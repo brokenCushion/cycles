@@ -77,6 +77,10 @@ if(WITH_CYCLES_STANDALONE)
     oiio_output_driver.h
   )
 
+  if(WITH_CYCLES_DEEP_OPAQUE)
+    list(APPEND SRC deep_output.cpp deep_output.h)
+  endif()
+
   if(WITH_CYCLES_STANDALONE_GUI)
     list(APPEND SRC
       opengl/display_driver.cpp
@@ -92,6 +96,9 @@ if(WITH_CYCLES_STANDALONE)
   unset(SRC)
 
   target_link_libraries(cycles PRIVATE ${LIB})
+  if(WITH_CYCLES_DEEP_OPAQUE)
+    target_link_libraries(cycles PRIVATE cycles_deep_exr cycles_deep_capture)
+  endif()
 
   if(APPLE)
     if(WITH_CYCLES_STANDALONE_GUI)

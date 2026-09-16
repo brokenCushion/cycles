@@ -12,6 +12,10 @@
 #endif
 
 #include "kernel/integrator/path_state.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "deep/capture.h"
+#  include "util/transform.h"
+#endif
 
 #include "integrator/pass_accessor_cpu.h"
 #include "integrator/path_trace_display.h"
@@ -156,6 +160,35 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
         break;
       }
     }
+
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    if (deep::OpaqueCapture *capture = film_->deep_capture) {
+      if (has_bake || state->path.queued_kernel != DEVICE_KERNEL_INTEGRATOR_INTERSECT_CLOSEST ||
+          state->path.bounce != 0 || !(state->path.visibility & PATH_RAY_VISIBILITY_CAMERA))
+      {
+        capture->fail();
+      }
+      else {
+        /* Execute the scheduled intersection once; megakernel resumes at its successor.
+         *
+         * Only prim is a defined miss marker; type and t can be uninitialized. */
+        kernels_.integrator_intersect_closest(kernel_globals, state, render_buffer);
+        if (state->isect.prim == PRIM_NONE) {
+          capture->record(work_tile.x, work_tile.y, state->path.sample, 0.0f);
+        }
+        else if (state->isect.type == PRIMITIVE_TRIANGLE) {
+          const float3 p = float3(state->ray.P) + float3(state->ray.D) * state->isect.t;
+          const float depth = transform_point(&kernel_globals->data.cam.worldtocamera, p).z;
+          if (depth > 0.0f)
+            capture->record(work_tile.x, work_tile.y, state->path.sample, depth);
+          else
+            capture->fail();
+        }
+        else
+          capture->fail();
+      }
+    }
+#endif
 
 #if defined(WITH_PATH_GUIDING)
     if (kernel_globals->data.integrator.train_guiding) {

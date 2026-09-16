@@ -80,6 +80,9 @@ CCL_NAMESPACE_BEGIN
 
 DEFINE_INTEGRATOR_INIT_KERNEL(init_from_camera)
 DEFINE_INTEGRATOR_INIT_KERNEL(init_from_bake)
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+DEFINE_INTEGRATOR_SHADE_KERNEL(intersect_closest)
+#endif
 DEFINE_INTEGRATOR_SHADE_KERNEL(megakernel)
 
 /* --------------------------------------------------------------------

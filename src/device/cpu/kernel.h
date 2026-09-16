@@ -30,6 +30,9 @@ class CPUKernels {
 
   IntegratorInitFunction integrator_init_from_camera;
   IntegratorInitFunction integrator_init_from_bake;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  IntegratorShadeFunction integrator_intersect_closest;
+#endif
   IntegratorShadeFunction integrator_megakernel;
 
   /* Shader evaluation. */

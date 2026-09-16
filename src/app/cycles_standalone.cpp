@@ -30,6 +30,12 @@
 
 #include "app/cycles_xml.h"
 #include "app/oiio_output_driver.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "app/deep_output.h"
+#  include "deep/capture.h"
+#  include <filesystem>
+#  include <stdexcept>
+#endif
 
 #ifdef WITH_CYCLES_STANDALONE_GUI
 #  include "opengl/display_driver.h"
@@ -49,6 +55,12 @@ struct Options {
   bool show_help, interactive, pause;
   string output_filepath;
   string output_pass;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  string deep_output_filepath;
+  string deep_records_filepath;
+  int deep_memory_mb = 64;
+  unique_ptr<deep::OpaqueCapture> deep_capture;
+#endif
 } options;
 
 static void session_print(const string &str)
@@ -155,6 +167,20 @@ static void session_init()
 
   /* load scene */
   scene_init();
+
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (!options.deep_output_filepath.empty()) {
+    validate_deep_scene(options.scene, options.session_params);
+    if (options.deep_memory_mb <= 0 || options.deep_memory_mb > 1024)
+      throw std::invalid_argument("Deep raw capture budget must be 1..1024 MiB");
+    options.deep_capture = make_unique<deep::OpaqueCapture>(options.width,
+                                                            options.height,
+                                                            options.session_params.samples,
+                                                            size_t(options.deep_memory_mb) * 1024 *
+                                                                1024);
+    options.scene->film->deep_capture = options.deep_capture.get();
+  }
+#endif
 
   /* add pass for output. */
   Pass *pass = options.scene->create_node<Pass>();
@@ -428,6 +454,17 @@ static void options_parse(const int argc, const char **argv)
   ap.arg("--output %s:OUTPUT").help("File path to write output image").action([&](auto argv) {
     parse_string(argv, &options.output_filepath);
   });
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  ap.arg("--deep-output %s:DEEP_OUTPUT")
+      .help("Write experimental opaque Deep EXR")
+      .action([&](auto argv) { parse_string(argv, &options.deep_output_filepath); });
+  ap.arg("--deep-records %s:CSV")
+      .help("Optional raw camera sample CSV for validation")
+      .action([&](auto argv) { parse_string(argv, &options.deep_records_filepath); });
+  ap.arg("--deep-memory-mb %d:MIB")
+      .help("Raw deep capture budget in MiB (default 64; excludes reconstruction)")
+      .action([&](auto argv) { parse_int(argv, &options.deep_memory_mb); });
+#endif
   ap.arg("--threads %d:THREADS").help("CPU Rendering Threads").action([&](auto argv) {
     parse_int(argv, &options.session_params.threads);
   });
@@ -545,29 +582,75 @@ int main(const int argc, const char **argv)
   system_max_open_files_ensure();
   options_parse(argc, argv);
 
-#ifdef WITH_CYCLES_STANDALONE_GUI
-  if (options.session_params.background) {
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  try {
+    if (!options.deep_output_filepath.empty()) {
+      if (!options.session_params.background)
+        throw std::invalid_argument("Deep M3 requires background rendering");
+      const vector<string> paths = {options.filepath,
+                                    options.output_filepath,
+                                    options.deep_output_filepath,
+                                    options.deep_records_filepath};
+      for (size_t i = 0; i < paths.size(); ++i) {
+        if (paths[i].empty())
+          continue;
+        const auto a = std::filesystem::weakly_canonical(paths[i]);
+        for (size_t j = i + 1; j < paths.size(); ++j) {
+          if (paths[j].empty())
+            continue;
+          const auto b = std::filesystem::weakly_canonical(paths[j]);
+          if (string_iequals(a.string(), b.string()) ||
+              (std::filesystem::exists(a) && std::filesystem::exists(b) &&
+               std::filesystem::equivalent(a, b)))
+            throw std::invalid_argument("Scene, beauty, deep and record paths must be distinct");
+        }
+      }
+    }
+    else if (!options.deep_records_filepath.empty())
+      throw std::invalid_argument("--deep-records requires --deep-output");
 #endif
-    session_init();
-    options.session->wait();
-    session_exit();
-#ifdef WITH_CYCLES_STANDALONE_GUI
-  }
-  else {
-    const string title = "Cycles: " + path_filename(options.filepath);
 
-    /* init/exit are callback so they run while GL is initialized */
-    window_main_loop(title.c_str(),
-                     options.width,
-                     options.height,
-                     session_init,
-                     session_exit,
-                     resize,
-                     display,
-                     keyboard,
-                     motion);
-  }
+#ifdef WITH_CYCLES_STANDALONE_GUI
+    if (options.session_params.background) {
+#endif
+      session_init();
+      options.session->wait();
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+      if (options.deep_capture) {
+        if (options.session->progress.get_error())
+          throw std::runtime_error(options.session->progress.get_error_message());
+        if (options.session->progress.get_cancel())
+          throw std::runtime_error("Render cancelled; deep output was not published");
+        write_deep_capture(
+            *options.deep_capture, options.deep_output_filepath, options.deep_records_filepath);
+      }
+#endif
+      session_exit();
+#ifdef WITH_CYCLES_STANDALONE_GUI
+    }
+    else {
+      const string title = "Cycles: " + path_filename(options.filepath);
+
+      /* init/exit are callback so they run while GL is initialized */
+      window_main_loop(title.c_str(),
+                       options.width,
+                       options.height,
+                       session_init,
+                       session_exit,
+                       resize,
+                       display,
+                       keyboard,
+                       motion);
+    }
 #endif
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  }
+  catch (const std::exception &error) {
+    fprintf(stderr, "Deep render failed: %s\n", error.what());
+    options.session.reset();
+    return EXIT_FAILURE;
+  }
+#endif
   return 0;
 }

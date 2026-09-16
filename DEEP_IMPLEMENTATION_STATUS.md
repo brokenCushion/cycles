@@ -1,0 +1,169 @@
+# Deep EXR investigation and implementation status
+
+## Baseline and scope
+
+- Source baseline: `a456b761034dda42c32eef9f4aae0fa5a5c9f604`.
+- Branch: `codex/deep-exr`; current work is uncommitted.
+- Platform/build evidence: [BASELINE_BUILD.md](BASELINE_BUILD.md).
+- Target agreed for this workspace: the official standalone Cycles mirror.
+  This differs from the proposal's full Blender checkout. Blender UI/session
+  integration and revision mapping remain future work.
+- M0 standalone source/build investigation: complete for planning the reference.
+- M1 reconstruction: implemented; standalone and optional parent-build tests pass.
+- M2 writer: implemented; OpenEXR round trips, failure tests, OIIO inspection and
+  Gaffer 1.7.2.0 deep-image validation pass. Nuke is not available to the user.
+- M3 renderer capture: optional CPU opaque capture with a pre-render scene
+  allowlist, raw storage budget, complete sample accounting, axial depth and
+  reference reconstruction. See [M3 validation](src/deep/CAPTURE_VALIDATION.md).
+  Transparent traversal and production storage remain future work.
+
+## Inspected source map
+
+The investigation below refers to the pinned baseline. M3 now modifies the
+CPU dispatch, film and standalone application at the identified hooks.
+
+| Concern | Source and symbols | Finding / integration constraint |
+| --- | --- | --- |
+| CPU sample dispatch | `src/integrator/path_trace_work_cpu.cpp`, `PathTraceWorkCPU::render_samples`, `render_samples_full_pipeline` | Builds a per-pixel work tile using full-image offsets, scheduled samples and sample offsets; initializes camera state then runs the megakernel. Cancellation can stop the loop. |
+| Sample acceptance/identity | `src/kernel/integrator/init_from_camera.h`, `integrator_init_from_camera`; `src/kernel/film/light_passes.h`, `film_write_sample` | Adaptive rejection precedes sample counting. Effective sample identity may come from the atomic per-pixel sample count plus sample offset. Camera cache retries reuse state: do not count them twice. |
+| Stored state | `src/kernel/integrator/state_template.h` | Has render pixel index, sample, RNG state, bounce counters and path flags. Buffer pixel index is not alone a globally stable image coordinate. |
+| Camera sampling | `src/kernel/integrator/init_from_camera.h`, `integrate_camera_sample`; `src/kernel/camera/camera.h`, `camera_sample` | Filter sample 0 uses the center; other samples use PRNG_FILTER. Raster/time/lens values feed ray creation. Capture must observe these decisions without drawing extra beauty RNG values. |
+| Filter estimator | `src/scene/film.cpp`, `filter_table`; `src/kernel/camera/camera.h`, `camera_sample_perspective` | Filter uses an inverse-CDF importance table. The supported static pinhole perspective path returns unit camera throughput. Proposed M3 box-filter ledger uses unit weights; applying the filter again would double-weight it. Other cameras/settings need separate validation. |
+| Adaptive stopping | `src/kernel/film/adaptive_sampling.h`, `film_need_sample_pixel` | Checks the adaptive auxiliary buffer before creating a new sample. Rejected scheduling attempts are not misses. M3 will reject adaptive sampling. |
+| Hits and misses | `src/kernel/integrator/intersect_closest.h`, `integrator_intersect_next_kernel_after_volume`; `src/kernel/integrator/shade_background.h` | Surface intersections schedule shading; misses schedule background or termination. A geometry miss must complete the ledger regardless of world radiance. Early termination is not automatically a verified miss. |
+| Shared material evaluation | `src/kernel/integrator/surface_shader.h`, `surface_shader_eval` | Dispatches OSL or SVM into ShaderData, initializes transparent extinction, and supports texture/cache retries. Capture must avoid duplicating events on retries. |
+| Transparent closure semantics | `src/kernel/closure/bsdf_transparent.h`, `bsdf_transparent_setup`; `src/kernel/osl/closures_setup.h`; `src/kernel/svm/closure.h` | OSL and SVM call the shared setup function. It accumulates spectral transparent extinction after a closure-weight cutoff. This is a candidate shared interface, not proof of scalar parity for arbitrary materials. |
+| Candidate local opacity | `src/kernel/integrator/surface_shader.h`, `surface_shader_transparency`, `surface_shader_alpha` | Computes saturated spectral (1 - transparency). Volume-only and ray-portal cases have special treatment. Only verified achromatic supported materials can become scalar events; do not average arbitrary colored transmission. |
+| Path selection and termination | `src/kernel/integrator/shade_surface.h`, `integrate_surface_bsdf_bssrdf_bounce`; `src/kernel/integrator/path_state.h`, `path_state_next`; `src/kernel/integrator/intersect_closest.h`, `integrator_intersect_terminate` | BSDF/BSSRDF selection consumes random values. Transparent events advance tmin, but other closures redirect paths; transparent limits and stochastic termination can end visibility observation. Naive recording of beauty's observed path does not supply the complete-chain contract. |
+| Depth | `src/kernel/camera/camera.h`, `camera_z_depth`; `src/scene/camera.cpp`, `Camera::update` | Perspective/orthographic depth is transformed camera-space **positive Z**, not a negated Cycles Z or raw ray distance. Ray origin moves to the near clip plane. Panorama uses distance. Restrict M3 to static perspective, and verify an off-axis plane before locking export semantics. |
+| Existing flat Z | `src/kernel/film/data_passes.h`, `film_write_data_passes` | Writes depth on sample zero with path/pass conditions. It cannot reconstruct all camera samples or transparent chains. |
+| Host output | `src/integrator/path_trace.cpp`, `PathTrace::tile_buffer_write`; `src/session/session.cpp`, `Session::wait`; `src/app/cycles_standalone.cpp` | Output passes through OutputDriver; standalone main waits for the session. Later sidecar ownership must distinguish complete frames, tiles and cancellation. |
+| Image orientation | `src/app/oiio_output_driver.cpp`, `OIIOOutputDriver::write_render_tile` | Full-buffer flat output uses negative row stride to convert bottom-up to top-down. Future deep output must reproduce image alignment and explicitly preserve windows. |
+
+## Decisions and open risks
+
+1. **Neutral module:** capture/reconstruction use standard C++17. Separate
+   targets allow standalone tests; the writer links existing OpenEXR. The optional
+   CPU renderer now links the capture target. No speculative adapter ABI.
+2. **Depth convention:** retain positive axial depth in the model. The standalone
+   source's +Z convention is established; Blender's coordinate conversion and
+   target compositor interpretation still require their own evidence.
+3. **Transparent capture:** for M4, plan to investigate a separate visibility
+   traversal that preserves the camera sample and evaluates the same shader
+   context with independent state/RNG. Source evidence rules out naive complete
+   chain recording from stochastic beauty paths; it does not yet prove the
+   separate traversal correct. Shader ray-type/bounce context, texture retries,
+   closure cutoff, unsupported material detection and traversal limits are open.
+4. **M3 opaque capture:** candidate hook is a validated primary geometry hit or
+   miss, tied to an accepted camera sample and completed once. Only verified
+   opaque polygon surfaces, static perspective pinhole, fixed samples and box
+   filter. Reject volume/portal/refraction/holdout/shadow-catcher cases. No hooks
+   were added during M1.
+5. **Writer route:** direct existing OpenEXR is the verified M2 choice. Pinned
+   headers expose `Imf::DeepScanLineOutputFile`, `DeepFrameBuffer`, and explicit
+   sample-count slices. OIIO also exposes deep I/O, but the existing application
+   driver is flat RGBA. Direct OpenEXR gives explicit types/counts/windows and
+   avoids adapting the flat driver. M2 now links and round-trips NONE/ZIPS with
+   OpenEXR 3.4.10 and verifies application-level behavior in Gaffer 1.7.2.0.
+6. **Existing implementation search:** searches for DeepScanLine, DeepData and
+   deep-image/output terms in this checkout's `src` found no existing writer.
+   This does not make a claim about other branches or third-party code.
+7. **Reference limits:** raw capture has an explicit byte budget. Reconstruction
+   uses one complete pixel ledger at a time; output and writer buffers are held
+   for the whole frame. This is not a total-process memory bound. No production
+   reduction or farm batch merging is claimed.
+
+## M1 verification
+
+Commands (repository root, Visual Studio 2022 and CMake from baseline):
+
+```powershell
+cmake -S src/deep -B build-deep -G "Visual Studio 17 2022" -A x64
+cmake --build build-deep --config Release
+ctest --test-dir build-deep -C Release --output-on-failure
+.\build-deep\Release\cycles_deep_reference_test.exe
+```
+
+Configure/build/CTest/executable exits: 0. Six test groups pass, including all
+required analytic fixtures, invalid/incomplete inputs, extreme weights,
+2,000-event low-opacity stack, 250 deterministic randomized ledgers, storage
+permutations, and the expected scalar-coverage limitation. Maximum checked
+absolute error: `8.7596596642924851e-14`, below `1e-12`. Disjoint coverage emits
+`(Z=2, A=0.5), (Z=8, A=1)` and flattens to 1.
+
+The independent brute-force oracle evaluates both sides of each raw boundary.
+Tests use explicit exceptions/checks, not Release-disabled assertions.
+Local configure/build logs and CTest output live in ignored build directories.
+
+## M2 verification and handoff
+
+See [src/deep/EXR_VALIDATION.md](src/deep/EXR_VALIDATION.md) for commands,
+file contract, fixture inventory, failure coverage, Gaffer reproduction and an
+optional Nuke procedure. Commands and observed exits:
+
+```powershell
+cmake -S . -B build-baseline -DWITH_CYCLES_DEEP_TESTS=ON -DWITH_CYCLES_DEEP_EXR_TESTS=ON
+cmake --build build-baseline --config Release --target cycles_deep_reference_test cycles_deep_exr_test
+ctest --test-dir build-baseline -C Release --output-on-failure
+.\build-gaffer\gaffer-1.7.2.0-windows\bin\gaffer.cmd python src/deep/validate_gaffer.py build-baseline/src/deep/fixtures
+```
+
+Configuration, builds and CTest exit 0; 3/3 tests passed. Final CTest wall time
+12.87 seconds (startup/file-scanning effects included; not a renderer benchmark).
+OpenEXR round-trip maximum transmittance error: `1.1920928910669204e-08`.
+Gaffer exits 0 across eight fixtures; maximum flat alpha error
+`3.35239146442845e-08`, partial-depth alpha error `1.1920928910669204e-08`.
+Both pass the 1e-6 gate. OIIO reads the uncompressed surface fixture with the
+expected 270 samples and zero NaN/Inf. Uncompressed surface files are 3,926 bytes;
+ZIPS files are 1,390 bytes; all-empty files are 686 bytes with either codec.
+These synthetic sizes are not production performance results.
+
+Changes: optional CMake targets; neutral model/reference/tests; OpenEXR writer
+and round-trip/failure tests; Gaffer validator; documentation. Renderer sources
+were unchanged at M2 and are now modified by M3. No new revision has been committed or
+pushed. Build outputs, fixtures, logs and portable Gaffer are ignored by Git.
+
+The first Gaffer run exposed Windows backslash substitution in filename plugs;
+the validator now supplies forward-slash paths. The final run passed. The saved
+`deep_validation.gfr` was loaded successfully in a separate headless check.
+Runtime introspection confirms the official package includes Cycles 5.1.0.
+Our fork is not installed into Gaffer, and no Gaffer Cycles rendering was tested.
+
+Limitations: no transparent renderer capture, production memory bound, atomic publication,
+GPU tests, volumes, deep RGB, or Nuke validation. Full Blender baseline and
+integration remain outside this standalone checkout. No performance qualification
+or upstream acceptance is claimed.
+
+## M3 work package and acceptance contract
+
+Keep this as a small patch series with independent gates:
+
+1. **Configuration and validation:** add one experimental standalone sidecar
+   setting in `src/app/cycles_standalone.cpp`, owned by the CLI with a non-owning film pointer.
+   Validate CPU, fixed samples, static perspective pinhole, box filter, opaque
+   polygon geometry, and the excluded feature set before rendering. Establish
+   an explicit material/scene allowlist; fail if opacity cannot be proven.
+2. **Sample lifecycle and bounded experimental storage:** extend the CPU work
+   owner around `PathTraceWorkCPU::render_samples_full_pipeline`. Assign identity
+   from accepted effective camera samples and full-image coordinates, reserve a
+   small-scene memory cap, and account for misses/cancellation/retries exactly
+   once. Keep storage absent when deep is disabled. Do not use an unbounded
+   whole-frame ledger as a production default.
+3. **Primary hit/miss adapter:** read the first valid opaque camera hit and axial
+   depth at inspected intersection/shading points; record miss completion before
+   world shading. Emit neutral events without changing beauty RNG or traversal.
+   Execute the scheduled primary intersection once before the megakernel and
+   resume from its successor. Reject unexpected camera states; use PRIM_NONE
+   for misses. Do not infer completeness from generic path end.
+4. **Output and alignment:** hand complete CPU ledgers to reconstruction/writer
+   after required rendering completes. Preserve orientation, crop and frame/view
+   identity, and report export failure. Keep the output explicitly experimental;
+   production atomic pairing stays a later gate.
+5. **Acceptance scenes:** frontoparallel off-axis plane, diagonal edge, small
+   geometry and near/far disjoint coverage. Compare captured-event oracle,
+   expected depth/alpha and deep-on/off beauty under fixed seeds. Load real
+   sidecars in the existing Gaffer validator workflow and test depth cuts.
+
+Gaffer's bundled Cycles 5.1.0 is a useful later host, but substituting this fork
+requires auditing Gaffer's Cycles revision/build/ABI and rebuilding its adapter.
+Do not swap renderer DLLs or equate successful EXR ingestion with integration.

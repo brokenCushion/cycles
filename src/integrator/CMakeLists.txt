@@ -74,3 +74,6 @@ include_directories(${INC})
 include_directories(SYSTEM ${INC_SYS})
 
 cycles_add_library(cycles_integrator "${LIB}" ${SRC} ${SRC_HEADERS})
+if(WITH_CYCLES_DEEP_OPAQUE)
+  target_link_libraries(cycles_integrator PRIVATE cycles_deep_capture)
+endif()

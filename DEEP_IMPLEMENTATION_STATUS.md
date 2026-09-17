@@ -3,7 +3,7 @@
 ## Baseline and scope
 
 - Source baseline: `a456b761034dda42c32eef9f4aae0fa5a5c9f604`.
-- Branch: `codex/deep-exr`; current work is uncommitted.
+- Branch: `codex/deep-exr`; M0–M3 committed as `703331004`; this CPU checkpoint includes M4/M5 and Gaffer review tools.
 - Platform/build evidence: [BASELINE_BUILD.md](BASELINE_BUILD.md).
 - Target agreed for this workspace: the official standalone Cycles mirror.
   This differs from the proposal's full Blender checkout. Blender UI/session
@@ -15,7 +15,14 @@
 - M3 renderer capture: optional CPU opaque capture with a pre-render scene
   allowlist, raw storage budget, complete sample accounting, axial depth and
   reference reconstruction. See [M3 validation](src/deep/CAPTURE_VALIDATION.md).
-  Transparent traversal and production storage remain future work.
+- M4 scalar transparency: independent CPU visibility traversal with shared
+  native/OSL evaluation, complete event chains and bounded experimental storage.
+  See [M4 validation](src/deep/TRANSPARENCY_VALIDATION.md).
+- M5 CPU storage/reduction/publication: implemented and validated with disk spill,
+  bounded scanline export, 0.001 reduction and atomic EXR publication.
+  See [M5 validation and limits](src/deep/PRODUCTION_VALIDATION.md).
+- Next milestone: M6, one GPU backend. GPU support,
+  motion/DOF/adaptive sampling and volumes remain later milestones.
 
 ## Inspected source map
 
@@ -48,12 +55,10 @@ CPU dispatch, film and standalone application at the identified hooks.
 2. **Depth convention:** retain positive axial depth in the model. The standalone
    source's +Z convention is established; Blender's coordinate conversion and
    target compositor interpretation still require their own evidence.
-3. **Transparent capture:** for M4, plan to investigate a separate visibility
-   traversal that preserves the camera sample and evaluates the same shader
-   context with independent state/RNG. Source evidence rules out naive complete
-   chain recording from stochastic beauty paths; it does not yet prove the
-   separate traversal correct. Shader ray-type/bounce context, texture retries,
-   closure cutoff, unsupported material detection and traversal limits are open.
+3. **Transparent capture:** M4 uses a separate visibility traversal with a private
+   copy of the accepted camera state/RNG. The restricted ordinary node graphs use
+   shared shader evaluation, including OSL. Cache misses and incomplete traversal
+   fail export. See the M4 validation contract for evidence and exclusions.
 4. **M3 opaque capture:** candidate hook is a validated primary geometry hit or
    miss, tied to an accepted camera sample and completed once. Only verified
    opaque polygon surfaces, static perspective pinhole, fixed samples and box
@@ -68,10 +73,10 @@ CPU dispatch, film and standalone application at the identified hooks.
 6. **Existing implementation search:** searches for DeepScanLine, DeepData and
    deep-image/output terms in this checkout's `src` found no existing writer.
    This does not make a claim about other branches or third-party code.
-7. **Reference limits:** raw capture has an explicit byte budget. Reconstruction
-   uses one complete pixel ledger at a time; output and writer buffers are held
-   for the whole frame. This is not a total-process memory bound. No production
-   reduction or farm batch merging is claimed.
+7. **Storage limits:** M5 spills raw capture to disk and reconstructs one pixel
+   at a time into one scanline of output. Deep working buffers have a conservative
+   preflight budget; this is not a total-process memory/RSS cap. Strict reduction
+   is optional. Farm batch merging and network publication remain unqualified.
 
 ## M1 verification
 
@@ -120,8 +125,9 @@ These synthetic sizes are not production performance results.
 
 Changes: optional CMake targets; neutral model/reference/tests; OpenEXR writer
 and round-trip/failure tests; Gaffer validator; documentation. Renderer sources
-were unchanged at M2 and are now modified by M3. No new revision has been committed or
-pushed. Build outputs, fixtures, logs and portable Gaffer are ignored by Git.
+were unchanged at M2 and are now modified by M3/M4. M0–M3 are committed locally as
+`703331004`; M4/M5 and Gaffer tools form the next CPU checkpoint. Build outputs, fixtures, logs and portable Gaffer
+are ignored by Git.
 
 The first Gaffer run exposed Windows backslash substitution in filename plugs;
 the validator now supplies forward-slash paths. The final run passed. The saved
@@ -129,8 +135,9 @@ the validator now supplies forward-slash paths. The final run passed. The saved
 Runtime introspection confirms the official package includes Cycles 5.1.0.
 Our fork is not installed into Gaffer, and no Gaffer Cycles rendering was tested.
 
-Limitations: no transparent renderer capture, production memory bound, atomic publication,
-GPU tests, volumes, deep RGB, or Nuke validation. Full Blender baseline and
+Limitations: no total-process memory cap, GPU tests, volumes, deep RGB, or Nuke
+validation. M5 adds a deep working-buffer bound and local atomic publication.
+Full Blender baseline and
 integration remain outside this standalone checkout. No performance qualification
 or upstream acceptance is claimed.
 

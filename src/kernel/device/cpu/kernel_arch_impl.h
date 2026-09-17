@@ -82,6 +82,74 @@ DEFINE_INTEGRATOR_INIT_KERNEL(init_from_camera)
 DEFINE_INTEGRATOR_INIT_KERNEL(init_from_bake)
 #ifdef WITH_CYCLES_DEEP_OPAQUE
 DEFINE_INTEGRATOR_SHADE_KERNEL(intersect_closest)
+
+/* Independent straight visibility traversal. The accepted camera ray, differentials,
+ * time and
+ * RNG identity are copied; beauty path state and buffers are never mutated.
+ * Scene validation
+ * excludes shader nodes with side effects (including AOV writes). */
+int KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGlobalsCPU *kg,
+                                            const IntegratorStateCPU *camera,
+                                            float *events,
+                                            const int max_events)
+{
+#  ifdef KERNEL_STUB
+  STUB_ASSERT(KERNEL_ARCH, deep_surface);
+  return -1;
+#  else
+  IntegratorStateCPU traversal = *camera;
+  IntegratorState state = &traversal;
+  Ray ray;
+  integrator_state_read_ray(state, &ray);
+  ray.self.object = OBJECT_NONE;
+  ray.self.prim = PRIM_NONE;
+  ray.self.light_object = OBJECT_NONE;
+  ray.self.light_prim = PRIM_NONE;
+  int count = 0;
+  for (;;) {
+    Intersection isect;
+    isect.object = OBJECT_NONE;
+    isect.prim = PRIM_NONE;
+    if (!scene_intersect(kg, &ray, PATH_RAY_VISIBILITY_CAMERA, &isect))
+      return count;
+    /* Test for a hit beyond the limit, so a complete chain exactly at capacity succeeds. */
+    if (count == max_events || isect.type != PRIMITIVE_TRIANGLE)
+      return -1;
+    integrator_state_write_isect(state, &isect);
+    integrator_state_write_ray(state, &ray);
+    ShaderData sd;
+    shader_setup_from_ray(kg, &sd, &ray, &isect);
+    surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE & ~KERNEL_FEATURE_NODE_RAYTRACE>(
+        kg, state, &sd, nullptr, state->path.visibility, state->path.flag);
+    if (sd.runtime_flag & SR_CACHE_MISS)
+      return -1;
+    const float3 transparency = spectrum_to_rgb(surface_shader_transparency(&sd));
+    /* Scalar extinction only: never luminance, throughput or a sampled closure weight. */
+    if (!isfinite(transparency.x) || !isfinite(transparency.y) || !isfinite(transparency.z) ||
+        transparency.x < 0 || transparency.x > 1 || transparency.y != transparency.x ||
+        transparency.z != transparency.x)
+      return -1;
+    const float depth = transform_point(&kg->data.cam.worldtocamera, ray.P + ray.D * isect.t).z;
+    if (!isfinite(depth) || depth <= 0)
+      return -1;
+    events[2 * count] = depth;
+    events[2 * count + 1] = 1.0f - transparency.x;
+    ++count;
+    if (transparency.x == 0)
+      return count;
+    const float next = intersection_t_offset(isect.t);
+    if (!(next > ray.tmin))
+      return -1;
+    ray.tmin = next;
+    ray.self.object = isect.object;
+    ray.self.prim = isect.prim;
+    /* Preserve the native transparent path's shader context, without beauty RR/termination. */
+    state->path.transparent_bounce++;
+    state->path.flag |= PATH_RAY_TRANSPARENT;
+    state->path.rng_offset += PRNG_BOUNCE_NUM;
+  }
+#  endif
+}
 #endif
 DEFINE_INTEGRATOR_SHADE_KERNEL(megakernel)
 

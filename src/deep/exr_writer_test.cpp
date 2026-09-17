@@ -292,6 +292,19 @@ void failures(const SurfaceImage &valid, const std::filesystem::path &directory)
       threw = true;
     }
     require(threw, "Injected writer failure was swallowed");
+    FaultStream row_stream(budget);
+    threw = false;
+    try {
+      write_deep_exr_rows(row_stream, valid, [&](int y) {
+        const size_t offset = size_t(y - valid.data_window.min_y) * 4;
+        return std::vector<std::vector<SurfaceSample>>(valid.pixels.begin() + offset,
+                                                       valid.pixels.begin() + offset + 4);
+      });
+    }
+    catch (const std::exception &) {
+      threw = true;
+    }
+    require(threw, "Injected scanline writer failure was swallowed");
   }
   /* Opening a directory as a file is a portable open failure without relying
    * on machine-specific permissions or filling a real disk. */
@@ -349,6 +362,12 @@ int main(int argc, char **argv)
         const auto path = directory /
                           ("surfaces_" + std::to_string(window) + "_" + suffix + ".exr");
         write_deep_exr(path, image);
+        round_trip(path, image, source);
+        write_deep_exr_rows(path, image, [&](int y) {
+          const size_t offset = size_t(y - image.data_window.min_y) * 4;
+          return std::vector<std::vector<SurfaceSample>>(image.pixels.begin() + offset,
+                                                         image.pixels.begin() + offset + 4);
+        });
         round_trip(path, image, source);
       }
       auto empty_source = source;

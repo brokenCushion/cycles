@@ -70,8 +70,11 @@ void OIIOOutputDriver::write_render_tile(const Tile &tile)
 
   /* Write to disk and close */
   image_buffer.set_write_format(TypeDesc::FLOAT);
-  image_buffer.write(image_output.get());
-  image_output->close();
+  const bool wrote = image_buffer.write(image_output.get());
+  const bool closed = image_output->close();
+  written_ = wrote && closed;
+  if (!written_)
+    log_("Failed to write or close image file");
 }
 
 CCL_NAMESPACE_END

@@ -21,6 +21,7 @@ CPUKernels::CPUKernels()
       REGISTER_KERNEL(integrator_init_from_bake),
 #ifdef WITH_CYCLES_DEEP_OPAQUE
       REGISTER_KERNEL(integrator_intersect_closest),
+      REGISTER_KERNEL(deep_surface),
 #endif
       REGISTER_KERNEL(integrator_megakernel),
       /* Shader evaluation. */

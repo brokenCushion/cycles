@@ -168,6 +168,15 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
       {
         capture->fail();
       }
+      else if (capture->max_events()) {
+        float events[128];
+        const int count = kernels_.deep_surface(
+            kernel_globals, state, events, capture->max_events());
+        if (count < 0)
+          capture->fail();
+        else
+          capture->record_events(work_tile.x, work_tile.y, state->path.sample, events, count);
+      }
       else {
         /* Execute the scheduled intersection once; megakernel resumes at its successor.
          *

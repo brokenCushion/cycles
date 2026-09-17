@@ -75,6 +75,28 @@ int main()
     miss.record(0, 0, 0, 0);
     check(miss.finalize());
     check(miss.reconstruct_pixel(0, 0).empty());
+    OpaqueCapture chains(1, 1, 2, 40, 2);
+    const float stack[] = {2, .25f, 8, .5f};
+    chains.record_events(0, 0, 0, stack, 2);
+    check(!chains.finalize());
+    chains.record_events(0, 0, 1, nullptr, 0);
+    check(chains.finalize());
+    p = chains.reconstruct_pixel(0, 0);
+    check(p.size() == 2 && p[0].alpha == .125);
+    check(std::abs((1 - p[0].alpha) * (1 - p[1].alpha) - .6875) < 1e-12);
+    chains.record_events(0, 0, 0, stack, 2);
+    check(!chains.finalize());
+    rejects([] { OpaqueCapture c(1, 1, 2, 39, 2); });
+    rejects([] { OpaqueCapture c(1, 1, 1, 1000, 65); });
+    for (const float alpha : {-1.f, 1.1f, std::numeric_limits<float>::quiet_NaN()}) {
+      OpaqueCapture c(1, 1, 1, 12, 1);
+      const float event[] = {2, alpha};
+      c.record_events(0, 0, 0, event, 1);
+      check(!c.finalize());
+    }
+    OpaqueCapture overflow(1, 1, 1, 12, 1);
+    overflow.record_events(0, 0, 0, stack, 2);
+    check(!overflow.finalize());
     std::cout
         << "Capture coverage, lifecycle, concurrent writes, bounds and budget checks passed\n";
   }

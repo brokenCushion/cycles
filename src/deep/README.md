@@ -1,9 +1,13 @@
 # Deep opacity reference (M1)
 
 This directory contains a dependency-free C++17 reference and tests, plus an
-optional Deep EXR writer and CPU opaque sample storage. The opt-in standalone
+optional Deep EXR writer and CPU surface sample storage. The opt-in standalone
 renderer adapter is described in [CAPTURE_VALIDATION.md](CAPTURE_VALIDATION.md).
-See EXR_VALIDATION.md for the writer. Production sample reduction is not implemented.
+See EXR_VALIDATION.md for the original writer fixtures. M5 storage, scanline
+export, strict reduction and atomic publication are documented in
+[PRODUCTION_VALIDATION.md](PRODUCTION_VALIDATION.md).
+M4's scalar transparency and CPU OSL contract is in
+[TRANSPARENCY_VALIDATION.md](TRANSPARENCY_VALIDATION.md).
 
 ## Build and inspect
 

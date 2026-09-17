@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "app/deep_output.h"
 #include "deep/exr_writer.h"
+#include "deep/publication.h"
 #include "scene/background.h"
 #include "scene/bake.h"
 #include "scene/camera.h"
@@ -23,10 +24,10 @@ CCL_NAMESPACE_BEGIN
 static void require_deep(const bool condition, const char *message)
 {
   if (!condition)
-    throw std::invalid_argument(string("Deep M3: ") + message);
+    throw std::invalid_argument(string("Deep: ") + message);
 }
 
-static void validate_shader(Shader *shader, const bool background)
+static void validate_shader(Shader *shader, const bool background, const bool transparent = false)
 {
   require_deep(shader && shader->graph, "missing shader graph");
   ShaderGraph *graph = shader->graph.get();
@@ -36,6 +37,15 @@ static void validate_shader(Shader *shader, const bool background)
   require_deep(output->input("Surface")->link != nullptr, "surface shader must be connected");
   for (ShaderNode *node : graph->nodes) {
     const string type = node->type->name.string();
+    if (transparent && !background) {
+      require_deep(type == "output" || type == "emission" || type == "diffuse_bsdf" ||
+                       type == "transparent_bsdf" || type == "mix_closure" ||
+                       type == "checker_texture" || type == "texture_coordinate" ||
+                       type == "image_texture",
+                   "unsupported M4 surface node (refraction, transmission, holdout and arbitrary "
+                   "OSL are deferred)");
+      continue;
+    }
     require_deep(type == "output" || (background ? type == "background_shader" :
                                                    (type == "emission" || type == "diffuse_bsdf")),
                  "only constant diffuse/emission surfaces and constant background are supported");
@@ -46,11 +56,11 @@ static void validate_shader(Shader *shader, const bool background)
   }
 }
 
-void validate_deep_scene(Scene *scene, const SessionParams &params)
+void validate_deep_scene(Scene *scene, const SessionParams &params, const bool transparent)
 {
   require_deep(params.device.type == DEVICE_CPU && params.background,
                "requires CPU background rendering");
-  require_deep(scene->params.shadingsystem == SHADINGSYSTEM_SVM,
+  require_deep(transparent || scene->params.shadingsystem == SHADINGSYSTEM_SVM,
                "OSL is not supported by the M3 material allowlist");
   require_deep(params.samples > 0 && params.samples <= 4096 && !params.use_sample_subset &&
                    params.pixel_size == 1 && params.time_limit == 0 && !params.use_auto_tile,
@@ -94,9 +104,9 @@ void validate_deep_scene(Scene *scene, const SessionParams &params)
     require_deep(static_cast<Mesh *>(geometry)->get_subdivision_type() == Mesh::SUBDIVISION_NONE,
                  "subdivision is unsupported");
     if (geometry->get_used_shaders().empty())
-      validate_shader(scene->default_surface, false);
+      validate_shader(scene->default_surface, false, transparent);
     for (Node *shader : geometry->get_used_shaders())
-      validate_shader(static_cast<Shader *>(shader), false);
+      validate_shader(static_cast<Shader *>(shader), false, transparent);
   }
   for (Object *object : scene->objects) {
     require_deep(object->get_motion().empty() && !object->get_use_holdout() &&
@@ -108,7 +118,10 @@ void validate_deep_scene(Scene *scene, const SessionParams &params)
 
 void write_deep_capture(const deep::OpaqueCapture &capture,
                         const string &path,
-                        const string &records_path)
+                        const string &records_path,
+                        const string &beauty_path,
+                        const bool reduce,
+                        const std::function<bool()> &cancelled)
 {
   if (!capture.finalize())
     throw std::runtime_error(capture.error_message());
@@ -116,22 +129,68 @@ void write_deep_capture(const deep::OpaqueCapture &capture,
   image.display_window = {0, 0, capture.width() - 1, capture.height() - 1};
   image.data_window = image.display_window;
   image.compression = deep::DeepCompression::Zips;
-  image.pixels.reserve(size_t(capture.width()) * size_t(capture.height()));
-  for (int y = 0; y < capture.height(); ++y)
-    for (int x = 0; x < capture.width(); ++x)
-      image.pixels.push_back(capture.reconstruct_pixel(x, capture.height() - 1 - y));
-  deep::write_deep_exr(path, image);
-  if (!records_path.empty()) {
-    std::ofstream records(records_path);
-    records.exceptions(std::ios::badbit | std::ios::failbit);
-    records << "file_x,file_y,sample,depth\n"
-            << std::setprecision(std::numeric_limits<float>::max_digits10);
-    for (int y = 0; y < capture.height(); ++y)
-      for (int x = 0; x < capture.width(); ++x)
-        for (int sample = 0; sample < capture.samples(); ++sample)
-          records << x << ',' << y << ',' << sample << ','
-                  << capture.value(x, capture.height() - 1 - y, sample) << '\n';
-    records.close();
+  image.reduction_error = reduce ? 1e-3 : 0;
+  const auto check_cancel = [&] {
+    if (cancelled())
+      throw std::runtime_error("Deep export cancelled; final EXR was not replaced");
+  };
+  check_cancel();
+  if (!beauty_path.empty()) {
+    /* Pair the exact already-written beauty bytes, including its header,
+     * with this deep export. FNV-1a is an identity checksum, not security. */
+    std::ifstream beauty(beauty_path, std::ios::binary);
+    if (!beauty)
+      throw std::runtime_error("Cannot read required beauty output for deep pairing");
+    uint64_t hash = UINT64_C(14695981039346656037), bytes = 0;
+    char buffer[65536];
+    while (beauty) {
+      check_cancel();
+      beauty.read(buffer, sizeof(buffer));
+      for (std::streamsize i = 0; i < beauty.gcount(); ++i) {
+        hash ^= static_cast<unsigned char>(buffer[i]);
+        hash *= UINT64_C(1099511628211);
+        ++bytes;
+      }
+    }
+    if (!beauty.eof())
+      throw std::runtime_error("Beauty identity read failed");
+    image.beauty_identity = "fnv1a64:" + std::to_string(hash) + ":bytes:" + std::to_string(bytes) +
+                            ":path:" + beauty_path;
   }
+  if (!records_path.empty()) {
+    deep::AtomicOutput publication(records_path);
+    std::ofstream records(publication.temporary());
+    records.exceptions(std::ios::badbit | std::ios::failbit);
+    records << "file_x,file_y,sample,depth,alpha,event\n"
+            << std::setprecision(std::numeric_limits<float>::max_digits10);
+    for (int y = 0; y < capture.height(); ++y) {
+      check_cancel();
+      for (int x = 0; x < capture.width(); ++x)
+        for (int sample = 0; sample < capture.samples(); ++sample) {
+          const auto events = capture.events(x, capture.height() - 1 - y, sample);
+          if (events.empty())
+            records << x << ',' << y << ',' << sample << ",0,0,-1\n";
+          for (size_t i = 0; i < events.size(); ++i)
+            records << x << ',' << y << ',' << sample << ',' << events[i].depth << ','
+                    << events[i].alpha << ',' << i << '\n';
+        }
+    }
+    records.close();
+    check_cancel();
+    publication.publish();
+  }
+  deep::write_deep_exr_rows(
+      path,
+      image,
+      [&](const int y) {
+        check_cancel();
+        std::vector<std::vector<deep::SurfaceSample>> row;
+        row.reserve(capture.width());
+        for (int x = 0; x < capture.width(); ++x)
+          row.push_back(capture.reconstruct_pixel(x, capture.height() - 1 - y));
+        check_cancel();
+        return row;
+      },
+      check_cancel);
 }
 CCL_NAMESPACE_END

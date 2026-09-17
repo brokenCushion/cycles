@@ -32,6 +32,9 @@ class CPUKernels {
   IntegratorInitFunction integrator_init_from_bake;
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   IntegratorShadeFunction integrator_intersect_closest;
+  CPUKernelFunction<int (*)(
+      const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *, float *, int)>
+      deep_surface;
 #endif
   IntegratorShadeFunction integrator_megakernel;
 

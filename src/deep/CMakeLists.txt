@@ -31,19 +31,24 @@ if(WITH_CYCLES_DEEP_EXR_TESTS OR WITH_CYCLES_DEEP_OPAQUE)
   if(NOT TARGET OpenEXR::OpenEXR)
     find_package(OpenEXR CONFIG REQUIRED)
   endif()
-  add_library(cycles_deep_exr STATIC exr_writer.cpp)
+  add_library(cycles_deep_exr STATIC exr_writer.cpp publication.cpp)
   target_link_libraries(cycles_deep_exr PUBLIC cycles_deep_reference OpenEXR::OpenEXR)
   if(BUILD_TESTING)
+    add_executable(cycles_deep_production_test production_test.cpp)
+    target_link_libraries(cycles_deep_production_test PRIVATE cycles_deep_exr cycles_deep_capture Threads::Threads)
+    add_test(NAME cycles_deep_production COMMAND cycles_deep_production_test ${CMAKE_CURRENT_BINARY_DIR}/production-fixtures)
     add_executable(cycles_deep_exr_test exr_writer_test.cpp)
     target_link_libraries(cycles_deep_exr_test PRIVATE cycles_deep_exr)
     if(WIN32)
       if(CMAKE_VERSION VERSION_LESS 3.21)
         message(FATAL_ERROR "Deep EXR Windows test DLL staging requires CMake 3.21+")
       endif()
-      add_custom_command(TARGET cycles_deep_exr_test POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-          $<TARGET_RUNTIME_DLLS:cycles_deep_exr_test> $<TARGET_FILE_DIR:cycles_deep_exr_test>
-        COMMAND_EXPAND_LISTS)
+      foreach(deep_test cycles_deep_exr_test cycles_deep_production_test)
+        add_custom_command(TARGET ${deep_test} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:${deep_test}> $<TARGET_FILE_DIR:${deep_test}>
+          COMMAND_EXPAND_LISTS)
+      endforeach()
     endif()
     add_test(NAME cycles_deep_exr
       COMMAND cycles_deep_exr_test ${CMAKE_CURRENT_BINARY_DIR}/fixtures)

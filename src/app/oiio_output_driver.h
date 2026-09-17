@@ -18,11 +18,16 @@ class OIIOOutputDriver : public OutputDriver {
   ~OIIOOutputDriver() override;
 
   void write_render_tile(const Tile &tile) override;
+  bool written() const
+  {
+    return written_;
+  }
 
  protected:
   string filepath_;
   string pass_;
   LogFunction log_;
+  bool written_ = false;
 };
 
 CCL_NAMESPACE_END

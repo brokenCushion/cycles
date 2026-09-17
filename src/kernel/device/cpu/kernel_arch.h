@@ -29,6 +29,10 @@ KERNEL_INTEGRATOR_INIT_FUNCTION(init_from_camera);
 KERNEL_INTEGRATOR_INIT_FUNCTION(init_from_bake);
 #ifdef WITH_CYCLES_DEEP_OPAQUE
 KERNEL_INTEGRATOR_SHADE_FUNCTION(intersect_closest);
+int KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGlobalsCPU *kg,
+                                            const IntegratorStateCPU *camera,
+                                            float *events,
+                                            int max_events);
 #endif
 KERNEL_INTEGRATOR_SHADE_FUNCTION(megakernel);
 

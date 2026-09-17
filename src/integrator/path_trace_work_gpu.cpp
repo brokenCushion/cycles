@@ -17,6 +17,11 @@
 
 #include "kernel/device/gpu/block_sizes.h"
 #include "kernel/types.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "deep/capture.h"
+#  include "scene/film.h"
+#  include "util/time.h"
+#endif
 
 CCL_NAMESPACE_BEGIN
 
@@ -96,6 +101,9 @@ PathTraceWorkGPU::PathTraceWorkGPU(Device *device,
       queued_paths_(device, "queued_paths", MEM_READ_WRITE),
       num_queued_paths_(device, "num_queued_paths", MEM_READ_WRITE),
       work_tiles_(device, "work_tiles", MEM_READ_WRITE),
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+      deep_records_(device, "deep records", MEM_READ_WRITE),
+#endif
       display_rgba_half_(device, "display buffer half", MEM_READ_WRITE),
       max_num_paths_(0),
       min_num_active_main_paths_(0),
@@ -366,6 +374,11 @@ void PathTraceWorkGPU::render_samples(RenderStatistics &statistics,
   enqueue_reset();
 
   int num_iterations = 0;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  deep_kernel_seconds_ = deep_transfer_seconds_ = deep_spill_seconds_ = 0;
+  deep_record_count_ = 0;
+  deep_skipped_count_ = 0;
+#endif
   uint64_t num_busy_accum = 0;
 
   /* TODO: set a hard limit in case of undetected kernel failures? */
@@ -409,6 +422,15 @@ void PathTraceWorkGPU::render_samples(RenderStatistics &statistics,
   else {
     statistics.occupancy = 0.0f;
   }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (film_->deep_capture)
+    LOG_INFO_IMPORTANT << "Deep CUDA capture: records=" << deep_record_count_
+                       << " skipped=" << deep_skipped_count_
+                       << " kernel_seconds=" << deep_kernel_seconds_
+                       << " transfer_seconds=" << deep_transfer_seconds_
+                       << " spill_seconds=" << deep_spill_seconds_
+                       << " buffer_bytes_each=" << 512 * sizeof(KernelDeepRecord);
+#endif
 }
 
 DeviceKernel PathTraceWorkGPU::get_most_queued_kernel() const
@@ -944,8 +966,83 @@ void PathTraceWorkGPU::enqueue_work_tiles(DeviceKernel kernel,
 
   queue_->enqueue(kernel, max_tile_work_size * num_work_tiles, args);
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (film_->deep_capture)
+    capture_deep_tiles(num_work_tiles);
+#endif
+
   max_active_main_path_index_ = path_index_offset + num_predicted_splits;
 }
+
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
+{
+  deep::OpaqueCapture *capture = film_->deep_capture;
+  constexpr int batch_size = 512;
+  if (deep_records_.size() == 0)
+    deep_records_.alloc(batch_size);
+  const device_ptr tiles = work_tiles_.device_pointer;
+  /* Allocate via the queue before retrieving the device pointer. */
+  queue_->zero_to_device(deep_records_);
+  if (!queue_->synchronize()) {
+    capture->fail();
+    return;
+  }
+  const device_ptr records = deep_records_.device_pointer;
+  const int max_events = capture->max_events();
+  const device_ptr render_buffer = buffers_->buffer.device_pointer;
+  for (int tile = 0; tile < num_tiles; ++tile) {
+    for (int offset = 0; offset < work_tiles_[tile].work_size; offset += batch_size) {
+      if (is_cancel_requested() || device_->have_error()) {
+        capture->fail();
+        return;
+      }
+      const int count = min(batch_size, work_tiles_[tile].work_size - offset);
+      const DeviceKernelArguments args(
+          &tiles, &tile, &offset, &count, &max_events, &render_buffer, &records);
+      const double kernel_start = time_dt();
+      if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, args)) {
+        capture->fail();
+        return;
+      }
+      if (!queue_->synchronize()) {
+        capture->fail();
+        return;
+      }
+      deep_kernel_seconds_ += time_dt() - kernel_start;
+      const double transfer_start = time_dt();
+      queue_->copy_from_device(deep_records_);
+      if (!queue_->synchronize()) {
+        capture->fail();
+        return;
+      }
+      deep_transfer_seconds_ += time_dt() - transfer_start;
+      const double spill_start = time_dt();
+      for (int i = 0; i < count; ++i) {
+        const KernelDeepRecord &record = deep_records_[i];
+        if (capture->adaptive()) {
+          capture->set_population(record.x, record.y, record.population);
+          if (record.count == -2) {
+            ++deep_skipped_count_;
+            continue;
+          }
+        }
+        if (record.count < 0) {
+          capture->fail();
+          device_->set_error("CUDA deep visibility chain incomplete or unsupported");
+          return;
+        }
+        if (max_events)
+          capture->record_events(record.x, record.y, record.sample, record.events, record.count);
+        else
+          capture->record(record.x, record.y, record.sample, record.count ? record.events[0] : 0);
+        ++deep_record_count_;
+      }
+      deep_spill_seconds_ += time_dt() - spill_start;
+    }
+  }
+}
+#endif
 
 int PathTraceWorkGPU::num_active_main_paths_paths()
 {

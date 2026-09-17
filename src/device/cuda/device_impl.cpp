@@ -231,6 +231,9 @@ string CUDADevice::compile_kernel_get_common_cflags(const uint kernel_features)
     cflags += " -D__KERNEL_FEATURES__=" + to_string(kernel_features);
   }
   const char *extra_cflags = getenv("CYCLES_CUDA_EXTRA_CFLAGS");
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  cflags += " -DWITH_CYCLES_DEEP_OPAQUE";
+#endif
   if (extra_cflags) {
     cflags += string(" ") + string(extra_cflags);
   }

@@ -258,7 +258,13 @@ set(SRC_KERNEL_TYPES_HEADERS
   types.h
 )
 
+set(SRC_KERNEL_DEEP_HEADERS
+  deep/types.h
+  deep/surface_cuda.h
+)
+
 set(SRC_KERNEL_HEADERS
+  ${SRC_KERNEL_DEEP_HEADERS}
   ${SRC_KERNEL_BAKE_HEADERS}
   ${SRC_KERNEL_BVH_HEADERS}
   ${SRC_KERNEL_CAMERA_HEADERS}
@@ -388,6 +394,7 @@ source_group("util" FILES ${SRC_KERNEL_UTIL_HEADERS})
 
 # -----------------------------------------------------------------------------
 # Install kernel source for runtime compilation.
+delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "${SRC_KERNEL_DEEP_HEADERS}" ${CYCLES_INSTALL_PATH}/source/kernel/deep)
 
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "${SRC_KERNEL_BAKE_HEADERS}" ${CYCLES_INSTALL_PATH}/source/kernel/bake)
 delayed_install(${CMAKE_CURRENT_SOURCE_DIR} "${SRC_KERNEL_BVH_HEADERS}" ${CYCLES_INSTALL_PATH}/source/kernel/bvh)

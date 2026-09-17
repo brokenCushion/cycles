@@ -235,6 +235,20 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
     }
     ++sample_work_tile.start_sample;
   }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (deep::OpaqueCapture *capture = film_->deep_capture; capture && capture->adaptive()) {
+    const auto &film = kernel_globals->data.film;
+    if (film.pass_sample_count == PASS_UNUSED || is_cancel_requested()) {
+      capture->fail();
+    }
+    else {
+      const size_t pixel = work_tile.offset + work_tile.x + work_tile.y * work_tile.stride;
+      const uint32_t count = __float_as_uint(
+          render_buffer[pixel * film.pass_stride + film.pass_sample_count]);
+      capture->set_population(work_tile.x, work_tile.y, count);
+    }
+  }
+#endif
 }
 
 void PathTraceWorkCPU::copy_to_display(PathTraceDisplay *display,

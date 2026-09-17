@@ -97,6 +97,34 @@ int main()
     OpaqueCapture overflow(1, 1, 1, 12, 1);
     overflow.record_events(0, 0, 0, stack, 2);
     check(!overflow.finalize());
+    for (const bool spill : {false, true}) {
+      OpaqueCapture adaptive(2, 1, 8, 4 * 1024 * 1024, 2, spill, true);
+      adaptive.record_events(0, 0, 0, stack, 2);
+      adaptive.record_events(0, 0, 1, nullptr, 0);
+      adaptive.set_population(0, 0, 2);
+      adaptive.record_events(1, 0, 0, nullptr, 0);
+      check(!adaptive.finalize());  // Missing independent film population.
+      adaptive.set_population(1, 0, 1);
+      check(adaptive.finalize());
+      p = adaptive.reconstruct_pixel(0, 0);
+      check(p.size() == 2 && p[0].alpha == .125);  // Divide by 2, not maximum 8.
+      check(adaptive.reconstruct_pixel(1, 0).empty());
+      adaptive.set_population(0, 0, 3);  // Film accepted an uncaptured sample.
+      check(!adaptive.finalize());
+      adaptive.record_events(0, 0, 2, stack, 2);
+      check(adaptive.finalize());  // A converged pixel may become active again.
+      adaptive.record_events(0, 0, 3, nullptr, 0);
+      check(!adaptive.finalize());  // Extra capture outside film population.
+      OpaqueCapture hole(1, 1, 8, 4 * 1024 * 1024, 0, spill, true);
+      hole.record(0, 0, 1, 2);
+      hole.set_population(0, 0, 1);
+      check(!hole.finalize());  // Equal counts do not hide a missing identity.
+      OpaqueCapture decreasing(1, 1, 8, 4 * 1024 * 1024, 0, spill, true);
+      decreasing.record(0, 0, 0, 2);
+      decreasing.set_population(0, 0, 2);
+      decreasing.set_population(0, 0, 1);
+      check(!decreasing.finalize());
+    }
     std::cout
         << "Capture coverage, lifecycle, concurrent writes, bounds and budget checks passed\n";
   }

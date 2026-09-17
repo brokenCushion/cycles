@@ -164,16 +164,15 @@ def run(exe, directory):
     report['repeat_records_identical']=True
     valid=scene(plane)
     bad = [
-        ('adaptive',valid.replace('use_adaptive_sampling="false"','use_adaptive_sampling="true"'),(), 'adaptive'),
         ('gaussian',valid.replace('filter_type="box"','filter_type="gaussian"'),(), 'box filter'),
-        ('dof',valid.replace('fov="0.9"','fov="0.9" aperturesize="0.1"'),(), 'pinhole'),
+        ('invalid_focus',valid.replace('fov="0.9"','fov="0.9" focaldistance="0"'),(), 'focal distance'),
         ('motion',valid.replace('seed="123"','seed="123" motion_blur="true"'),(), 'motion blur'),
         ('transparent',valid.replace('<emission name="e"','<transparent_bsdf name="e"').replace('from="e emission"','from="e bsdf"'),(), 'constant diffuse'),
         ('osl',valid,('--shadingsys','osl'), 'OSL'),
         ('budget',valid,('--width','1024','--height','1024','--deep-memory-mb','1'), 'budget'),
-        ('zero_samples',valid,('--samples','0'), 'fixed samples'),
+        ('zero_samples',valid,('--samples','0'), 'maximum samples'),
         ('tiling',valid,('--tile-size','16'), 'tiling'),
-        ('orthographic',valid.replace('camera_type="perspective"','camera_type="orthograph"'),(), 'pinhole'),
+        ('orthographic',valid.replace('camera_type="perspective"','camera_type="orthograph"'),(), 'perspective'),
         ('volume',valid.replace('to="output surface"/></shader>', 'to="output surface"/><connect from="e emission" to="output volume"/></shader>'),(), 'volume'),
         ('invalid_budget',valid,('--deep-memory-mb','0'), 'budget'),
         ('alias',valid,('--deep-output',str(directory/'reject_alias.exr')), 'distinct'),

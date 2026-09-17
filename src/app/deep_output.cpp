@@ -13,6 +13,7 @@
 #include "scene/shader.h"
 #include "scene/shader_nodes.h"
 #include "session/session.h"
+#include "util/math.h"
 
 #include <cmath>
 #include <fstream>
@@ -58,16 +59,19 @@ static void validate_shader(Shader *shader, const bool background, const bool tr
 
 void validate_deep_scene(Scene *scene, const SessionParams &params, const bool transparent)
 {
-  require_deep(params.device.type == DEVICE_CPU && params.background,
-               "requires CPU background rendering");
+  require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA) &&
+                   params.background,
+               "requires single CPU or CUDA background rendering");
+  require_deep(params.device.type == DEVICE_CPU ||
+                   scene->params.shadingsystem == SHADINGSYSTEM_SVM,
+               "CUDA deep supports native SVM only; GPU OSL is not qualified");
   require_deep(transparent || scene->params.shadingsystem == SHADINGSYSTEM_SVM,
                "OSL is not supported by the M3 material allowlist");
   require_deep(params.samples > 0 && params.samples <= 4096 && !params.use_sample_subset &&
                    params.pixel_size == 1 && params.time_limit == 0 && !params.use_auto_tile,
-               "requires 1..4096 fixed samples, full resolution, no time limit or tiling");
+               "requires 1..4096 maximum samples, full resolution, no time limit or tiling");
   const Integrator *integrator = scene->integrator;
-  require_deep(!integrator->get_use_adaptive_sampling() && !integrator->get_use_sample_subset(),
-               "adaptive sampling and sample subsets are unsupported");
+  require_deep(!integrator->get_use_sample_subset(), "sample subsets are unsupported");
   require_deep(
       !integrator->get_motion_blur() && !integrator->get_use_guiding() &&
           !integrator->get_use_denoise() && !integrator->get_use_custom_pixel_jitter_sample() &&
@@ -78,13 +82,19 @@ void validate_deep_scene(Scene *scene, const SessionParams &params, const bool t
                "requires box filter width 1");
   const Camera *camera = scene->camera;
   require_deep(camera->get_camera_type() == CAMERA_PERSPECTIVE &&
-                   camera->get_aperturesize() == 0 && camera->get_motion().empty() &&
+                   camera->get_motion().empty() &&
                    !camera->get_use_perspective_motion() &&
                    camera->get_stereo_eye() == Camera::STEREO_NONE &&
                    !camera->get_use_spherical_stereo() && camera->script_name.empty(),
-               "requires static mono perspective pinhole camera");
+               "requires static mono perspective camera");
+  require_deep(isfinite_safe(camera->get_aperturesize()) && camera->get_aperturesize() >= 0 &&
+                   isfinite_safe(camera->get_aperture_ratio()) && camera->get_aperture_ratio() > 0 &&
+                   isfinite_safe(camera->get_bladesrotation()) &&
+                   isfinite_safe(camera->get_focaldistance()) && camera->get_focaldistance() > 0,
+               "invalid aperture size, ratio, rotation or focal distance");
   require_deep(camera->get_nearclip() >= 0 && camera->get_farclip() > camera->get_nearclip() &&
-                   std::isfinite(camera->get_fov()) && camera->get_fov() > 0 &&
+                   isfinite_safe(camera->get_nearclip()) && isfinite_safe(camera->get_farclip()) &&
+                   isfinite_safe(camera->get_fov()) && camera->get_fov() > 0 &&
                    camera->get_fov() < M_PI_F,
                "invalid camera clipping or field of view");
   require_deep(camera->border.left == 0 && camera->border.bottom == 0 &&
@@ -166,7 +176,7 @@ void write_deep_capture(const deep::OpaqueCapture &capture,
     for (int y = 0; y < capture.height(); ++y) {
       check_cancel();
       for (int x = 0; x < capture.width(); ++x)
-        for (int sample = 0; sample < capture.samples(); ++sample) {
+        for (int sample = 0; sample < capture.population(x, capture.height() - 1 - y); ++sample) {
           const auto events = capture.events(x, capture.height() - 1 - y, sample);
           if (events.empty())
             records << x << ',' << y << ',' << sample << ",0,0,-1\n";

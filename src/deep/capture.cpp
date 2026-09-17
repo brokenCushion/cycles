@@ -11,7 +11,8 @@ OpaqueCapture::OpaqueCapture(const int width,
                              const int samples,
                              const size_t max_bytes,
                              const int max_events,
-                             const bool spill)
+                             const bool spill,
+                             const bool adaptive)
     : width_(width), height_(height), samples_(samples), max_events_(max_events)
 {
   if (max_events < 0 || max_events > 64)
@@ -30,14 +31,19 @@ OpaqueCapture::OpaqueCapture(const int width,
   stride_ = stride;
   if (count > size_t(INT64_MAX) / (sizeof(float) * stride))
     throw std::invalid_argument("Deep spill file offsets overflow");
+  if (adaptive && count / samples > max_bytes / sizeof(uint32_t))
+    throw std::invalid_argument("Deep adaptive populations exceed memory budget");
+  const size_t population_bytes = adaptive ? count / samples * sizeof(uint32_t) : 0;
   if (spill) {
     /* Conservative working-set reservation: one row of reconstructed/FLOAT
      * samples, one pixel ledger and sorting workspace, and I/O buffers.
      * The renderer's beauty/shader memory is outside this deep-only budget. */
     const uint64_t events = uint64_t(samples) * std::max(1, max_events);
     const uint64_t required = 1024 * 1024 + uint64_t(width) * (128 + events * 128) + events * 512;
-    if (required > max_bytes)
+    if (required > max_bytes - population_bytes)
       throw std::invalid_argument("Deep scanline working set exceeds --deep-memory-mb budget");
+    if (adaptive)
+      populations_.assign(count / samples, 0);
     spill_ = std::tmpfile();
     if (!spill_)
       throw std::runtime_error("Cannot create temporary deep capture spill file");
@@ -61,8 +67,10 @@ OpaqueCapture::OpaqueCapture(const int width,
     }
     return;
   }
-  if (count > max_bytes / (sizeof(float) * stride))
+  if (count > (max_bytes - population_bytes) / (sizeof(float) * stride))
     throw std::invalid_argument("Deep raw capture exceeds --deep-memory-mb budget");
+  if (adaptive)
+    populations_.assign(count / samples, 0);
   values_.assign(count, -1.0f);
   events_.resize(count * 2 * size_t(max_events));
 }
@@ -143,8 +151,10 @@ void OpaqueCapture::record(const int x, const int y, const uint32_t sample, cons
   }
   if (values_[index] != -1.0f)
     set_error(DUPLICATE);
-  else
+  else {
     values_[index] = depth;
+    ++completed_;
+  }
 }
 void OpaqueCapture::record_events(
     const int x, const int y, const uint32_t sample, const float *events, const int count)
@@ -183,6 +193,27 @@ void OpaqueCapture::record_events(
   for (int i = 0; i < 2 * count; ++i)
     events_[index * 2 * max_events_ + i] = events[i];
   values_[index] = float(count);
+  ++completed_;
+}
+void OpaqueCapture::set_population(const int x, const int y, const uint32_t count)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!adaptive() || x < 0 || y < 0 || x >= width_ || y >= height_ ||
+      count == 0 || count > uint32_t(samples_)) {
+    set_error(OUT_OF_RANGE);
+    return;
+  }
+  uint32_t &previous = populations_[size_t(y) * width_ + x];
+  if (count < previous)
+    set_error(OUT_OF_RANGE);
+  else
+    previous = count;
+}
+int OpaqueCapture::population(const int x, const int y) const
+{
+  if (x < 0 || y < 0 || x >= width_ || y >= height_)
+    throw std::out_of_range("Deep population outside bounds");
+  return adaptive() ? int(populations_[size_t(y) * width_ + x]) : samples_;
 }
 std::vector<SurfaceEvent> OpaqueCapture::events(const int x, const int y, const int sample) const
 {
@@ -211,6 +242,32 @@ bool OpaqueCapture::finalize() const
   std::lock_guard<std::mutex> lock(mutex_);
   if (error_.load() != NONE)
     return false;
+  if (adaptive()) {
+    size_t expected = 0;
+    std::array<float, 129> record{};
+    try {
+      for (size_t pixel = 0; pixel < populations_.size(); ++pixel) {
+        const uint32_t n = populations_[pixel];
+        if (!n)
+          return false;
+        expected += n;
+        for (uint32_t sample = 0; sample < n; ++sample) {
+          const size_t index = pixel * samples_ + sample;
+          if (spill_) {
+            read_record(index, record.data());
+            if (record[0] == 0)
+              return false;
+          }
+          else if (values_[index] == -1.0f)
+            return false;
+        }
+      }
+    }
+    catch (const std::exception &) {
+      return false;
+    }
+    return expected == completed_ && (!spill_ || std::fflush(spill_) == 0);
+  }
   if (spill_)
     return completed_ == count_ && std::fflush(spill_) == 0;
   for (const float value : values_)
@@ -257,8 +314,9 @@ std::vector<SurfaceSample> OpaqueCapture::reconstruct_pixel(const int x, const i
   if (error_.load() != NONE)
     throw std::runtime_error(error_message());
   PixelLedger ledger{x, y, {}};
-  ledger.samples.reserve(samples_);
-  for (int sample = 0; sample < samples_; ++sample) {
+  const int count = population(x, y);
+  ledger.samples.reserve(count);
+  for (int sample = 0; sample < count; ++sample) {
     CameraSample camera_sample{uint64_t(sample), 1.0, true, events(x, y, sample)};
     ledger.samples.push_back(std::move(camera_sample));
   }

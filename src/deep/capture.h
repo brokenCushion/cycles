@@ -10,7 +10,8 @@
 #include <vector>
 
 namespace ccl::deep {
-/* Unit-weight fixed-sample CPU capture. The renderer selects disk spill;
+/* Unit-weight camera capture with fixed or independently counted populations.
+ * The renderer selects disk spill;
  * in-memory mode is retained for reference tests. Spill uses checked fixed
  * offsets for (pixel, sample) identities and explicit completion markers.
  * Its budget preflights a conservative scanline/pixel export working set.
@@ -22,12 +23,17 @@ class OpaqueCapture {
                 int samples,
                 size_t max_bytes,
                 int max_events = 0,
-                bool spill = false);
+                bool spill = false,
+                bool adaptive = false);
   ~OpaqueCapture();
   void record(int x, int y, uint32_t sample, float depth);
   /* Publish only a complete traversal. Interleaved positive depth and local alpha. */
   void record_events(int x, int y, uint32_t sample, const float *events, int count);
   std::vector<SurfaceEvent> events(int x, int y, int sample) const;
+  /* Independent film counter, updated after each pixel batch. Read after workers join. */
+  void set_population(int x, int y, uint32_t count);
+  int population(int x, int y) const;
+  bool adaptive() const { return !populations_.empty(); }
   int max_events() const
   {
     return max_events_;
@@ -53,6 +59,7 @@ class OpaqueCapture {
  private:
   int width_, height_, samples_;
   std::vector<float> values_;
+  std::vector<uint32_t> populations_;
   int max_events_;
   std::vector<float> events_;
   mutable std::mutex mutex_;

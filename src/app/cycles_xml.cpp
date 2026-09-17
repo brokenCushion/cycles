@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <stdexcept>
 
 #include "graph/node_xml.h"
 
@@ -179,6 +180,17 @@ static bool xml_equal_string(const xml_node node, const char *name, const char *
 static void xml_read_camera(XMLReadState &state, const xml_node node)
 {
   Camera *cam = state.scene->camera;
+
+  /* Check before node assignment/update: fast-math comparisons in property
+   * setters can discard NaNs as unchanged values, hiding invalid input. */
+  for (const SocketType &socket : cam->type->inputs) {
+    if (socket.type == SocketType::FLOAT) {
+      const xml_attribute attr = node.attribute(socket.name.c_str());
+      if (attr && !isfinite_safe(float(atof(attr.value())))) {
+        throw std::invalid_argument("Camera attribute must be finite: " + socket.name.string());
+      }
+    }
+  }
 
   int width = -1;
   int height = -1;

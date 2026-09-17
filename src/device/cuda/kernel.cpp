@@ -16,7 +16,11 @@ void CUDADeviceKernels::load(CUDADevice *device)
   for (int i = 0; i < (int)DEVICE_KERNEL_NUM; i++) {
     CUDADeviceKernel &kernel = kernels_[i];
 
-    if (!device_kernel_has_gpu_function((DeviceKernel)i)) {
+    bool load = device_kernel_has_gpu_function((DeviceKernel)i);
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    load |= i == DEVICE_KERNEL_DEEP_SURFACE;
+#endif
+    if (!load) {
       continue;
     }
 

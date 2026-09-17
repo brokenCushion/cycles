@@ -14,6 +14,9 @@
 #include "integrator/work_tile_scheduler.h"
 
 #include "util/vector.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "kernel/deep/types.h"
+#endif
 
 CCL_NAMESPACE_BEGIN
 
@@ -149,6 +152,14 @@ class PathTraceWorkGPU : public PathTraceWork {
 
   /* Temporary buffer for passing work tiles to kernel. */
   device_vector<KernelWorkTile> work_tiles_;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  /* 512 records = 266 KiB each on host/device; inside the deep I/O allowance. */
+  device_vector<KernelDeepRecord> deep_records_;
+  void capture_deep_tiles(int num_tiles);
+  double deep_kernel_seconds_ = 0, deep_transfer_seconds_ = 0, deep_spill_seconds_ = 0;
+  uint64_t deep_record_count_ = 0;
+  uint64_t deep_skipped_count_ = 0;
+#endif
 
   /* Temporary buffer used by the copy_to_display() whenever graphics interoperability is not
    * available. Is allocated on-demand. */

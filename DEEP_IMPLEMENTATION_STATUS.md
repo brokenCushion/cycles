@@ -3,7 +3,7 @@
 ## Baseline and scope
 
 - Source baseline: `a456b761034dda42c32eef9f4aae0fa5a5c9f604`.
-- Branch: `codex/deep-exr`; M0–M3 committed as `703331004`; this CPU checkpoint includes M4/M5 and Gaffer review tools.
+- Branch: `codex/deep-exr`; M0–M3 committed as `703331004`; M4/M5 and Gaffer review tools committed as `a508f1758`. M6 is uncommitted.
 - Platform/build evidence: [BASELINE_BUILD.md](BASELINE_BUILD.md).
 - Target agreed for this workspace: the official standalone Cycles mirror.
   This differs from the proposal's full Blender checkout. Blender UI/session
@@ -21,8 +21,20 @@
 - M5 CPU storage/reduction/publication: implemented and validated with disk spill,
   bounded scanline export, 0.001 reduction and atomic EXR publication.
   See [M5 validation and limits](src/deep/PRODUCTION_VALIDATION.md).
-- Next milestone: M6, one GPU backend. GPU support,
-  motion/DOF/adaptive sampling and volumes remain later milestones.
+- M6 CUDA backend: rebuilt and validated on RTX 3080. Eleven CPU/CUDA fixtures,
+  Gaffer raw-ledger curve checks and five CTest groups pass. A 640x480 three-mesh
+  review has matching depth cuts and live DeepToPointCloud nodes. Performance
+  qualification remains in progress. See [CUDA validation](src/deep/CUDA_VALIDATION.md).
+- M7a CPU/CUDA adaptive sampling: implemented with independent film population
+  accounting, accepted-miss normalization, explicit GPU skipped lanes, CPU
+  native/OSL and CUDA native validation. Beauty remains unchanged in the tested
+  fixtures. See [adaptive validation](src/deep/ADAPTIVE_VALIDATION.md).
+- M7b static perspective depth of field: CPU/CUDA native and CPU OSL checks
+  pass, including adaptive DOF, focus invariance, defocus, and polygonal/anamorphic
+  apertures. The 640x480 primitives review passes depth cuts on both backends.
+  See [DOF validation](src/deep/DOF_VALIDATION.md).
+- Remaining M7 sub-gate: motion blur.
+  M6 isolated performance qualification remains open; volumes remain M8.
 
 ## Inspected source map
 

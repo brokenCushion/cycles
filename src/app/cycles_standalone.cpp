@@ -189,7 +189,8 @@ static void session_init()
         options.session_params.samples,
         size_t(options.deep_memory_mb) * 1024 * 1024,
         options.deep_transparent ? options.deep_max_events : 0,
-        true);
+        true,
+        options.scene->integrator->get_use_adaptive_sampling());
     options.scene->film->deep_capture = options.deep_capture.get();
   }
 #endif

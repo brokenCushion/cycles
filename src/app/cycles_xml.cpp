@@ -177,8 +177,29 @@ static bool xml_equal_string(const xml_node node, const char *name, const char *
 
 /* Camera */
 
+static void xml_validate_motion(const xml_node node)
+{
+  const xml_attribute attr = node.attribute("motion");
+  if (!attr) {
+    return;
+  }
+  vector<string> tokens;
+  string_split(tokens, attr.value());
+  if (tokens.size() < 24 || tokens.size() % 12 != 0) {
+    throw std::invalid_argument("Motion requires at least two complete 3x4 transforms");
+  }
+  for (const string &token : tokens) {
+    char *end = nullptr;
+    const float value = strtof(token.c_str(), &end);
+    if (end == token.c_str() || *end != '\0' || !isfinite_safe(value)) {
+      throw std::invalid_argument("Motion transforms must contain finite numbers");
+    }
+  }
+}
+
 static void xml_read_camera(XMLReadState &state, const xml_node node)
 {
+  xml_validate_motion(node);
   Camera *cam = state.scene->camera;
 
   /* Check before node assignment/update: fast-math comparisons in property
@@ -779,6 +800,7 @@ static void xml_read_state(XMLReadState &state, const xml_node node)
 
 static void xml_read_object(XMLReadState &state, const xml_node node)
 {
+  xml_validate_motion(node);
   Scene *scene = state.scene;
 
   /* create mesh */

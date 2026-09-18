@@ -73,20 +73,46 @@ void validate_deep_scene(Scene *scene, const SessionParams &params, const bool t
   const Integrator *integrator = scene->integrator;
   require_deep(!integrator->get_use_sample_subset(), "sample subsets are unsupported");
   require_deep(
-      !integrator->get_motion_blur() && !integrator->get_use_guiding() &&
+      !integrator->get_use_guiding() &&
           !integrator->get_use_denoise() && !integrator->get_use_custom_pixel_jitter_sample() &&
           !integrator->get_use_pixel_jitter() && integrator->get_ao_bounces() == 0,
-      "motion blur, guiding, denoising, pixel jitter overrides and AO bounces are unsupported");
+      "guiding, denoising, pixel jitter overrides and AO bounces are unsupported");
   require_deep(scene->film->get_filter_type() == FILTER_BOX &&
                    scene->film->get_filter_width() == 1,
                "requires box filter width 1");
   const Camera *camera = scene->camera;
   require_deep(camera->get_camera_type() == CAMERA_PERSPECTIVE &&
-                   camera->get_motion().empty() &&
                    !camera->get_use_perspective_motion() &&
                    camera->get_stereo_eye() == Camera::STEREO_NONE &&
                    !camera->get_use_spherical_stereo() && camera->script_name.empty(),
-               "requires static mono perspective camera");
+               "requires mono perspective camera without animated field of view");
+  require_deep(camera->get_rolling_shutter_type() == Camera::ROLLING_SHUTTER_NONE,
+               "rolling shutter is unsupported");
+  if (integrator->get_motion_blur()) {
+    require_deep(isfinite_safe(camera->get_shuttertime()) && camera->get_shuttertime() > 0,
+                 "motion blur requires a positive finite shutter duration");
+    for (const float weight : camera->get_shutter_curve())
+      require_deep(isfinite_safe(weight) && weight == 1.0f,
+                   "deep motion currently requires a uniform shutter curve");
+  }
+  const auto validate_motion = [&](const array<Transform> &motion) {
+    if (motion.empty())
+      return;
+    require_deep(integrator->get_motion_blur() && motion.size() >= 2,
+                 "motion transforms require enabled motion blur and at least two steps");
+    for (const Transform &tfm : motion) {
+      const float3 x = make_float3(tfm.x.x, tfm.x.y, tfm.x.z);
+      const float3 y = make_float3(tfm.y.x, tfm.y.y, tfm.y.z);
+      const float3 z = make_float3(tfm.z.x, tfm.z.y, tfm.z.z);
+      require_deep(isfinite_safe(tfm.x) && isfinite_safe(tfm.y) && isfinite_safe(tfm.z) &&
+                       fabsf(dot(x, x) - 1) < 1e-4f && fabsf(dot(y, y) - 1) < 1e-4f &&
+                       fabsf(dot(z, z) - 1) < 1e-4f && fabsf(dot(x, y)) < 1e-4f &&
+                       fabsf(dot(x, z)) < 1e-4f && fabsf(dot(y, z)) < 1e-4f &&
+                       dot(x, cross(y, z)) > 0,
+                   "deep motion requires finite rigid transforms without scale or reflection");
+    }
+  };
+  validate_motion(camera->get_motion());
   require_deep(isfinite_safe(camera->get_aperturesize()) && camera->get_aperturesize() >= 0 &&
                    isfinite_safe(camera->get_aperture_ratio()) && camera->get_aperture_ratio() > 0 &&
                    isfinite_safe(camera->get_bladesrotation()) &&
@@ -119,10 +145,11 @@ void validate_deep_scene(Scene *scene, const SessionParams &params, const bool t
       validate_shader(static_cast<Shader *>(shader), false, transparent);
   }
   for (Object *object : scene->objects) {
-    require_deep(object->get_motion().empty() && !object->get_use_holdout() &&
+    validate_motion(object->get_motion());
+    require_deep(!object->get_use_holdout() &&
                      !object->get_is_shadow_catcher() && !object->get_is_caustics_caster() &&
                      !object->get_is_caustics_receiver(),
-                 "object motion, holdout, shadow catcher and caustics are unsupported");
+                 "holdout, shadow catcher and caustics are unsupported");
   }
 }
 

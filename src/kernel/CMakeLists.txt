@@ -259,6 +259,8 @@ set(SRC_KERNEL_TYPES_HEADERS
 )
 
 set(SRC_KERNEL_DEEP_HEADERS
+  deep/camera_depth.h
+  deep/surface_boundary.h
   deep/types.h
   deep/surface_cuda.h
 )

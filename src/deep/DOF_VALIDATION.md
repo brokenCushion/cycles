@@ -10,7 +10,8 @@ No separate lens RNG, central-ray substitute or beauty stopping override is used
 The standalone allowlist now accepts finite nonnegative aperture size, positive
 finite focal distance and aperture ratio, and finite blade rotation. Static
 mono perspective, box filter width 1 and the surface/material restrictions remain.
-Camera/object motion and time-varying perspective remain rejected.
+This gate tested static cameras/objects. Rigid motion is subsequently qualified
+by [M7c](MOTION_VALIDATION.md); time-varying perspective remains rejected.
 
 Camera XML scalar floats are checked before property assignment and camera
 update. This rejects NaN/Infinity even when fast-math property comparisons would
@@ -71,5 +72,5 @@ coverage correlations. No exact separate-layer bokeh recomposition is claimed.
 build-m6/run-cuda.cmd build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd env python src/deep/validate_dof_gaffer.py install-m6/cycles.exe build-m6/m7-dof
 ```
 
-Motion blur is the remaining M7 sub-gate. M6's separate performance qualification
-remains open; successful DOF tests do not close those measurements.
+Rigid motion is covered by [M7c](MOTION_VALIDATION.md). M6's separate performance
+qualification remains open; successful DOF tests do not close those measurements.

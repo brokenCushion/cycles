@@ -166,7 +166,7 @@ def run(exe, directory):
     bad = [
         ('gaussian',valid.replace('filter_type="box"','filter_type="gaussian"'),(), 'box filter'),
         ('invalid_focus',valid.replace('fov="0.9"','fov="0.9" focaldistance="0"'),(), 'focal distance'),
-        ('motion',valid.replace('seed="123"','seed="123" motion_blur="true"'),(), 'motion blur'),
+        ('rolling',valid.replace('fov="0.9"','fov="0.9" rolling_shutter_type="top"'),(), 'rolling shutter'),
         ('transparent',valid.replace('<emission name="e"','<transparent_bsdf name="e"').replace('from="e emission"','from="e bsdf"'),(), 'constant diffuse'),
         ('osl',valid,('--shadingsys','osl'), 'OSL'),
         ('budget',valid,('--width','1024','--height','1024','--deep-memory-mb','1'), 'budget'),

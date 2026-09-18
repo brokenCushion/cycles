@@ -3,7 +3,7 @@
 ## Baseline and scope
 
 - Source baseline: `a456b761034dda42c32eef9f4aae0fa5a5c9f604`.
-- Branch: `codex/deep-exr`; M0–M3 committed as `703331004`; M4/M5 and Gaffer review tools committed as `a508f1758`. M6 is uncommitted.
+- Branch: `codex/deep-exr`; M0–M3 committed as `703331004`; M4/M5 and Gaffer review tools committed as `a508f1758`; CUDA, adaptive sampling and DOF committed as `2786fbe22`. M7c is uncommitted.
 - Platform/build evidence: [BASELINE_BUILD.md](BASELINE_BUILD.md).
 - Target agreed for this workspace: the official standalone Cycles mirror.
   This differs from the proposal's full Blender checkout. Blender UI/session
@@ -33,7 +33,16 @@
   pass, including adaptive DOF, focus invariance, defocus, and polygonal/anamorphic
   apertures. The 640x480 primitives review passes depth cuts on both backends.
   See [DOF validation](src/deep/DOF_VALIDATION.md).
-- Remaining M7 sub-gate: motion blur.
+- M7c rigid object/camera motion: CPU native/OSL and CUDA native capture tests pass,
+  including opaque capture, adaptive sampling and DOF. Depth uses the camera at
+  each accepted ray's shutter time. See [motion validation](src/deep/MOTION_VALIDATION.md).
+  Shared-edge duplicate crossings are corrected with topology and orientation
+  checks. Both 640x480 outputs pass independent raw-ledger depth cuts below
+  1e-6. One cube-edge CPU/CUDA difference also occurs with deep disabled and is
+  documented as a native backend precision limitation; strict backend parity
+  remains false. The limited rigid-motion capture/reconstruction scope is qualified.
+  Deformation, motion scale, rolling shutter and animated FOV remain outside
+  this qualified M7 scope.
   M6 isolated performance qualification remains open; volumes remain M8.
 
 ## Inspected source map

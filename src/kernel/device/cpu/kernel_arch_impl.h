@@ -32,6 +32,8 @@
 #    include "kernel/film/volume_guiding_denoise.h"
 
 #    include "kernel/bake/bake.h"
+#    include "kernel/deep/camera_depth.h"
+#    include "kernel/deep/surface_boundary.h"
 
 #else
 #  define STUB_ASSERT(arch, name) \
@@ -106,6 +108,8 @@ int KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGlobalsCPU *kg,
   ray.self.light_object = OBJECT_NONE;
   ray.self.light_prim = PRIM_NONE;
   int count = 0;
+  Intersection previous;
+  bool previous_backfacing = false;
   for (;;) {
     Intersection isect;
     isect.object = OBJECT_NONE;
@@ -113,12 +117,23 @@ int KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGlobalsCPU *kg,
     if (!scene_intersect(kg, &ray, PATH_RAY_VISIBILITY_CAMERA, &isect))
       return count;
     /* Test for a hit beyond the limit, so a complete chain exactly at capacity succeeds. */
-    if (count == max_events || isect.type != PRIMITIVE_TRIANGLE)
+    if (isect.type != PRIMITIVE_TRIANGLE)
       return -1;
     integrator_state_write_isect(state, &isect);
     integrator_state_write_ray(state, &ray);
     ShaderData sd;
     shader_setup_from_ray(kg, &sd, &ray, &isect);
+    const bool backfacing = (sd.runtime_flag & SR_BACKFACING) != 0;
+    if (count && deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing)) {
+      ray.tmin = intersection_t_offset(isect.t);
+      ray.self.object = isect.object;
+      ray.self.prim = isect.prim;
+      continue;
+    }
+    if (count == max_events)
+      return -1;
+    previous = isect;
+    previous_backfacing = backfacing;
     surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE & ~KERNEL_FEATURE_NODE_RAYTRACE>(
         kg, state, &sd, nullptr, state->path.visibility, state->path.flag);
     if (sd.runtime_flag & SR_CACHE_MISS)
@@ -129,7 +144,8 @@ int KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGlobalsCPU *kg,
         transparency.x < 0 || transparency.x > 1 || transparency.y != transparency.x ||
         transparency.z != transparency.x)
       return -1;
-    const float depth = transform_point(&kg->data.cam.worldtocamera, ray.P + ray.D * isect.t).z;
+    const float depth = deep_camera_depth(
+        kg->data.cam, kg->camera_motion.data, ray.time, ray.P + ray.D * isect.t);
     if (!isfinite(depth) || depth <= 0)
       return -1;
     events[2 * count] = depth;

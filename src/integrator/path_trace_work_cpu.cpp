@@ -14,6 +14,7 @@
 #include "kernel/integrator/path_state.h"
 #ifdef WITH_CYCLES_DEEP_OPAQUE
 #  include "deep/capture.h"
+#  include "kernel/deep/camera_depth.h"
 #  include "util/transform.h"
 #endif
 
@@ -187,7 +188,9 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
         }
         else if (state->isect.type == PRIMITIVE_TRIANGLE) {
           const float3 p = float3(state->ray.P) + float3(state->ray.D) * state->isect.t;
-          const float depth = transform_point(&kernel_globals->data.cam.worldtocamera, p).z;
+          const float depth = deep_camera_depth(kernel_globals->data.cam,
+                                                kernel_globals->camera_motion.data,
+                                                state->ray.time, p);
           if (depth > 0.0f)
             capture->record(work_tile.x, work_tile.y, state->path.sample, depth);
           else

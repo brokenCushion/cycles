@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Render the existing three-mesh fixture on CPU/CUDA and save a Gaffer review.
 
-Run in Gaffer Python: EXE SCENE_XML OUTPUT_DIR [REVIEW_FILENAME], with CUDA compiler environment.
+Run in Gaffer Python: EXE SCENE_XML OUTPUT_DIR [REVIEW_FILENAME] [--existing-renders],
+with CUDA compiler environment. The explicit final flag rebuilds a review from
+existing CPU/CUDA EXRs without rendering or reporting render timings.
 """
 import json
 import math
@@ -17,6 +19,7 @@ import imath
 exe, source, out = (Path(p).resolve() for p in sys.argv[1:4])
 out.mkdir(parents=True, exist_ok=True)
 review_filename = sys.argv[4] if len(sys.argv) > 4 else 'm6_review.gfr'
+existing_renders = len(sys.argv) > 5 and sys.argv[5] == '--existing-renders'
 script = Gaffer.ScriptNode()
 report = {'resolution': [640, 480], 'samples': 16, 'renders': {}}
 
@@ -34,13 +37,15 @@ for index, device in enumerate(('CPU', 'CUDA')):
         '--width', '640', '--height', '480', '--output', str(beauty),
         '--deep-output', str(deep), '--deep-transparent', '--deep-max-events', '8',
         '--deep-memory-mb', '32', str(source)]
-    start = time.monotonic()
-    p = subprocess.run(command, capture_output=True, text=True, timeout=1800)
-    (out / (device + '.log')).write_text(p.stdout + p.stderr)
-    if p.returncode or 'ERROR:' in p.stderr:
-        raise RuntimeError(p.stderr[-4000:])
-    report['renders'][device] = {'seconds': time.monotonic() - start,
-        'deep_bytes': deep.stat().st_size}
+    timing = {}
+    if not existing_renders:
+        start = time.monotonic()
+        p = subprocess.run(command, capture_output=True, text=True, timeout=1800)
+        (out / (device + '.log')).write_text(p.stdout + p.stderr)
+        if p.returncode or 'ERROR:' in p.stderr:
+            raise RuntimeError(p.stderr[-4000:])
+        timing['seconds'] = time.monotonic() - start
+    report['renders'][device] = dict(timing, deep_bytes=deep.stat().st_size)
     reader = add(device + '_Deep', GafferImage.ImageReader(), index * 40, 30)
     reader['fileName'].setValue(deep.as_posix())
     points = add(device + '_DeepToPointCloud', CyclesDeep.DeepToPointCloud(), index * 40, 10)
@@ -48,7 +53,7 @@ for index, device in enumerate(('CPU', 'CUDA')):
     points['verticalFieldOfView'].setValue(math.degrees(.9))
     points['maxPoints'].setValue(1000000)
     Gaffer.Metadata.registerValue(points, 'description',
-        'Pixel-centre projection of deep axial depth. With depth of field this displays the depth distribution, not the original lens-ray hit positions.')
+        'Pixel-centre projection of deep axial depth. With depth of field or motion blur this displays the camera-relative depth distribution, not original lens-ray hit positions or world-space trajectories.')
     flat = add(device + '_Flat', GafferImage.DeepToFlat(), index * 40, -10)
     flat['in'].setInput(reader['out'])
     cut = add(device + '_DepthCut', GafferImage.DeepSlice(), index * 40, -30)
@@ -85,6 +90,7 @@ for depth in (3., 4., 5.2, 6.5, 8.8, 10., 12., 14.):
     print('holdout', depth, report['holdouts'][str(depth)], flush=True)
 for device in ('CPU', 'CUDA'):
     script[device + '_DepthCut']['farClip']['value'].setValue(5.2)
+report['acceptance_passed'] = all(v['pixels_over_1e-6'] == 0 for v in report['holdouts'].values())
 script['fileName'].setValue((out / review_filename).as_posix())
 script.save()
 (out / 'report.json').write_text(json.dumps(report, indent=2))
@@ -93,3 +99,5 @@ loaded['fileName'].setValue(script['fileName'].getValue())
 loaded.load()
 assert loaded['CUDA_DeepToPointCloud']['out'].object('/deepPoints').numPoints > 0
 print('Saved and reloaded', script['fileName'].getValue(), flush=True)
+if not report['acceptance_passed']:
+    raise RuntimeError('CPU/CUDA depth cuts exceed 1e-6; review saved, acceptance failed. See report.json.')

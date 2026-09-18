@@ -49,7 +49,9 @@ It assumes positive axial depth, static pinhole perspective or orthographic
 projection; ray-distance depth, lens distortion and motion-time reconstruction
 are not supported. DOF images can be displayed as a central-camera projection
 of their deep depth distribution, but the original lens-ray hit positions cannot
-be recovered from Z/ZBack/A. A volume interval produces a boundary point, not a filled
+be recovered from Z/ZBack/A. Motion-blurred images likewise show a shutter-integrated
+camera-relative distribution, not original time-tagged world-space trajectories.
+A volume interval produces a boundary point, not a filled
 volume. No hidden geometry is invented. Color/alpha are point attributes; the
 viewport displays solid colored dots rather than reproducing deep compositing.
 

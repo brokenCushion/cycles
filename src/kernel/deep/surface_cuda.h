@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
 #include "kernel/deep/types.h"
+#include "kernel/deep/camera_depth.h"
+#include "kernel/deep/surface_boundary.h"
 
 /* Called only immediately after camera initialization, before beauty work.
  * The allowlist excludes AOVs, ray tracing and other side-effecting shaders. */
@@ -20,15 +22,18 @@ ccl_device int deep_surface_cuda(KernelGlobals kg,
   ray.self.light_object = OBJECT_NONE;
   ray.self.light_prim = PRIM_NONE;
   int count = 0;
+  Intersection previous;
+  bool previous_backfacing = false;
   for (;;) {
     Intersection isect;
     isect.object = OBJECT_NONE;
     isect.prim = PRIM_NONE;
     if (!scene_intersect(kg, &ray, PATH_RAY_VISIBILITY_CAMERA, &isect))
       return count;
-    if (isect.type != PRIMITIVE_TRIANGLE || (max_events && count == max_events))
+    if (isect.type != PRIMITIVE_TRIANGLE)
       return -1;
-    const float depth = transform_point(&kernel_data.cam.worldtocamera, ray.P + ray.D * isect.t).z;
+    const float depth = deep_camera_depth(
+        kernel_data.cam, kernel_data_array(camera_motion), ray.time, ray.P + ray.D * isect.t);
     if (!isfinite(depth) || depth <= 0)
       return -1;
     if (!max_events) {
@@ -38,6 +43,17 @@ ccl_device int deep_surface_cuda(KernelGlobals kg,
     }
     ShaderData sd;
     shader_setup_from_ray(kg, &sd, &ray, &isect);
+    const bool backfacing = (sd.runtime_flag & SR_BACKFACING) != 0;
+    if (count && deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing)) {
+      ray.tmin = intersection_t_offset(isect.t);
+      ray.self.object = isect.object;
+      ray.self.prim = isect.prim;
+      continue;
+    }
+    if (count == max_events)
+      return -1;
+    previous = isect;
+    previous_backfacing = backfacing;
     surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE & ~KERNEL_FEATURE_NODE_RAYTRACE>(
         kg, state, &sd, nullptr,
         INTEGRATOR_STATE(state, path, visibility), INTEGRATOR_STATE(state, path, flag));

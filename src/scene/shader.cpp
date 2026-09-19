@@ -706,6 +706,7 @@ void ShaderManager::device_update_common(Device * /*device*/,
     kshader->constant_emission[1] = shader->emission_estimate.y;
     kshader->constant_emission[2] = shader->emission_estimate.z;
     kshader->cryptomatte_id = util_hash_to_float(cryptomatte_id);
+    kshader->deep_density_scale = shader->deep_density_scale;
     kshader++;
 
     has_transparent_shadow |= (flag & SD_HAS_TRANSPARENT_SHADOW) != 0;

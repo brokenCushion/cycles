@@ -2,6 +2,14 @@
 
 ## Current result
 
+**Native VDB continuation:** the supplied `firePlume_0000.vdb` now produces native
+scalar-absorption deep output on CPU and CUDA at 256x256, one sample. Results are
+in `builds/validation/native-vdb/final-cpu/` and `final-cuda/`. Each beauty is
+pixel-identical to its device's deep-disabled reference. Both Gaffer review
+graphs pass reader, depth-cut and million-point reload checks. Live presentation
+of these new results still needs working desktop window access. This is density
+visibility, not emission/scattering deep RGB. See [qualification](src/deep/NATIVE_VDB_PLAN.md).
+
 **Performance follow-up:** compact spill storage repeats the unchanged full
 scene in 247.633 seconds versus 1862.293 seconds for the reference (7.52x in
 this single-run comparison). The entire deep EXR is byte-identical and every

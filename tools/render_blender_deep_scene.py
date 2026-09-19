@@ -20,6 +20,8 @@ parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--samples', type=int, default=4)
 parser.add_argument('--percentage', type=int, default=25)
 parser.add_argument('--deep', action='store_true')
+parser.add_argument('--deep-volume', action='store_true')
+parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
 parser.add_argument('--deep-max-events', type=int, default=16)
 parser.add_argument('--deep-memory-mb', type=int, default=512)
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
@@ -33,6 +35,17 @@ scene = bpy.context.scene
 source_hash = hashlib.sha256(Path(bpy.data.filepath).read_bytes()).hexdigest()
 scene.render.engine = 'CYCLES'
 scene.cycles.device = 'CPU'
+if args.device == 'CUDA':
+    preferences = bpy.context.preferences.addons['cycles'].preferences
+    preferences.compute_device_type = 'CUDA'
+    preferences.refresh_devices()
+    candidates = [device for device in preferences.devices if device.type == 'CUDA']
+    if not candidates:
+        raise RuntimeError('No CUDA render device available')
+    selected_id = candidates[0].id
+    for device in preferences.devices:
+        device.use = device.type == 'CUDA' and device.id == selected_id
+    scene.cycles.device = 'GPU'
 scene.cycles.samples = args.samples
 scene.render.threads_mode = 'FIXED'
 scene.render.threads = 8
@@ -47,6 +60,7 @@ if args.deep:
     if not hasattr(scene.cycles, 'use_deep_output'):
         raise RuntimeError('This Blender does not include the custom deep adapter')
     scene.cycles.use_deep_output = True
+    scene.cycles.use_deep_volume = args.deep_volume
     scene.cycles.deep_output_path = str(directory / 'scene.deep.exr')
     scene.cycles.deep_max_events = args.deep_max_events
     scene.cycles.deep_memory_mb = args.deep_memory_mb
@@ -70,6 +84,8 @@ report = {
     'objects': len(scene.objects),
     'compositing': False,
     'deep': args.deep,
+    'device': args.device,
+    'deep_volume': args.deep and args.deep_volume,
     'deep_max_events': args.deep_max_events if args.deep else None,
     'deep_memory_mb': args.deep_memory_mb if args.deep else None,
     'view_layers': [layer.name for layer in scene.view_layers if layer.use],

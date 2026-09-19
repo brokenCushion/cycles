@@ -96,14 +96,15 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
                                             const IntegratorStateCPU *camera,
                                             KernelDeepEvent *events,
                                             const int max_events,
-                                            const bool volume)
+                                            const bool volume,
+                                            KernelDeepDensity *density)
 {
 #  ifdef KERNEL_STUB
   STUB_ASSERT(KERNEL_ARCH, deep_surface);
   return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
 #  else
   if (volume)
-    return deep_volume_cpu(kg, camera, events, max_events);
+    return deep_volume_cpu(kg, camera, events, max_events, density);
   IntegratorStateCPU traversal = *camera;
   IntegratorState state = &traversal;
   Ray ray;

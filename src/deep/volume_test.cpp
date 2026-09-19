@@ -121,7 +121,8 @@ int main(int argc, char **argv)
       const auto output = reconstruct_volume(samples);
       for (int j = 0; j < 300; ++j) {
         const double z = 10 * value(rng);
-        check(std::abs(oracle(samples, z) - interval_transmittance(output, z)) < 2.0001e-7,
+        check(std::abs(oracle(samples, z) - interval_transmittance(output, z)) <
+                  volume_reconstruction_error + 1e-11,
               "Random volume curve mismatch");
       }
     }
@@ -159,6 +160,10 @@ int main(int argc, char **argv)
     const auto preserved = directory / "preserve.exr";
     { std::ofstream out(preserved); out << "sentinel"; }
     SurfaceImage one{{0, 0, 0, 0}, {0, 0, 0, 0}};
+    const std::vector<IntervalSample> thin{{2, 2 + 1e-10, 1e-8}};
+    check(interval_curve_error(thin, {{2, 2, double(float(1e-8))}}) < 1.1e-8,
+          "Thin interval step error was not bounded");
+    write_volume_exr(directory / "thin_bounded.exr", one, {thin});
     rejects([&] { write_volume_exr(preserved, one, {{{2, 2 + 1e-10, .5}}}); });
     std::ifstream read(preserved);
     std::string content;

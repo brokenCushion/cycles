@@ -105,6 +105,7 @@ PathTraceWorkGPU::PathTraceWorkGPU(Device *device,
       deep_records_(device, "deep records", MEM_READ_WRITE),
       deep_events_(device, "deep events", MEM_READ_WRITE),
       deep_media_(device, "deep media", MEM_READ_WRITE),
+      deep_density_(device, "deep density", MEM_READ_WRITE),
 #endif
       display_rgba_half_(device, "display buffer half", MEM_READ_WRITE),
       max_num_paths_(0),
@@ -438,7 +439,8 @@ void PathTraceWorkGPU::render_samples(RenderStatistics &statistics,
                        << " device_bytes_peak=" << device_->stats.mem_peak
                        << " medium_bytes_each=" << deep_media_.memory_size()
                        << " buffer_bytes_each="
-                       << deep_records_.memory_size() + deep_events_.memory_size();
+                       << deep_records_.memory_size() + deep_events_.memory_size() +
+                              deep_density_.memory_size();
 #endif
 }
 
@@ -987,20 +989,26 @@ void PathTraceWorkGPU::enqueue_work_tiles(DeviceKernel kernel,
 void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
 {
   deep::Capture *capture = deep_capture_;
-  constexpr int batch_size = 512;
   const int max_events = capture->max_events();
   const int event_capacity = max(1, max_events);
-  if (max_events < 0 || event_capacity > int(DEEP_MAX_EVENTS)) {
+  if (max_events < 0 || event_capacity >
+      int(capture->volume_grid() ? DEEP_MAX_VOLUME_EVENTS : DEEP_MAX_EVENTS)) {
     capture->fail(DEEP_ERROR_CAPACITY);
     return;
   }
-  /* Both factors are bounded before multiplication (512 lanes, at most 64 events).
+  const int batch_size = capture->volume_grid() ? min(512, 8192 / event_capacity) : 512;
+  /* Grid batches use at most 8192 event/coefficient slots. Host/device copies,
+   * medium buffers and contiguous readback scratch fit the reserved 2 MiB.
    * Reallocate
    * when a Session reset changes capacity; no previous launch is pending
    * because every batch
    * is consumed before returning. */
   deep_records_.alloc(batch_size);
   deep_events_.alloc(size_t(batch_size) * event_capacity);
+  if (capture->volume_grid())
+    deep_density_.alloc(size_t(batch_size) * event_capacity);
+  else
+    deep_density_.free();
   if (capture->volume())
     deep_media_.alloc(size_t(batch_size) * DEEP_MAX_MEDIA);
   else
@@ -1015,6 +1023,8 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
     queue_->zero_to_device(deep_events_);
   if (capture->volume() && !deep_media_.device_pointer)
     queue_->zero_to_device(deep_media_);
+  if (capture->volume_grid() && !deep_density_.device_pointer)
+    queue_->zero_to_device(deep_density_);
   if (device_->have_error()) {
     capture->fail();
     return;
@@ -1022,6 +1032,9 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
   const device_ptr records = deep_records_.device_pointer;
   const device_ptr events = deep_events_.device_pointer;
   const device_ptr media = deep_media_.device_pointer;
+  const device_ptr density = deep_density_.device_pointer;
+  vector<KernelDeepEvent> sample_events(event_capacity);
+  vector<KernelDeepDensity> sample_density(capture->volume_grid() ? event_capacity : 0);
   const device_ptr render_buffer = buffers_->buffer.device_pointer;
   for (int tile = 0; tile < num_tiles; ++tile) {
     for (int offset = 0; offset < work_tiles_[tile].work_size; offset += batch_size) {
@@ -1039,7 +1052,8 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
                                        &render_buffer,
                                        &records,
                                        &events,
-                                       &media);
+                                       &media,
+                                       &density);
       const double readback_start = time_dt();
       if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, args)) {
         capture->fail();
@@ -1050,8 +1064,11 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
        * consumption, including any queued initialization/beauty work. */
       queue_->copy_from_device(deep_records_);
       queue_->copy_from_device(deep_events_);
+      if (capture->volume_grid())
+        queue_->copy_from_device(deep_density_);
       ++deep_batch_count_;
-      deep_readback_bytes_ += deep_records_.memory_size() + deep_events_.memory_size();
+      deep_readback_bytes_ += deep_records_.memory_size() + deep_events_.memory_size() +
+                              deep_density_.memory_size();
       if (!queue_->synchronize()) {
         capture->fail();
         return;
@@ -1084,10 +1101,13 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
           return;
         }
         /* Host-only scratch adapts event planes to the contiguous spill contract. */
-        KernelDeepEvent sample_events[DEEP_MAX_EVENTS];
-        for (unsigned event = 0; event < record.result.count; ++event)
+        for (unsigned event = 0; event < record.result.count; ++event) {
           sample_events[event] = deep_events_[size_t(event) * batch_size + i];
-        capture->record_sample(record.x, record.y, record.sample, record.result, sample_events);
+          if (capture->volume_grid())
+            sample_density[event] = deep_density_[size_t(event) * batch_size + i];
+        }
+        capture->record_sample(record.x, record.y, record.sample, record.result,
+                               sample_events.data(), sample_density.data());
         ++deep_record_count_;
       }
       deep_spill_seconds_ += time_dt() - spill_start;

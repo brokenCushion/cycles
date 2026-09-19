@@ -82,6 +82,10 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
         name="Deep EXR", subtype='FILE_PATH', default="",
     )
     deep_max_events: IntProperty(name="Deep Events Per Sample", default=16, min=1, max=64)
+    use_deep_volume: BoolProperty(
+        name="Deep Volume Visibility", default=False,
+        description="Capture scalar absorption through supported volume density grids",
+    )
     deep_memory_mb: IntProperty(name="Deep Working Memory MiB", default=512, min=1, max=1024)
 ''')
 edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_denoise_params', '''#ifdef WITH_CYCLES_DEEP_OPAQUE
@@ -89,6 +93,7 @@ edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_
                         get_boolean(cscene, "use_deep_output");
   if (params.deep.enabled) {
     params.deep.transparent = true;
+    params.deep.volume = get_boolean(cscene, "use_deep_volume");
     params.deep.max_events = get_int(cscene, "deep_max_events");
     params.deep.memory_bytes = size_t(get_int(cscene, "deep_memory_mb")) * 1024 * 1024;
     /* Deep publication covers a complete frame. Native automatic tiling is not
@@ -127,8 +132,8 @@ edit('blender/output_driver.cpp', '#include "blender/output_driver.h"\n', '''#in
 edit('blender/output_driver.cpp', 'CCL_NAMESPACE_END', '''#ifdef WITH_CYCLES_DEEP_OPAQUE
 void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
 {
-  if (tile.volume || deep_path_.empty()) {
-    throw std::runtime_error("Blender deep adapter requires surface capture and an output path");
+  if (deep_path_.empty()) {
+    throw std::runtime_error("Blender deep adapter requires an output path");
   }
   deep::SurfaceImage image;
   image.display_window = {0, 0, tile.width - 1, tile.height - 1};
@@ -140,6 +145,17 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
     if (tile.cancelled())
       throw std::runtime_error("Blender deep export cancelled; final file preserved");
   };
+  if (tile.volume) {
+    deep::write_volume_exr_rows(deep_path_, image, [&](const int y) {
+      check_cancel();
+      std::vector<std::vector<deep::IntervalSample>> row(tile.width);
+      for (int x = 0; x < tile.width; ++x)
+        row[x] = tile.get_pixel(x, tile.height - 1 - y);
+      check_cancel();
+      return row;
+    }, check_cancel);
+    return;
+  }
   /* Small, reproducible diagnostic grid for independent reader validation.
    * This is raw accepted camera data, before pixel reconstruction/FLOAT export. */
   deep::AtomicOutput records_publication(deep_path_ + ".samples.csv");

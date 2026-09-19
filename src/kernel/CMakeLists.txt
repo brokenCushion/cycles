@@ -262,6 +262,10 @@ set(SRC_KERNEL_DEEP_HEADERS
   deep/camera_depth.h
   deep/volume_cpu.h
   deep/volume.h
+  deep/density.h
+  deep/grid.h
+  deep/volume_grid.h
+  deep/volume_native.h
   deep/surface_boundary.h
   deep/types.h
   deep/surface_cuda.h

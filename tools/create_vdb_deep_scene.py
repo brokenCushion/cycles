@@ -33,6 +33,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 volume = bpy.data.volumes.new('SuppliedVDB')
 volume.filepath = source.as_posix()
+volume.render.precision = 'FULL'
 obj = bpy.data.objects.new('SuppliedVDB', volume)
 scene.collection.objects.link(obj)
 if not volume.grids.load():
@@ -112,6 +113,7 @@ report = {
               for name, grid in grids.items()},
     'bounds_world': [list(lower), list(upper)],
     'density_scale': args.density_scale,
+    'grid_precision': volume.render.precision,
     'resolution': [args.resolution, args.resolution], 'samples': 1,
     'material': 'density * scale, scalar absorption; no scattering/emission',
     'deep_enabled': False,

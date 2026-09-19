@@ -724,10 +724,22 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
   {
     throw std::invalid_argument("Deep render requires a single-device full frame without crop");
   }
+  size_t capture_bytes = settings.memory_bytes;
+  const int event_capacity = settings.volume_grid ? int(DEEP_MAX_VOLUME_EVENTS) : settings.max_events;
+  if (settings.volume_grid && device_->info.type == DEVICE_CPU) {
+    if (device_->info.cpu_threads <= 0 || event_capacity <= 0 ||
+        event_capacity > int(DEEP_MAX_VOLUME_EVENTS))
+      throw std::invalid_argument("Invalid native deep CPU worker capacity");
+    const uint64_t worker_bytes = uint64_t(device_->info.cpu_threads) * event_capacity *
+                                  (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity));
+    if (worker_bytes >= capture_bytes)
+      throw std::invalid_argument("Native deep CPU buffers exceed memory budget");
+    capture_bytes -= size_t(worker_bytes);
+  }
   deep_capture_ = make_unique<deep::Capture>(
-      params.width, params.height, samples, settings.memory_bytes,
-      (settings.transparent || settings.volume) ? settings.max_events : 0,
-      true, adaptive, settings.volume);
+      params.width, params.height, samples, capture_bytes,
+      (settings.transparent || settings.volume) ? event_capacity : 0,
+      true, adaptive, settings.volume, settings.volume_grid);
   for (auto &work : path_trace_works_) {
     work->set_deep_capture(deep_capture_.get());
   }

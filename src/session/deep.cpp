@@ -12,10 +12,12 @@
 #include "scene/shader_nodes.h"
 #include "session/session.h"
 #include "util/math.h"
+#include "kernel/deep/types.h"
 
 #include <cmath>
 #include <limits>
 #include <map>
+#include <set>
 #include <stdexcept>
 
 CCL_NAMESPACE_BEGIN
@@ -33,6 +35,77 @@ static bool default_normal_link(const ShaderInput *input)
   return input->link && (input->flags() & SocketType::LINK_NORMAL) &&
          input->link->parent->type->name == ustring("geometry") &&
          input->link->name() == ustring("Normal");
+}
+
+/* Only a scalar multiple of the native density attribute is qualified. Keep
+ * the graph proof separate from stochastic beauty shader evaluation. */
+struct DeepDensityExpression {
+  double scale;
+  bool grid;
+};
+static DeepDensityExpression density_expression(ShaderInput *input,
+                                                const float constant,
+                                                std::set<ShaderNode *> &visited,
+                                                const int depth = 0)
+{
+  require_deep(depth < 64, "density expression is too deep or cyclic");
+  if (!input->link) {
+    require_deep(std::isfinite(constant) && constant >= 0, "invalid density multiplier");
+    return {constant, false};
+  }
+  ShaderNode *node = input->link->parent;
+  visited.insert(node);
+  if (node->type->name == ustring("attribute")) {
+    require_deep(static_cast<AttributeNode *>(node)->get_attribute() == ustring("density") &&
+                     input->link->name() == ustring("Fac"),
+                 "native deep volume requires the density attribute Fac output");
+    return {1, true};
+  }
+  require_deep(node->type->name == ustring("math"), "unsupported native density expression");
+  auto *math = static_cast<MathNode *>(node);
+  require_deep(math->get_math_type() == NODE_MATH_MULTIPLY && !math->get_use_clamp() &&
+                   input->link->name() == ustring("Value"),
+               "native deep density supports unclamped multiplication only");
+  const auto a = density_expression(math->input("Value1"), math->get_value1(), visited, depth + 1);
+  const auto b = density_expression(math->input("Value2"), math->get_value2(), visited, depth + 1);
+  require_deep(!(a.grid && b.grid), "nonlinear products of density are unsupported");
+  const double scale = a.scale * b.scale;
+  require_deep(std::isfinite(scale) && scale <= std::numeric_limits<float>::max(),
+               "density multiplier overflow");
+  return {scale, a.grid || b.grid};
+}
+
+static void validate_grid_shader(Scene *scene, Shader *shader)
+{
+  require_deep(shader && shader->graph, "missing native volume shader");
+  auto *output = shader->graph->output();
+  require_deep(!output->input("Surface")->link && !output->input("Displacement")->link &&
+                   output->input("Volume")->link,
+               "native deep grids require a pure absorption volume material");
+  ShaderNode *node = output->input("Volume")->link->parent;
+  require_deep(node->type->name == ustring("absorption_volume"),
+               "native deep grids require absorption_volume");
+  auto *absorption = static_cast<AbsorptionVolumeNode *>(node);
+  for (ShaderInput *input : node->inputs)
+    require_deep(input->name() == ustring("Density") || !input->link,
+                 "native absorption supports only a linked Density input");
+  const float3 color = absorption->get_color();
+  require_deep(isfinite_safe(color) && color.x == color.y && color.x == color.z &&
+                   color.x >= 0 && color.x <= 1,
+               "native deep absorption requires scalar extinction");
+  require_deep(shader->get_volume_interpolation_method() == VOLUME_INTERPOLATION_LINEAR,
+               "native deep grids require linear interpolation");
+  std::set<ShaderNode *> visited{output, node};
+  const auto expression = density_expression(absorption->input("Density"),
+                                              absorption->get_density(), visited);
+  require_deep(expression.grid, "native deep volume must use the density grid");
+  for (ShaderNode *candidate : shader->graph->nodes)
+    require_deep(visited.count(candidate) != 0, "unsupported node in native volume material");
+  const float scale = float(expression.scale * (1.0 - color.x));
+  if (shader->deep_density_scale != scale) {
+    shader->deep_density_scale = scale;
+    shader->tag_update(scene);
+  }
 }
 
 static void validate_shader(Shader *shader,
@@ -123,12 +196,22 @@ static void validate_shader(Shader *shader,
   }
 }
 
-void validate_deep_scene(Scene *scene, const SessionParams &params)
+void validate_deep_scene(Scene *scene, SessionParams &params)
 {
   const bool transparent = params.deep.transparent;
   const bool volume = params.deep.volume;
-  require_deep(params.deep.max_events >= 1 && params.deep.max_events <= 64,
-               "traversal limit must be 1..64 events");
+  params.deep.volume_grid = false;
+  for (Geometry *geometry : scene->geometry)
+    params.deep.volume_grid |= volume && geometry->geometry_type == Geometry::VOLUME;
+  require_deep(params.deep.max_events >= 1 &&
+                   params.deep.max_events <= int(params.deep.volume_grid ? DEEP_MAX_VOLUME_EVENTS : DEEP_MAX_EVENTS),
+               "invalid deep traversal limit");
+  for (Shader *shader : scene->shaders) {
+    if (shader->deep_density_scale >= 0) {
+      shader->deep_density_scale = -1;
+      shader->tag_update(scene);
+    }
+  }
   require_deep(params.deep.memory_bytes > 0 &&
                    params.deep.memory_bytes <= size_t(1024) * 1024 * 1024,
                "working memory budget must be at most 1024 MiB");
@@ -138,7 +221,6 @@ void validate_deep_scene(Scene *scene, const SessionParams &params)
                  "M8 volumes require CPU or CUDA native SVM");
     require_deep(!scene->integrator->get_use_adaptive_sampling() &&
                      !scene->integrator->get_motion_blur() &&
-                     scene->camera->get_motion().empty() &&
                      scene->camera->get_aperturesize() == 0 && scene->camera->get_nearclip() > 0,
                  "M8 requires fixed samples, static pinhole camera and positive near clip");
   }
@@ -214,7 +296,8 @@ void validate_deep_scene(Scene *scene, const SessionParams &params)
                    isfinite_safe(camera->get_aperture_ratio()) &&
                    camera->get_aperture_ratio() > 0 &&
                    isfinite_safe(camera->get_bladesrotation()) &&
-                   isfinite_safe(camera->get_focaldistance()) && camera->get_focaldistance() > 0,
+                   isfinite_safe(camera->get_focaldistance()) &&
+                   (camera->get_aperturesize() == 0 || camera->get_focaldistance() > 0),
                "invalid aperture size, ratio, rotation or focal distance");
   require_deep(camera->get_nearclip() >= 0 && camera->get_farclip() > camera->get_nearclip() &&
                    isfinite_safe(camera->get_nearclip()) && isfinite_safe(camera->get_farclip()) &&
@@ -235,6 +318,12 @@ void validate_deep_scene(Scene *scene, const SessionParams &params)
      * integrator_shade_light_forward). They are not deep visibility surfaces. */
     if (geometry->is_light())
       continue;
+    if (volume && geometry->geometry_type == Geometry::VOLUME) {
+      require_deep(!geometry->get_use_motion_blur() && geometry->get_used_shaders().size() == 1,
+                   "native deep grids require static geometry with one material");
+      validate_grid_shader(scene, static_cast<Shader *>(geometry->get_used_shaders()[0]));
+      continue;
+    }
     require_deep(geometry->geometry_type == Geometry::MESH && !geometry->get_use_motion_blur(),
                  "only static polygon meshes and background lighting are supported");
     require_deep(static_cast<Mesh *>(geometry)->get_subdivision_type() == Mesh::SUBDIVISION_NONE,

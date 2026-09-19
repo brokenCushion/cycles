@@ -63,12 +63,23 @@ void PathTraceWorkCPU::init_execution()
 {
   /* Acquire thread globals, updating all data pointers. */
   kernel_thread_globals_ = device_->acquire_cpu_kernel_thread_globals();
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (deep_capture_ && deep_capture_->volume_grid()) {
+    const size_t slots = kernel_thread_globals_->size() * size_t(deep_capture_->max_events());
+    deep_grid_events_.resize(slots);
+    deep_grid_density_.resize(slots);
+  }
+#endif
 }
 
 void PathTraceWorkCPU::deinit_execution()
 {
   device_->release_cpu_kernel_thread_globals();
   kernel_thread_globals_ = nullptr;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  vector<KernelDeepEvent>().swap(deep_grid_events_);
+  vector<KernelDeepDensity>().swap(deep_grid_density_);
+#endif
 }
 
 void PathTraceWorkCPU::render_samples(RenderStatistics &statistics,
@@ -172,10 +183,18 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
         capture->fail();
       }
       else if (capture->max_events()) {
-        KernelDeepEvent events[DEEP_MAX_EVENTS];
+        KernelDeepEvent surface_events[DEEP_MAX_EVENTS];
+        KernelDeepEvent *events = surface_events;
+        KernelDeepDensity *density = nullptr;
+        if (capture->volume_grid()) {
+          const size_t worker = size_t(kernel_globals - kernel_thread_globals_->data());
+          const size_t offset = worker * size_t(capture->max_events());
+          events = deep_grid_events_.data() + offset;
+          density = deep_grid_density_.data() + offset;
+        }
         const KernelDeepResult result = kernels_.deep_surface(
-            kernel_globals, state, events, capture->max_events(), capture->volume());
-        capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, events);
+            kernel_globals, state, events, capture->max_events(), capture->volume(), density);
+        capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, events, density);
       }
       else {
         /* Execute the scheduled intersection once; megakernel resumes at its successor.

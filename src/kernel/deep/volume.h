@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
 #include "kernel/deep/types.h"
+#include "kernel/deep/volume_native.h"
 
 CCL_NAMESPACE_BEGIN
 
@@ -13,7 +14,8 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
                                         ccl_global KernelDeepEvent *events,
                                         ccl_global KernelDeepMedium *media,
                                         const int stride,
-                                        const int capacity)
+                                        const int capacity,
+                                        ccl_global KernelDeepDensity *density = nullptr)
 {
 #ifdef __VOLUME__
   Ray ray;
@@ -25,7 +27,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
   int object_count = 0, count = 0;
   Intersection previous;
   bool previous_back = false, has_previous = false;
-  for (int step = 0; step < 128; ++step) {
+  for (int step = 0; step < (density ? 16384 : 128); ++step) {
     Intersection hit;
     if (!scene_intersect(kg, &ray, PATH_RAY_VISIBILITY_CAMERA, &hit)) {
       for (int i = 0; i < object_count; ++i)
@@ -68,40 +70,53 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
           media[index * stride].start = -1;
           if (end > start) {
             const VolumeStack entry = {sd.object, sd.shader};
+            const float grid_scale = kernel_data_fetch(shaders, sd.shader & SHADER_MASK).deep_density_scale;
             shader_setup_from_volume(&sd, &ray, hit.object);
-            sd.num_closure = 0;
-            sd.num_closure_left = 0;
-            sd.runtime_flag = SR_IS_VOLUME_SHADER_EVAL;
-            volume_shader_eval_entry<false, KERNEL_FEATURE_NODE_MASK_VOLUME>(
-                kg,
-                state,
-                &sd,
-                entry,
-                PATH_RAY_VISIBILITY_CAMERA,
-                INTEGRATOR_STATE(state, path, flag) | PATH_RAY_EXTINCTION);
-            if (sd.runtime_flag & SR_CACHE_MISS)
-              return {DEEP_FAILED, 0, DEEP_ERROR_CACHE_MISS};
-            const float3 sigma = spectrum_to_rgb((sd.runtime_flag & SR_EXTINCTION) ?
-                                                     sd.closure_transparent_extinction :
-                                                     zero_spectrum());
-            if (!isfinite(sigma.x) || sigma.x < 0 || sigma.x != sigma.y || sigma.x != sigma.z)
-              return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
-            if (sigma.x > 0) {
-              if (count == capacity)
-                return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
-              const float front = deep_camera_depth(kernel_data.cam,
-                                                    kernel_data_array(camera_motion),
-                                                    ray.time,
-                                                    ray.P + start * ray.D);
-              const float rear = deep_camera_depth(kernel_data.cam,
-                                                   kernel_data_array(camera_motion),
-                                                   ray.time,
-                                                   ray.P + end * ray.D);
-              if (!(rear > front) || !(front > 0))
-                return {DEEP_FAILED, 0, DEEP_ERROR_DEPTH};
-              events[count * stride] = {
-                  DEEP_VOLUME, front, rear, 0, sigma.x * (end - start) * len(ray.D)};
-              ++count;
+            if (grid_scale >= 0) {
+              sd.shader = entry.shader;
+              sd.shader_flag = kernel_data_fetch(shaders, entry.shader & SHADER_MASK).flags;
+              sd.object_flag = kernel_data_fetch(object_flag, hit.object);
+              const KernelDeepResult captured = deep_volume_native(
+                  kg, &sd, &ray, start, end, grid_scale, events, density, stride, capacity, count);
+              if (captured.status != DEEP_COMPLETE)
+                return captured;
+              count = int(captured.count);
+            }
+            else {
+              sd.num_closure = 0;
+              sd.num_closure_left = 0;
+              sd.runtime_flag = SR_IS_VOLUME_SHADER_EVAL;
+              volume_shader_eval_entry<false, KERNEL_FEATURE_NODE_MASK_VOLUME>(
+                  kg,
+                  state,
+                  &sd,
+                  entry,
+                  PATH_RAY_VISIBILITY_CAMERA,
+                  INTEGRATOR_STATE(state, path, flag) | PATH_RAY_EXTINCTION);
+              if (sd.runtime_flag & SR_CACHE_MISS)
+                return {DEEP_FAILED, 0, DEEP_ERROR_CACHE_MISS};
+              const float3 sigma = spectrum_to_rgb((sd.runtime_flag & SR_EXTINCTION) ?
+                                                       sd.closure_transparent_extinction :
+                                                       zero_spectrum());
+              if (!isfinite(sigma.x) || sigma.x < 0 || sigma.x != sigma.y || sigma.x != sigma.z)
+                return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
+              if (sigma.x > 0) {
+                if (count == capacity)
+                  return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
+                const float front = deep_camera_depth(kernel_data.cam,
+                                                      kernel_data_array(camera_motion),
+                                                      ray.time,
+                                                      ray.P + start * ray.D);
+                const float rear = deep_camera_depth(kernel_data.cam,
+                                                     kernel_data_array(camera_motion),
+                                                     ray.time,
+                                                     ray.P + end * ray.D);
+                if (!(rear > front) || !(front > 0))
+                  return {DEEP_FAILED, 0, DEEP_ERROR_DEPTH};
+                events[count * stride] = {
+                    DEEP_VOLUME, front, rear, 0, sigma.x * (end - start) * len(ray.D)};
+                ++count;
+              }
             }
           }
         }

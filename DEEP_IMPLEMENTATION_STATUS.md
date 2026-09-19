@@ -10,18 +10,20 @@ validates the deep output and a live million-point review. The full review is
 open and its point-cloud viewport has been visually verified after desktop
 unlock. The Blender scene render-and-presentation objective is complete. See [Blender integration evidence](BLENDER_DEEP_INTEGRATION.md).
 
-Volume checkpoint: **M8d1 known linear-density reference** passes the eight CTest
-groups and Gaffer analytic depth cuts. This advances heterogeneous integration
-testing; native heterogeneous shader/VDB capture remains unsupported. See
-[density reference evidence](src/deep/DENSITY_REFERENCE_VALIDATION.md).
+Volume checkpoint: **Native FLOAT VDB scalar absorption** now renders the supplied
+grid through CPU and CUDA at 256x256, one sample. Both preserve every beauty RGBA
+pixel and pass Gaffer depth cuts and million-point graph reload. Independent
+OpenVDB grid checks and a full-render scale-invariance check pass. General volume
+shaders, emission/scattering deep RGB and other GPU backends remain unqualified.
+See [native VDB evidence](src/deep/NATIVE_VDB_PLAN.md).
 
 Performance continuation: compact indexed/append-only spill storage repeats the
 full scene in 247.633 seconds (reference 1862.293 seconds), with a byte-identical
 deep EXR and exact beauty RGBA equality. All eight CTest groups and CPU/CUDA
 acceptance pass. The optimized Gaffer review is open and validated headlessly;
 live viewport verification awaits restored desktop access.
-Native VDB capture remains open; a reproducible native scene now loads the actual
-supplied grid. See [performance and VDB progress](DEEP_PERFORMANCE_AND_VDB.md).
+Native VDB render validation passes; live presentation remains pending window
+access. See [performance and VDB progress](DEEP_PERFORMANCE_AND_VDB.md).
 
 ## Baseline and scope
 

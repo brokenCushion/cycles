@@ -213,13 +213,21 @@ static std::vector<FloatPixel> prepare_volume(
     std::vector<IntervalSample> quantized;
     for (const auto &s : source[p]) {
       quantized.push_back({double(float(s.front)), double(float(s.back)), double(float(s.alpha))});
-      if (s.back > s.front && quantized.back().back <= quantized.back().front)
-        throw std::invalid_argument("Volume interval collapses under FLOAT export");
+      /* A sub-FLOAT-width interval becomes a step only when the complete
+       * curve comparison below proves its error fits the export budget. This
+       * retains its optical depth; appreciable unresolved extinction fails. */
       pixels[p].z.push_back(float(s.front));
       pixels[p].back.push_back(float(s.back));
       pixels[p].a.push_back(float(s.alpha));
     }
-    if (interval_curve_error(source[p], quantized) > export_error - 2e-7)
+    /* Reserve 1e-7 for cubic fitting, 5e-8 for sample reconstruction and
+     * 4e-8 for FLOAT nonnegative density controls. For normal coefficients,
+     * rounding changes tau by at most 2^-24 relatively; the corresponding
+     * absolute exp(-tau) error is below 2.2e-8. The reserve also covers
+     * subnormal contributions from the bounded number of cell records. */
+    if (interval_curve_error(source[p], quantized) >
+        export_error - volume_density_error - volume_reconstruction_error -
+            volume_coefficient_error)
       throw std::invalid_argument("FLOAT volume curve exceeds transmittance error budget");
   }
   return pixels;
@@ -251,7 +259,7 @@ void write_volume_exr_rows(const std::filesystem::path &path,
                            const std::function<void()> &before_publish)
 {
   auto header = make_header(image);
-  header.insert("cycles:deepScope", Imf::StringAttribute("cpu_homogeneous_absorption"));
+  header.insert("cycles:deepScope", Imf::StringAttribute("native_scalar_absorption"));
   const auto dw = header.dataWindow();
   const size_t width = size_t(int64_t(dw.max.x) - dw.min.x + 1);
   AtomicOutput publication(path);

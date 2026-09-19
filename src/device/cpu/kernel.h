@@ -34,7 +34,8 @@ class CPUKernels {
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   IntegratorShadeFunction integrator_intersect_closest;
   CPUKernelFunction<KernelDeepResult (*)(
-      const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *, KernelDeepEvent *, int, bool)>
+      const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *, KernelDeepEvent *, int, bool,
+      KernelDeepDensity *)>
       deep_surface;
 #endif
   IntegratorShadeFunction integrator_megakernel;

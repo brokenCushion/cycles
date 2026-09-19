@@ -157,6 +157,7 @@ class PathTraceWorkGPU : public PathTraceWork {
   device_vector<KernelDeepRecord> deep_records_;
   device_vector<KernelDeepEvent> deep_events_;
   device_vector<KernelDeepMedium> deep_media_;
+  device_vector<KernelDeepDensity> deep_density_;
   void capture_deep_tiles(int num_tiles);
   double deep_readback_seconds_ = 0, deep_spill_seconds_ = 0;
   uint64_t deep_record_count_ = 0;

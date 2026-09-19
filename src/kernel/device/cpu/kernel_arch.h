@@ -33,7 +33,8 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
                                             const IntegratorStateCPU *camera,
                                             KernelDeepEvent *events,
                                             int max_events,
-                                            bool volume);
+                                            bool volume,
+                                            KernelDeepDensity *density);
 #endif
 KERNEL_INTEGRATOR_SHADE_FUNCTION(megakernel);
 

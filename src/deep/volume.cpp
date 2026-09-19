@@ -1,5 +1,10 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "deep/volume.h"
+#ifndef CCL_NAMESPACE_BEGIN
+#  define CCL_NAMESPACE_BEGIN namespace ccl {
+#  define CCL_NAMESPACE_END }
+#endif
+#include "kernel/deep/density.h"
 
 #include <algorithm>
 #include <cmath>
@@ -9,6 +14,91 @@
 #include <unordered_set>
 
 namespace ccl::deep {
+std::vector<VolumeInterval> integrate_cubic_density(
+    const std::vector<CubicDensityInterval> &segments,
+    const double tolerance,
+    const size_t max_intervals)
+{
+  if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-3 || !max_intervals)
+    throw std::invalid_argument("Invalid cubic integration budget");
+  std::vector<std::pair<double, int>> boundaries;
+  for (const auto &s : segments) {
+    if (!std::isfinite(s.front) || !std::isfinite(s.back) || s.front <= 0 ||
+        s.back <= s.front)
+      throw std::invalid_argument("Invalid cubic density interval");
+    bool active = false;
+    double sum = 0;
+    for (const double b : s.optical_depth) {
+      if (!std::isfinite(b) || b < 0)
+        throw std::invalid_argument("Invalid cubic density coefficient");
+      active |= b > 0;
+      sum += b;
+    }
+    if (!std::isfinite(sum))
+      throw std::invalid_argument("Cubic density integral overflow");
+    if (active) {
+      boundaries.emplace_back(s.front, 1);
+      boundaries.emplace_back(s.back, -1);
+    }
+  }
+  /* Only unfinished cells contribute approximation error at any depth.
+   * Adjacent cells preserve total tau, so divide by simultaneous overlaps,
+   * not by every cell along a long VDB ray. Ends sort before starts. */
+  std::sort(boundaries.begin(), boundaries.end());
+  size_t active = 0, overlap = 0;
+  for (const auto &boundary : boundaries) {
+    if (boundary.second > 0)
+      overlap = std::max(overlap, ++active);
+    else
+      --active;
+  }
+  if (!overlap)
+    return {};
+  const double budget = tolerance / overlap;
+  if (!(budget > 0))
+    throw std::invalid_argument("Cubic integration budget underflow");
+  std::vector<VolumeInterval> result;
+  /* Count before allocating output. Iterative depth-first traversal uses a
+   * fixed stack; both passes follow precisely the same subdivisions. */
+  size_t count = 0;
+  for (int pass = 0; pass < 2; ++pass) {
+    for (const auto &s : segments) {
+      const DeepCubicDensity<double> curve = {{s.optical_depth[0], s.optical_depth[1],
+                                               s.optical_depth[2], s.optical_depth[3]}};
+      if (deep_density_integral(curve, 1.0) == 0)
+        continue;
+      struct Piece { double front, back; int level; };
+      Piece stack[62];
+      size_t pending = 1;
+      stack[0] = {s.front, s.back, 0};
+      while (pending) {
+        const Piece p = stack[--pending];
+        const double a = (p.front - s.front) / (s.back - s.front);
+        const double b = (p.back - s.front) / (s.back - s.front);
+        const auto clipped = deep_density_restrict(curve, a, b);
+        if (deep_density_chord_error(clipped, b - a) <= budget) {
+          if (pass == 0) {
+            if (count == max_intervals)
+              throw std::invalid_argument("Cubic integration capacity exceeded");
+            ++count;
+          }
+          else
+            result.push_back({p.front, p.back, deep_density_integral(clipped, b - a)});
+          continue;
+        }
+        const double middle = p.front + (p.back - p.front) / 2;
+        if (p.level == 60 || middle == p.front || middle == p.back)
+          throw std::invalid_argument("Cubic subdivision exhausted depth precision");
+        stack[pending++] = {middle, p.back, p.level + 1};
+        stack[pending++] = {p.front, middle, p.level + 1};
+      }
+    }
+    if (pass == 0)
+      result.reserve(count);
+  }
+  return result;
+}
+
 std::vector<VolumeInterval> integrate_linear_density(
     const std::vector<LinearDensityInterval> &segments,
     const double tolerance,
@@ -91,13 +181,41 @@ void validate_curve(const std::vector<IntervalSample> &samples)
   }
 }
 
-double rate(const std::vector<IntervalSample> &samples, double z)
-{
-  for (const auto &s : samples)
-    if (s.front < z && z < s.back)
-      return -std::log1p(-s.alpha) / (s.back - s.front);
-  return 0;
-}
+/* Evaluate sorted boundary queries without rescanning completed intervals. */
+struct CurveCursor {
+  const std::vector<IntervalSample> &samples;
+  size_t index = 0;
+  double prefix = 1;
+  double at(const double z, const bool before)
+  {
+    while (index < samples.size()) {
+      const auto &s = samples[index];
+      if (s.front == s.back) {
+        if (!(s.front < z || (!before && s.front == z)))
+          break;
+      }
+      else if (s.back > z)
+        break;
+      prefix *= 1 - s.alpha;
+      ++index;
+    }
+    if (index < samples.size()) {
+      const auto &s = samples[index];
+      if (s.back > s.front && z > s.front)
+        return prefix * std::exp(std::log1p(-s.alpha) * ((z - s.front) / (s.back - s.front)));
+    }
+    return prefix;
+  }
+  double rate(const double z) const
+  {
+    if (index < samples.size()) {
+      const auto &s = samples[index];
+      if (s.front < z && z < s.back)
+        return -std::log1p(-s.alpha) / (s.back - s.front);
+    }
+    return 0;
+  }
+};
 }  // namespace
 
 double interval_transmittance(const std::vector<IntervalSample> &samples,
@@ -132,16 +250,16 @@ double interval_curve_error(const std::vector<IntervalSample> &a,
   std::sort(boundaries.begin(), boundaries.end());
   boundaries.erase(std::unique(boundaries.begin(), boundaries.end()), boundaries.end());
   double error = 0;
+  CurveCursor ca{a}, cb{b};
   for (size_t i = 0; i < boundaries.size(); ++i) {
     const double z = boundaries[i];
     for (bool before : {true, false})
-      error = std::max(error, std::abs(interval_transmittance(a, z, before) -
-                                     interval_transmittance(b, z, before)));
+      error = std::max(error, std::abs(ca.at(z, before) - cb.at(z, before)));
     if (i + 1 == boundaries.size())
       break;
     const double h = boundaries[i + 1] - z;
-    const double ta = interval_transmittance(a, z), tb = interval_transmittance(b, z);
-    const double ra = rate(a, z + h / 2), rb = rate(b, z + h / 2);
+    const double ta = ca.at(z, false), tb = cb.at(z, false);
+    const double ra = ca.rate(z + h / 2), rb = cb.rate(z + h / 2);
     if (ra > 0 && rb > 0 && ra != rb && ta > 0 && tb > 0) {
       const double x = (std::log(ra) + std::log(ta) - std::log(rb) - std::log(tb)) /
                        (ra - rb);
@@ -183,6 +301,46 @@ std::vector<IntervalSample> reconstruct_volume(const std::vector<VolumeCameraSam
   }
   if (!max_weight)
     throw std::invalid_argument("Volume pixel requires positive sample weight");
+  /* A single ordered medium already is an exponential curve. Avoid repeatedly
+   * evaluating every interval at every boundary (quadratic for native VDBs).
+   * Overlaps or surface events retain the general mixture reconstruction. */
+  if (samples.size() == 1 && samples[0].camera.events.empty()) {
+    bool ordered = true;
+    double previous = 0;
+    for (const auto &v : samples[0].intervals) {
+      ordered &= v.front >= previous;
+      previous = v.back;
+    }
+    if (ordered) {
+      size_t count = 0;
+      for (const auto &v : samples[0].intervals) {
+        const double pieces = v.optical_depth > 0 ? std::max(1.0, std::ceil(v.optical_depth / 16.0)) : 0;
+        if (pieces > double(max_intervals - count))
+          throw std::runtime_error("Volume reconstruction interval budget exceeded");
+        count += size_t(pieces);
+      }
+      std::vector<IntervalSample> result;
+      result.reserve(count);
+      for (const auto &v : samples[0].intervals) {
+        const size_t pieces = v.optical_depth > 0 ?
+                                  size_t(std::max(1.0, std::ceil(v.optical_depth / 16.0))) : 0;
+        for (size_t i = 0; i < pieces; ++i) {
+          const double front = i ? v.front + (v.back - v.front) * (double(i) / pieces) : v.front;
+          const double back = i + 1 == pieces ? v.back :
+                                v.front + (v.back - v.front) * (double(i + 1) / pieces);
+          if (!(back > front))
+            throw std::runtime_error("Volume interval exhausted depth precision");
+          const double tau = v.optical_depth * ((back - front) / (v.back - v.front));
+          const double alpha = -std::expm1(-tau);
+          if (alpha == 1)
+            throw std::runtime_error("Volume interval opacity cannot be represented");
+          if (alpha > 0)
+            result.push_back({front, back, alpha});
+        }
+      }
+      return result;
+    }
+  }
   double total = 0;
   for (const auto &s : samples)
     total += s.camera.weight / max_weight;

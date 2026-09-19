@@ -15,11 +15,14 @@ Capture::Capture(const int width,
                  const int max_events,
                  const bool spill,
                  const bool adaptive,
-                 const bool volume)
-    : width_(width), height_(height), samples_(samples), max_events_(max_events), volume_(volume)
+                 const bool volume,
+                 const bool volume_grid)
+    : width_(width), height_(height), samples_(samples), max_events_(max_events), volume_(volume),
+      volume_grid_(volume_grid)
 {
-  if (max_events < 0 || max_events > int(DEEP_MAX_EVENTS) || (volume && !max_events))
-    throw std::invalid_argument("Deep traversal limit must be 1..64 events");
+  if (max_events < 0 || max_events > int(volume_grid ? DEEP_MAX_VOLUME_EVENTS : DEEP_MAX_EVENTS) ||
+      (volume && !max_events) || (volume_grid && !volume))
+    throw std::invalid_argument("Invalid deep traversal capacity or volume mode");
   if (width <= 0 || height <= 0 || samples <= 0 || samples > 4096)
     throw std::invalid_argument("Deep capture requires positive dimensions and 1..4096 samples");
   size_t count = size_t(width);
@@ -30,7 +33,8 @@ Capture::Capture(const int width,
   }
   count_ = count;
   capacity_ = size_t(std::max(1, max_events));
-  stride_ = sizeof(KernelDeepResult) + capacity_ * sizeof(KernelDeepEvent);
+  stride_ = sizeof(KernelDeepResult) + capacity_ *
+             (sizeof(KernelDeepEvent) + (volume_grid ? sizeof(KernelDeepDensity) : 0));
   if (count > size_t(INT64_MAX) / stride_)
     throw std::invalid_argument("Deep spill file offsets overflow");
   if (adaptive && count / samples > max_bytes / sizeof(uint32_t))
@@ -40,11 +44,12 @@ Capture::Capture(const int width,
     /* Two MiB covers 512-lane host/device events and 64 media (1,863,680 bytes),
      * fixed scratch and I/O. Beauty/shader memory remains outside this budget. */
     const uint64_t events = uint64_t(samples) * capacity_;
-    const uint64_t output_events = volume ? volume_interval_limit : events;
+    const uint64_t output_events = volume ? reconstruction_limit() : events;
     const uint64_t required = 2 * 1024 * 1024 +
                               (spill_page_bytes + event_page_bytes) * spill_page_count +
                               uint64_t(width) * (128 + output_events * 128) +
-                              events * 512;
+                              events * 512 +
+                              (volume_grid ? uint64_t(samples + 2) * reconstruction_limit() * 32 : 0);
     if (required > max_bytes - population_bytes)
       throw std::invalid_argument("Deep scanline working set exceeds --deep-memory-mb budget");
     if (adaptive)
@@ -88,6 +93,8 @@ Capture::Capture(const int width,
     populations_.assign(count / samples, 0);
   results_.resize(count);
   events_.resize(count * capacity_);
+  if (volume_grid_)
+    density_.resize(count * capacity_);
 }
 Capture::~Capture()
 {
@@ -192,7 +199,8 @@ void Capture::read_events(size_t offset, unsigned char *destination, size_t byte
 
 void Capture::read_record(const size_t index,
                           KernelDeepResult &result,
-                          KernelDeepEvent *events) const
+                          KernelDeepEvent *events,
+                          KernelDeepDensity *density) const
 {
   SpillRecord stored{};
   if (spill_) {
@@ -205,6 +213,8 @@ void Capture::read_record(const size_t index,
     result = results_[index];
     if (events)
       std::copy_n(events_.data() + index * capacity_, capacity_, events);
+    if (density && volume_grid_)
+      std::copy_n(density_.data() + index * capacity_, capacity_, density);
   }
   if (result.count > capacity_ || result.error != DEEP_ERROR_NONE ||
       (result.status != DEEP_EMPTY && result.status != DEEP_COMPLETE))
@@ -214,11 +224,21 @@ void Capture::read_record(const size_t index,
     read_events(size_t(stored.event_offset),
                 reinterpret_cast<unsigned char *>(events),
                 result.count * sizeof(*events));
+    if (density && volume_grid_) {
+      std::fill_n(density, capacity_, KernelDeepDensity{});
+      size_t offset = size_t(stored.event_offset) + result.count * sizeof(*events);
+      for (unsigned i = 0; i < result.count; ++i)
+        if (events[i].kind == DEEP_VOLUME_CUBIC) {
+          read_events(offset, reinterpret_cast<unsigned char *>(density + i), sizeof(*density));
+          offset += sizeof(*density);
+        }
+    }
   }
 }
 void Capture::store_record(const size_t index,
                            const KernelDeepResult &result,
-                           const KernelDeepEvent *events)
+                           const KernelDeepEvent *events,
+                           const KernelDeepDensity *density)
 {
   try {
     KernelDeepResult previous{};
@@ -227,11 +247,12 @@ void Capture::store_record(const size_t index,
       set_error(DUPLICATE);
       return;
     }
-    std::array<KernelDeepEvent, DEEP_MAX_EVENTS> record{};
-    if (result.count)
-      std::copy_n(events, result.count, record.data());
     if (spill_) {
-      const size_t bytes = result.count * sizeof(KernelDeepEvent);
+      const size_t event_bytes = result.count * sizeof(KernelDeepEvent);
+      size_t bytes = event_bytes;
+      for (unsigned i = 0; i < result.count; ++i)
+        if (events[i].kind == DEEP_VOLUME_CUBIC)
+          bytes += sizeof(KernelDeepDensity);
       if (spill_event_bytes_ > size_t(INT64_MAX) - bytes)
         throw std::runtime_error("Deep event file offset overflow");
       if (bytes && spill_events_reading_) {
@@ -243,8 +264,12 @@ void Capture::store_record(const size_t index,
           page.last_used = 0;
         }
       }
-      if (bytes && std::fwrite(record.data(), 1, bytes, spill_events_) != bytes)
+      if (event_bytes && std::fwrite(events, 1, event_bytes, spill_events_) != event_bytes)
         throw std::runtime_error("Deep event file append failed");
+      for (unsigned i = 0; i < result.count; ++i)
+        if (events[i].kind == DEEP_VOLUME_CUBIC &&
+            std::fwrite(density + i, 1, sizeof(*density), spill_events_) != sizeof(*density))
+          throw std::runtime_error("Deep density file append failed");
       const SpillRecord stored{uint64_t(spill_event_bytes_), result};
       spill_event_bytes_ += bytes;
       SpillPage &page = spill_page(index);
@@ -256,7 +281,12 @@ void Capture::store_record(const size_t index,
     }
     else {
       results_[index] = result;
-      std::copy_n(record.data(), capacity_, events_.data() + index * capacity_);
+      if (result.count)
+        std::copy_n(events, result.count, events_.data() + index * capacity_);
+      if (volume_grid_)
+        for (unsigned i = 0; i < result.count; ++i)
+          if (events[i].kind == DEEP_VOLUME_CUBIC)
+            density_[index * capacity_ + i] = density[i];
     }
     ++completed_;
   }
@@ -305,7 +335,8 @@ void Capture::record_sample(const int x,
                             const int y,
                             const uint32_t sample,
                             const KernelDeepResult &result,
-                            const KernelDeepEvent *events)
+                            const KernelDeepEvent *events,
+                            const KernelDeepDensity *density)
 {
   if (error_.load() != NONE)
     return;
@@ -326,11 +357,30 @@ void Capture::record_sample(const int x,
   for (unsigned i = 0; i < result.count; ++i) {
     const KernelDeepEvent &e = events[i];
     const bool surface = e.kind == DEEP_SURFACE;
+    const bool cubic = e.kind == DEEP_VOLUME_CUBIC;
+    if (cubic) {
+      if (!volume_grid_ || !density || e.optical_depth != 0) {
+        set_error(INVALID_DEPTH);
+        return;
+      }
+      if (!std::isfinite(density[i].front) || !std::isfinite(density[i].back) ||
+          density[i].front <= 0 || density[i].back <= density[i].front ||
+          e.front != float(density[i].front) || e.back != float(density[i].back)) {
+        set_error(INVALID_DEPTH);
+        return;
+      }
+      for (float coefficient : density[i].optical_depth)
+        if (!std::isfinite(coefficient) || coefficient < 0) {
+          set_error(INVALID_DEPTH);
+          return;
+        }
+    }
     if (!std::isfinite(e.front) || e.front <= 0 || !std::isfinite(e.back) ||
         !std::isfinite(e.surface_alpha) || !std::isfinite(e.optical_depth) ||
         (surface ? (e.back != e.front || e.surface_alpha < 0 || e.surface_alpha > 1 ||
                     e.optical_depth != 0) :
-                   (e.kind != DEEP_VOLUME || !volume_ || e.back <= e.front ||
+                   ((!cubic && e.kind != DEEP_VOLUME) || !volume_ ||
+                    (cubic ? e.back < e.front : e.back <= e.front) ||
                     e.optical_depth < 0 || e.surface_alpha != 0)) ||
         (!volume_ && i && e.front < events[i - 1].front) ||
         (!max_events_ && (!surface || e.surface_alpha != 1)))
@@ -341,7 +391,7 @@ void Capture::record_sample(const int x,
   }
   const size_t index = (size_t(y) * width_ + x) * samples_ + sample;
   std::lock_guard<std::mutex> lock(mutex_);
-  store_record(index, result, events);
+  store_record(index, result, events, density);
 }
 void Capture::set_population(const int x, const int y, const uint32_t count)
 {
@@ -369,20 +419,35 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
   if (sample < 0 || sample >= population(x, y))
     throw std::out_of_range("Deep camera sample outside population");
   KernelDeepResult result{};
-  std::array<KernelDeepEvent, DEEP_MAX_EVENTS> record{};
+  std::array<KernelDeepEvent, DEEP_MAX_EVENTS> small_record{};
+  std::vector<KernelDeepEvent> grid_record(volume_grid_ ? capacity_ : 0);
+  KernelDeepEvent *record = volume_grid_ ? grid_record.data() : small_record.data();
+  std::vector<KernelDeepDensity> density(volume_grid_ ? capacity_ : 0);
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    read_record((size_t(y) * width_ + x) * samples_ + sample, result, record.data());
+    read_record((size_t(y) * width_ + x) * samples_ + sample, result, record, density.data());
   }
   if (error_.load() != NONE || result.status != DEEP_COMPLETE)
     throw std::runtime_error("Cannot read incomplete deep capture");
   VolumeCameraSample output{{uint64_t(sample), 1, true, {}}, {}};
+  std::vector<CubicDensityInterval> cubic;
   for (unsigned i = 0; i < result.count; ++i) {
     const auto &event = record[i];
     if (event.kind == DEEP_SURFACE)
       output.camera.events.push_back({event.front, event.surface_alpha});
+    else if (event.kind == DEEP_VOLUME_CUBIC) {
+      const auto &b = density[i].optical_depth;
+      cubic.push_back({density[i].front, density[i].back, {b[0], b[1], b[2], b[3]}});
+    }
     else
       output.intervals.push_back({event.front, event.back, event.optical_depth});
+  }
+  if (!cubic.empty()) {
+    const auto fitted = integrate_cubic_density(cubic, volume_density_error, reconstruction_limit());
+    if (output.intervals.size() > reconstruction_limit() ||
+        fitted.size() > reconstruction_limit() - output.intervals.size())
+      throw std::runtime_error("Volume integration interval budget exceeded");
+    output.intervals.insert(output.intervals.end(), fitted.begin(), fitted.end());
   }
   return output;
 }
@@ -475,7 +540,8 @@ float Capture::value(const int x, const int y, const int sample) const
   KernelDeepResult result{};
   std::array<KernelDeepEvent, DEEP_MAX_EVENTS> record{};
   std::lock_guard<std::mutex> lock(mutex_);
-  read_record((size_t(y) * width_ + x) * samples_ + sample, result, record.data());
+  read_record((size_t(y) * width_ + x) * samples_ + sample, result,
+              max_events_ ? nullptr : record.data());
   if (result.status != DEEP_COMPLETE)
     return -1;
   return max_events_ ? float(result.count) : (result.count ? record[0].front : 0);
@@ -496,6 +562,6 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   std::vector<VolumeCameraSample> ledger;
   for (int i = 0; i < population(x, y); ++i)
     ledger.push_back(volume_sample(x, y, i));
-  return reconstruct_volume(ledger, 2e-7, volume_interval_limit);
+  return reconstruct_volume(ledger, volume_reconstruction_error, reconstruction_limit());
 }
 }  // namespace ccl::deep

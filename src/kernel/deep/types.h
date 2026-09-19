@@ -20,8 +20,9 @@ enum KernelDeepError : unsigned int {
   DEEP_ERROR_PROGRESS,
   DEEP_ERROR_MEDIUM,
 };
-enum KernelDeepEventKind : unsigned int { DEEP_SURFACE = 0, DEEP_VOLUME };
+enum KernelDeepEventKind : unsigned int { DEEP_SURFACE = 0, DEEP_VOLUME, DEEP_VOLUME_CUBIC };
 constexpr unsigned int DEEP_MAX_EVENTS = 64;
+constexpr unsigned int DEEP_MAX_VOLUME_EVENTS = 4096;
 constexpr unsigned int DEEP_MAX_MEDIA = 64;
 
 /* A visited convex medium has one entry/exit pair. Negative start means exited.
@@ -39,6 +40,15 @@ struct KernelDeepEvent {
   float surface_alpha;
   float optical_depth;
 };
+/* Optional companion buffer for native grid cells, indexed like events.
+ * Cubic Bernstein coefficients include physical ray-segment length, so their
+ * average is the cell's optical depth. Surface records keep their 20-byte layout.
+ * The host allocates this buffer; kernels never allocate it per thread. */
+struct KernelDeepDensity {
+  float optical_depth[4];
+  /* Do not quantize thin cell boundaries before the export error check. */
+  double front, back;
+};
 struct KernelDeepResult {
   KernelDeepStatus status;
   unsigned int count;
@@ -51,6 +61,7 @@ struct KernelDeepRecord {
 
 static_assert(sizeof(unsigned int) == 4 && sizeof(float) == 4, "Deep record scalar layout");
 static_assert(sizeof(KernelDeepEvent) == 20, "Deep event layout");
+static_assert(sizeof(KernelDeepDensity) == 32, "Deep density layout");
 static_assert(sizeof(KernelDeepResult) == 12, "Deep result layout");
 static_assert(sizeof(KernelDeepRecord) == 28, "Deep metadata layout");
 static_assert(sizeof(KernelDeepMedium) == 8, "Deep medium layout");

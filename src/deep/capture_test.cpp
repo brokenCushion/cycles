@@ -29,6 +29,90 @@ template<typename F> static void rejects(F f)
 int main()
 {
   try {
+    {
+      using namespace ccl::deep;
+      VolumeCameraSample ray{{0, 1, true, {}}, {}};
+      for (int i = 0; i < 12000; ++i)
+        ray.intervals.push_back({double(i + 1), double(i + 2), .0001});
+      const auto curve = reconstruct_volume({ray}, 2e-7, 16384);
+      check(curve.size() == 12000);
+      for (const double depth : {1.0, 10.5, 6000.25, 12001.0})
+        check(std::abs(interval_transmittance(curve, depth) -
+                        std::exp(-.0001 * (depth - 1))) < 1e-12);
+      ray.intervals = {{1, 2, 80}};
+      const auto dense = reconstruct_volume({ray});
+      check(dense.size() == 5);
+      check(std::abs(interval_transmittance(dense, 1.25) - std::exp(-20.0)) < 1e-15);
+    }
+    {
+      Capture memory(33, 1, 17, 128 * 1024 * 1024, 65, false, false, true, true);
+      Capture disk(33, 1, 17, 128 * 1024 * 1024, 65, true, false, true, true);
+      std::vector<KernelDeepEvent> events(65);
+      std::vector<KernelDeepDensity> density(65);
+      events[0] = {DEEP_SURFACE, 1, 1, .25f, 0};
+      for (unsigned i = 1; i < 65; ++i) {
+        events[i] = {DEEP_VOLUME_CUBIC, float(i), float(i + 1), 0, 0};
+        density[i] = {{.001f, .001f, .001f, .001f}, double(i), double(i + 1)};
+      }
+      for (int sample = 0; sample < 17; ++sample)
+        for (int x = 32; x >= 0; --x)
+          for (Capture *capture : {&memory, &disk})
+            capture->record_sample(x, 0, sample, {DEEP_COMPLETE, 65, DEEP_ERROR_NONE},
+                                   events.data(), density.data());
+      check(memory.finalize() && disk.finalize());
+      for (int x = 0; x < 33; ++x)
+        for (int sample = 0; sample < 17; ++sample) {
+          const auto a = memory.volume_sample(x, 0, sample);
+          const auto b = disk.volume_sample(x, 0, sample);
+          check(a.camera.events.size() == 1 && b.camera.events.size() == 1);
+          check(a.intervals.size() == 64 && b.intervals.size() == 64);
+          for (size_t i = 0; i < a.intervals.size(); ++i) {
+            check(a.intervals[i].front == b.intervals[i].front);
+            check(a.intervals[i].back == b.intervals[i].back);
+            check(a.intervals[i].optical_depth == b.intervals[i].optical_depth);
+            check(b.intervals[i].optical_depth == double(.001f));
+          }
+        }
+      check(disk.value(0, 0, 0) == 65);
+      disk.record_sample(0, 0, 0, {DEEP_COMPLETE, 65, DEEP_ERROR_NONE},
+                         events.data(), density.data());
+      check(!disk.finalize());
+      for (bool spill : {false, true}) {
+        Capture thin(1, 1, 1, 8 * 1024 * 1024, 1, spill, false, true, true);
+        const KernelDeepEvent thin_event{DEEP_VOLUME_CUBIC, 1000, 1000, 0, 0};
+        const KernelDeepDensity thin_density{{1e-8f, 1e-8f, 1e-8f, 1e-8f}, 1000, 1000 + 1e-8};
+        thin.record_sample(0, 0, 0, {DEEP_COMPLETE, 1, DEEP_ERROR_NONE}, &thin_event, &thin_density);
+        check(thin.finalize());
+        const auto thin_sample = thin.volume_sample(0, 0, 0);
+        check(thin_sample.intervals.size() == 1);
+        check(thin_sample.intervals[0].front == thin_density.front &&
+              thin_sample.intervals[0].back == thin_density.back);
+        Capture varying(1, 1, 2, 8 * 1024 * 1024, 2, spill, false, true, true);
+        const KernelDeepEvent cell{DEEP_VOLUME_CUBIC, 1, 2, 0, 0};
+        const KernelDeepDensity curve{{0, .0001f, .0002f, 0}, 1, 2};
+        varying.record_sample(0, 0, 0, {DEEP_COMPLETE, 1, DEEP_ERROR_NONE}, &cell, &curve);
+        check(!varying.volume_sample(0, 0, 0).intervals.empty());
+        /* Resume appending after reading a partial final event cache page. */
+        varying.record_sample(0, 0, 1, {DEEP_COMPLETE, 1, DEEP_ERROR_NONE}, &cell, &curve);
+        check(varying.finalize());
+        const auto reconstructed = varying.reconstruct_volume_pixel(0, 0);
+        for (int probe = 0; probe <= 100; ++probe) {
+          const double u = probe / 100.0;
+          const double b = curve.optical_depth[1], c = curve.optical_depth[2];
+          const double tau = 1.5 * b * u * u + (-2 * b + c) * u * u * u +
+                             (3 * b - 3 * c) * u * u * u * u / 4;
+          check(std::abs(interval_transmittance(reconstructed, 1 + u) - std::exp(-tau)) < 3e-7);
+        }
+        Capture missing(1, 1, 1, 8 * 1024 * 1024, 65, spill, false, true, true);
+        missing.record_sample(0, 0, 0, {DEEP_COMPLETE, 65, DEEP_ERROR_NONE}, events.data());
+        check(!missing.finalize());
+        Capture invalid(1, 1, 1, 8 * 1024 * 1024, 65, spill, false, true, true);
+        density[1].optical_depth[2] = -1;
+        invalid.record_sample(0, 0, 0, {DEEP_COMPLETE, 65, DEEP_ERROR_NONE},
+                               events.data(), density.data());
+        check(!invalid.finalize());
+      }
+    }
     rejects([] { Capture c(-1, 2, 1, 1024); });
     rejects([] { Capture c(1, 2, 0, 1024); });
     rejects([] { Capture c(1, 1, 4097, 1024); });

@@ -120,6 +120,9 @@ class Shader : public Node {
   bool has_surface_spatial_varying;
   bool has_volume_spatial_varying;
   bool has_volume_attribute_dependency;
+  /* Set by deep preflight for a qualified density-grid absorption graph.
+   * Negative means the native grid capture path is not enabled. */
+  float deep_density_scale = -1.0f;
   bool has_light_path_node;
   bool has_aov_output_node;
   bool has_time_dependency;

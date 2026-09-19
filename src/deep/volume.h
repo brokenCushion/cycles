@@ -6,6 +6,11 @@
 
 namespace ccl::deep {
 
+/* Shared error allocations for capture and FLOAT publication. */
+inline constexpr double volume_density_error = 1e-7;
+inline constexpr double volume_reconstruction_error = 5e-8;
+inline constexpr double volume_coefficient_error = 4e-8;
+
 struct VolumeInterval {
   double front, back;
   /* Integrated scalar extinction sigma_t * physical ray length, NOT axial length. */
@@ -27,6 +32,21 @@ struct LinearDensityInterval {
   double physical_length_per_depth = 1;
 };
 
+/* Bernstein controls already multiplied by physical cell length. Their mean
+ * is the cell optical depth; front/back are axial camera depths. */
+struct CubicDensityInterval {
+  double front, back;
+  double optical_depth[4];
+};
+
+/* Fit native cell records with constant-extinction intervals. The tolerance
+ * bounds absolute transmittance error in exact arithmetic, including overlaps.
+ * FLOAT coefficient/export errors require a separate budget. */
+std::vector<VolumeInterval> integrate_cubic_density(
+    const std::vector<CubicDensityInterval> &segments,
+    double tolerance = volume_density_error,
+    size_t max_intervals = 65536);
+
 /* Reference integration. In exact arithmetic, preserves each segment's total
  * optical depth and bounds transmittance error at every interior depth. Double
  * precision is numerically qualified by density_test, not an interval-arithmetic
@@ -45,9 +65,9 @@ struct IntervalSample {
 /* Reference only: averages sample transmittance, then fits nonoverlapping
  * exponential intervals. Surface steps have front == back. Error is absolute
  * transmittance error at EVERY depth, bounded using log-mixture curvature.
- * Limits fail explicitly; this is not yet connected to renderer capture. */
+ * Limits fail explicitly. Renderer capture uses the shared error allocation. */
 std::vector<IntervalSample> reconstruct_volume(const std::vector<VolumeCameraSample> &samples,
-                                              double tolerance = 2e-7,
+                                              double tolerance = volume_reconstruction_error,
                                               size_t max_intervals = 65536);
 
 /* Exact maximum difference between two ordered, nonoverlapping exponential

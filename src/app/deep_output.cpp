@@ -2,168 +2,21 @@
 #include "app/deep_output.h"
 #include "deep/exr_writer.h"
 #include "deep/publication.h"
-#include "scene/background.h"
-#include "scene/bake.h"
-#include "scene/camera.h"
-#include "scene/geometry.h"
-#include "scene/integrator.h"
-#include "scene/mesh.h"
-#include "scene/object.h"
-#include "scene/scene.h"
-#include "scene/shader.h"
-#include "scene/shader_nodes.h"
-#include "session/session.h"
-#include "util/math.h"
-
-#include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <limits>
 #include <stdexcept>
 
 CCL_NAMESPACE_BEGIN
-static void require_deep(const bool condition, const char *message)
-{
-  if (!condition)
-    throw std::invalid_argument(string("Deep: ") + message);
-}
-
-static void validate_shader(Shader *shader, const bool background, const bool transparent = false)
-{
-  require_deep(shader && shader->graph, "missing shader graph");
-  ShaderGraph *graph = shader->graph.get();
-  auto *output = graph->output();
-  require_deep(!output->input("Volume")->link && !output->input("Displacement")->link,
-               "volume and displacement shaders are unsupported");
-  require_deep(output->input("Surface")->link != nullptr, "surface shader must be connected");
-  for (ShaderNode *node : graph->nodes) {
-    const string type = node->type->name.string();
-    if (transparent && !background) {
-      require_deep(type == "output" || type == "emission" || type == "diffuse_bsdf" ||
-                       type == "transparent_bsdf" || type == "mix_closure" ||
-                       type == "checker_texture" || type == "texture_coordinate" ||
-                       type == "image_texture",
-                   "unsupported M4 surface node (refraction, transmission, holdout and arbitrary "
-                   "OSL are deferred)");
-      continue;
-    }
-    require_deep(type == "output" || (background ? type == "background_shader" :
-                                                   (type == "emission" || type == "diffuse_bsdf")),
-                 "only constant diffuse/emission surfaces and constant background are supported");
-    if (type != "output") {
-      for (ShaderInput *input : node->inputs)
-        require_deep(!input->link, "material inputs must be constant");
-    }
-  }
-}
-
-void validate_deep_scene(Scene *scene, const SessionParams &params, const bool transparent)
-{
-  require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA) &&
-                   params.background,
-               "requires single CPU or CUDA background rendering");
-  require_deep(params.device.type == DEVICE_CPU ||
-                   scene->params.shadingsystem == SHADINGSYSTEM_SVM,
-               "CUDA deep supports native SVM only; GPU OSL is not qualified");
-  require_deep(transparent || scene->params.shadingsystem == SHADINGSYSTEM_SVM,
-               "OSL is not supported by the M3 material allowlist");
-  require_deep(params.samples > 0 && params.samples <= 4096 && !params.use_sample_subset &&
-                   params.pixel_size == 1 && params.time_limit == 0 && !params.use_auto_tile,
-               "requires 1..4096 maximum samples, full resolution, no time limit or tiling");
-  const Integrator *integrator = scene->integrator;
-  require_deep(!integrator->get_use_sample_subset(), "sample subsets are unsupported");
-  require_deep(
-      !integrator->get_use_guiding() &&
-          !integrator->get_use_denoise() && !integrator->get_use_custom_pixel_jitter_sample() &&
-          !integrator->get_use_pixel_jitter() && integrator->get_ao_bounces() == 0,
-      "guiding, denoising, pixel jitter overrides and AO bounces are unsupported");
-  require_deep(scene->film->get_filter_type() == FILTER_BOX &&
-                   scene->film->get_filter_width() == 1,
-               "requires box filter width 1");
-  const Camera *camera = scene->camera;
-  require_deep(camera->get_camera_type() == CAMERA_PERSPECTIVE &&
-                   !camera->get_use_perspective_motion() &&
-                   camera->get_stereo_eye() == Camera::STEREO_NONE &&
-                   !camera->get_use_spherical_stereo() && camera->script_name.empty(),
-               "requires mono perspective camera without animated field of view");
-  require_deep(camera->get_rolling_shutter_type() == Camera::ROLLING_SHUTTER_NONE,
-               "rolling shutter is unsupported");
-  if (integrator->get_motion_blur()) {
-    require_deep(isfinite_safe(camera->get_shuttertime()) && camera->get_shuttertime() > 0,
-                 "motion blur requires a positive finite shutter duration");
-    for (const float weight : camera->get_shutter_curve())
-      require_deep(isfinite_safe(weight) && weight == 1.0f,
-                   "deep motion currently requires a uniform shutter curve");
-  }
-  const auto validate_motion = [&](const array<Transform> &motion) {
-    if (motion.empty())
-      return;
-    require_deep(integrator->get_motion_blur() && motion.size() >= 2,
-                 "motion transforms require enabled motion blur and at least two steps");
-    for (const Transform &tfm : motion) {
-      const float3 x = make_float3(tfm.x.x, tfm.x.y, tfm.x.z);
-      const float3 y = make_float3(tfm.y.x, tfm.y.y, tfm.y.z);
-      const float3 z = make_float3(tfm.z.x, tfm.z.y, tfm.z.z);
-      require_deep(isfinite_safe(tfm.x) && isfinite_safe(tfm.y) && isfinite_safe(tfm.z) &&
-                       fabsf(dot(x, x) - 1) < 1e-4f && fabsf(dot(y, y) - 1) < 1e-4f &&
-                       fabsf(dot(z, z) - 1) < 1e-4f && fabsf(dot(x, y)) < 1e-4f &&
-                       fabsf(dot(x, z)) < 1e-4f && fabsf(dot(y, z)) < 1e-4f &&
-                       dot(x, cross(y, z)) > 0,
-                   "deep motion requires finite rigid transforms without scale or reflection");
-    }
-  };
-  validate_motion(camera->get_motion());
-  require_deep(isfinite_safe(camera->get_aperturesize()) && camera->get_aperturesize() >= 0 &&
-                   isfinite_safe(camera->get_aperture_ratio()) && camera->get_aperture_ratio() > 0 &&
-                   isfinite_safe(camera->get_bladesrotation()) &&
-                   isfinite_safe(camera->get_focaldistance()) && camera->get_focaldistance() > 0,
-               "invalid aperture size, ratio, rotation or focal distance");
-  require_deep(camera->get_nearclip() >= 0 && camera->get_farclip() > camera->get_nearclip() &&
-                   isfinite_safe(camera->get_nearclip()) && isfinite_safe(camera->get_farclip()) &&
-                   isfinite_safe(camera->get_fov()) && camera->get_fov() > 0 &&
-                   camera->get_fov() < M_PI_F,
-               "invalid camera clipping or field of view");
-  require_deep(camera->border.left == 0 && camera->border.bottom == 0 &&
-                   camera->border.right == 1 && camera->border.top == 1,
-               "camera borders are unsupported");
-  require_deep(!scene->bake_manager->get_baking() && scene->procedurals.empty(),
-               "baking and procedural geometry are unsupported");
-  require_deep(!scene->background->get_transparent_glass(), "transparent glass is unsupported");
-  validate_shader(scene->background->get_shader() ? scene->background->get_shader() :
-                                                    scene->default_background,
-                  true);
-  for (Geometry *geometry : scene->geometry) {
-    if (geometry->geometry_type == Geometry::BACKGROUND_LIGHT)
-      continue;
-    require_deep(geometry->geometry_type == Geometry::MESH && !geometry->get_use_motion_blur(),
-                 "only static polygon meshes and background lighting are supported");
-    require_deep(static_cast<Mesh *>(geometry)->get_subdivision_type() == Mesh::SUBDIVISION_NONE,
-                 "subdivision is unsupported");
-    if (geometry->get_used_shaders().empty())
-      validate_shader(scene->default_surface, false, transparent);
-    for (Node *shader : geometry->get_used_shaders())
-      validate_shader(static_cast<Shader *>(shader), false, transparent);
-  }
-  for (Object *object : scene->objects) {
-    validate_motion(object->get_motion());
-    require_deep(!object->get_use_holdout() &&
-                     !object->get_is_shadow_catcher() && !object->get_is_caustics_caster() &&
-                     !object->get_is_caustics_receiver(),
-                 "holdout, shadow catcher and caustics are unsupported");
-  }
-}
-
-void write_deep_capture(const deep::OpaqueCapture &capture,
+static void write_deep_tile(const OutputDriver::DeepTile &tile,
                         const string &path,
                         const string &records_path,
                         const string &beauty_path,
                         const bool reduce,
                         const std::function<bool()> &cancelled)
 {
-  if (!capture.finalize())
-    throw std::runtime_error(capture.error_message());
   deep::SurfaceImage image;
-  image.display_window = {0, 0, capture.width() - 1, capture.height() - 1};
+  image.display_window = {0, 0, tile.width - 1, tile.height - 1};
   image.data_window = image.display_window;
   image.compression = deep::DeepCompression::Zips;
   image.reduction_error = reduce ? 1e-3 : 0;
@@ -198,13 +51,27 @@ void write_deep_capture(const deep::OpaqueCapture &capture,
     deep::AtomicOutput publication(records_path);
     std::ofstream records(publication.temporary());
     records.exceptions(std::ios::badbit | std::ios::failbit);
-    records << "file_x,file_y,sample,depth,alpha,event\n"
+    records << (tile.volume ? "file_x,file_y,sample,front,back,value,kind,event\n" :
+                                    "file_x,file_y,sample,depth,alpha,event\n")
             << std::setprecision(std::numeric_limits<float>::max_digits10);
-    for (int y = 0; y < capture.height(); ++y) {
+    for (int y = 0; y < tile.height; ++y) {
       check_cancel();
-      for (int x = 0; x < capture.width(); ++x)
-        for (int sample = 0; sample < capture.population(x, capture.height() - 1 - y); ++sample) {
-          const auto events = capture.events(x, capture.height() - 1 - y, sample);
+      for (int x = 0; x < tile.width; ++x)
+        for (int sample = 0; sample < tile.population(x, tile.height - 1 - y); ++sample) {
+          if (tile.volume) {
+            const auto v = tile.get_camera_sample(x, tile.height - 1 - y, sample);
+            size_t event = 0;
+            for (const auto &interval : v.intervals)
+              records << x << ',' << y << ',' << sample << ',' << interval.front << ','
+                      << interval.back << ',' << interval.optical_depth << ",volume," << event++ << '\n';
+            for (const auto &surface : v.camera.events)
+              records << x << ',' << y << ',' << sample << ',' << surface.depth << ','
+                      << surface.depth << ',' << surface.alpha << ",surface," << event++ << '\n';
+            if (!event)
+              records << x << ',' << y << ',' << sample << ",0,0,0,miss,-1\n";
+            continue;
+          }
+          const auto events = tile.get_camera_sample(x, tile.height - 1 - y, sample).camera.events;
           if (events.empty())
             records << x << ',' << y << ',' << sample << ",0,0,-1\n";
           for (size_t i = 0; i < events.size(); ++i)
@@ -216,18 +83,59 @@ void write_deep_capture(const deep::OpaqueCapture &capture,
     check_cancel();
     publication.publish();
   }
+  if (tile.volume) {
+    deep::write_volume_exr_rows(path, image, [&](const int y) {
+      check_cancel();
+      std::vector<std::vector<deep::IntervalSample>> row;
+      row.reserve(tile.width);
+      for (int x = 0; x < tile.width; ++x)
+        row.push_back(tile.get_pixel(x, tile.height - 1 - y));
+      check_cancel();
+      return row;
+    }, check_cancel);
+    return;
+  }
   deep::write_deep_exr_rows(
       path,
       image,
       [&](const int y) {
         check_cancel();
         std::vector<std::vector<deep::SurfaceSample>> row;
-        row.reserve(capture.width());
-        for (int x = 0; x < capture.width(); ++x)
-          row.push_back(capture.reconstruct_pixel(x, capture.height() - 1 - y));
+        row.reserve(tile.width);
+        for (int x = 0; x < tile.width; ++x) {
+          std::vector<deep::SurfaceSample> pixel;
+          for (const auto &sample : tile.get_pixel(x, tile.height - 1 - y))
+            pixel.push_back({sample.front, sample.alpha});
+          row.push_back(std::move(pixel));
+        }
         check_cancel();
         return row;
       },
       check_cancel);
+}
+DeepOutputDriver::DeepOutputDriver(const string_view beauty_path, const string_view pass,
+                                    LogFunction log, const string_view deep_path,
+                                    const string_view records_path, const bool reduce)
+    : OIIOOutputDriver(beauty_path, pass, std::move(log)),
+      deep_path_(deep_path), records_path_(records_path), reduce_(reduce) {}
+
+void DeepOutputDriver::write_render_tile(const Tile &tile)
+{
+  if (!filepath_.empty()) {
+    written_ = false;
+    OIIOOutputDriver::write_render_tile(tile);
+  }
+}
+
+void DeepOutputDriver::write_deep_render_tile(const DeepTile &tile)
+{
+  if (!filepath_.empty() && !written_) {
+    throw std::runtime_error("Required beauty output was not successfully written and closed");
+  }
+  if (tile.volume && reduce_) {
+    throw std::invalid_argument("Deep: surface reduction is unsupported for volumes");
+  }
+  write_deep_tile(tile, deep_path_, records_path_, filepath_, reduce_,
+                  [&tile] { return tile.cancelled(); });
 }
 CCL_NAMESPACE_END

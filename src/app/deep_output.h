@@ -1,18 +1,28 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
-#include "deep/capture.h"
-#include "util/string.h"
-#include <functional>
+#include "app/oiio_output_driver.h"
 
 CCL_NAMESPACE_BEGIN
-class Scene;
-class SessionParams;
-/* Throws before render if the experimental M3 contract cannot be established. */
-void validate_deep_scene(Scene *scene, const SessionParams &params, bool transparent = false);
-void write_deep_capture(const deep::OpaqueCapture &capture,
-                        const string &path,
-                        const string &records_path,
-                        const string &beauty_path,
-                        bool reduce,
-                        const std::function<bool()> &cancelled);
+
+/* Standalone file adapter. Capture and reconstruction belong to PathTrace. */
+class DeepOutputDriver final : public OIIOOutputDriver {
+ public:
+  DeepOutputDriver(string_view beauty_path,
+                   string_view pass,
+                   LogFunction log,
+                   string_view deep_path,
+                   string_view records_path,
+                   bool reduce);
+  void write_render_tile(const Tile &tile) override;
+  bool supports_deep_output() const override
+  {
+    return true;
+  }
+  void write_deep_render_tile(const DeepTile &tile) override;
+
+ private:
+  string deep_path_, records_path_;
+  bool reduce_;
+};
+
 CCL_NAMESPACE_END

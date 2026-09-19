@@ -163,20 +163,19 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
     }
 
 #ifdef WITH_CYCLES_DEEP_OPAQUE
-    if (deep::OpaqueCapture *capture = film_->deep_capture) {
-      if (has_bake || state->path.queued_kernel != DEVICE_KERNEL_INTEGRATOR_INTERSECT_CLOSEST ||
+    if (deep::Capture *capture = deep_capture_) {
+      if (has_bake || (state->path.queued_kernel != DEVICE_KERNEL_INTEGRATOR_INTERSECT_CLOSEST &&
+                      !(capture->volume() && state->path.queued_kernel ==
+                          DEVICE_KERNEL_INTEGRATOR_INTERSECT_VOLUME_STACK)) ||
           state->path.bounce != 0 || !(state->path.visibility & PATH_RAY_VISIBILITY_CAMERA))
       {
         capture->fail();
       }
       else if (capture->max_events()) {
-        float events[128];
-        const int count = kernels_.deep_surface(
-            kernel_globals, state, events, capture->max_events());
-        if (count < 0)
-          capture->fail();
-        else
-          capture->record_events(work_tile.x, work_tile.y, state->path.sample, events, count);
+        KernelDeepEvent events[DEEP_MAX_EVENTS];
+        const KernelDeepResult result = kernels_.deep_surface(
+            kernel_globals, state, events, capture->max_events(), capture->volume());
+        capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, events);
       }
       else {
         /* Execute the scheduled intersection once; megakernel resumes at its successor.
@@ -239,7 +238,7 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
     ++sample_work_tile.start_sample;
   }
 #ifdef WITH_CYCLES_DEEP_OPAQUE
-  if (deep::OpaqueCapture *capture = film_->deep_capture; capture && capture->adaptive()) {
+  if (deep::Capture *capture = deep_capture_; capture && capture->adaptive()) {
     const auto &film = kernel_globals->data.film;
     if (film.pass_sample_count == PASS_UNUSED || is_cancel_requested()) {
       capture->fail();

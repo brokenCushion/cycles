@@ -5,6 +5,7 @@
 #pragma once
 
 #include "device/cpu/kernel_function.h"
+#include "kernel/deep/types.h"
 #include "util/half.h"
 
 CCL_NAMESPACE_BEGIN
@@ -32,8 +33,8 @@ class CPUKernels {
   IntegratorInitFunction integrator_init_from_bake;
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   IntegratorShadeFunction integrator_intersect_closest;
-  CPUKernelFunction<int (*)(
-      const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *, float *, int)>
+  CPUKernelFunction<KernelDeepResult (*)(
+      const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *, KernelDeepEvent *, int, bool)>
       deep_surface;
 #endif
   IntegratorShadeFunction integrator_megakernel;

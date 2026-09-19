@@ -37,19 +37,19 @@ to this machine; another Python 3 installation may be substituted.
 ```powershell
 & 'C:\Users\jun\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' src/cmake/make_update.py --no-cycles
 
-cmake -S . -B build-baseline -G 'Visual Studio 17 2022' -A x64 `
+cmake -S . -B builds/build-baseline -G 'Visual Studio 17 2022' -A x64 `
   -DWITH_CYCLES_DEVICE_CUDA=OFF -DWITH_CYCLES_DEVICE_OPTIX=OFF `
   -DWITH_CYCLES_DEVICE_HIP=OFF -DWITH_CYCLES_HYDRA_RENDER_DELEGATE=OFF `
   -DWITH_CYCLES_USD=OFF -DWITH_CYCLES_OSL=ON -DWITH_STRICT_BUILD_OPTIONS=ON
 
-cmake --build build-baseline --target install --config Release --parallel 4
-ctest --test-dir build-baseline -C Release --output-on-failure
+cmake --build builds/build-baseline --target install --config Release --parallel 4
+ctest --test-dir builds/build-baseline -C Release --output-on-failure
 
-.\install\cycles.exe --list-devices
-.\install\cycles.exe --device CPU --background --samples 8 --threads 8 --width 160 --height 100 --output build-baseline-logs/native.exr examples/scene_cube_surface.xml
-.\install\cycles.exe --device CPU --background --shadingsys osl --samples 8 --threads 8 --width 160 --height 100 --output build-baseline-logs/osl.exr examples/scene_osl_stripes.xml
+.\builds\install\cycles.exe --list-devices
+.\builds\install\cycles.exe --device CPU --background --samples 8 --threads 8 --width 160 --height 100 --output builds/build-baseline-logs/native.exr examples/scene_cube_surface.xml
+.\builds\install\cycles.exe --device CPU --background --shadingsys osl --samples 8 --threads 8 --width 160 --height 100 --output builds/build-baseline-logs/osl.exr examples/scene_osl_stripes.xml
 
-$env:PATH = "$((Resolve-Path install).Path);$env:PATH"
+$env:PATH = "$((Resolve-Path builds/install).Path);$env:PATH"
 .\lib\windows_x64\openimageio\bin\oiiotool.exe --info -v --stats build-baseline-logs/native.exr
 .\lib\windows_x64\openimageio\bin\oiiotool.exe --info -v --stats build-baseline-logs/osl.exr
 ```

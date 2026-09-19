@@ -7,7 +7,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(CTest)
 endif()
 
-add_library(cycles_deep_reference STATIC reconstruction.cpp)
+add_library(cycles_deep_reference STATIC reconstruction.cpp volume.cpp)
 target_compile_features(cycles_deep_reference PUBLIC cxx_std_17)
 
 add_library(cycles_deep_capture STATIC capture.cpp capture.h)
@@ -39,11 +39,19 @@ if(WITH_CYCLES_DEEP_EXR_TESTS OR WITH_CYCLES_DEEP_OPAQUE)
     add_test(NAME cycles_deep_production COMMAND cycles_deep_production_test ${CMAKE_CURRENT_BINARY_DIR}/production-fixtures)
     add_executable(cycles_deep_exr_test exr_writer_test.cpp)
     target_link_libraries(cycles_deep_exr_test PRIVATE cycles_deep_exr)
+    add_executable(cycles_deep_volume_test volume_test.cpp)
+    target_link_libraries(cycles_deep_volume_test PRIVATE cycles_deep_exr)
+    add_test(NAME cycles_deep_volume
+      COMMAND cycles_deep_volume_test ${CMAKE_CURRENT_BINARY_DIR}/volume-fixtures)
+    add_executable(cycles_deep_density_test density_test.cpp)
+    target_link_libraries(cycles_deep_density_test PRIVATE cycles_deep_exr)
+    add_test(NAME cycles_deep_density
+      COMMAND cycles_deep_density_test ${CMAKE_CURRENT_BINARY_DIR}/density-fixtures)
     if(WIN32)
       if(CMAKE_VERSION VERSION_LESS 3.21)
         message(FATAL_ERROR "Deep EXR Windows test DLL staging requires CMake 3.21+")
       endif()
-      foreach(deep_test cycles_deep_exr_test cycles_deep_production_test)
+      foreach(deep_test cycles_deep_exr_test cycles_deep_production_test cycles_deep_volume_test cycles_deep_density_test)
         add_custom_command(TARGET ${deep_test} POST_BUILD
           COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_RUNTIME_DLLS:${deep_test}> $<TARGET_FILE_DIR:${deep_test}>

@@ -12,6 +12,7 @@
 
 // clang-format off
 #include "kernel/device/cpu/compat.h"
+#include "kernel/deep/types.h"
 
 #ifndef KERNEL_STUB
 #    include "kernel/globals.h"
@@ -34,6 +35,7 @@
 #    include "kernel/bake/bake.h"
 #    include "kernel/deep/camera_depth.h"
 #    include "kernel/deep/surface_boundary.h"
+#    include "kernel/deep/volume_cpu.h"
 
 #else
 #  define STUB_ASSERT(arch, name) \
@@ -90,15 +92,18 @@ DEFINE_INTEGRATOR_SHADE_KERNEL(intersect_closest)
  * RNG identity are copied; beauty path state and buffers are never mutated.
  * Scene validation
  * excludes shader nodes with side effects (including AOV writes). */
-int KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGlobalsCPU *kg,
+KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGlobalsCPU *kg,
                                             const IntegratorStateCPU *camera,
-                                            float *events,
-                                            const int max_events)
+                                            KernelDeepEvent *events,
+                                            const int max_events,
+                                            const bool volume)
 {
 #  ifdef KERNEL_STUB
   STUB_ASSERT(KERNEL_ARCH, deep_surface);
-  return -1;
+  return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
 #  else
+  if (volume)
+    return deep_volume_cpu(kg, camera, events, max_events);
   IntegratorStateCPU traversal = *camera;
   IntegratorState state = &traversal;
   Ray ray;
@@ -115,10 +120,10 @@ int KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGlobalsCPU *kg,
     isect.object = OBJECT_NONE;
     isect.prim = PRIM_NONE;
     if (!scene_intersect(kg, &ray, PATH_RAY_VISIBILITY_CAMERA, &isect))
-      return count;
+      return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
     /* Test for a hit beyond the limit, so a complete chain exactly at capacity succeeds. */
     if (isect.type != PRIMITIVE_TRIANGLE)
-      return -1;
+      return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
     integrator_state_write_isect(state, &isect);
     integrator_state_write_ray(state, &ray);
     ShaderData sd;
@@ -131,31 +136,30 @@ int KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGlobalsCPU *kg,
       continue;
     }
     if (count == max_events)
-      return -1;
+      return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
     previous = isect;
     previous_backfacing = backfacing;
     surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE & ~KERNEL_FEATURE_NODE_RAYTRACE>(
         kg, state, &sd, nullptr, state->path.visibility, state->path.flag);
     if (sd.runtime_flag & SR_CACHE_MISS)
-      return -1;
+      return {DEEP_FAILED, 0, DEEP_ERROR_CACHE_MISS};
     const float3 transparency = spectrum_to_rgb(surface_shader_transparency(&sd));
     /* Scalar extinction only: never luminance, throughput or a sampled closure weight. */
     if (!isfinite(transparency.x) || !isfinite(transparency.y) || !isfinite(transparency.z) ||
         transparency.x < 0 || transparency.x > 1 || transparency.y != transparency.x ||
         transparency.z != transparency.x)
-      return -1;
+      return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
     const float depth = deep_camera_depth(
         kg->data.cam, kg->camera_motion.data, ray.time, ray.P + ray.D * isect.t);
     if (!isfinite(depth) || depth <= 0)
-      return -1;
-    events[2 * count] = depth;
-    events[2 * count + 1] = 1.0f - transparency.x;
+      return {DEEP_FAILED, 0, DEEP_ERROR_DEPTH};
+    events[count] = {DEEP_SURFACE, depth, depth, 1.0f - transparency.x, 0};
     ++count;
     if (transparency.x == 0)
-      return count;
+      return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
     const float next = intersection_t_offset(isect.t);
     if (!(next > ray.tmin))
-      return -1;
+      return {DEEP_FAILED, 0, DEEP_ERROR_PROGRESS};
     ray.tmin = next;
     ray.self.object = isect.object;
     ray.self.prim = isect.prim;

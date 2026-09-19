@@ -368,6 +368,24 @@ static void xml_read_shader_graph(XMLReadState &state, Shader *shader, const xml
       snode = graph->create_node(node_type);
     }
 
+    if (node_name == "absorption_volume") {
+      /* Preserve invalid-input detection before fast-math socket setters. */
+      for (const char *name : {"density", "color"}) {
+        const xml_attribute attr = node.attribute(name);
+        if (!attr)
+          continue;
+        vector<string> tokens;
+        string_split(tokens, attr.value());
+        if (tokens.size() != (string(name) == "color" ? 3 : 1))
+          throw std::invalid_argument("Invalid absorption volume attribute");
+        for (const string &token : tokens) {
+          char *end = nullptr;
+          const float value = strtof(token.c_str(), &end);
+          if (end == token.c_str() || *end != '\0' || !isfinite_safe(value))
+            throw std::invalid_argument("Absorption volume attributes must be finite numbers");
+        }
+      }
+    }
     xml_read_node(graph_reader, snode, node);
 
     if (node_name == "image_texture") {

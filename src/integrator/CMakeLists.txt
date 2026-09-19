@@ -49,6 +49,7 @@ set(SRC_HEADERS
   pass_accessor_gpu.h
   path_trace_display.h
   path_trace_tile.h
+  path_trace_deep_tile.h
   path_trace_work.h
   path_trace_work_cpu.h
   path_trace_work_gpu.h

@@ -32,7 +32,6 @@
 #include "app/oiio_output_driver.h"
 #ifdef WITH_CYCLES_DEEP_OPAQUE
 #  include "app/deep_output.h"
-#  include "deep/capture.h"
 #  include <filesystem>
 #  include <stdexcept>
 #endif
@@ -60,10 +59,9 @@ struct Options {
   string deep_records_filepath;
   int deep_memory_mb = 64;
   bool deep_transparent = false;
+  bool deep_volume = false;
   int deep_max_events = 16;
   bool deep_reduce = false;
-  OIIOOutputDriver *beauty_driver = nullptr;
-  unique_ptr<deep::OpaqueCapture> deep_capture;
 #endif
 } options;
 
@@ -155,12 +153,17 @@ static void session_init()
   }
 #endif
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (!options.deep_output_filepath.empty()) {
+    options.session->set_output_driver(make_unique<DeepOutputDriver>(
+        options.output_filepath, options.output_pass, session_print,
+        options.deep_output_filepath, options.deep_records_filepath, options.deep_reduce));
+  }
+  else
+#endif
   if (!options.output_filepath.empty()) {
     auto driver = make_unique<OIIOOutputDriver>(
         options.output_filepath, options.output_pass, session_print);
-#ifdef WITH_CYCLES_DEEP_OPAQUE
-    options.beauty_driver = driver.get();
-#endif
     options.session->set_output_driver(std::move(driver));
   }
 
@@ -178,20 +181,16 @@ static void session_init()
 
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   if (!options.deep_output_filepath.empty()) {
-    validate_deep_scene(options.scene, options.session_params, options.deep_transparent);
-    if (options.deep_max_events < 1 || options.deep_max_events > 64)
-      throw std::invalid_argument("Deep traversal limit must be 1..64 events");
+    if (options.deep_volume && options.deep_reduce)
+      throw std::invalid_argument("Deep: surface reduction is unsupported for volumes");
     if (options.deep_memory_mb <= 0 || options.deep_memory_mb > 1024)
       throw std::invalid_argument("Deep working memory budget must be 1..1024 MiB");
-    options.deep_capture = make_unique<deep::OpaqueCapture>(
-        options.width,
-        options.height,
-        options.session_params.samples,
-        size_t(options.deep_memory_mb) * 1024 * 1024,
-        options.deep_transparent ? options.deep_max_events : 0,
-        true,
-        options.scene->integrator->get_use_adaptive_sampling());
-    options.scene->film->deep_capture = options.deep_capture.get();
+    DeepSettings &deep = options.session_params.deep;
+    deep.enabled = true;
+    deep.transparent = options.deep_transparent;
+    deep.volume = options.deep_volume;
+    deep.max_events = options.deep_max_events;
+    deep.memory_bytes = size_t(options.deep_memory_mb) * 1024 * 1024;
   }
 #endif
 
@@ -199,6 +198,9 @@ static void session_init()
   Pass *pass = options.scene->create_node<Pass>();
   pass->set_name(ustring(options.output_pass.c_str()));
   pass->set_type(PASS_COMBINED);
+  if (options.scene->integrator->get_use_denoise()) {
+    pass->set_mode(PassMode::DENOISED);
+  }
 
   options.session->reset(options.session_params, session_buffer_params());
   options.session->start();
@@ -479,6 +481,8 @@ static void options_parse(const int argc, const char **argv)
       .action([&](auto argv) { parse_int(argv, &options.deep_memory_mb); });
   ap.arg("--deep-transparent", &options.deep_transparent)
       .help("Enable experimental M4 scalar transparent visibility traversal (CPU SVM/OSL)");
+  ap.arg("--deep-volume", &options.deep_volume)
+      .help("Experimental CPU/CUDA homogeneous scalar absorption intervals");
   ap.arg("--deep-max-events %d:EVENTS")
       .help(
           "Maximum intersections per M4 camera sample (1..64, default 16; overflow fails export)")
@@ -637,20 +641,11 @@ int main(const int argc, const char **argv)
       session_init();
       options.session->wait();
 #ifdef WITH_CYCLES_DEEP_OPAQUE
-      if (options.deep_capture) {
-        if (options.beauty_driver && !options.beauty_driver->written())
-          throw std::runtime_error(
-              "Required beauty output was not successfully written and closed");
+      if (options.session_params.deep.enabled) {
         if (options.session->progress.get_error())
           throw std::runtime_error(options.session->progress.get_error_message());
         if (options.session->progress.get_cancel())
           throw std::runtime_error("Render cancelled; deep output was not published");
-        write_deep_capture(*options.deep_capture,
-                           options.deep_output_filepath,
-                           options.deep_records_filepath,
-                           options.output_filepath,
-                           options.deep_reduce,
-                           [] { return options.session->progress.get_cancel(); });
       }
 #endif
       session_exit();

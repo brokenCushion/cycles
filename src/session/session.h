@@ -11,6 +11,9 @@
 #include "scene/shader.h"
 #include "scene/stats.h"
 #include "session/buffers.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "session/deep.h"
+#endif
 #include "session/cache_eviction.h"
 #include "session/tile.h"
 
@@ -45,6 +48,9 @@ class SessionParams {
   bool headless;
   bool background;
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  DeepSettings deep;
+#endif
   int samples;
   bool use_sample_subset;
   int sample_subset_offset;

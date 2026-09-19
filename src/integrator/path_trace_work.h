@@ -18,6 +18,10 @@ class Film;
 class PathTraceDisplay;
 class RenderBuffers;
 
+namespace deep {
+class Capture;
+}
+
 class PathTraceWork {
  public:
   struct RenderStatistics {
@@ -35,6 +39,10 @@ class PathTraceWork {
                                           const bool *cancel_requested_flag);
 
   virtual ~PathTraceWork();
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  /* Set by PathTrace only between joined render batches. */
+  void set_deep_capture(deep::Capture *capture) { deep_capture_ = capture; }
+#endif
 
   /* Access the render buffers.
    *
@@ -179,6 +187,9 @@ class PathTraceWork {
   /* Film is used to access display pass configuration for GPU display update.
    * Note that only fields which are not a part of kernel data can be accessed via the Film. */
   Film *film_;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  deep::Capture *deep_capture_ = nullptr;
+#endif
 
   /* Device side scene storage, that may be used for integrator logic. */
   DeviceScene *device_scene_;

@@ -17,9 +17,6 @@ CCL_NAMESPACE_BEGIN
 class Device;
 class DeviceScene;
 class Scene;
-namespace deep {
-class OpaqueCapture;
-}
 
 enum FilterType {
   FILTER_BOX,
@@ -31,9 +28,6 @@ enum FilterType {
 
 class Film : public Node {
  public:
-#ifdef WITH_CYCLES_DEEP_OPAQUE
-  deep::OpaqueCapture *deep_capture = nullptr;
-#endif
   NODE_DECLARE
 
   NODE_SOCKET_API(float, exposure)

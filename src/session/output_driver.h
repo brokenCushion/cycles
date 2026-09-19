@@ -4,6 +4,10 @@
 
 #pragma once
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "deep/volume.h"
+#  include <stdexcept>
+#endif
 #include "util/math.h"
 #include "util/string.h"
 #include "util/types.h"
@@ -47,6 +51,39 @@ class OutputDriver {
                                  const int num_channels,
                                  const float *pixels) const = 0;
   };
+
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  /* Completed, full-frame deep data. Coordinates follow render buffers (Y up).
+   * Depths are positive camera-axis distances; equal front/back denotes a surface.
+   * Pull one pixel at a time to bound reconstruction memory. Returned vectors are
+   * owned by the caller. Serialize reads on the callback thread; the tile itself
+   * is valid only during the callback. Do not reset the session from this callback.
+   * Current contract has matching data/display windows with origin (0, 0).
+   * No RGB channels are supplied: alpha describes averaged camera visibility. */
+  class DeepTile {
+   public:
+    DeepTile(int width, int height, bool volume, string_view layer, string_view view)
+        : width(width), height(height), volume(volume), layer(layer), view(view) {}
+    virtual ~DeepTile() = default;
+    const int width, height;
+    const bool volume;
+    const string layer, view;
+    virtual std::vector<deep::IntervalSample> get_pixel(int x, int y) const = 0;
+    /* Actual accepted camera population, including misses. Diagnostic reads
+     * expose local surface alpha and volume optical depth, before reconstruction. */
+    virtual int population(int x, int y) const = 0;
+    virtual deep::VolumeCameraSample get_camera_sample(int x, int y, int sample) const = 0;
+    virtual bool cancelled() const = 0;
+  };
+
+  virtual bool supports_deep_output() const { return false; }
+  /* Called after all workers finish and completeness is verified. Throw to report
+   * host delivery failure through Session::progress. No callback on cancellation. */
+  virtual void write_deep_render_tile(const DeepTile & /* tile */)
+  {
+    throw std::runtime_error("Output driver does not support deep output");
+  }
+#endif
 
   /* Write tile once it has finished rendering. */
   virtual void write_render_tile(const Tile &tile) = 0;

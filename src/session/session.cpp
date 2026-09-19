@@ -288,7 +288,17 @@ void Session::thread_render()
     /* reset number of rendered samples */
     progress.reset_sample();
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    try {
+      run_main_render_loop();
+      path_trace_->write_deep_output();
+    }
+    catch (const std::exception &error) {
+      progress.set_error(error.what());
+    }
+#else
     run_main_render_loop();
+#endif
   }
 
   profiler.stop();
@@ -537,6 +547,18 @@ bool Session::delayed_reset_buffer_params()
 
   params = delayed_reset_.session_params;
   buffer_params_ = delayed_reset_.buffer_params;
+
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (params.deep.enabled) {
+    validate_deep_scene(scene.get(), params);
+    if (buffer_params_.width != scene->camera->get_full_width() ||
+        buffer_params_.height != scene->camera->get_full_height()) {
+      throw std::invalid_argument("Deep camera and render buffer dimensions must match");
+    }
+  }
+  path_trace_->reset_deep(params.deep, buffer_params_, params.samples,
+                          scene->integrator->get_use_adaptive_sampling());
+#endif
 
   /* Store parameters used for buffers access outside of scene graph. */
   buffer_params_.samples = min(params.samples, Integrator::MAX_SAMPLES);

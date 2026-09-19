@@ -30,9 +30,9 @@ int main(int argc, char **argv)
     check(argc == 2);
     const std::filesystem::path directory(argv[1]);
     std::filesystem::create_directories(directory);
-    rejects([] { OpaqueCapture c(100000, 10000, 4096, 1024, 64, true); });
-    const float stack[] = {2, .25f, 8, .5f};
-    OpaqueCapture memory(8, 3, 8, 100000, 2), disk(8, 3, 8, 8 * 1024 * 1024, 2, true);
+    rejects([] { Capture c(100000, 10000, 4096, 1024, 64, true); });
+    const KernelDeepEvent stack[] = {{DEEP_SURFACE, 2, 2, .25f, 0}, {DEEP_SURFACE, 8, 8, .5f, 0}};
+    Capture memory(8, 3, 8, 100000, 2), disk(8, 3, 8, 8 * 1024 * 1024, 2, true);
     check(!disk.finalize());
     rejects([&] { disk.reconstruct_pixel(0, 0); });
     auto record = [&](int parity) {
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
       }
     disk.record_events(0, 0, 0, stack, 1);
     check(!disk.finalize());
-    OpaqueCapture opaque(2, 1, 1, 2 * 1024 * 1024, 0, true);
+    Capture opaque(2, 1, 1, 4 * 1024 * 1024, 0, true);
     opaque.record(0, 0, 0, .123456789f);
     opaque.record(1, 0, 0, 0);
     check(opaque.finalize() && opaque.value(0, 0, 0) == .123456789f && opaque.value(1, 0, 0) == 0);
@@ -112,6 +112,24 @@ int main(int argc, char **argv)
           [] { throw std::runtime_error("cancelled after final scanline"); });
     });
     check(read_file() == original);
+    image.reduction_error = 0;
+    for (int failure = 0; failure < 2; ++failure) {
+      rejects([&] {
+        write_volume_exr_rows(
+            path,
+            image,
+            [&](int y) {
+              if (y == 1 && failure == 0)
+                throw std::runtime_error("cancelled during volume export");
+              return std::vector<std::vector<IntervalSample>>{{{2, 8, .5}}};
+            },
+            [&] {
+              if (failure == 1)
+                throw std::runtime_error("cancelled before volume publication");
+            });
+      });
+      check(read_file() == original);
+    }
     for (const auto &entry : std::filesystem::directory_iterator(directory))
       check(entry.path().filename().string().find(".partial-") == std::string::npos);
     std::cout << "PASS spill identity/completeness/concurrency, preflight memory limit, atomic "

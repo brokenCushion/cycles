@@ -164,7 +164,7 @@ def run(exe, directory):
     report['repeat_records_identical']=True
     valid=scene(plane)
     bad = [
-        ('gaussian',valid.replace('filter_type="box"','filter_type="gaussian"'),(), 'box filter'),
+        ('invalid_filter_width',valid.replace('filter_width="1"','filter_width="0"'),(), 'positive-width'),
         ('invalid_focus',valid.replace('fov="0.9"','fov="0.9" focaldistance="0"'),(), 'focal distance'),
         ('rolling',valid.replace('fov="0.9"','fov="0.9" rolling_shutter_type="top"'),(), 'rolling shutter'),
         ('transparent',valid.replace('<emission name="e"','<transparent_bsdf name="e"').replace('from="e emission"','from="e bsdf"'),(), 'constant diffuse'),
@@ -172,7 +172,7 @@ def run(exe, directory):
         ('budget',valid,('--width','1024','--height','1024','--deep-memory-mb','1'), 'budget'),
         ('zero_samples',valid,('--samples','0'), 'maximum samples'),
         ('tiling',valid,('--tile-size','16'), 'tiling'),
-        ('orthographic',valid.replace('camera_type="perspective"','camera_type="orthograph"'),(), 'perspective'),
+        ('panorama',valid.replace('camera_type="perspective"','camera_type="panorama"'),(), 'perspective'),
         ('volume',valid.replace('to="output surface"/></shader>', 'to="output surface"/><connect from="e emission" to="output volume"/></shader>'),(), 'volume'),
         ('invalid_budget',valid,('--deep-memory-mb','0'), 'budget'),
         ('alias',valid,('--deep-output',str(directory/'reject_alias.exr')), 'distinct'),

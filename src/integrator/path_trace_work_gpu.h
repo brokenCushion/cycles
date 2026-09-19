@@ -153,12 +153,15 @@ class PathTraceWorkGPU : public PathTraceWork {
   /* Temporary buffer for passing work tiles to kernel. */
   device_vector<KernelWorkTile> work_tiles_;
 #ifdef WITH_CYCLES_DEEP_OPAQUE
-  /* 512 records = 266 KiB each on host/device; inside the deep I/O allowance. */
+  /* Bounded lane metadata and configured-capacity event planes, allocated lazily. */
   device_vector<KernelDeepRecord> deep_records_;
+  device_vector<KernelDeepEvent> deep_events_;
+  device_vector<KernelDeepMedium> deep_media_;
   void capture_deep_tiles(int num_tiles);
-  double deep_kernel_seconds_ = 0, deep_transfer_seconds_ = 0, deep_spill_seconds_ = 0;
+  double deep_readback_seconds_ = 0, deep_spill_seconds_ = 0;
   uint64_t deep_record_count_ = 0;
   uint64_t deep_skipped_count_ = 0;
+  uint64_t deep_batch_count_ = 0, deep_readback_bytes_ = 0;
 #endif
 
   /* Temporary buffer used by the copy_to_display() whenever graphics interoperability is not

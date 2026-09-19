@@ -53,7 +53,9 @@ def reader(path):
     return n
 
 
-def run(exe, directory):
+def run(exe, directory, device='CPU'):
+    check(device in ('CPU', 'CUDA'), 'Expected CPU or CUDA device')
+    backends = ('svm','osl') if device == 'CPU' else ('svm',)
     directory.mkdir(parents=True, exist_ok=True)
     texture = directory / 'opacity.ppm'
     texture.write_bytes(b'P6\n2 2\n255\n' + bytes([64]*3 + [192]*3 + [192]*3 + [64]*3))
@@ -73,14 +75,74 @@ def run(exe, directory):
         'cutout': (scene(material('near',.5,checker)+material('far',.5), plane('near',2,'translate="0.3 0.2 0" scale="0.7 0.6 1"')+plane('far',8)), None),
         'texture': (scene(material('near',1,tex), plane('near',2)), None),
     }
-    report = {'gaffer': Gaffer.About.versionString(), 'scenes': {}, 'rejections': []}
+    for name, attributes in (('orthographic', ''),
+                             ('orthographic_dof', ' aperturesize="0.1" focaldistance="5" nearclip="0.5"')):
+        fixtures[name] = (fixtures['stack'][0].replace(
+            'camera_type="perspective"', 'camera_type="orthograph"'+attributes), [(2,.25),(8,.5)])
+    identity = '1 0 0 0 0 1 0 0 0 0 1 0'
+    fixtures['orthographic_static_motion_slots'] = (fixtures['orthographic'][0].replace(
+        'camera_type="orthograph"', f'camera_type="orthograph" motion="{identity} {identity} {identity}"'),
+        [(2,.25),(8,.5)])
+    # Standard Blender materials retain their native shading. Refractive
+    # transmission is not Transparent BSDF opacity: glass still has alpha 1.
+    def closure(kind, attributes=''):
+        return (f'<shader name="near"><{kind} name="c" {attributes}/>'
+                '<connect from="c bsdf" to="output surface"/></shader>')
+    fixtures.update({
+        'principled_opaque': (scene(closure('principled_bsdf',
+            'base_color="0.1 0.6 0.9" metallic="0.7"'), plane('near',2)), [(2,1)]),
+        'principled_alpha': (scene(closure('principled_bsdf',
+            'base_color="0.8 0.2 0.1" alpha="0.25"')+material('far',.5),
+            plane('near',2)+plane('far',8)), [(2,.25),(8,.5)]),
+        'principled_transmission': (scene(closure('principled_bsdf',
+            'transmission_weight="1" roughness="0.1"'), plane('near',2)), [(2,1)]),
+        'glass': (scene(closure('glass_bsdf', 'color="0.2 0.7 0.9"'),
+            plane('near',2)), [(2,1)]),
+        'translucent': (scene(closure('translucent_bsdf', 'color="0.7 0.2 0.1"'),
+            plane('near',2)), [(2,1)]),
+    })
+    for filter_name in ('gaussian', 'blackman_harris'):
+        fixtures[filter_name] = (fixtures['cutout'][0].replace(
+            'filter_type="box" filter_width="1"',
+            f'filter_type="{filter_name}" filter_width="1.5"'), None)
+    lights = ''.join(f'<transform translate="0 0 {z}"><light light_type="{kind}" '
+                     'strength="2 3 4"/></transform>'
+                     for kind,z in (('area',1),('point',3),('spot',4),('sun',6)))
+    fixtures['analytic_lights'] = (scene(stack, lights+plane('near',2)+plane('far',8)),
+                                   [(2,.25),(8,.5)])
+    fixtures['analytic_lights_empty'] = (scene('', lights), [])
+    procedural = '''<shader name="near">
+<texture_coordinate name="uv"/><mapping name="map"/>
+<noise_texture name="noise" scale="8"/><gradient_texture name="grad"/>
+<rgb_ramp name="ramp" ramp="0.1 0.2 0.3 0.7 0.8 0.9" ramp_alpha="1 1"/>
+<invert name="inv"/><mix_color name="mix" b="0.2 0.4 0.8"/>
+<bump name="bump" distance="0.02"/><principled_bsdf name="p" alpha="0.25"/>
+<connect from="uv UV" to="map vector"/><connect from="map vector" to="noise vector"/>
+<connect from="map vector" to="grad vector"/><connect from="noise fac" to="ramp fac"/>
+<connect from="ramp color" to="inv color"/><connect from="inv color" to="mix A"/>
+<connect from="grad fac" to="mix fac"/><connect from="mix Result" to="p base_color"/>
+<connect from="noise fac" to="bump Height"/><connect from="bump Normal" to="p Normal"/>
+<connect from="p BSDF" to="output surface"/></shader>'''
+    fixtures['procedural_principled'] = (scene(procedural+material('far',.5),
+        plane('near',2)+plane('far',8)), [(2,.25),(8,.5)])
+    fixtures['numeric_socket_conversion'] = (fixtures['procedural_principled'][0].replace(
+        'from="map vector" to="noise vector"', 'from="grad fac" to="noise vector"'), [(2,.25),(8,.5)])
+    fixtures['denoised_principled'] = (fixtures['procedural_principled'][0].replace(
+        'seed="123"', 'seed="123" use_denoise="true" denoise_use_gpu="false"'),
+        [(2,.25),(8,.5)])
+    # CPU denoising is qualified. CUDA input accumulation variation can be
+    # amplified by denoising beyond the current beauty bound; keep it fail-closed.
+    cuda_denoise = fixtures.pop('denoised_principled')[0] if device=='CUDA' else None
+    report = {'gaffer': Gaffer.About.versionString(), 'device': device,
+              'beauty_relative_bound': S*2**-23 if device=='CUDA' else 0,
+              'scenes': {}, 'rejections': []}
 
     def render(name, xml, backend, deep=True, extra=(), failure=False):
         name += '_' + backend
         source = directory / (name+'.xml'); source.write_text(xml)
         beauty = directory / (name+'.exr'); output = directory / (name+'.deep.exr')
         records = directory / (name+'.csv')
-        cmd = [str(exe), '--device','CPU','--background','--quiet','--samples',str(S),
+        cmd = [str(exe), '--device',device,'--background','--quiet','--samples',str(S),
                '--width',str(W),'--height',str(H),
                '--threads','4','--shadingsys',backend,'--output',str(beauty)]
         if deep:
@@ -99,12 +161,20 @@ def run(exe, directory):
 
     for name, (xml, analytic) in fixtures.items():
         native = None
-        stats = {'max_curve_error':0, 'max_backend_alpha_error':0, 'max_depth_error':0}
-        for backend in ('svm','osl'):
+        stats = {'max_curve_error':0, 'max_backend_alpha_error':0, 'max_depth_error':0,
+                 'max_beauty_error':0, 'max_off_repeat_error':0}
+        for backend in backends:
             paths = render(name, xml, backend)
             off = reader(render(name+'_off', xml, backend, False)[0])
             on, deep = reader(paths[0]), reader(paths[1])
             flat = GafferImage.DeepToFlat(); flat['in'].setInput(deep['out'])
+            if name == 'denoised_principled':
+                noisy = reader(directory / ('procedural_principled_'+backend+'.exr'))
+                denoise_change = max(abs(float(a)-float(b))
+                    for c in ('R','G','B')
+                    for a,b in zip(on['out'].channelData(c,imath.V2i(0)),
+                                   noisy['out'].channelData(c,imath.V2i(0))))
+                check(denoise_change > 1e-7, 'Denoising fixture did not change RGB')
             check(deep['out']['deep'].getValue(), 'not deep EXR')
             raw = {(x,y,s): [] for y in range(H) for x in range(W) for s in range(S)}
             seen = set()
@@ -145,10 +215,23 @@ def run(exe, directory):
                     point = fmt.fromEXRSpace(imath.V2i(x,y)); origin,index = tile_index(point)
                     for c in ('R','G','B','A'):
                         a,b = (float(n['out'].channelData(c,origin)[index]) for n in (off,on))
-                        check(math.isfinite(a) and a==b, f'{name}/{backend}: beauty changed')
+                        error = abs(a-b)
+                        stats['max_beauty_error'] = max(stats['max_beauty_error'],error)
+                        # CUDA floating accumulation order also varies between
+                        # deep-disabled runs, including alpha for Principled.
+                        # Use the existing sample-count-scaled FLOAT criterion;
+                        # the separate deep-curve oracle remains at 1e-6.
+                        bound = (S*2**-23*max(1,abs(a),abs(b))
+                                 if device=='CUDA' else 0)
+                        check(math.isfinite(a) and math.isfinite(b) and error<=bound,
+                              f'{name}/{backend}: beauty changed beyond bound ({error})')
                     actual = deep_pixel(deep['out'],point)
                     expected_alpha = 1-sum(math.prod(1-a for z,a in raw[x,y,s]) for s in range(S))/S
                     check(abs(float(flat['out'].channelData('A',origin)[index])-expected_alpha)<1e-6, 'DeepToFlat alpha mismatch')
+                    if name in ('gaussian', 'blackman_harris', 'analytic_lights', 'analytic_lights_empty'):
+                        check(abs(float(flat['out'].channelData('A',origin)[index])-
+                                  float(on['out'].channelData('A',origin)[index]))<1e-6,
+                              f'{name}: native camera alpha disagrees with deep visibility')
                     boundaries = sorted({z for s in range(S) for z,a in raw[x,y,s]})
                     for z in boundaries + [100.]:
                         for inclusive in (False,True):
@@ -158,8 +241,24 @@ def run(exe, directory):
                             error = abs(expected-observed)
                             stats['max_curve_error']=max(stats['max_curve_error'],error)
                             check(error<1e-6, f'{name}/{backend}: transmittance mismatch {error}')
+            if device=='CUDA' and stats['max_beauty_error']:
+                repeat = reader(render(name+'_off_repeat',xml,backend,False)[0])
+                for c in ('R','G','B','A'):
+                    for a,b in zip(off['out'].channelData(c,imath.V2i(0)),
+                                   repeat['out'].channelData(c,imath.V2i(0))):
+                        error = abs(float(a)-float(b))
+                        stats['max_off_repeat_error'] = max(stats['max_off_repeat_error'],error)
+                        check(math.isfinite(error) and error <= (
+                            S*2**-23*max(1,abs(a),abs(b))),
+                            'Deep-disabled CUDA repeat exceeds beauty bound')
         report['scenes'][name]=stats
-    for backend in ('svm','osl'):
+    for backend in backends:
+        if cuda_denoise is not None:
+            render('cuda_denoise',cuda_denoise,backend,failure=True)
+        else:
+            render('denoise_upscale',fixtures['denoised_principled'][0].replace(
+                'use_denoise="true"', 'use_denoise="true" denoiser_upscale_factor="2"'),
+                backend,failure=True)
         render('limit', fixtures['stack'][0], backend, extra=('--deep-max-events','1'), failure=True)
         render('exact_limit', fixtures['stack'][0], backend, extra=('--deep-max-events','2'))
         render('colored', scene(material('near',1).replace('color="1 1 1"','color="0.2 0.5 0.8"'),plane('near',2)), backend, failure=True)
@@ -172,4 +271,5 @@ def run(exe, directory):
 
 
 if __name__ == '__main__':
-    run(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve())
+    run(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve(),
+        sys.argv[3] if len(sys.argv)>3 else 'CPU')

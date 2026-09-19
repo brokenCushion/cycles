@@ -33,6 +33,7 @@ class PathTraceDisplay;
 class OutputDriver;
 class Progress;
 class TileManager;
+struct DeepSettings;
 
 /* PathTrace class takes care of kernel graph and scheduling on a (multi)device. It takes care of
  * all the common steps of path tracing which are not device-specific. The list of tasks includes
@@ -102,6 +103,11 @@ class PathTrace {
 
   /* Sets output driver for render buffer output. */
   void set_output_driver(unique_ptr<OutputDriver> driver);
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  void reset_deep(const DeepSettings &settings, const BufferParams &params,
+                  int samples, bool adaptive);
+  void write_deep_output();
+#endif
 
   /* Set display driver for interactive render buffer display. */
   void set_display_driver(unique_ptr<DisplayDriver> driver);
@@ -275,6 +281,10 @@ class PathTrace {
 
   /* Output driver to write render buffer to. */
   unique_ptr<OutputDriver> output_driver_;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  unique_ptr<deep::Capture> deep_capture_;
+  bool deep_written_ = false;
+#endif
 
   /* Per-compute device descriptors of work which is responsible for path tracing on its configured
    * device. */

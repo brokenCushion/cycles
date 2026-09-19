@@ -3,6 +3,7 @@
 #pragma once
 
 #include "deep/reconstruction.h"
+#include "deep/volume.h"
 #include <OpenEXR/ImfForward.h>
 #include <filesystem>
 #include <functional>
@@ -38,6 +39,17 @@ struct SurfaceImage {
  * Stream overload leaves flush/close to the caller (also enables fault tests). */
 void write_deep_exr(const std::filesystem::path &path, const SurfaceImage &image);
 void write_deep_exr(Imf::OStream &stream, const SurfaceImage &image);
+/* M8 analytic reference output. Metadata/windows come from image (whose surface
+ * pixels must be empty). Checks FLOAT curve error at all depths; atomic output.
+ * Whole-image fixtures only; renderer/storage integration is a separate gate. */
+void write_volume_exr(const std::filesystem::path &path,
+                      const SurfaceImage &image,
+                      const std::vector<std::vector<IntervalSample>> &pixels);
+using VolumeRowProvider = std::function<std::vector<std::vector<IntervalSample>>(int)>;
+void write_volume_exr_rows(const std::filesystem::path &path,
+                           const SurfaceImage &image,
+                           const VolumeRowProvider &row,
+                           const std::function<void()> &before_publish = {});
 /* Streaming production path. Callback supplies one increasing-file-Y row.
  * FLOAT export and optional reduction are checked together against the
  * original curve before each row is written. Final name is atomic. */

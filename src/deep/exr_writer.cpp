@@ -36,7 +36,7 @@ Imath::Box2i box(const ImageWindow &w)
 }
 
 struct FloatPixel {
-  std::vector<float> z, a;
+  std::vector<float> z, a, back;
 };
 
 /* Compare every interval of the two step functions, including either side of
@@ -149,11 +149,12 @@ void serialize(Imf::OStream &stream, const Imf::Header &header, std::vector<Floa
   const size_t width = size_t(int64_t(dw.max.x) - dw.min.x + 1);
   const int height = int(int64_t(dw.max.y) - dw.min.y + 1);
   std::vector<unsigned int> counts;
-  std::vector<float *> z, a;
+  std::vector<float *> z, a, back;
   for (auto &pixel : pixels) {
     counts.push_back(static_cast<unsigned int>(pixel.z.size()));
     z.push_back(pixel.z.empty() ? nullptr : pixel.z.data());
     a.push_back(pixel.a.empty() ? nullptr : pixel.a.data());
+    back.push_back(pixel.back.empty() ? z.back() : pixel.back.data());
   }
   Imf::DeepFrameBuffer fb;
   fb.insertSampleCountSlice(Imf::Slice::Make(Imf::UINT, counts.data(), dw));
@@ -163,8 +164,10 @@ void serialize(Imf::OStream &stream, const Imf::Header &header, std::vector<Floa
       Imf::FLOAT, z.data(), dw, sizeof(float *), width * sizeof(float *));
   const auto as = Imf::Slice::Make(
       Imf::FLOAT, a.data(), dw, sizeof(float *), width * sizeof(float *));
+  const auto bs = Imf::Slice::Make(
+      Imf::FLOAT, back.data(), dw, sizeof(float *), width * sizeof(float *));
   fb.insert("Z", Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
-  fb.insert("ZBack", Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
+  fb.insert("ZBack", Imf::DeepSlice(Imf::FLOAT, bs.base, bs.xStride, bs.yStride, sizeof(float)));
   fb.insert("A", Imf::DeepSlice(Imf::FLOAT, as.base, as.xStride, as.yStride, sizeof(float)));
   Imf::DeepScanLineOutputFile file(stream, header, 1);
   file.setFrameBuffer(fb);
@@ -194,6 +197,100 @@ void write_deep_exr(Imf::OStream &stream, const SurfaceImage &image)
   auto pixels = prepare(image);
   const auto header = make_header(image);
   serialize(stream, header, pixels);
+}
+
+static std::vector<FloatPixel> prepare_volume(
+    const SurfaceImage &image, const std::vector<std::vector<IntervalSample>> &source)
+{
+  if (!image.pixels.empty() || image.reduction_error != 0)
+    throw std::invalid_argument("Volume fixture writer requires empty surface pixels and no reduction");
+  SurfaceImage metadata = image;
+  metadata.pixels.resize(source.size());
+  auto pixels = prepare(metadata);
+  for (size_t p = 0; p < source.size(); ++p) {
+    if (source[p].size() > std::numeric_limits<unsigned int>::max())
+      throw std::invalid_argument("Volume sample count exceeds UINT");
+    std::vector<IntervalSample> quantized;
+    for (const auto &s : source[p]) {
+      quantized.push_back({double(float(s.front)), double(float(s.back)), double(float(s.alpha))});
+      if (s.back > s.front && quantized.back().back <= quantized.back().front)
+        throw std::invalid_argument("Volume interval collapses under FLOAT export");
+      pixels[p].z.push_back(float(s.front));
+      pixels[p].back.push_back(float(s.back));
+      pixels[p].a.push_back(float(s.alpha));
+    }
+    if (interval_curve_error(source[p], quantized) > export_error - 2e-7)
+      throw std::invalid_argument("FLOAT volume curve exceeds transmittance error budget");
+  }
+  return pixels;
+}
+
+void write_volume_exr(const std::filesystem::path &path,
+                      const SurfaceImage &image,
+                      const std::vector<std::vector<IntervalSample>> &source)
+{
+  auto pixels = prepare_volume(image, source);
+  auto header = make_header(image);
+  header.insert("cycles:deepScope", Imf::StringAttribute("analytic_volume_reference"));
+  AtomicOutput publication(path);
+  std::ofstream output;
+  output.exceptions(std::ios::badbit | std::ios::failbit);
+  output.open(publication.temporary(), std::ios::binary | std::ios::trunc);
+  {
+    Imf::StdOFStream stream(output, path.string().c_str());
+    serialize(stream, header, pixels);
+  }
+  output.flush();
+  output.close();
+  publication.publish();
+}
+
+void write_volume_exr_rows(const std::filesystem::path &path,
+                           const SurfaceImage &image,
+                           const VolumeRowProvider &row,
+                           const std::function<void()> &before_publish)
+{
+  auto header = make_header(image);
+  header.insert("cycles:deepScope", Imf::StringAttribute("cpu_homogeneous_absorption"));
+  const auto dw = header.dataWindow();
+  const size_t width = size_t(int64_t(dw.max.x) - dw.min.x + 1);
+  AtomicOutput publication(path);
+  std::ofstream output;
+  output.exceptions(std::ios::badbit | std::ios::failbit);
+  output.open(publication.temporary(), std::ios::binary | std::ios::trunc);
+  {
+    Imf::StdOFStream stream(output, path.string().c_str());
+    Imf::DeepScanLineOutputFile file(stream, header, 1);
+    for (int64_t y = dw.min.y; y <= dw.max.y; ++y) {
+      SurfaceImage metadata = image;
+      metadata.data_window = {dw.min.x, int(y), dw.max.x, int(y)};
+      auto pixels = prepare_volume(metadata, row(int(y)));
+      std::vector<unsigned int> counts(width);
+      std::vector<float *> z(width), back(width), a(width);
+      for (size_t x = 0; x < width; ++x) {
+        counts[x] = unsigned(pixels[x].z.size());
+        z[x] = pixels[x].z.data();
+        back[x] = pixels[x].back.data();
+        a[x] = pixels[x].a.data();
+      }
+      const Imath::Box2i bounds({dw.min.x, int(y)}, {dw.max.x, int(y)});
+      Imf::DeepFrameBuffer fb;
+      fb.insertSampleCountSlice(Imf::Slice::Make(Imf::UINT, counts.data(), bounds));
+      for (const auto &channel : {std::make_pair("Z", &z), std::make_pair("ZBack", &back),
+                                  std::make_pair("A", &a)}) {
+        const auto s = Imf::Slice::Make(Imf::FLOAT, channel.second->data(), bounds,
+                                        sizeof(float *), width * sizeof(float *));
+        fb.insert(channel.first, Imf::DeepSlice(Imf::FLOAT, s.base, s.xStride, s.yStride, sizeof(float)));
+      }
+      file.setFrameBuffer(fb);
+      file.writePixels(1);
+    }
+  }
+  output.flush();
+  output.close();
+  if (before_publish)
+    before_publish();
+  publication.publish();
 }
 
 std::vector<SurfaceSample> reduce_surface(const std::vector<SurfaceSample> &source,

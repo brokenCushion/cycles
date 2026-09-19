@@ -1,13 +1,36 @@
 # Deep EXR investigation and implementation status
 
+Generated build and review artifacts live under `builds/`. Commands below use
+that layout; older milestone notes may retain their original artifact names.
+
+Latest checkpoint: **Native Blender full-scene deep render** completed at
+664x625, 128 samples. Original evaluated geometry/materials, orthographic camera,
+DOF and denoising are retained. Full beauty is identical with deep on/off; Gaffer
+validates the deep output and a live million-point review. The full review is
+open and its point-cloud viewport has been visually verified after desktop
+unlock. The Blender scene render-and-presentation objective is complete. See [Blender integration evidence](BLENDER_DEEP_INTEGRATION.md).
+
+Volume checkpoint: **M8d1 known linear-density reference** passes the eight CTest
+groups and Gaffer analytic depth cuts. This advances heterogeneous integration
+testing; native heterogeneous shader/VDB capture remains unsupported. See
+[density reference evidence](src/deep/DENSITY_REFERENCE_VALIDATION.md).
+
+Performance continuation: compact indexed/append-only spill storage repeats the
+full scene in 247.633 seconds (reference 1862.293 seconds), with a byte-identical
+deep EXR and exact beauty RGBA equality. All eight CTest groups and CPU/CUDA
+acceptance pass. The optimized Gaffer review is open and validated headlessly;
+live viewport verification awaits restored desktop access.
+Native VDB capture remains open; a reproducible native scene now loads the actual
+supplied grid. See [performance and VDB progress](DEEP_PERFORMANCE_AND_VDB.md).
+
 ## Baseline and scope
 
 - Source baseline: `a456b761034dda42c32eef9f4aae0fa5a5c9f604`.
-- Branch: `codex/deep-exr`; M0–M3 committed as `703331004`; M4/M5 and Gaffer review tools committed as `a508f1758`; CUDA, adaptive sampling and DOF committed as `2786fbe22`. M7c is uncommitted.
+- Branch: `codex/deep-exr`; M0–M3 committed as `703331004`; M4/M5 and Gaffer review tools committed as `a508f1758`; CUDA, adaptive sampling and DOF committed as `2786fbe22`; M7c committed as `659e8dda9`.
 - Platform/build evidence: [BASELINE_BUILD.md](BASELINE_BUILD.md).
 - Target agreed for this workspace: the official standalone Cycles mirror.
-  This differs from the proposal's full Blender checkout. Blender UI/session
-  integration and revision mapping remain future work.
+  The user subsequently requested native Blender scene testing; a pinned custom
+  Blender build and experimental session/output adapter now render deep previews.
 - M0 standalone source/build investigation: complete for planning the reference.
 - M1 reconstruction: implemented; standalone and optional parent-build tests pass.
 - M2 writer: implemented; OpenEXR round trips, failure tests, OIIO inspection and
@@ -44,8 +67,45 @@
   Deformation, motion scale, rolling shutter and animated FOV remain outside
   this qualified M7 scope.
   M6 isolated performance qualification remains open; volumes remain M8.
+- M8a analytic volume reference: interval reconstruction and FLOAT EXR output
+  implemented, with homogeneous/overlapping extinction, partial coverage,
+  camera-inside and surface-crossing fixtures. All six CTest groups pass.
+  Gaffer depth cuts pass below 1e-6; live front/back point-cloud review provided.
+  See [volume validation](src/deep/VOLUME_VALIDATION.md).
+- M8b CPU homogeneous absorption capture: implemented behind `--deep-volume`,
+  with constant scalar absorption on closed convex mesh volumes, static pinhole
+  cameras and fixed sampling. Nine actual-render cases pass raw-ledger Gaffer
+  cuts below 1e-6 and deep-on/off beauty equality. Disk spill and atomic scanline
+  export support intervals. At M8b, CUDA volumes, heterogeneous density/VDB and volume
+  DOF/motion/adaptive sampling remain unsupported; M8 is still in progress.
+- M8c CUDA homogeneous absorption capture: the CPU/CUDA paths now share interval
+  traversal, with bounded preallocated GPU medium storage and explicit overflow.
+  Eighteen scenes and thirteen rejection cases pass on each backend, including
+  clipping, overlaps and surfaces inside fog. See
+  [CUDA volume validation](src/deep/CUDA_VOLUME_VALIDATION.md) for current results,
+  floating-point beauty limits and the linked CPU/CUDA Gaffer point-cloud review.
+  Heterogeneous/VDB integration and volume camera/sampling extensions remain future
+  work; M8 overall is not complete.
 
-## Inspected source map
+## Architecture follow-up before CUDA volumes
+
+Alex's requirements were audited against the current implementation. See
+[architecture review and patch order](src/deep/ARCHITECTURE_REVIEW.md).
+The first patch now moves settings/preflight into Session, capture ownership into
+PathTrace, and final deep delivery into OutputDriver. The standalone application
+is a file-writing adapter; a non-file host test consumes reconstructed samples.
+See [native output integration](src/deep/NATIVE_OUTPUT_VALIDATION.md) for the API,
+lifecycle checks and validation limits. Shared typed records now connect CPU/CUDA
+capture and host spill storage, with explicit surface/volume fields and
+completion/error states. See [typed record validation](src/deep/TYPED_RECORD_VALIDATION.md).
+CUDA staging now uses configured-capacity event planes and one explicit deep
+wait per batch. Native lifecycle, surface, adaptive, DOF and motion regressions
+pass. See [CUDA storage validation](src/deep/CUDA_STORAGE_VALIDATION.md) for
+measurements and remaining performance limits. CUDA homogeneous volumes now use
+the shared helper and bounded medium buffer described in the M8c validation.
+Controlled heterogeneous integration is next; M8 remains in progress.
+
+## Original inspected source map
 
 The investigation below refers to the pinned baseline. M3 now modifies the
 CPU dispatch, film and standalone application at the identified hooks.
@@ -104,10 +164,10 @@ CPU dispatch, film and standalone application at the identified hooks.
 Commands (repository root, Visual Studio 2022 and CMake from baseline):
 
 ```powershell
-cmake -S src/deep -B build-deep -G "Visual Studio 17 2022" -A x64
-cmake --build build-deep --config Release
-ctest --test-dir build-deep -C Release --output-on-failure
-.\build-deep\Release\cycles_deep_reference_test.exe
+cmake -S src/deep -B builds/build-deep -G "Visual Studio 17 2022" -A x64
+cmake --build builds/build-deep --config Release
+ctest --test-dir builds/build-deep -C Release --output-on-failure
+.\builds\build-deep\Release\cycles_deep_reference_test.exe
 ```
 
 Configure/build/CTest/executable exits: 0. Six test groups pass, including all

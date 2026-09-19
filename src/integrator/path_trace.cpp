@@ -15,6 +15,12 @@
 #include "scene/pass.h"
 #include "scene/scene.h"
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "session/deep.h"
+#  include "integrator/path_trace_deep_tile.h"
+#  include "deep/capture.h"
+#  include <stdexcept>
+#endif
 #include "session/display_driver.h"
 #include "session/tile.h"
 
@@ -170,15 +176,13 @@ void PathTrace::render(const RenderWork &render_work)
     render_cancel_.is_rendering = true;
   }
 
-  render_pipeline(render_work);
-
-  /* Indicate that rendering has finished, making it so thread which requested `cancel()` can carry
-   * on. */
-  {
+  SCOPED_DEFER([&]() {
     const thread_scoped_lock lock(render_cancel_.mutex);
     render_cancel_.is_rendering = false;
     render_cancel_.condition.notify_one();
-  }
+  }());
+
+  render_pipeline(render_work);
 }
 
 void PathTrace::render_pipeline(RenderWork render_work)
@@ -695,6 +699,58 @@ void PathTrace::set_output_driver(unique_ptr<OutputDriver> driver)
 {
   output_driver_ = std::move(driver);
 }
+
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &params,
+                            const int samples, const bool adaptive)
+{
+  /* Invalidate old capture before validation/allocation can fail. */
+  for (auto &work : path_trace_works_) {
+    work->set_deep_capture(nullptr);
+  }
+  deep_capture_.reset();
+  deep_written_ = false;
+  if (!settings.enabled) {
+    return;
+  }
+  if (!output_driver_ || !output_driver_->supports_deep_output()) {
+    throw std::invalid_argument("Deep render requires a deep-capable output driver");
+  }
+  if (path_trace_works_.size() != 1 || params.full_x != 0 || params.full_y != 0 ||
+      params.width != params.full_width || params.height != params.full_height ||
+      params.window_x != 0 || params.window_y != 0 ||
+      (params.window_width != 0 && params.window_width != params.width) ||
+      (params.window_height != 0 && params.window_height != params.height))
+  {
+    throw std::invalid_argument("Deep render requires a single-device full frame without crop");
+  }
+  deep_capture_ = make_unique<deep::Capture>(
+      params.width, params.height, samples, settings.memory_bytes,
+      (settings.transparent || settings.volume) ? settings.max_events : 0,
+      true, adaptive, settings.volume);
+  for (auto &work : path_trace_works_) {
+    work->set_deep_capture(deep_capture_.get());
+  }
+}
+
+void PathTrace::write_deep_output()
+{
+  if (!deep_capture_ || deep_written_ || is_cancel_requested() || device_->have_error() ||
+      (progress_ && progress_->get_error())) {
+    return;
+  }
+  if (!deep_capture_->finalize()) {
+    throw std::runtime_error(deep_capture_->error_message());
+  }
+  if (!output_driver_ || !output_driver_->supports_deep_output()) {
+    throw std::runtime_error("Deep output driver was removed before delivery");
+  }
+  const PathTraceDeepTile tile(*deep_capture_, full_params_.layer, full_params_.view,
+                               [this] { return is_cancel_requested(); });
+  output_driver_->write_deep_render_tile(tile);
+  deep_written_ = true;
+}
+#endif
 
 void PathTrace::set_display_driver(unique_ptr<DisplayDriver> driver)
 {

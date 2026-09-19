@@ -1,5 +1,8 @@
 # Deep opacity reference (M1)
 
+All generated build trees and validation artifacts are under the repository's
+`builds/` directory.
+
 This directory contains a dependency-free C++17 reference and tests, plus an
 optional Deep EXR writer and CPU surface sample storage. The opt-in standalone
 renderer adapter is described in [CAPTURE_VALIDATION.md](CAPTURE_VALIDATION.md).
@@ -8,14 +11,27 @@ export, strict reduction and atomic publication are documented in
 [PRODUCTION_VALIDATION.md](PRODUCTION_VALIDATION.md).
 M4's scalar transparency and CPU OSL contract is in
 [TRANSPARENCY_VALIDATION.md](TRANSPARENCY_VALIDATION.md).
+M8's analytic reference and opt-in CPU homogeneous absorption capture
+(`--deep-volume`) are described in [VOLUME_VALIDATION.md](VOLUME_VALIDATION.md),
+including the supported geometry and Gaffer review.
+
+Session-owned capture and the host `OutputDriver::DeepTile` interface are described
+in [NATIVE_OUTPUT_VALIDATION.md](NATIVE_OUTPUT_VALIDATION.md). The standalone
+writer uses that interface; a host can also consume samples directly in memory.
+Shared typed CPU/CUDA capture records and spill accounting are described in
+[TYPED_RECORD_VALIDATION.md](TYPED_RECORD_VALIDATION.md).
+Configured-capacity CUDA staging, ordered readback and current measurements
+are described in [CUDA_STORAGE_VALIDATION.md](CUDA_STORAGE_VALIDATION.md).
+Shared CPU/CUDA homogeneous volume capture and bounded GPU medium storage
+are described in [CUDA_VOLUME_VALIDATION.md](CUDA_VOLUME_VALIDATION.md).
 
 ## Build and inspect
 
 ```powershell
-cmake -S src/deep -B build-deep -G "Visual Studio 17 2022" -A x64
-cmake --build build-deep --config Release
-ctest --test-dir build-deep -C Release --output-on-failure
-.\build-deep\Release\cycles_deep_reference_test.exe
+cmake -S src/deep -B builds/build-deep -G "Visual Studio 17 2022" -A x64
+cmake --build builds/build-deep --config Release
+ctest --test-dir builds/build-deep -C Release --output-on-failure
+.\builds\build-deep\Release\cycles_deep_reference_test.exe
 ```
 
 Alternatively enable `WITH_CYCLES_DEEP_TESTS=ON` in a standalone Cycles build.

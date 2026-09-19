@@ -1,6 +1,6 @@
-# Alex's Deep Output Requirements
+# Peer Review: Deep Output Requirements
 
-Alex wants the deep-output implementation to fit naturally into Cycles, remain independent from Blender, and account for both CPU and GPU constraints.
+The peer review calls for the deep-output implementation to fit naturally into Cycles, remain independent from Blender, and account for both CPU and GPU constraints.
 
 ## Keep Cycles Standalone
 
@@ -173,6 +173,6 @@ The main remaining architectural work is:
 
 ## Summary
 
-Alex wants deep output implemented as native, GPU-conscious Cycles functionality. It should use bounded, preallocated device memory; follow existing Cycles device, kernel, and output conventions; and keep Blender and Gaffer outside the renderer's core dependencies.
+The peer review calls for deep output to be implemented as native, GPU-conscious Cycles functionality. It should use bounded, preallocated device memory; follow existing Cycles device, kernel, and output conventions; and keep Blender and Gaffer outside the renderer's core dependencies.
 
 Modularity itself is not the goal. Correct integration with Cycles and efficient behavior across rendering devices are the priorities.

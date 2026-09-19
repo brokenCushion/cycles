@@ -96,7 +96,7 @@ access. See [performance and VDB progress](DEEP_PERFORMANCE_AND_VDB.md).
 
 ## Architecture follow-up before CUDA volumes
 
-Alex's requirements were audited against the current implementation. See
+Peer review requirements were audited against the current implementation. See
 [architecture review and patch order](src/deep/ARCHITECTURE_REVIEW.md).
 The first patch now moves settings/preflight into Session, capture ownership into
 PathTrace, and final deep delivery into OutputDriver. The standalone application

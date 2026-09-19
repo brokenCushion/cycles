@@ -1,4 +1,4 @@
-# Deep output architecture review against Alex's requirements
+# Deep output architecture review against peer review requirements
 
 Date: 2026-09-19. Scope: local M0–M8b implementation, including uncommitted
 changes on top of `659e8dda9`. This is a reviewed implementation plan, not a

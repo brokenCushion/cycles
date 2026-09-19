@@ -3,6 +3,11 @@
 Generated build and review artifacts live under `builds/`. Commands below use
 that layout; older milestone notes may retain their original artifact names.
 
+Completion update (2026-09-20): both the optimized full-scene and native VDB
+point clouds have now been inspected in live Gaffer viewports. The performance,
+full-scene comparison, checkpoint and native VDB qualification/presentation
+objective is complete. Earlier pending desktop-access notes are superseded.
+
 Latest checkpoint: **Native Blender full-scene deep render** completed at
 664x625, 128 samples. Original evaluated geometry/materials, orthographic camera,
 DOF and denoising are retained. Full beauty is identical with deep on/off; Gaffer

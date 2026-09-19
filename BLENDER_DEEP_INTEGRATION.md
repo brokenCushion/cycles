@@ -2,6 +2,11 @@
 
 ## Current result
 
+**Live review update (2026-09-20):** the optimized scene and native VDB point
+clouds are visually verified in Gaffer. Recovered graph edits remain intact;
+a separate validated scene review was opened without overwriting them. Earlier
+desktop-access limitations below are resolved.
+
 **Native VDB continuation:** the supplied `firePlume_0000.vdb` now produces native
 scalar-absorption deep output on CPU and CUDA at 256x256, one sample. Results are
 in `builds/validation/native-vdb/final-cpu/` and `final-cuda/`. Each beauty is

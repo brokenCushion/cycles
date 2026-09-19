@@ -1,6 +1,6 @@
 # Deep performance and native VDB continuation
 
-Active objective: achieve all four user-approved steps.
+Completed objective: all four user-approved steps, including live Gaffer review.
 
 1. Optimize host capture storage/export within the memory budget.
 2. Repeat the original 664x625, 128-sample scene; compare deep output and beauty
@@ -8,6 +8,23 @@ Active objective: achieve all four user-approved steps.
 3. Present the faster result in Gaffer and commit the integration checkpoint.
 4. Implement/qualify native heterogeneous VDB deep capture using the supplied
    test-assets/vdb/firePlume_0000.vdb, and present actual output in Gaffer.
+
+## Completion: live review verified, 2026-09-20
+
+Both outputs were inspected in visible Gaffer windows. The native VDB review
+displays the cyan plume through VDBDeepPoints after framing. The optimized
+Blender review displays the cyan scene point cloud through SceneDeepPoints;
+an additional readback confirms 1,000,000 points and finite scene bounds.
+The newer backup of the optimized graph was opened, retaining the user's
+Transform/PathFilter edits without saving over the original. A separate copy,
+`scene-compact-deep/blender_deep_validated_review.gfr`, presents the validated
+graph. VDB review: `native-vdb/final-cpu/native_vdb_review.gfr`.
+
+The earlier window-access blocker is resolved. Launching the reviews on the
+interactive desktop outside the restricted launch environment made them
+available to the window-control tool. The following chronological notes retain
+earlier failures and pending states; they are superseded by this completion.
+Implementation checkpoints: `1ac6ce87c` and `8fb124b8d`. No push was performed.
 
 ## Current implementation
 

@@ -2,6 +2,10 @@
 
 ## Current result
 
+Live Gaffer review is now verified (2026-09-20): `final-cpu/native_vdb_review.gfr`
+displays the deep-derived cyan plume through VDBDeepPoints. Earlier desktop
+access/presentation pending notes below are historical and resolved.
+
 The supplied VDB now renders through custom Blender/Cycles CPU and CUDA paths
 at 256x256, one sample. Final outputs under `builds/validation/native-vdb/`:
 

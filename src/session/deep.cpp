@@ -75,33 +75,56 @@ static DeepDensityExpression density_expression(ShaderInput *input,
   return {scale, a.grid || b.grid};
 }
 
+static VolumeNode *scalar_volume_node(ShaderNode *node)
+{
+  const bool scatter = node->type->name == ustring("scatter_volume");
+  require_deep(scatter || node->type->name == ustring("absorption_volume"),
+               "deep volume requires absorption_volume or scatter_volume");
+  if (scatter) {
+    const auto *volume = static_cast<ScatterVolumeNode *>(node);
+    require_deep(volume->get_phase() == CLOSURE_VOLUME_HENYEY_GREENSTEIN_ID &&
+                     isfinite_safe(volume->get_anisotropy()) &&
+                     fabsf(volume->get_anisotropy()) <= 1,
+                 "deep scattering requires finite Henyey-Greenstein anisotropy in [-1, 1]");
+  }
+  auto *volume = static_cast<VolumeNode *>(node);
+  const float3 color = volume->get_color();
+  require_deep(isfinite_safe(color) && color.x == color.y && color.x == color.z &&
+                   color.x >= 0 && color.x <= 1,
+               "deep volume requires scalar extinction");
+  return volume;
+}
+
 static void validate_grid_shader(Scene *scene, Shader *shader)
 {
   require_deep(shader && shader->graph, "missing native volume shader");
   auto *output = shader->graph->output();
   require_deep(!output->input("Surface")->link && !output->input("Displacement")->link &&
                    output->input("Volume")->link,
-               "native deep grids require a pure absorption volume material");
+               "native deep grids require a pure volume material");
   ShaderNode *node = output->input("Volume")->link->parent;
-  require_deep(node->type->name == ustring("absorption_volume"),
-               "native deep grids require absorption_volume");
-  auto *absorption = static_cast<AbsorptionVolumeNode *>(node);
+  auto *volume = scalar_volume_node(node);
   for (ShaderInput *input : node->inputs)
     require_deep(input->name() == ustring("Density") || !input->link,
-                 "native absorption supports only a linked Density input");
-  const float3 color = absorption->get_color();
-  require_deep(isfinite_safe(color) && color.x == color.y && color.x == color.z &&
-                   color.x >= 0 && color.x <= 1,
-               "native deep absorption requires scalar extinction");
+                 "native volume supports only a linked Density input");
+  const float3 color = volume->get_color();
   require_deep(shader->get_volume_interpolation_method() == VOLUME_INTERPOLATION_LINEAR,
                "native deep grids require linear interpolation");
   std::set<ShaderNode *> visited{output, node};
-  const auto expression = density_expression(absorption->input("Density"),
-                                              absorption->get_density(), visited);
-  require_deep(expression.grid, "native deep volume must use the density grid");
+  const auto expression = density_expression(volume->input("Density"),
+                                              volume->get_density(), visited);
+  /* Native graph simplification folds density * 0 to a constant. It remains
+   * a valid empty medium; requiring a surviving attribute would reject it on
+   * session reset even though its extinction is identically zero. */
+  require_deep(expression.grid || expression.scale == 0,
+               "native deep volume must use the density grid");
   for (ShaderNode *candidate : shader->graph->nodes)
     require_deep(visited.count(candidate) != 0, "unsupported node in native volume material");
-  const float scale = float(expression.scale * (1.0 - color.x));
+  /* Match native SVM extinction: absorption uses (1-color), scattering color.
+   * Phase redistributes light but does not change this scalar extinction. */
+  const float scale = float(expression.scale *
+                           (node->type->name == ustring("scatter_volume") ? color.x :
+                                                                         1.0 - color.x));
   if (shader->deep_density_scale != scale) {
     shader->deep_density_scale = scale;
     shader->tag_update(scene);
@@ -122,15 +145,10 @@ static void validate_shader(Shader *shader,
     for (ShaderNode *node : graph->nodes) {
       if (node == output)
         continue;
-      require_deep(node->type->name == ustring("absorption_volume"),
-                   "M8 supports constant absorption_volume only");
+      const auto *volume_node = scalar_volume_node(node);
       for (ShaderInput *input : node->inputs)
         require_deep(!input->link, "M8 volume inputs must be constant");
-      const auto *absorption = static_cast<AbsorptionVolumeNode *>(node);
-      const float3 color = absorption->get_color();
-      require_deep(isfinite_safe(color) && color.x == color.y && color.x == color.z &&
-                       color.x >= 0 && color.x <= 1 && isfinite_safe(absorption->get_density()) &&
-                       absorption->get_density() >= 0,
+      require_deep(isfinite_safe(volume_node->get_density()) && volume_node->get_density() >= 0,
                    "M8 requires finite nonnegative scalar extinction");
     }
     return;

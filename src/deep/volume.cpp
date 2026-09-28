@@ -7,6 +7,7 @@
 #include "kernel/deep/density.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <functional>
 #include <limits>
@@ -169,6 +170,31 @@ std::vector<VolumeInterval> integrate_linear_density(
 }
 
 namespace {
+/* Exact extrema of the difference of two exponentials on one span. */
+double exponential_error(double ta, double ra, double tb, double rb, double width)
+{
+  double error = std::max(std::abs(ta - tb),
+                          std::abs(ta * std::exp(-ra * width) - tb * std::exp(-rb * width)));
+  if (ra > 0 && rb > 0 && ra != rb && ta > 0 && tb > 0) {
+    const double x = (std::log(ra) + std::log(ta) - std::log(rb) - std::log(tb)) / (ra - rb);
+    if (x > 0 && x < width)
+      error = std::max(error, std::abs(ta * std::exp(-ra * x) - tb * std::exp(-rb * x)));
+  }
+  return error;
+}
+
+/* The merger handles two adjacent volume intervals, so its bound needs just
+ * two spans. Avoid allocating/sorting general curve vectors at every boundary. */
+double merge_error(const IntervalSample &a, const IntervalSample &b, const IntervalSample &merged)
+{
+  const double wa = a.back - a.front, wb = b.back - b.front;
+  const double ra = -std::log1p(-a.alpha) / wa;
+  const double rb = -std::log1p(-b.alpha) / wb;
+  const double rm = -std::log1p(-merged.alpha) / (merged.back - merged.front);
+  return std::max(exponential_error(1, ra, 1, rm, wa),
+                  exponential_error(1 - a.alpha, rb, std::exp(-rm * wa), rm, wb));
+}
+
 void validate_curve(const std::vector<IntervalSample> &samples)
 {
   double previous = 0;
@@ -216,7 +242,109 @@ struct CurveCursor {
     return 0;
   }
 };
+
+/* Each grid crossing emits an ordered interval run. Index those runs separately
+ * so overlapping grids add optical depth without rescanning every cell at each
+ * fitting query. Arbitrarily shuffled input remains valid, with shorter runs. */
+struct OpticalDepthCurve {
+  const std::vector<VolumeInterval> &intervals;
+  std::vector<double> prefix;
+  struct Run {
+    size_t begin, end;
+    double total;
+  };
+  std::vector<Run> runs;
+
+  explicit OpticalDepthCurve(const std::vector<VolumeInterval> &source) : intervals(source)
+  {
+    size_t count = 0;
+    for (size_t i = 0; i < intervals.size(); ++i)
+      count += i == 0 || intervals[i].front < intervals[i - 1].back;
+    runs.reserve(count);
+    prefix.reserve(intervals.size());
+    for (size_t i = 0; i < intervals.size(); ++i) {
+      if (i == 0 || intervals[i].front < intervals[i - 1].back)
+        runs.push_back({i, i, 0});
+      Run &run = runs.back();
+      prefix.push_back(run.total);
+      run.total += intervals[i].optical_depth;
+      ++run.end;
+    }
+  }
+
+  size_t index(const Run &run, double z) const
+  {
+    return std::lower_bound(intervals.begin() + run.begin, intervals.begin() + run.end, z,
+                            [](const VolumeInterval &v, double depth) {
+                              return v.back < depth;
+                            }) - intervals.begin();
+  }
+
+  double at(double z) const
+  {
+    double tau = 0;
+    for (const Run &run : runs) {
+      const size_t i = index(run, z);
+      if (i == run.end)
+        tau += run.total;
+      else {
+        const auto &v = intervals[i];
+        tau += prefix[i] + v.optical_depth *
+                              std::clamp((z - v.front) / (v.back - v.front), 0.0, 1.0);
+      }
+    }
+    return tau;
+  }
+
+  double rate(double z) const
+  {
+    double rate = 0;
+    for (const Run &run : runs) {
+      const size_t i = index(run, z);
+      if (i != run.end && intervals[i].front < z && z < intervals[i].back)
+        rate += intervals[i].optical_depth / (intervals[i].back - intervals[i].front);
+    }
+    return rate;
+  }
+};
 }  // namespace
+
+std::vector<IntervalSample> reduce_interval_curve(const std::vector<IntervalSample> &source,
+                                                 const double tolerance)
+{
+  validate_curve(source);
+  if (!std::isfinite(tolerance) || tolerance < 0 || tolerance > 1e-3)
+    throw std::invalid_argument("Invalid volume export reduction budget");
+  std::vector<IntervalSample> result;
+  result.reserve(source.size());
+  double prefix = 1, last_prefix = 1, last_error = 0;
+  for (const auto &next : source) {
+    bool merged = false;
+    if (tolerance > 0 && !result.empty()) {
+      const auto &previous = result.back();
+      if (previous.front < previous.back && previous.back == next.front && next.front < next.back) {
+        const double alpha = -std::expm1(std::log1p(-previous.alpha) + std::log1p(-next.alpha));
+        const IntervalSample combined{previous.front, next.back, alpha};
+        if (alpha < 1) {
+          const double error = last_error + last_prefix * merge_error(previous, next, combined) +
+                               32 * std::numeric_limits<double>::epsilon();
+          if (error <= tolerance) {
+            result.back() = combined;
+            last_error = error;
+            merged = true;
+          }
+        }
+      }
+    }
+    if (!merged) {
+      result.push_back(next);
+      last_prefix = prefix;
+      last_error = 0;
+    }
+    prefix *= 1-next.alpha;
+  }
+  return result;
+}
 
 double interval_transmittance(const std::vector<IntervalSample> &samples,
                               double depth,
@@ -272,9 +400,12 @@ double interval_curve_error(const std::vector<IntervalSample> &a,
 
 std::vector<IntervalSample> reconstruct_volume(const std::vector<VolumeCameraSample> &samples,
                                               double tolerance,
-                                              size_t max_intervals)
+                                              size_t max_intervals,
+                                              double reduction_tolerance)
 {
-  if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-3 || !max_intervals)
+  if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-3 || !max_intervals ||
+      !std::isfinite(reduction_tolerance) || reduction_tolerance < 0 ||
+      reduction_tolerance > 1e-3)
     throw std::invalid_argument("Invalid volume reconstruction budget");
   std::unordered_set<uint64_t> ids;
   std::vector<double> boundaries;
@@ -301,10 +432,70 @@ std::vector<IntervalSample> reconstruct_volume(const std::vector<VolumeCameraSam
   }
   if (!max_weight)
     throw std::invalid_argument("Volume pixel requires positive sample weight");
+  std::vector<IntervalSample> result;
+  double last_error = 0, last_prefix = 1;
+  /* A small bounded source window can tighten the triangle-inequality merge
+   * bound. Longer chains retain the conservative bound; never reset its budget. */
+  std::array<IntervalSample, 64> merge_source;
+  size_t merge_count = 0;
+  auto emit = [&](double front, double back, double a, double b) {
+    if (a <= b || a == 0)
+      return;
+    const double alpha = 1 - b / a;
+    if (front < back && alpha == 1)
+      throw std::runtime_error("Volume interval opacity cannot be represented");
+    const IntervalSample next{front, back, alpha};
+    if (reduction_tolerance > 0 && !result.empty()) {
+      const auto &previous = result.back();
+      if (previous.front < previous.back && previous.back == front && front < back) {
+        const double combined_alpha = -std::expm1(std::log1p(-previous.alpha) +
+                                                 std::log1p(-alpha));
+        const IntervalSample combined{previous.front, back, combined_alpha};
+        if (combined_alpha < 1) {
+          /* The merge preserves endpoint transmittance. Its interior error
+           * adds to the last segment's accumulated bound, never to a fresh
+           * budget on each merge. Completed segments are never changed again.
+           * Therefore max(segment errors), not their sum, bounds the curve. */
+          double error = last_error + last_prefix *
+              merge_error(previous, next, combined) +
+              32 * std::numeric_limits<double>::epsilon();
+          if (error > reduction_tolerance && merge_count) {
+            const double rate = -std::log1p(-combined_alpha) / (back - combined.front);
+            double prefix = 1, exact = 0;
+            for (size_t i = 0; i <= merge_count; ++i) {
+              const auto &s = i == merge_count ? next : merge_source[i];
+              exact = std::max(exact, exponential_error(
+                  prefix, -std::log1p(-s.alpha) / (s.back - s.front),
+                  std::exp(-rate * (s.front - combined.front)), rate, s.back - s.front));
+              prefix *= 1 - s.alpha;
+            }
+            error = last_prefix * exact +
+                    32 * (merge_count + 1) * std::numeric_limits<double>::epsilon();
+          }
+          if (error <= reduction_tolerance) {
+            result.back() = combined;
+            last_error = error;
+            if (merge_count && merge_count < merge_source.size())
+              merge_source[merge_count++] = next;
+            else
+              merge_count = 0;
+            return;
+          }
+        }
+      }
+    }
+    if (result.size() == max_intervals)
+      throw std::runtime_error("Volume reconstruction interval budget exceeded");
+    result.push_back(next);
+    last_error = 0;
+    last_prefix = a;
+    merge_source[0] = next;
+    merge_count = 1;
+  };
   /* A single ordered medium already is an exponential curve. Avoid repeatedly
    * evaluating every interval at every boundary (quadratic for native VDBs).
    * Overlaps or surface events retain the general mixture reconstruction. */
-  if (samples.size() == 1 && samples[0].camera.events.empty()) {
+  if (samples.size() == 1 && samples[0].camera.events.empty() && reduction_tolerance == 0) {
     bool ordered = true;
     double previous = 0;
     for (const auto &v : samples[0].intervals) {
@@ -319,7 +510,6 @@ std::vector<IntervalSample> reconstruct_volume(const std::vector<VolumeCameraSam
           throw std::runtime_error("Volume reconstruction interval budget exceeded");
         count += size_t(pieces);
       }
-      std::vector<IntervalSample> result;
       result.reserve(count);
       for (const auto &v : samples[0].intervals) {
         const size_t pieces = v.optical_depth > 0 ?
@@ -342,14 +532,18 @@ std::vector<IntervalSample> reconstruct_volume(const std::vector<VolumeCameraSam
     }
   }
   double total = 0;
-  for (const auto &s : samples)
+  std::vector<OpticalDepthCurve> curves;
+  curves.reserve(samples.size());
+  for (const auto &s : samples) {
     total += s.camera.weight / max_weight;
+    curves.emplace_back(s.intervals);
+  }
   auto raw = [&](double z, bool before) {
     double sum = 0;
-    for (const auto &s : samples) {
-      double tau = 0, t = 1;
-      for (const auto &v : s.intervals)
-        tau += v.optical_depth * std::clamp((z - v.front) / (v.back - v.front), 0.0, 1.0);
+    for (size_t i = 0; i < samples.size(); ++i) {
+      const auto &s = samples[i];
+      const double tau = curves[i].at(z);
+      double t = 1;
       for (const auto &e : s.camera.events)
         if (e.depth < z || (!before && e.depth == z))
           t *= 1 - e.alpha;
@@ -359,17 +553,6 @@ std::vector<IntervalSample> reconstruct_volume(const std::vector<VolumeCameraSam
   };
   std::sort(boundaries.begin(), boundaries.end());
   boundaries.erase(std::unique(boundaries.begin(), boundaries.end()), boundaries.end());
-  std::vector<IntervalSample> result;
-  auto emit = [&](double front, double back, double a, double b) {
-    if (a <= b || a == 0)
-      return;
-    if (result.size() == max_intervals)
-      throw std::runtime_error("Volume reconstruction interval budget exceeded");
-    const double alpha = 1 - b / a;
-    if (front < back && alpha == 1)
-      throw std::runtime_error("Volume interval opacity cannot be represented");
-    result.push_back({front, back, alpha});
-  };
   for (size_t i = 0; i < boundaries.size(); ++i) {
     const double z = boundaries[i];
     emit(z, z, raw(z, true), raw(z, false));
@@ -377,13 +560,10 @@ std::vector<IntervalSample> reconstruct_volume(const std::vector<VolumeCameraSam
       break;
     const double end = boundaries[i + 1], mid = z + (end - z) / 2;
     double low = std::numeric_limits<double>::infinity(), high = 0;
-    for (const auto &s : samples) {
-      if (s.camera.weight == 0)
+    for (size_t j = 0; j < samples.size(); ++j) {
+      if (samples[j].camera.weight == 0)
         continue;
-      double r = 0;
-      for (const auto &v : s.intervals)
-        if (v.front < mid && mid < v.back)
-          r += v.optical_depth / (v.back - v.front);
+      const double r = curves[j].rate(mid);
       if (!std::isfinite(r))
         throw std::invalid_argument("Volume extinction rate overflow");
       low = std::min(low, r);

@@ -45,12 +45,32 @@ Capture::Capture(const int width,
      * fixed scratch and I/O. Beauty/shader memory remains outside this budget. */
     const uint64_t events = uint64_t(samples) * capacity_;
     const uint64_t output_events = volume ? reconstruction_limit() : events;
-    const uint64_t required = 2 * 1024 * 1024 +
+    /* Volume pixel streaming retains only 12-byte FLOAT samples per row.
+     * OpenEXR 3.4 ZIPS with zero workers has one line buffer: raw + consecutive
+     * + ZIP scratch + compressed data, plus a transient replacement buffer.
+     * 80 bytes/sample covers these copies and compression overhead. Double
+     * source/quantization/curve scratch is bounded per pixel, not per row. */
+    const uint64_t row_sample_bytes = volume ? 80 : 128;
+    const uint64_t fixed = 2 * 1024 * 1024 +
                               (spill_page_bytes + event_page_bytes) * spill_page_count +
-                              uint64_t(width) * (128 + output_events * 128) +
+                              uint64_t(width) * 256 +
+                              uint64_t(height) * 32 +
                               events * 512 +
-                              (volume_grid ? uint64_t(samples + 2) * reconstruction_limit() * 32 : 0);
-    if (required > max_bytes - population_bytes)
+                              (volume ? output_events * 240 : 0) +
+                              (volume_grid ? uint64_t(samples + 2) * reconstruction_limit() * 96 : 0);
+    const uint64_t available = max_bytes - population_bytes;
+    if (fixed > available)
+      throw std::invalid_argument("Deep scanline working set exceeds --deep-memory-mb budget");
+    if (volume) {
+      /* Reserve a fixed row capacity from the remaining budget, then enforce
+       * actual counts before FLOAT staging. Sparse wide rows need not reserve
+       * the per-pixel maximum at every pixel. Dense rows still fail closed. */
+      volume_row_sample_limit_ = size_t(std::min(uint64_t(width) * output_events,
+                                               (available - fixed) / row_sample_bytes));
+      if (volume_row_sample_limit_ < output_events)
+        throw std::invalid_argument("Deep volume row cannot fit one maximum-capacity pixel");
+    }
+    else if (uint64_t(width) * output_events * row_sample_bytes > available - fixed)
       throw std::invalid_argument("Deep scanline working set exceeds --deep-memory-mb budget");
     if (adaptive)
       populations_.assign(count / samples, 0);
@@ -72,6 +92,7 @@ Capture::Capture(const int width,
         spill_ = nullptr;
         throw std::runtime_error("Cannot allocate deep spill file (disk full or write failure)");
       }
+      spill_write_bytes_ += n;
       remaining -= n;
     }
     if (std::fflush(spill_) != 0) {
@@ -103,6 +124,12 @@ Capture::~Capture()
   if (spill_events_)
     std::fclose(spill_events_);
 }
+Capture::SpillStatistics Capture::spill_statistics() const
+{
+  const std::lock_guard<std::mutex> lock(mutex_);
+  return {spill_read_bytes_, spill_write_bytes_,
+          spill_ ? uint64_t(count_) * stride_ + spill_event_bytes_ : 0};
+}
 namespace {
 void seek_record(FILE *file, const size_t offset)
 {
@@ -127,6 +154,7 @@ void Capture::flush_page(SpillPage &page) const
   seek_record(spill_, page.first * stride_ + page.dirty_begin);
   if (std::fwrite(page.data.data() + page.dirty_begin, 1, bytes, spill_) != bytes)
     throw std::runtime_error("Deep spill page write failed");
+  spill_write_bytes_ += bytes;
   page.dirty_begin = spill_page_bytes;
   page.dirty_end = 0;
 }
@@ -155,6 +183,7 @@ Capture::SpillPage &Capture::spill_page(const size_t index) const
     seek_record(spill_, first * stride_);
     if (std::fread(page.data.data(), 1, bytes, spill_) != bytes)
       throw std::runtime_error("Deep spill page read failed");
+    spill_read_bytes_ += bytes;
     page.first = first;
     page.bytes = bytes;
   }
@@ -186,6 +215,7 @@ void Capture::read_events(size_t offset, unsigned char *destination, size_t byte
       spill_events_reading_ = true;
       if (std::fread(page.data.data(), 1, page.bytes, spill_events_) != page.bytes)
         throw std::runtime_error("Deep event file read failed");
+      spill_read_bytes_ += page.bytes;
       page.first = first;
     }
     page.last_used = ++spill_clock_;
@@ -266,10 +296,13 @@ void Capture::store_record(const size_t index,
       }
       if (event_bytes && std::fwrite(events, 1, event_bytes, spill_events_) != event_bytes)
         throw std::runtime_error("Deep event file append failed");
+      spill_write_bytes_ += event_bytes;
       for (unsigned i = 0; i < result.count; ++i)
-        if (events[i].kind == DEEP_VOLUME_CUBIC &&
-            std::fwrite(density + i, 1, sizeof(*density), spill_events_) != sizeof(*density))
-          throw std::runtime_error("Deep density file append failed");
+        if (events[i].kind == DEEP_VOLUME_CUBIC) {
+          if (std::fwrite(density + i, 1, sizeof(*density), spill_events_) != sizeof(*density))
+            throw std::runtime_error("Deep density file append failed");
+          spill_write_bytes_ += sizeof(*density);
+        }
       const SpillRecord stored{uint64_t(spill_event_bytes_), result};
       spill_event_bytes_ += bytes;
       SpillPage &page = spill_page(index);
@@ -562,6 +595,11 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   std::vector<VolumeCameraSample> ledger;
   for (int i = 0; i < population(x, y); ++i)
     ledger.push_back(volume_sample(x, y, i));
-  return reconstruct_volume(ledger, volume_reconstruction_error, reconstruction_limit());
+  /* Share the existing reconstruction allowance between mixture fitting and
+   * streaming reduction; the total published error budget is unchanged. */
+  return reconstruct_volume(ledger,
+                            volume_reconstruction_error / 2,
+                            reconstruction_limit(),
+                            volume_reconstruction_error / 2);
 }
 }  // namespace ccl::deep

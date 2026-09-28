@@ -17,20 +17,23 @@ from validate_gaffer import check, deep_pixel
 
 
 def curve(samples):
-    ends, cumulative = [], [0.0]
+    ends, cumulative = [], [1.0]
+    previous = 0.0
     for front, back, alpha in samples:
-        check(back >= front and 0 < alpha < 1, 'Invalid absorption interval')
+        check(front >= previous and back >= front and 0 < alpha <= 1 and
+              (back == front or alpha < 1), 'Invalid volume/surface interval')
         ends.append(back)
-        cumulative.append(cumulative[-1] - math.log1p(-alpha))
+        cumulative.append(cumulative[-1] * (1-alpha))
+        previous = back
 
     def evaluate(depth, before=False):
         i = bisect.bisect_left(ends, depth) if before else bisect.bisect_right(ends, depth)
-        tau = cumulative[i]
+        t = cumulative[i]
         if i < len(samples):
             front, back, alpha = samples[i]
             if back > front and depth > front:
-                tau -= math.log1p(-alpha) * min(1.0, (depth-front)/(back-front))
-        return math.exp(-tau)
+                t *= math.exp(math.log1p(-alpha) * min(1.0, (depth-front)/(back-front)))
+        return t
     return evaluate
 
 
@@ -43,6 +46,7 @@ for path in sys.argv[1:3]:
 fmt = readers[0]['out']['format'].getValue()
 check(fmt == readers[1]['out']['format'].getValue(), 'Backend formats differ')
 maximum, checks, pixels = 0.0, 0, 0
+worst = None
 for y in sorted(set(i*(fmt.height()-1)//8 for i in range(9))):
     for x in sorted(set(i*(fmt.width()-1)//8 for i in range(9))):
         samples = [deep_pixel(reader['out'], imath.V2i(x, y)) for reader in readers]
@@ -51,12 +55,19 @@ for y in sorted(set(i*(fmt.height()-1)//8 for i in range(9))):
         probes = depths + [(a+b)/2 for a, b in zip(depths, depths[1:])]
         for depth in probes:
             for before in (False, True):
-                maximum = max(maximum, abs(functions[0](depth, before)-functions[1](depth, before)))
+                values = [f(depth, before) for f in functions]
+                error = abs(values[0]-values[1])
+                if error > maximum:
+                    maximum = error
+                    worst = {'gaffer_pixel': [x, y], 'file_pixel': [x, fmt.height()-1-y],
+                             'depth': depth, 'before': before, 'transmittance': values,
+                             'interval_counts': [len(s) for s in samples]}
                 checks += 1
         pixels += 1
 report = {'scope': 'CPU/CUDA diagnostic deep-curve boundaries and midpoints',
           'diagnostic_pixels': pixels, 'comparisons': checks,
           'max_transmittance_error': maximum, 'tolerance': 1e-6,
+          'worst': worst,
           'passed': checks > 0 and maximum <= 1e-6}
 Path(sys.argv[3]).write_text(json.dumps(report, indent=2))
 print(json.dumps(report, indent=2))

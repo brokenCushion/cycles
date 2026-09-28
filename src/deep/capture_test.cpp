@@ -30,6 +30,21 @@ int main()
 {
   try {
     {
+      /* Wider rows share a bounded total capacity instead of reserving every
+       * pixel's worst case. Leave 32 MiB for the production GPU staging pool. */
+      Capture production(664, 625, 4, size_t(1024) * 1024 * 1024,
+                         4096, true, false, true, true);
+      Capture wide(1920, 1, 4, size_t(1024 - 32) * 1024 * 1024,
+                   4096, true, false, true, true);
+      check(wide.volume_row_sample_limit() >= wide.reconstruction_limit());
+      check(wide.volume_row_sample_limit() < 1920 * wide.reconstruction_limit());
+      Capture limited(664, 1, 4, size_t(512) * 1024 * 1024,
+                      4096, true, false, true, true);
+      check(limited.volume_row_sample_limit() < production.volume_row_sample_limit());
+      rejects([] { Capture too_small(664, 625, 4, size_t(8) * 1024 * 1024,
+                                     4096, true, false, true, true); });
+    }
+    {
       using namespace ccl::deep;
       VolumeCameraSample ray{{0, 1, true, {}}, {}};
       for (int i = 0; i < 12000; ++i)
@@ -78,16 +93,25 @@ int main()
                          events.data(), density.data());
       check(!disk.finalize());
       for (bool spill : {false, true}) {
-        Capture thin(1, 1, 1, 8 * 1024 * 1024, 1, spill, false, true, true);
+        Capture thin(1, 1, 1, 16 * 1024 * 1024, 1, spill, false, true, true);
+        const auto initial_io = thin.spill_statistics();
         const KernelDeepEvent thin_event{DEEP_VOLUME_CUBIC, 1000, 1000, 0, 0};
         const KernelDeepDensity thin_density{{1e-8f, 1e-8f, 1e-8f, 1e-8f}, 1000, 1000 + 1e-8};
         thin.record_sample(0, 0, 0, {DEEP_COMPLETE, 1, DEEP_ERROR_NONE}, &thin_event, &thin_density);
         check(thin.finalize());
+        const auto captured_io = thin.spill_statistics();
         const auto thin_sample = thin.volume_sample(0, 0, 0);
+        const auto read_io = thin.spill_statistics();
+        thin.volume_sample(0, 0, 0);
+        check(thin.spill_statistics().read_bytes == read_io.read_bytes);  // Cached reread.
+        const uint64_t payload = sizeof(thin_event) + sizeof(thin_density);
+        check(captured_io.file_bytes == initial_io.file_bytes + (spill ? payload : 0));
+        check(captured_io.write_bytes == (spill ? 2 * initial_io.file_bytes + payload : 0));
+        check(read_io.read_bytes == captured_io.read_bytes + (spill ? payload : 0));
         check(thin_sample.intervals.size() == 1);
         check(thin_sample.intervals[0].front == thin_density.front &&
               thin_sample.intervals[0].back == thin_density.back);
-        Capture varying(1, 1, 2, 8 * 1024 * 1024, 2, spill, false, true, true);
+        Capture varying(1, 1, 2, 16 * 1024 * 1024, 2, spill, false, true, true);
         const KernelDeepEvent cell{DEEP_VOLUME_CUBIC, 1, 2, 0, 0};
         const KernelDeepDensity curve{{0, .0001f, .0002f, 0}, 1, 2};
         varying.record_sample(0, 0, 0, {DEEP_COMPLETE, 1, DEEP_ERROR_NONE}, &cell, &curve);
@@ -103,10 +127,10 @@ int main()
                              (3 * b - 3 * c) * u * u * u * u / 4;
           check(std::abs(interval_transmittance(reconstructed, 1 + u) - std::exp(-tau)) < 3e-7);
         }
-        Capture missing(1, 1, 1, 8 * 1024 * 1024, 65, spill, false, true, true);
+        Capture missing(1, 1, 1, 16 * 1024 * 1024, 65, spill, false, true, true);
         missing.record_sample(0, 0, 0, {DEEP_COMPLETE, 65, DEEP_ERROR_NONE}, events.data());
         check(!missing.finalize());
-        Capture invalid(1, 1, 1, 8 * 1024 * 1024, 65, spill, false, true, true);
+        Capture invalid(1, 1, 1, 16 * 1024 * 1024, 65, spill, false, true, true);
         density[1].optical_depth[2] = -1;
         invalid.record_sample(0, 0, 0, {DEEP_COMPLETE, 65, DEEP_ERROR_NONE},
                                events.data(), density.data());
@@ -209,7 +233,7 @@ int main()
                                             KernelDeepEvent{DEEP_VOLUME, 2, 3, .5f, 1},
                                             KernelDeepEvent{KernelDeepEventKind(99), 2, 3, 0, 1}})
       {
-        Capture c(1, 1, 1, 4 * 1024 * 1024, 1, spill, false, true);
+        Capture c(1, 1, 1, 8 * 1024 * 1024, 1, spill, false, true);
         c.record_events(0, 0, 0, &invalid, 1);
         check(!c.finalize());
       }
@@ -217,7 +241,7 @@ int main()
       const KernelDeepEvent medium{DEEP_VOLUME, 2, 3, 0, 1};
       surface_only.record_events(0, 0, 0, &medium, 1);
       check(!surface_only.finalize());
-      Capture volume(1, 1, 2, 4 * 1024 * 1024, 3, spill, false, true);
+      Capture volume(1, 1, 2, 8 * 1024 * 1024, 3, spill, false, true);
       const KernelDeepEvent intervals[] = {
           {DEEP_VOLUME, 2, 8, 0, 1.8f}, {DEEP_SURFACE, 5, 5, .5f, 0}, {DEEP_VOLUME, 4, 9, 0, 1}};
       volume.record_events(0, 0, 0, intervals, 3);

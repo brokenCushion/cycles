@@ -7,13 +7,13 @@
 CCL_NAMESPACE_BEGIN
 
 /* Resolve the same density attribute and texture transforms as native volume
- * shading. Host preflight supplies a validated scalar absorption multiplier.
+ * shading. Host preflight supplies a validated scalar extinction multiplier.
  * The static camera/object contract is checked again before using transforms. */
 ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
                                                ccl_private ShaderData *sd,
                                                const ccl_private Ray *ray,
-                                               const float start,
-                                               const float end,
+                                               const double start,
+                                               const double end,
                                                const float scale,
                                                ccl_global KernelDeepEvent *events,
                                                ccl_global KernelDeepDensity *density,

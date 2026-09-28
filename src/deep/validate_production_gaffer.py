@@ -82,7 +82,7 @@ report['raw_capture_bytes']=128*96*16*(1+2*64)*4
 report['deep_budget_bytes']=32*1024*1024
 
 # Actual geometry review, alongside the high-depth-complexity fixture.
-geometry=Path.cwd()/'build-m3/primitives-review/04_all_objects_reference.xml'
+geometry=Path.cwd()/'builds/build-m3/primitives-review/04_all_objects_reference.xml'
 geometry_paths=[]
 if geometry.exists():
     for flag in (False,True):

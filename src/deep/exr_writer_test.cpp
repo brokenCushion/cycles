@@ -31,6 +31,50 @@ void require(bool value, const std::string &message)
   }
 }
 
+void volume_projection(const std::filesystem::path &directory)
+{
+  /* Independent rounding passes the export allowance here, but introduces
+   * avoidable drift. Keep the cumulative-depth refit active below that limit. */
+  std::vector<IntervalSample> source, rounded;
+  for (int i = 0; i < 200; ++i) {
+    const double front = 1200.00006 + .1 * i;
+    const double back = 1200.00006 + .1 * (i + 1);
+    const double alpha = -std::expm1(-.00001 * std::min(i + 1, 200 - i));
+    source.push_back({front, back, alpha});
+    rounded.push_back({double(float(front)), double(float(back)), double(float(alpha))});
+  }
+  const double drift = interval_curve_error(source, rounded);
+  require(drift > 1e-7 && drift < 8.1e-7, "Projection regression does not exercise passing drift");
+  const auto path = directory / "volume_projection.exr";
+  SurfaceImage image{{0, 0, 0, 0}, {0, 0, 0, 0}};
+  write_volume_exr(path, image, {source});
+
+  Imf::DeepScanLineInputFile input(path.string().c_str(), 1);
+  unsigned int count = 0;
+  Imf::DeepFrameBuffer fb;
+  fb.insertSampleCountSlice(Imf::Slice::Make(Imf::UINT, &count, input.header().dataWindow()));
+  input.setFrameBuffer(fb);
+  input.readPixelSampleCounts(0, 0);
+  require(count > 0 && count <= source.size(), "Invalid projected sample count");
+  std::vector<float> z(count), back(count), alpha(count);
+  float *zp = z.data(), *bp = back.data(), *ap = alpha.data();
+  fb.insert("Z", Imf::DeepSlice(Imf::FLOAT, reinterpret_cast<char *>(&zp),
+                               sizeof(float *), sizeof(float *), sizeof(float)));
+  fb.insert("ZBack", Imf::DeepSlice(Imf::FLOAT, reinterpret_cast<char *>(&bp),
+                                   sizeof(float *), sizeof(float *), sizeof(float)));
+  fb.insert("A", Imf::DeepSlice(Imf::FLOAT, reinterpret_cast<char *>(&ap),
+                               sizeof(float *), sizeof(float *), sizeof(float)));
+  input.setFrameBuffer(fb);
+  input.readPixelSampleCounts(0, 0);
+  input.readPixels(0, 0);
+  std::vector<IntervalSample> actual;
+  for (size_t i = 0; i < count; ++i)
+    actual.push_back({z[i], back[i], alpha[i]});
+  require(interval_curve_error(source, actual) < drift / 5,
+          "Volume serialization retains avoidable depth-rounding drift");
+  std::cout << "PASS cumulative extinction projection below export allowance\n";
+}
+
 std::vector<PixelLedger> ledgers()
 {
   std::vector<PixelLedger> p = {
@@ -305,6 +349,24 @@ void failures(const SurfaceImage &valid, const std::filesystem::path &directory)
       threw = true;
     }
     require(threw, "Injected scanline writer failure was swallowed");
+    FaultStream volume_stream(budget);
+    SurfaceImage volume_image = valid;
+    volume_image.pixels.clear();
+    threw = false;
+    try {
+      write_volume_exr_pixels(volume_stream, volume_image, [](int, int) {
+        std::vector<IntervalSample> intervals;
+        for (int i = 0; i < 128; ++i)
+          intervals.push_back({double(i + 1), i + 1.5, .1});
+        return intervals;
+      });
+    }
+    catch (const std::exception &error) {
+      require(std::string(error.what()).find("Injected I/O failure") != std::string::npos,
+              "Volume fault test failed before reaching the stream");
+      threw = true;
+    }
+    require(threw, "Injected volume writer failure was swallowed");
   }
   /* Opening a directory as a file is a portable open failure without relying
    * on machine-specific permissions or filling a real disk. */
@@ -383,6 +445,7 @@ int main(int argc, char **argv)
       round_trip(path, empty, empty_source);
     }
     failures(base, directory);
+    volume_projection(directory);
     std::ofstream manifest(directory / "expected_pixels.csv");
     manifest.exceptions(std::ios::badbit | std::ios::failbit);
     manifest << "file_x,file_y,samples,flattened_alpha\n" << std::setprecision(17);

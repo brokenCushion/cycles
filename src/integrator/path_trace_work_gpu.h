@@ -27,6 +27,19 @@ struct KernelWorkTile;
  * This implementation suits best devices which have a lot of integrator states, such as GPU. */
 class PathTraceWorkGPU : public PathTraceWork {
  public:
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  /* Host/device mirrors, medium tracking and contiguous readback scratch.
+   * Keep the reservation shared with PathTrace's allocation preflight. */
+  static constexpr int deep_grid_batch_size = 64;
+  static constexpr size_t deep_grid_staging_bytes = 32 * 1024 * 1024;
+  static_assert(2 * size_t(deep_grid_batch_size) *
+                        (sizeof(KernelDeepRecord) +
+                         DEEP_MAX_VOLUME_EVENTS * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) +
+                         DEEP_MAX_MEDIA * sizeof(KernelDeepMedium)) +
+                    DEEP_MAX_VOLUME_EVENTS * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) <=
+                deep_grid_staging_bytes,
+                "Native deep GPU staging exceeds its preflight reservation");
+#endif
   PathTraceWorkGPU(Device *device,
                    Film *film,
                    DeviceScene *device_scene,

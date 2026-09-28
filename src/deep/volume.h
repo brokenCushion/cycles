@@ -65,10 +65,15 @@ struct IntervalSample {
 /* Reference only: averages sample transmittance, then fits nonoverlapping
  * exponential intervals. Surface steps have front == back. Error is absolute
  * transmittance error at EVERY depth, bounded using log-mixture curvature.
- * Limits fail explicitly. Renderer capture uses the shared error allocation. */
+ * Optional streaming reduction adds at most reduction_tolerance absolute curve
+ * error, preserves merged-segment endpoint transmittance and never merges
+ * surface steps or gaps.
+ * Limits fail explicitly. Renderer capture splits its shared error allocation
+ * between fitting and reduction; callers must budget their sum. */
 std::vector<IntervalSample> reconstruct_volume(const std::vector<VolumeCameraSample> &samples,
                                               double tolerance = volume_reconstruction_error,
-                                              size_t max_intervals = 65536);
+                                              size_t max_intervals = 65536,
+                                              double reduction_tolerance = 0);
 
 /* Exact maximum difference between two ordered, nonoverlapping exponential
  * curves, including surface discontinuities and interior stationary points. */
@@ -77,4 +82,9 @@ double interval_curve_error(const std::vector<IntervalSample> &a,
 double interval_transmittance(const std::vector<IntervalSample> &samples,
                               double depth,
                               bool before = false);
+/* Bounded linear pass over an already reconstructed curve. Preserves endpoint
+ * transmittance, surface steps and gaps. Each merged span accumulates its own
+ * whole-curve error bound; the caller budgets this separately from fitting. */
+std::vector<IntervalSample> reduce_interval_curve(const std::vector<IntervalSample> &source,
+                                                 double tolerance);
 }  // namespace ccl::deep

@@ -18,6 +18,7 @@
 #ifdef WITH_CYCLES_DEEP_OPAQUE
 #  include "session/deep.h"
 #  include "integrator/path_trace_deep_tile.h"
+#  include "integrator/path_trace_work_gpu.h"
 #  include "deep/capture.h"
 #  include <stdexcept>
 #endif
@@ -736,6 +737,11 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
       throw std::invalid_argument("Native deep CPU buffers exceed memory budget");
     capture_bytes -= size_t(worker_bytes);
   }
+  if (settings.volume_grid && device_->info.type != DEVICE_CPU) {
+    if (capture_bytes <= PathTraceWorkGPU::deep_grid_staging_bytes)
+      throw std::invalid_argument("Native deep GPU staging exceeds memory budget");
+    capture_bytes -= PathTraceWorkGPU::deep_grid_staging_bytes;
+  }
   deep_capture_ = make_unique<deep::Capture>(
       params.width, params.height, samples, capture_bytes,
       (settings.transparent || settings.volume) ? event_capacity : 0,
@@ -759,8 +765,14 @@ void PathTrace::write_deep_output()
   }
   const PathTraceDeepTile tile(*deep_capture_, full_params_.layer, full_params_.view,
                                [this] { return is_cancel_requested(); });
+  const double export_start = time_dt();
   output_driver_->write_deep_render_tile(tile);
   deep_written_ = true;
+  const deep::Capture::SpillStatistics spill = deep_capture_->spill_statistics();
+  LOG_INFO_IMPORTANT << "Deep output: export_seconds=" << time_dt() - export_start
+                     << " spill_read_bytes=" << spill.read_bytes
+                     << " spill_write_bytes=" << spill.write_bytes
+                     << " spill_file_bytes=" << spill.file_bytes;
 }
 #endif
 

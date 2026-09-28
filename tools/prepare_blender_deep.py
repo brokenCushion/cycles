@@ -46,6 +46,10 @@ files = subprocess.check_output(['git', '-C', str(ROOT), 'ls-files', '--cached',
 manifest = {'blender_revision': BASE, 'files': {}}
 for name in files:
     path = ROOT/name
+    # git ls-files includes tracked files deleted in the current worktree.
+    # Skip them rather than trying to read a file that is no longer present.
+    if not path.is_file():
+        continue
     relative = path.relative_to(ROOT/'src')
     if relative.parts[0] == 'blender':
         raise RuntimeError('Unexpected Blender host code in standalone overlay')
@@ -141,18 +145,47 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.frame = deep_frame_;
   image.view = tile.view.empty() ? "default" : tile.view;
   image.compression = deep::DeepCompression::Zips;
+  image.volume_row_sample_limit = tile.volume_row_sample_limit();
   const auto check_cancel = [&] {
     if (tile.cancelled())
       throw std::runtime_error("Blender deep export cancelled; final file preserved");
   };
   if (tile.volume) {
-    deep::write_volume_exr_rows(deep_path_, image, [&](const int y) {
+    /* Accepted per-camera intervals on a small grid, before pixel mixture
+     * reconstruction/reduction. This is diagnostic evidence, not a completed
+     * frame marker; the EXR is published independently below. */
+    deep::AtomicOutput diagnostic(deep_path_ + ".samples.csv");
+    std::ofstream records(diagnostic.temporary());
+    records.exceptions(std::ios::badbit | std::ios::failbit);
+    records << "file_x,file_y,sample,front,back,value,kind,event\\n"
+            << std::setprecision(std::numeric_limits<double>::max_digits10);
+    for (int gy = 0; gy < 9; ++gy) {
+      const int y = gy * (tile.height - 1) / 8;
       check_cancel();
-      std::vector<std::vector<deep::IntervalSample>> row(tile.width);
-      for (int x = 0; x < tile.width; ++x)
-        row[x] = tile.get_pixel(x, tile.height - 1 - y);
+      for (int gx = 0; gx < 9; ++gx) {
+        const int x = gx * (tile.width - 1) / 8;
+        for (int sample = 0; sample < tile.population(x, tile.height - 1 - y); ++sample) {
+          const auto camera = tile.get_camera_sample(x, tile.height - 1 - y, sample);
+          size_t event = 0;
+          for (const auto &v : camera.intervals)
+            records << x << ',' << y << ',' << sample << ',' << v.front << ',' << v.back
+                    << ',' << v.optical_depth << ",volume," << event++ << '\\n';
+          for (const auto &s : camera.camera.events)
+            records << x << ',' << y << ',' << sample << ',' << s.depth << ',' << s.depth
+                    << ',' << s.alpha << ",surface," << event++ << '\\n';
+          if (!event)
+            records << x << ',' << y << ',' << sample << ",0,0,0,miss,-1\\n";
+        }
+      }
+    }
+    records.close();
+    check_cancel();
+    diagnostic.publish();
+    deep::write_volume_exr_pixels(deep_path_, image, [&](const int x, const int y) {
       check_cancel();
-      return row;
+      auto pixel = tile.get_pixel(x, tile.height - 1 - y);
+      check_cancel();
+      return pixel;
     }, check_cancel);
     return;
   }

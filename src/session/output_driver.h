@@ -69,6 +69,9 @@ class OutputDriver {
     const bool volume;
     const string layer, view;
     virtual std::vector<deep::IntervalSample> get_pixel(int x, int y) const = 0;
+    /* Bound for FLOAT scanline staging plus the supported EXR codec buffers.
+     * Streaming file hosts must enforce it before allocating a converted pixel. */
+    virtual size_t volume_row_sample_limit() const = 0;
     /* Actual accepted camera population, including misses. Diagnostic reads
      * expose local surface alpha and volume optical depth, before reconstruction. */
     virtual int population(int x, int y) const = 0;

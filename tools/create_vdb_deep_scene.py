@@ -19,11 +19,15 @@ parser.add_argument('--vdb', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--density-scale', type=float, default=0.02)
 parser.add_argument('--resolution', type=int, default=256)
+parser.add_argument('--width', type=int)
+parser.add_argument('--height', type=int)
 args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
 if not math.isfinite(args.density_scale) or args.density_scale <= 0:
     raise ValueError('Density scale must be finite and positive')
-if not 16 <= args.resolution <= 2048:
-    raise ValueError('Resolution must be between 16 and 2048')
+width = args.resolution if args.width is None else args.width
+height = args.resolution if args.height is None else args.height
+if not all(16 <= value <= 2048 for value in (width, height)):
+    raise ValueError('Width and height must be between 16 and 2048')
 source = args.vdb.resolve(strict=True)
 directory = args.output.resolve()
 directory.mkdir(parents=True, exist_ok=True)
@@ -94,7 +98,8 @@ scene.cycles.samples = 1
 scene.cycles.use_adaptive_sampling = False
 scene.cycles.use_denoising = False
 scene.cycles.pixel_filter_type = 'BOX'
-scene.render.resolution_x = scene.render.resolution_y = args.resolution
+scene.render.resolution_x = width
+scene.render.resolution_y = height
 scene.render.resolution_percentage = 100
 scene.render.film_transparent = False
 scene.render.use_compositing = False
@@ -114,7 +119,7 @@ report = {
     'bounds_world': [list(lower), list(upper)],
     'density_scale': args.density_scale,
     'grid_precision': volume.render.precision,
-    'resolution': [args.resolution, args.resolution], 'samples': 1,
+    'resolution': [width, height], 'samples': 1,
     'material': 'density * scale, scalar absorption; no scattering/emission',
     'deep_enabled': False,
     'scene': (directory / 'scene.blend').as_posix(),

@@ -17,6 +17,7 @@
 #include <cmath>
 #include <fstream>
 #include <limits>
+#include <sstream>
 #include <stdexcept>
 
 namespace ccl::deep {
@@ -199,6 +200,66 @@ void write_deep_exr(Imf::OStream &stream, const SurfaceImage &image)
   serialize(stream, header, pixels);
 }
 
+/* Refit continuous volume runs at representable depth boundaries. Rounding
+ * depths while retaining every local alpha shifts extinction between cells.
+ * Sampling the original cumulative optical depth avoids that drift. Surface
+ * steps and gaps remain separate; the full-curve check still decides acceptance. */
+static std::vector<IntervalSample> project_volume_depths(const std::vector<IntervalSample> &source)
+{
+  std::vector<IntervalSample> result;
+  result.reserve(source.size());
+  for (size_t begin = 0; begin < source.size();) {
+    if (source[begin].front == source[begin].back) {
+      result.push_back({double(float(source[begin].front)), double(float(source[begin].back)),
+                        double(float(source[begin].alpha))});
+      ++begin;
+      continue;
+    }
+    size_t end = begin + 1;
+    while (end < source.size() && source[end].front == source[end - 1].back &&
+           source[end].back > source[end].front)
+      ++end;
+    double total = 0;
+    for (size_t i = begin; i < end; ++i)
+      total -= std::log1p(-source[i].alpha);
+    double front = double(float(source[begin].front));
+    const double last = double(float(source[end - 1].back));
+    if (front == last) {
+      const float alpha = float(-std::expm1(-total));
+      if (alpha > 0)
+        result.push_back({front, last, alpha});
+    }
+    else {
+      size_t cursor = begin;
+      double completed = 0, published = 0;
+      for (size_t i = begin; i < end; ++i) {
+        const double back = double(float(source[i].back));
+        if (back == front)
+          continue;
+        while (cursor < end && source[cursor].back <= back)
+          completed -= std::log1p(-source[cursor++].alpha);
+        double target = completed;
+        if (back == last)
+          target = total;
+        else if (cursor < end) {
+          const auto &s = source[cursor];
+          target -= std::log1p(-s.alpha) *
+                    std::clamp((back - s.front) / (s.back - s.front), 0.0, 1.0);
+        }
+        const float alpha = std::min(float(-std::expm1(-std::max(0.0, target - published))),
+                                     std::nextafter(1.0f, 0.0f));
+        if (alpha > 0) {
+          result.push_back({front, back, alpha});
+          published -= std::log1p(-double(alpha));
+        }
+        front = back;
+      }
+    }
+    begin = end;
+  }
+  return result;
+}
+
 static std::vector<FloatPixel> prepare_volume(
     const SurfaceImage &image, const std::vector<std::vector<IntervalSample>> &source)
 {
@@ -210,25 +271,62 @@ static std::vector<FloatPixel> prepare_volume(
   for (size_t p = 0; p < source.size(); ++p) {
     if (source[p].size() > std::numeric_limits<unsigned int>::max())
       throw std::invalid_argument("Volume sample count exceeds UINT");
-    std::vector<IntervalSample> quantized;
-    for (const auto &s : source[p]) {
-      quantized.push_back({double(float(s.front)), double(float(s.back)), double(float(s.alpha))});
-      /* A sub-FLOAT-width interval becomes a step only when the complete
-       * curve comparison below proves its error fits the export budget. This
-       * retains its optical depth; appreciable unresolved extinction fails. */
-      pixels[p].z.push_back(float(s.front));
-      pixels[p].back.push_back(float(s.back));
-      pixels[p].a.push_back(float(s.alpha));
-    }
+    /* Preserve cumulative extinction at FLOAT boundaries even when independent
+     * rounding would pass this pixel's error allowance. Otherwise two nearby
+     * device curves can drift in opposite directions during serialization. */
+    auto quantized = project_volume_depths(source[p]);
+    pixels[p].z.reserve(source[p].size());
+    pixels[p].back.reserve(source[p].size());
+    pixels[p].a.reserve(source[p].size());
     /* Reserve 1e-7 for cubic fitting, 5e-8 for sample reconstruction and
      * 4e-8 for FLOAT nonnegative density controls. For normal coefficients,
      * rounding changes tau by at most 2^-24 relatively; the corresponding
      * absolute exp(-tau) error is below 2.2e-8. The reserve also covers
      * subnormal contributions from the bounded number of cell records. */
-    if (interval_curve_error(source[p], quantized) >
-        export_error - volume_density_error - volume_reconstruction_error -
-            volume_coefficient_error)
-      throw std::invalid_argument("FLOAT volume curve exceeds transmittance error budget");
+    double error = interval_curve_error(source[p], quantized);
+    const double allowance = export_error - volume_density_error - volume_reconstruction_error -
+                             volume_coefficient_error;
+    if (quantized.size() > 64) {
+      /* Fewer small alpha contributions reduce consumer FLOAT accumulation
+       * error as well as storage. Spend part of the existing export allowance;
+       * the original source still checks EVERY boundary and interior extremum.
+       * Do not merge steps/gaps or weaken the frame's 1e-6 curve budget. */
+      const auto reduced = reduce_interval_curve(quantized, 2.5e-7);
+      if (reduced.size() < quantized.size()) {
+        auto projected = project_volume_depths(reduced);
+        const double candidate_error = interval_curve_error(source[p], projected);
+        if (candidate_error <= allowance) {
+          quantized = std::move(projected);
+          error = candidate_error;
+        }
+      }
+    }
+    if (error > allowance) {
+      std::vector<IntervalSample> rounded;
+      rounded.reserve(source[p].size());
+      for (const auto &s : source[p]) {
+        rounded.push_back({double(float(s.front)), double(float(s.back)), double(float(s.alpha))});
+      }
+      const double rounded_error = interval_curve_error(source[p], rounded);
+      if (rounded_error < error) {
+        error = rounded_error;
+        quantized = std::move(rounded);
+      }
+    }
+    if (error > allowance) {
+      const size_t width = size_t(image.data_window.max_x) - image.data_window.min_x + 1;
+      std::ostringstream message;
+      message << "FLOAT volume curve exceeds transmittance error budget at pixel "
+              << int64_t(image.data_window.min_x) + int64_t(p % width) << ','
+              << int64_t(image.data_window.min_y) + int64_t(p / width)
+              << ": " << error << " > " << allowance;
+      throw std::invalid_argument(message.str());
+    }
+    for (const auto &s : quantized) {
+      pixels[p].z.push_back(float(s.front));
+      pixels[p].back.push_back(float(s.back));
+      pixels[p].a.push_back(float(s.alpha));
+    }
   }
   return pixels;
 }
@@ -253,26 +351,35 @@ void write_volume_exr(const std::filesystem::path &path,
   publication.publish();
 }
 
-void write_volume_exr_rows(const std::filesystem::path &path,
-                           const SurfaceImage &image,
-                           const VolumeRowProvider &row,
-                           const std::function<void()> &before_publish)
+void write_volume_exr_pixels(Imf::OStream &stream,
+                            const SurfaceImage &image,
+                            const VolumePixelProvider &pixel)
 {
   auto header = make_header(image);
-  header.insert("cycles:deepScope", Imf::StringAttribute("native_scalar_absorption"));
+  header.insert("cycles:deepScope", Imf::StringAttribute("native_scalar_extinction"));
   const auto dw = header.dataWindow();
   const size_t width = size_t(int64_t(dw.max.x) - dw.min.x + 1);
-  AtomicOutput publication(path);
-  std::ofstream output;
-  output.exceptions(std::ios::badbit | std::ios::failbit);
-  output.open(publication.temporary(), std::ios::binary | std::ios::trunc);
   {
-    Imf::StdOFStream stream(output, path.string().c_str());
-    Imf::DeepScanLineOutputFile file(stream, header, 1);
+    /* Rows are submitted synchronously. Zero workers keeps one OpenEXR line
+     * buffer instead of the two allocated for one worker (capture budget). */
+    Imf::DeepScanLineOutputFile file(stream, header, 0);
     for (int64_t y = dw.min.y; y <= dw.max.y; ++y) {
       SurfaceImage metadata = image;
-      metadata.data_window = {dw.min.x, int(y), dw.max.x, int(y)};
-      auto pixels = prepare_volume(metadata, row(int(y)));
+      std::vector<FloatPixel> pixels(width);
+      size_t row_samples = 0;
+      for (size_t x = 0; x < width; ++x) {
+        const int file_x = int(int64_t(dw.min.x) + x);
+        metadata.data_window = {file_x, int(y), file_x, int(y)};
+        std::vector<std::vector<IntervalSample>> source(1);
+        source[0] = pixel(file_x, int(y));
+        if (image.volume_row_sample_limit &&
+            source[0].size() > image.volume_row_sample_limit - row_samples)
+          throw std::runtime_error("Deep volume scanline exceeds memory budget at row " +
+                                   std::to_string(y) + "; increase deep-memory-mb");
+        row_samples += source[0].size();
+        auto converted = prepare_volume(metadata, source);
+        pixels[x] = std::move(converted[0]);
+      }
       std::vector<unsigned int> counts(width);
       std::vector<float *> z(width), back(width), a(width);
       for (size_t x = 0; x < width; ++x) {
@@ -293,6 +400,21 @@ void write_volume_exr_rows(const std::filesystem::path &path,
       file.setFrameBuffer(fb);
       file.writePixels(1);
     }
+  }
+}
+
+void write_volume_exr_pixels(const std::filesystem::path &path,
+                            const SurfaceImage &image,
+                            const VolumePixelProvider &pixel,
+                            const std::function<void()> &before_publish)
+{
+  AtomicOutput publication(path);
+  std::ofstream output;
+  output.exceptions(std::ios::badbit | std::ios::failbit);
+  output.open(publication.temporary(), std::ios::binary | std::ios::trunc);
+  {
+    Imf::StdOFStream stream(output, path.string().c_str());
+    write_volume_exr_pixels(stream, image, pixel);
   }
   output.flush();
   output.close();

@@ -26,6 +26,9 @@ struct SurfaceImage {
   DeepCompression compression = DeepCompression::None;
   std::string beauty_identity;
   double reduction_error = 0.0;
+  /* Streaming volume row capacity supplied by capture memory preflight.
+   * Zero leaves synthetic/non-renderer callers responsible for their memory. */
+  size_t volume_row_sample_limit = 0;
   /* Increasing image y, then x, starting at data_window.min. No implicit flip.
    * Each pixel contains strictly depth-sorted reconstructed point samples. */
   std::vector<std::vector<SurfaceSample>> pixels;
@@ -45,11 +48,17 @@ void write_deep_exr(Imf::OStream &stream, const SurfaceImage &image);
 void write_volume_exr(const std::filesystem::path &path,
                       const SurfaceImage &image,
                       const std::vector<std::vector<IntervalSample>> &pixels);
-using VolumeRowProvider = std::function<std::vector<std::vector<IntervalSample>>(int)>;
-void write_volume_exr_rows(const std::filesystem::path &path,
+/* Quantize one pixel at a time; retain only FLOAT samples for the scanline.
+ * Callback coordinates are file x/y. */
+using VolumePixelProvider = std::function<std::vector<IntervalSample>(int, int)>;
+void write_volume_exr_pixels(const std::filesystem::path &path,
                            const SurfaceImage &image,
-                           const VolumeRowProvider &row,
+                           const VolumePixelProvider &pixel,
                            const std::function<void()> &before_publish = {});
+/* Caller owns stream flush/close; shared with the atomic path and fault tests. */
+void write_volume_exr_pixels(Imf::OStream &stream,
+                            const SurfaceImage &image,
+                            const VolumePixelProvider &pixel);
 /* Streaming production path. Callback supplies one increasing-file-Y row.
  * FLOAT export and optional reduction are checked together against the
  * original curve before each row is written. Final name is atomic. */

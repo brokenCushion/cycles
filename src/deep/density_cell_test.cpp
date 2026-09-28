@@ -5,6 +5,7 @@
 #endif
 #include "kernel/deep/density.h"
 #include "kernel/deep/grid.h"
+#include "kernel/deep/volume_boundary.h"
 #include "deep/volume.h"
 
 #include <algorithm>
@@ -56,6 +57,41 @@ double integral(const double *corners,
 void grid_tests()
 {
   using namespace ccl;
+  /* A production overlap ray starts on a grid plane. Fused position arithmetic
+   * can choose the preceding cell while division rounds its exit to start.
+   * Also include cancellation cases that reproduce with unfused arithmetic. */
+  const double clipped_rays[][2] = {
+      {-304.76766072190367, 0.91253751516342163},
+      {-193.31958277894515, 0.707061631312155},
+      {-228.2156701619392, 0.6650244287666001},
+      {-252.95390239087573, 0.4812357726306221}};
+  for (const auto &ray : clipped_rays) {
+    const double o = ray[0], d = ray[1];
+    for (const double sign : {-1.0, 1.0}) {
+      const double origin[] = {sign * o, .25, .25};
+      const double direction[] = {sign * d, 0, 0};
+      const double crossing = (1-o)/d, end = crossing + .5/d;
+      for (const double start : {std::nextafter(crossing, 0.0), crossing,
+                                 std::nextafter(crossing, end)}) {
+        DeepGridCursor<double> cursor{};
+        DeepGridSegment<double> segment{};
+        check(deep_grid_begin(&cursor, origin, direction, start, end, 3),
+              "Rounded start boundary rejected");
+        if (start < crossing) {
+          check(deep_grid_next(&cursor, &segment) == DEEP_GRID_SEGMENT &&
+                    segment.front == start && segment.back == crossing &&
+                    segment.cell[0] == (sign > 0 ? 0 : -1),
+                "Start correction skipped a positive-length interval");
+        }
+        check(deep_grid_next(&cursor, &segment) == DEEP_GRID_SEGMENT &&
+                  segment.front == std::max(start, crossing) && segment.back == end &&
+                  segment.cell[0] == (sign > 0 ? 1 : -2),
+              "Rounded start selected a zero-length interpolation cell");
+        check(deep_grid_next(&cursor, &segment) == DEEP_GRID_DONE,
+              "Rounded-start ray did not finish");
+      }
+    }
+  }
   std::mt19937 rng(3181);
   std::uniform_real_distribution<double> uniform(-1, 1);
   for (int fixture = 0; fixture < 500; ++fixture) {
@@ -146,6 +182,52 @@ void grid_tests()
 int main()
 {
   try {
+    {
+      /* Captured production rays: a true interval narrower than one FLOAT ULP,
+       * and a false grazing exit accepted by the native FLOAT triangle test.
+       * Compare triangle crossings with an independent axis-aligned slab oracle. */
+      const double lo[3] = {-112.499725f, -94.9990005f, -285.499847f};
+      const double hi[3] = {90.5002747f, 577.000977f, 177.500168f};
+      const double origins[2][3] = {{28.0226612f, -422.024323f, -103.740944f},
+                                    {72.2773285f, -370.052856f, 168.97818f}};
+      const double directions[2][3] = {{-.3749322f, .872546554f, -.31319043f},
+                                       {-.325293064f, .945494235f, .0150026893f}};
+      const int faces[6][4] = {{0, 2, 3, 1}, {4, 5, 7, 6}, {0, 1, 5, 4},
+                              {2, 6, 7, 3}, {0, 4, 6, 2}, {1, 3, 7, 5}};
+      double vertices[8][3];
+      for (int i = 0; i < 8; ++i)
+        for (int axis = 0; axis < 3; ++axis)
+          vertices[i][axis] = (i & (1 << axis)) ? hi[axis] : lo[axis];
+      for (int ray = 0; ray < 2; ++ray) {
+        double enter = 0, exit = 1e20;
+        for (int axis = 0; axis < 3; ++axis) {
+          const double a = (lo[axis] - origins[ray][axis]) / directions[ray][axis];
+          const double b = (hi[axis] - origins[ray][axis]) / directions[ray][axis];
+          enter = std::max(enter, std::min(a, b));
+          exit = std::min(exit, std::max(a, b));
+        }
+        int entries = 0, exits = 0;
+        for (const auto &face : faces)
+          for (int half = 0; half < 2; ++half) {
+            const int ids[3] = {face[0], face[half + 1], face[half + 2]};
+            double triangle[3][3];
+            for (int i = 0; i < 3; ++i)
+              for (int axis = 0; axis < 3; ++axis)
+                triangle[i][axis] = vertices[ids[i]][axis];
+            double t, u, v;
+            bool back;
+            if (ccl::deep_volume_triangle(origins[ray], directions[ray], triangle, t, u, v, back)) {
+              check(std::abs(t - (back ? exit : enter)) < 1e-10,
+                    "Boundary crossing differs from slab oracle");
+              back ? ++exits : ++entries;
+            }
+          }
+        check(entries == 1 && exits == 1, "Missing or spurious volume boundary crossing");
+        check(exit > enter, "Grazing interval lost");
+        if (ray == 0)
+          check(float(enter) == float(exit), "Fixture no longer exercises sub-FLOAT interval");
+      }
+    }
     {
       using namespace ccl::deep;
       /* Thin interior density, overlapping medium and an adjacent cell. The

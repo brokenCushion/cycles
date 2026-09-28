@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "deep/exr_writer.h"
 
+#include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -51,7 +53,7 @@ struct Fixture {
 int main(int argc, char **argv)
 {
   try {
-    check(argc == 2, "Expected output directory");
+    check(argc == 2 || argc == 3, "Expected output directory and optional captured-curve CSV");
     const std::filesystem::path directory(argv[1]);
     std::filesystem::create_directories(directory);
     std::vector<Fixture> fixtures = {
@@ -72,6 +74,9 @@ int main(int argc, char **argv)
     double maximum = 0;
     for (const auto &f : fixtures) {
       const auto reconstructed = reconstruct_volume(f.samples);
+      const auto reduced = reconstruct_volume(f.samples, volume_reconstruction_error, 65536, 2e-8);
+      check(interval_curve_error(reconstructed, reduced) <= 2e-8 + 1e-11,
+            "Volume reduction exceeded whole-curve budget");
       for (int j = 0; j <= 1000; ++j) {
         const double z = j / 100.0;
         const double t = oracle(f.samples, z);
@@ -110,6 +115,7 @@ int main(int argc, char **argv)
     rejects([&] { reconstruct_volume(invalid); });
     rejects([&] { reconstruct_volume(fixtures[4].samples, 2e-7, 1); });
     rejects([&] { reconstruct_volume(fixtures[0].samples, 0); });
+    rejects([&] { reconstruct_volume(fixtures[0].samples, 1e-7, 10, -1); });
     rejects([&] { interval_curve_error({{2, 8, 1}}, {}); });
     std::mt19937 rng(918);
     std::uniform_real_distribution<double> value(0, 1);
@@ -119,6 +125,9 @@ int main(int argc, char **argv)
         samples.push_back({{uint64_t(s), .1 + value(rng), true, {{5, value(rng)}}},
                            {{2, 8, 4 * value(rng)}, {3, 7, value(rng)}}});
       const auto output = reconstruct_volume(samples);
+      const auto reduced = reconstruct_volume(samples, volume_reconstruction_error, 65536, 2e-8);
+      check(interval_curve_error(output, reduced) <= 2e-8 + 1e-11,
+            "Random reduction exceeded whole-curve budget");
       for (int j = 0; j < 300; ++j) {
         const double z = 10 * value(rng);
         check(std::abs(oracle(samples, z) - interval_transmittance(output, z)) <
@@ -126,6 +135,93 @@ int main(int argc, char **argv)
               "Random volume curve mismatch");
       }
     }
+    /* Staggered, gapped VDB-like rays exercise indexed optical-depth queries
+     * at cell boundaries, interior cuts and surface steps. Reversing one ray
+     * also checks unordered runs against the same physical oracle. */
+    std::vector<VolumeCameraSample> long_rays;
+    for (int s = 0; s < 4; ++s) {
+      VolumeCameraSample ray{{uint64_t(s), double(s + 1), true, {{3.5, .2}}}, {}};
+      for (int cell = 0; cell < 512; ++cell) {
+        const double front = 1 + cell * .01 + s * .001;
+        ray.intervals.push_back({front, front + .008, .001 + .004 * value(rng)});
+      }
+      long_rays.push_back(std::move(ray));
+    }
+    const auto started = std::chrono::steady_clock::now();
+    const auto indexed = reconstruct_volume(long_rays);
+    std::cout << "Four 512-cell rays: "
+              << std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count()
+              << " seconds, " << indexed.size() << " output intervals\n";
+    const auto reduced_rays = reconstruct_volume(long_rays, volume_reconstruction_error,
+                                                  indexed.size(), 2e-8);
+    check(interval_curve_error(indexed, reduced_rays) <= 2e-8 + 1e-11,
+          "Long-ray reduction exceeded whole-curve budget");
+    std::cout << "Reduced four-ray output: " << reduced_rays.size() << " intervals\n";
+    /* Redundant shared boundaries should not exhaust the output capacity. An
+     * empty zero-weight sample exercises the general mixture path. */
+    std::vector<VolumeCameraSample> uniform_rays{{{0, 1, true, {}}, {}},
+                                                {{1, 0, true, {}}, {}}};
+    for (int i = 0; i < 2000; ++i)
+      uniform_rays[0].intervals.push_back({1 + i * .001, 1 + (i + 1) * .001, .0001});
+    rejects([&] { reconstruct_volume(uniform_rays, 2e-8, 10); });
+    const auto uniform_reduced = reconstruct_volume(uniform_rays, 2e-8, 10, 2e-8);
+    check(uniform_reduced.size() == 1, "Constant-density subdivision was not reduced");
+    check(interval_curve_error(uniform_reduced, {{1, 3, -std::expm1(-.2)}}) < 1e-11,
+          "Long merge chain changed extinction");
+    uniform_rays.pop_back();
+    check(reconstruct_volume(uniform_rays, 2e-8, 10, 2e-8).size() == 1,
+          "Single-ray reduction exhausted capacity before merging");
+    const std::vector<VolumeCameraSample> alternating_rate{
+        {{0, 1, true, {}}, {{1, 2, .1}, {2, 3, .1001}, {3, 4, .0999}}}};
+    /* The pairwise sum is 1.2711e-4, but the actual three-span error is
+     * 8.1869e-5. Tightening may rescue that merge, without resetting its budget. */
+    const auto tightened = reconstruct_volume(alternating_rate, 1e-8, 1, 1e-4);
+    check(tightened.size() == 1, "Bounded source check did not rescue a valid merge");
+    for (int i = 0; i <= 300; ++i) {
+      const double z = 1 + i * .01;
+      check(std::abs(oracle(alternating_rate, z) - interval_transmittance(tightened, z)) <= 1e-4,
+            "Rescued merge exceeded physical curve budget");
+    }
+    rejects([&] { reconstruct_volume(alternating_rate, 1e-8, 1, 8e-5); });
+    for (const auto &ray : long_rays)
+      for (const auto &v : ray.intervals)
+        for (double z : {v.front, (v.front + v.back) / 2, v.back})
+          check(std::abs(oracle(long_rays, z) - interval_transmittance(indexed, z)) <
+                    volume_reconstruction_error + 1e-11,
+                "Indexed volume boundary/interior mismatch");
+    for (double z : {std::nextafter(3.5, 0.0), 3.5, 7.0})
+      check(std::abs(oracle(long_rays, z) - interval_transmittance(indexed, z)) <
+                volume_reconstruction_error + 1e-11,
+            "Indexed volume surface/tail mismatch");
+    std::reverse(long_rays[0].intervals.begin(), long_rays[0].intervals.end());
+    const auto unordered = reconstruct_volume(long_rays);
+    check(interval_curve_error(indexed, unordered) < 1e-11,
+          "Unordered volume evaluation differs from indexed evaluation");
+    auto overlapping_rays = long_rays;
+    for (auto &ray : overlapping_rays) {
+      std::sort(ray.intervals.begin(), ray.intervals.end(),
+                [](const auto &a, const auto &b) { return a.front < b.front; });
+      auto second_grid = ray.intervals;
+      for (auto &v : second_grid) {
+        v.front += .003;
+        v.back += .003;
+        v.optical_depth *= .7;
+      }
+      ray.intervals.insert(ray.intervals.end(), second_grid.begin(), second_grid.end());
+    }
+    const auto overlapping = reconstruct_volume(overlapping_rays);
+    for (const auto &ray : overlapping_rays)
+      for (size_t i = 0; i < ray.intervals.size(); i += 7) {
+        const auto &v = ray.intervals[i];
+        for (double z : {v.front, (v.front + v.back) / 2, v.back})
+          check(std::abs(oracle(overlapping_rays, z) - interval_transmittance(overlapping, z)) <
+                    volume_reconstruction_error + 1e-11,
+                "Overlapping indexed grid runs differ from physical oracle");
+      }
+    for (auto &ray : overlapping_rays)
+      std::shuffle(ray.intervals.begin(), ray.intervals.end(), rng);
+    check(interval_curve_error(overlapping, reconstruct_volume(overlapping_rays)) < 1e-11,
+          "Overlapping grid result depends on interval order");
     /* Analytic perspective rays through two overlapping spheres. This is a
      * reference fixture, not a Cycles render. Physical chord length sets tau. */
     constexpr int width = 160, height = 120;
@@ -160,6 +256,48 @@ int main(int argc, char **argv)
     const auto preserved = directory / "preserve.exr";
     { std::ofstream out(preserved); out << "sentinel"; }
     SurfaceImage one{{0, 0, 0, 0}, {0, 0, 0, 0}};
+    if (argc == 3) {
+      /* Replay a captured production pixel without re-rendering the scene. */
+      std::ifstream input(argv[2]);
+      std::string header;
+      check(bool(std::getline(input, header)) && header == "front,back,alpha",
+            "Invalid captured-curve CSV header");
+      std::vector<IntervalSample> captured;
+      IntervalSample value;
+      char comma_a, comma_b;
+      while (input >> value.front >> comma_a >> value.back >> comma_b >> value.alpha) {
+        check(comma_a == ',' && comma_b == ',', "Invalid captured-curve CSV row");
+        captured.push_back(value);
+      }
+      check(input.eof() && !captured.empty(), "Incomplete captured-curve CSV");
+      write_volume_exr(directory / "captured_curve.exr", one, {captured});
+    }
+    std::vector<IntervalSample> ramp, rounded_ramp;
+    for (int i = 0; i < 200; ++i) {
+      const double front = 1200.00006 + .1 * i, back = 1200.00006 + .1 * (i + 1);
+      const double alpha = -std::expm1(-.0001 * std::min(i + 1, 200 - i));
+      ramp.push_back({front, back, alpha});
+      rounded_ramp.push_back({double(float(front)), double(float(back)), double(float(alpha))});
+    }
+    check(interval_curve_error(ramp, rounded_ramp) > 1e-6,
+          "Depth projection fixture does not exercise rounding drift");
+    write_volume_exr(directory / "float_projected.exr", one, {ramp});
+    std::vector<IntervalSample> dense;
+    for (int i = 0; i < 10000; ++i)
+      dense.push_back({2+i*.001, 2+(i+1)*.001, -std::expm1(-(.0001+i*1e-10))});
+    dense.insert(dense.begin()+5000, {7, 7, .3});
+    const auto reduced = reduce_interval_curve(dense, 2.5e-7);
+    check(reduced.size() < dense.size(), "Dense export curve did not reduce");
+    check(interval_curve_error(dense, reduced) <= 2.5e-7,
+          "Export merges accumulated excess whole-curve error");
+    check(std::abs(interval_transmittance(dense, 20)-interval_transmittance(reduced, 20)) < 1e-12,
+          "Export reduction changed endpoint opacity");
+    check(std::count_if(reduced.begin(), reduced.end(), [](const IntervalSample &s) {
+            return s.front == s.back && s.front == 7 && s.alpha == .3;
+          }) == 1, "Export reduction lost a surface step");
+    const std::vector<IntervalSample> gap{{2, 3, .2}, {4, 5, .2}};
+    check(reduce_interval_curve(gap, 1e-3).size() == 2, "Export reduction crossed an empty gap");
+    rejects([&] { reduce_interval_curve(gap, -1); });
     const std::vector<IntervalSample> thin{{2, 2 + 1e-10, 1e-8}};
     check(interval_curve_error(thin, {{2, 2, double(float(1e-8))}}) < 1.1e-8,
           "Thin interval step error was not bounded");

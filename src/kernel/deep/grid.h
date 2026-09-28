@@ -54,9 +54,27 @@ ccl_device bool deep_grid_begin(ccl_private DeepGridCursor<T> *cursor,
     cursor->direction[axis] = direction[axis];
     cursor->cell[axis] = cell;
     cursor->step[axis] = step;
+    /* A rounded position can appear to have entered a cell whose
+     * incoming plane is still ahead of start. Retain that short real interval. */
+    if (step) {
+      const T incoming = (T(cell + (step < 0 ? 1 : 0)) - origin[axis]) / direction[axis];
+      if (incoming > start)
+        cursor->cell[axis] -= step;
+    }
     cursor->next[axis] = step ?
-                                  (T(cell + (step > 0 ? 1 : 0)) - origin[axis]) / direction[axis] :
-                                  end;
+                            (T(cursor->cell[axis] + (step > 0 ? 1 : 0)) - origin[axis]) /
+                                direction[axis] :
+                            end;
+    /* Position evaluation (possibly fused) and division can round differently
+     * at the clipped start. If this cell's outgoing plane rounds at or before
+     * start, it has no represented interval in [start, end]. Enter the adjacent
+     * cell rather than rejecting the ray or emitting a zero-length segment.
+     * Never skip a plane whose represented time is greater than start. */
+    if (step && cursor->next[axis] <= start) {
+      cursor->cell[axis] += step;
+      cursor->next[axis] =
+          (T(cursor->cell[axis] + (step > 0 ? 1 : 0)) - origin[axis]) / direction[axis];
+    }
     moving |= step != 0;
     if (!(cursor->next[axis] > start))
       return false;

@@ -52,6 +52,12 @@ class Capture {
   {
     return volume_grid_;
   }
+  /* Maximum total samples retained by the streaming volume writer in one row.
+   * Zero applies to non-volume or reference-only in-memory captures. */
+  size_t volume_row_sample_limit() const
+  {
+    return volume_row_sample_limit_;
+  }
   /* Four times tighter curvature tolerance can require twice as many pieces.
    * This limit also drives scanline working-memory preflight. */
   static constexpr size_t volume_interval_limit = 4096;
@@ -87,8 +93,16 @@ class Capture {
   {
     return samples_;
   }
+  /* Successful stdio transfers, including index initialization and page rereads.
+   * These are logical file I/O bytes, not physical disk traffic through OS caches. */
+  struct SpillStatistics {
+    uint64_t read_bytes = 0, write_bytes = 0, file_bytes = 0;
+  };
+  SpillStatistics spill_statistics() const;
 
  private:
+  mutable uint64_t spill_read_bytes_ = 0, spill_write_bytes_ = 0;
+  size_t volume_row_sample_limit_ = 0;
   int width_, height_, samples_;
   std::vector<KernelDeepResult> results_;
   std::vector<uint32_t> populations_;

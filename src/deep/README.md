@@ -1,103 +1,72 @@
-# Deep opacity reference (M1)
+# Cycles deep alpha
 
-All generated build trees and validation artifacts are under the repository's
-`builds/` directory.
+Produces **Z/ZBack/A camera visibility** with separate native beauty.
+**M8 technical gates pass; final user review of the release candidate is pending.** Deep RGB and
+additional backends are deferred to M9.
 
-This directory contains a dependency-free C++17 reference and tests, plus an
-optional Deep EXR writer and CPU surface sample storage. The opt-in standalone
-renderer adapter is described in [CAPTURE_VALIDATION.md](CAPTURE_VALIDATION.md).
-See EXR_VALIDATION.md for the original writer fixtures. M5 storage, scanline
-export, strict reduction and atomic publication are documented in
-[PRODUCTION_VALIDATION.md](PRODUCTION_VALIDATION.md).
-M4's scalar transparency and CPU OSL contract is in
-[TRANSPARENCY_VALIDATION.md](TRANSPARENCY_VALIDATION.md).
-M8's analytic reference and opt-in CPU homogeneous absorption capture
-(`--deep-volume`) are described in [VOLUME_VALIDATION.md](VOLUME_VALIDATION.md),
-including the supported geometry and Gaffer review.
+- [Release status](../../DEEP_IMPLEMENTATION_STATUS.md): what works and what blocks M8.
+- [Milestones](../../DEEP_MILESTONES.md): M8 acceptance gates and M9 scope.
+- [Measured evidence](../../DEEP_PERFORMANCE_AND_VDB.md): results and artifact locations.
+- [Final M8 qualification](M8_RELEASE_VALIDATION.md): release matrix, regressions and review.
+- [Blender usage](../../BLENDER_DEEP_INTEGRATION.md) and [Gaffer node](gaffer/README.md).
+- [Architecture](ARCHITECTURE_REVIEW.md), [EXR format](EXR_VALIDATION.md),
+  [storage/publication](PRODUCTION_VALIDATION.md), [native VDB](NATIVE_VDB_PLAN.md).
 
-Session-owned capture and the host `OutputDriver::DeepTile` interface are described
-in [NATIVE_OUTPUT_VALIDATION.md](NATIVE_OUTPUT_VALIDATION.md). The standalone
-writer uses that interface; a host can also consume samples directly in memory.
-Shared typed CPU/CUDA capture records and spill accounting are described in
-[TYPED_RECORD_VALIDATION.md](TYPED_RECORD_VALIDATION.md).
-Configured-capacity CUDA staging, ordered readback and current measurements
-are described in [CUDA_STORAGE_VALIDATION.md](CUDA_STORAGE_VALIDATION.md).
-Shared CPU/CUDA homogeneous volume capture and bounded GPU medium storage
-are described in [CUDA_VOLUME_VALIDATION.md](CUDA_VOLUME_VALIDATION.md).
+## Code map
 
-## Build and inspect
+Shared capture kernels: `src/kernel/deep/`.
+Scheduling and device storage: `src/integrator/path_trace*`.
+Configuration/preflight: `src/session/deep.cpp`.
+Host interface: `src/session/output_driver.h`.
+This directory contains reconstruction, spill storage, EXR writing and tests.
+Blender and Gaffer are not core runtime dependencies.
+
+## Build and test
+
+The [M8 support matrix](RELEASE_MATRIX.md) distinguishes surface-only adaptive,
+DOF and rigid-motion capture from static, fixed-sample volume capture. Run fresh
+installed-build qualification with `tools/qualify_deep_release.ps1`; native
+Blender VDB pairs and rejection fixtures use `tools/qualify_native_vdb.py`.
+
+The dependency-free reference can build by itself:
 
 ```powershell
-cmake -S src/deep -B builds/build-deep -G "Visual Studio 17 2022" -A x64
+cmake -S src/deep -B builds/build-deep -G 'Visual Studio 17 2022' -A x64
 cmake --build builds/build-deep --config Release
 ctest --test-dir builds/build-deep -C Release --output-on-failure
-.\builds\build-deep\Release\cycles_deep_reference_test.exe
 ```
 
-Alternatively enable `WITH_CYCLES_DEEP_TESTS=ON` in a standalone Cycles build.
-The option defaults to OFF. Tests require `BUILD_TESTING=ON` (CTest's default).
-Enabling `WITH_CYCLES_DEEP_OPAQUE` additionally links CPU capture and reconstruction
-to the renderer and enables the standalone `--deep-output` option.
+For the renderer, enable `WITH_CYCLES_DEEP_OPAQUE`, `WITH_CYCLES_DEEP_TESTS`
+and `BUILD_TESTING` in a normal Cycles build. The legacy OPAQUE option name also
+covers supported transparency/volume capture. The optional EXR test target uses
+OpenEXR. Current configured Windows build:
 
-## Contract and derivation
+```powershell
+cmake --build builds/build-m6 --target install --config Release --parallel 2
+ctest --test-dir builds/build-m6 -C Release --output-on-failure
+```
 
-One `PixelLedger` owns camera samples for a single target pixel. Each sample has
-a unique identity, nonnegative weight, completion flag, and local surface
-opacities. A completed sample with no events is a miss, not an absent sample.
-All samples, even zero-weight ones, must be complete and valid. An empty ledger
-or all-zero weights is an error because normalization is undefined.
+Keep generated builds, renders and reports under `builds/`.
 
-For each sample, start with T_s = 1. At an event multiply by (1 - local alpha).
-At each distinct depth, combine all coincident events before calculating the
-new weighted sum S = sum(w_s * T_s). Emit A = 1 - S_after / S_before when S drops.
-The common denominator W cancels in this ratio. Consequently the product of
-output (1 - A) telescopes to S(z) / W, including misses in W.
+## Numerical contract
 
-Input storage order does not matter. Samples are sorted by identity and events
-by exact depth, sample identity, and alpha. Nearly equal depths are **not**
-merged. Surface output stores depth and effective alpha in double precision;
-serialization sets ZBack=Z. Pixel coordinates may be negative for
-cropped/offset windows. This module does not establish image-window conventions.
+Each pixel ledger contains uniquely identified, completed camera samples with
+nonnegative weights. Completed misses contribute to normalization. Incomplete
+samples, duplicate IDs, invalid events and zero total weight fail explicitly.
+Depth is positive axial camera distance in scene units.
 
-Caller responsibilities:
+For each camera sample, surface events multiply transmittance by `(1 - alpha)`;
+volumes contribute `exp(-optical_depth)`. Reconstruction averages transmittance,
+then emits local alpha as `1 - T_after / T_before`. It does not average local
+alphas or accept incomplete batches. Optical depth includes physical ray length.
 
-- Supply positive axial depths in one consistent coordinate system.
-- Supply scalar local opacity, not attenuated throughput or closure-selection
-  probability; no RGB-to-scalar conversion occurs here.
-- Set completion only after resolving the visibility chain. An opaque event
-  may complete it because later transmittance is zero. A traversal limit,
-  cancellation, or unresolved cache retry is incomplete.
-- Assign sample IDs uniquely across batches; invoke reconstruction only when
-  the pixel ledger is complete. This is not a batch-merging API.
+Surface depths remain distinct until checked FLOAT export. Volumes use fitted
+exponential intervals with bounded whole-curve error. See `volume.h` for numerical
+allowances and `reconstruction.h` for caller responsibilities. Tests use independent
+raw-event/physical integration oracles; assertions remain active in Release builds.
 
-Inputs outside the contract throw `std::invalid_argument`, including bad events
-behind an opaque surface or in zero-weight samples. Input alphas are not clamped.
-The implementation only clamps a weighted-sum increase within eight double
-epsilons relative to the previous sum; larger increases throw. Finite weights
-are scaled by the maximum weight to avoid sum overflow. Contributions below
-double precision or underflow range can disappear; no arbitrary-dynamic-range
-relative-error guarantee is made.
-
-For E events, S camera samples, and D distinct depths, time is approximately
-O(S log S + E log E + D*S), storage O(S+E). The repeated weighted summation favors
-readability and stability. This is deliberately not a production accumulator.
-
-## Validation
-
-The test executable checks analytic expectations, invalid values, duplicate IDs,
-incomplete chains, zero weights, extreme finite weights, 2,000 low-opacity
-boundaries, and 250 deterministic randomized ledgers with shuffled samples and
-events. Its independent oracle directly multiplies raw event transmittance at
-queried depths, without the implementation's sweep or summation helper.
-Comparisons cover both sides of every input boundary and the final curve.
-Assertions are explicit runtime checks and remain active in Release builds.
-
-The executable prints PASS/FAIL groups, maximum absolute checked error, and a
-small `Z ZBack A` text example. Acceptance is absolute error <= 1e-12 on these
-bounded fixtures, not a universal precision guarantee.
-
-An expected-limitation fixture preserves the coverage ambiguity: two separately
-reconstructed half-covered elements can have identical scalar outputs whether
-they cover the same or opposite halves. Scalar alpha-over gives 0.75; the true
-combined coverage can be 0.5 or 1. This model does not promise lossless deep
-merges or recovery of per-depth color from flat beauty.
+Scalar deep alpha cannot preserve subpixel correlations between independently
+rendered elements. Two half-covered elements may combine to 0.5 or 1 depending
+on overlap, while scalar alpha-over yields 0.75. Lossless arbitrary deep merges,
+recovery of deep colour from flat beauty, and arbitrary dynamic-range precision
+are not promised.

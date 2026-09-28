@@ -22,7 +22,7 @@ if device not in ('CPU', 'CUDA'):
 baseline = Path(sys.argv[4]).resolve() if len(sys.argv) > 4 else None
 out.mkdir(parents=True, exist_ok=True)
 tile_size = GafferImage.ImagePlug.tileSize()
-report = {'scope': device + ' SVM static homogeneous absorption', 'fixtures': {}, 'rejections': []}
+report = {'scope': device + ' SVM static scalar absorption/scattering extinction', 'fixtures': {}, 'rejections': []}
 
 
 def check(value, message):
@@ -43,13 +43,20 @@ def box(name, bounds):
 nverts="4 4 4 4 4 4" verts="0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5"/></state>'''
 
 
-def scene(media, surface=False, near=.125, far=20):
+def scene(media, surface=False, near=.125, far=20, scattering=None):
     text = f'''<cycles><camera camera_type="perspective" fov="0.9" nearclip="{near}" farclip="{far}"/>
 <film filter_type="box" filter_width="1"/><integrator seed="123" use_adaptive_sampling="false"/>
 <background transparent="true"><background name="b" color="0.1 0.1 0.1"/>
 <connect from="b background" to="output surface"/></background>'''
     for i, (bounds, density) in enumerate(media):
-        text += material('fog' + str(i), density) + box('fog' + str(i), bounds)
+        shader = material('fog' + str(i), density)
+        if scattering is not None:
+            # A half-grey scattering coefficient needs twice the density to
+            # match the independent analytic extinction supplied in media.
+            shader = shader.replace('absorption_volume', 'scatter_volume').replace(
+                'color="0 0 0"', f'color=".5 .5 .5" anisotropy="{scattering}"').replace(
+                f'density="{density}"', f'density="{2*density}"')
+        text += shader + box('fog' + str(i), bounds)
     if surface:
         text += f'''<shader name="wall"><emission name="e" color="0.3 0.5 0.7"/>
 <transparent_bsdf name="t" color="1 1 1"/><mix_closure name="m" fac="{1-float(surface)}"/>
@@ -120,8 +127,8 @@ def analytic(media, x, y, w, h, z, surface, near, far):
     return math.exp(-tau) * (1-float(surface) if 5 < z and near < 5 <= far else 1)
 
 
-def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=12, extra=()):
-    xml = scene(media, surface, near, far)
+def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=12, extra=(), scattering=None):
+    xml = scene(media, surface, near, far, scattering)
     paths = render(name, xml, w, h, samples, extra=extra)
     off = reader(render(name+'_off', xml, w, h, samples, False)[0])
     repeated_off = reader(render(name+'_off_repeat', xml, w, h, samples, False)[0]) if device == 'CUDA' and samples > 1 else None
@@ -198,10 +205,22 @@ def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=1
 
 slab = [((-10,-10,2,10,10,8),.3)]
 validate('homogeneous', slab)
+validate('scattering_isotropic', slab, scattering=0)
+validate('scattering_forward', slab, scattering=.8)
+validate('scattering_backward', slab, scattering=-.6)
+validate('scattering_surface', slab, scattering=.5, surface=.4, samples=4)
+validate('scattering_overlap', [((-10,-10,2,10,10,6),.3),((-10,-10,4,10,10,8),.2)], scattering=.5)
 validate('camera_inside', [((-10,-10,-2,10,10,4),.3)])
 validate('near_clip_inside', slab, near=3)
 validate('far_clip_inside', slab, far=3)
 validate('overlap', [((-10,-10,2,10,10,6),.3),((-10,-10,4,10,10,8),.2)])
+# Distinct media can share a face or the entire boundary. Advancing the global
+# ray after just one hit must not drop another object's entry/exit at that depth.
+validate('coincident_media', [((-10,-10,2,10,10,8),.3),((-10,-10,2,10,10,8),.2)])
+validate('coincident_exits', [((-10,-10,2,10,10,8),.3),((-10,-10,4,10,10,8),.2)])
+validate('touching_media', [((-10,-10,2,10,10,4),.3),((-10,-10,4,10,10,8),.2)])
+validate('surface_on_volume_entry', [((-10,-10,5,10,10,8),.3)], surface=.4)
+validate('surface_on_volume_exit', [((-10,-10,2,10,10,5),.3)], surface=.4)
 validate('surface_in_fog', slab, surface=True)
 validate('transparent_in_fog', slab, surface=.4, samples=4)
 validate('surface_before_fog', [((-10,-10,6,10,10,8),.3)], surface=True)
@@ -215,7 +234,13 @@ validate('both_clips_inside', slab, near=3, far=4)
 validate('volume_miss', [((20,20,2,21,21,8),.3)])
 validate('odd_batch', [((-.9,-.8,3,.9,.8,7),.3)], samples=3, w=19, h=13)
 valid = scene(slab)
+scatter_valid = scene(slab, scattering=.5)
 for name, xml, extra in (
+    ('reject_scatter_color', scatter_valid.replace('color=".5 .5 .5"', 'color=".5 .2 .5"'), ()),
+    ('reject_scatter_anisotropy', scatter_valid.replace('anisotropy="0.5"', 'anisotropy="2"'), ()),
+    ('reject_scatter_nan', scatter_valid.replace('anisotropy="0.5"', 'anisotropy="nan"'), ()),
+    ('reject_scatter_infinity', scatter_valid.replace('density="0.6"', 'density="inf"'), ()),
+    ('reject_scatter_phase', scatter_valid.replace('anisotropy="0.5"', 'phase="Rayleigh"'), ()),
     ('reject_colored', valid.replace('color="0 0 0"','color="0 .2 0"'), ()),
     ('reject_negative', valid.replace('density="0.3"','density="-1"'), ()),
     ('reject_nan', valid.replace('density="0.3"','density="nan"'), ()),
@@ -229,6 +254,7 @@ for name, xml, extra in (
     ('reject_memory', valid, ('--deep-memory-mb','1')),
     ('reject_capacity', scene(slab, surface=True), ('--deep-max-events','1')),
     ('reject_medium_capacity', scene([((-10,-10,2+i*.01,10,10,8+i*.01),0) for i in range(65)]), ()),
+    ('reject_coincident_capacity', scene([((-10,-10,2,10,10,8),0) for i in range(65)]), ()),
 ):
     render(name,xml,16,12,1,extra=extra,failure=True)
 review_media = [((-1.5,-1,3,.4,1,6),.35),((-.3,-.8,5,1.5,.8,8),.55)]

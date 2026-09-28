@@ -996,13 +996,10 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
     capture->fail(DEEP_ERROR_CAPACITY);
     return;
   }
-  const int batch_size = capture->volume_grid() ? min(512, 8192 / event_capacity) : 512;
-  /* Grid batches use at most 8192 event/coefficient slots. Host/device copies,
-   * medium buffers and contiguous readback scratch fit the reserved 2 MiB.
-   * Reallocate
-   * when a Session reset changes capacity; no previous launch is pending
-   * because every batch
-   * is consumed before returning. */
+  const int batch_size = capture->volume_grid() ? deep_grid_batch_size : 512;
+  /* Native grid staging is reserved separately in PathTrace::reset_deep.
+   * Reallocate when reset changes capacity; every previous batch has already
+   * been consumed. No kernel-thread allocation or extra synchronization. */
   deep_records_.alloc(batch_size);
   deep_events_.alloc(size_t(batch_size) * event_capacity);
   if (capture->volume_grid())

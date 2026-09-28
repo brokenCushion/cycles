@@ -20,6 +20,7 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
   image.data_window = image.display_window;
   image.compression = deep::DeepCompression::Zips;
   image.reduction_error = reduce ? 1e-3 : 0;
+  image.volume_row_sample_limit = tile.volume_row_sample_limit();
   const auto check_cancel = [&] {
     if (cancelled())
       throw std::runtime_error("Deep export cancelled; final EXR was not replaced");
@@ -84,14 +85,11 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
     publication.publish();
   }
   if (tile.volume) {
-    deep::write_volume_exr_rows(path, image, [&](const int y) {
+    deep::write_volume_exr_pixels(path, image, [&](const int x, const int y) {
       check_cancel();
-      std::vector<std::vector<deep::IntervalSample>> row;
-      row.reserve(tile.width);
-      for (int x = 0; x < tile.width; ++x)
-        row.push_back(tile.get_pixel(x, tile.height - 1 - y));
+      auto pixel = tile.get_pixel(x, tile.height - 1 - y);
       check_cancel();
-      return row;
+      return pixel;
     }, check_cancel);
     return;
   }

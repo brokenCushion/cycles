@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Compare CUDA driver-reported kernel resources for deep-on/off cubins.
 
-Windows Python: ON_CUBIN OFF_CUBIN OFF_PTXAS_LOG OUTPUT_JSON.
+Windows Python: ON_CUBIN OFF_CUBIN NAMES_SOURCE OUTPUT_JSON.
+NAMES_SOURCE is a ptxas log or a previous resource report (its common kernels).
 Occupancy is the driver's theoretical recommendation, not measured utilization.
 """
 import ctypes as c
@@ -24,9 +25,13 @@ device = c.c_int()
 call('cuDeviceGet', c.byref(device), 0)
 context = pointer()
 call('cuCtxCreate_v2', c.byref(context), 0, device)
-names = sorted(set(re.findall(r"Compiling entry function '([^']+)'", log.read_text())))
+if log.suffix == '.json':
+    names = sorted(name for name in json.loads(log.read_text())['off']
+                   if name != 'kernel_gpu_deep_surface')
+else:
+    names = sorted(set(re.findall(r"Compiling entry function '([^']+)'", log.read_text())))
 if not names:
-    raise RuntimeError('No kernel names in ptxas log')
+    raise RuntimeError('No kernel names in resource input')
 
 def inspect(path, names):
     module = pointer()

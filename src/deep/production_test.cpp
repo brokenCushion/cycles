@@ -7,6 +7,12 @@
 #include <iostream>
 #include <stdexcept>
 #include <thread>
+#ifdef _WIN32
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
+#  include <windows.h>
+#endif
 using namespace ccl::deep;
 static void check(bool value)
 {
@@ -113,23 +119,74 @@ int main(int argc, char **argv)
     });
     check(read_file() == original);
     image.reduction_error = 0;
-    for (int failure = 0; failure < 2; ++failure) {
+    image.display_window = image.data_window = {-1, 0, 1, 2};
+    for (int failure = 0; failure < 4; ++failure) {
+      int calls = 0;
       rejects([&] {
-        write_volume_exr_rows(
+        write_volume_exr_pixels(
             path,
             image,
-            [&](int y) {
-              if (y == 1 && failure == 0)
-                throw std::runtime_error("cancelled during volume export");
-              return std::vector<std::vector<IntervalSample>>{{{2, 8, .5}}};
+            [&](int x, int y) {
+              check(x == calls % 3 - 1 && y == calls / 3);
+              ++calls;
+              if (x == 0 && y == 1) {
+                if (failure == 0)
+                  throw std::runtime_error("cancelled during volume export");
+                if (failure == 2)
+                  throw std::bad_alloc();
+                if (failure == 3)
+                  throw std::ios_base::failure("injected volume source I/O failure");
+              }
+              return std::vector<IntervalSample>{{2, 8, .5}};
             },
             [&] {
               if (failure == 1)
                 throw std::runtime_error("cancelled before volume publication");
             });
       });
+      check(calls == (failure == 1 ? 9 : 5));
       check(read_file() == original);
     }
+    image.volume_row_sample_limit = 2;
+    int row_limit_calls = 0;
+    rejects([&] {
+      write_volume_exr_pixels(path, image, [&](int, int) {
+        ++row_limit_calls;
+        return std::vector<IntervalSample>{{2, 8, .5}};
+      });
+    });
+    check(row_limit_calls == 3 && read_file() == original);
+    /* The exact row limit succeeds and resets on the next row, including
+     * offset windows and empty pixels. */
+    write_volume_exr_pixels(directory / "volume-row-budget.exr", image, [&](int x, int) {
+      return x == 0 ? std::vector<IntervalSample>{} :
+                      std::vector<IntervalSample>{{2, 8, .5}};
+    });
+#ifdef _WIN32
+    /* A real OS replacement failure after serialization, without filling a
+     * drive or altering permissions. Deny deletion of our completed fixture. */
+    HANDLE locked = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    check(locked != INVALID_HANDLE_VALUE);
+    bool replacement_failed = false;
+    int locked_pixels = 0;
+    image.volume_row_sample_limit = 0;
+    try {
+      write_volume_exr_pixels(path, image, [&](int, int) {
+        ++locked_pixels;
+        return std::vector<IntervalSample>{{2, 8, .5}};
+      });
+    }
+    catch (const std::system_error &) {
+      replacement_failed = true;
+    }
+    catch (...) {
+      CloseHandle(locked);
+      throw;
+    }
+    CloseHandle(locked);
+    check(replacement_failed && locked_pixels == 9 && read_file() == original);
+#endif
     for (const auto &entry : std::filesystem::directory_iterator(directory))
       check(entry.path().filename().string().find(".partial-") == std::string::npos);
     std::cout << "PASS spill identity/completeness/concurrency, preflight memory limit, atomic "

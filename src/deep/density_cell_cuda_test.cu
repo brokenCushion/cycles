@@ -99,6 +99,37 @@ static double integral(const CellCase &cell, const double t)
   const double middle = t / 2, delta = middle / std::sqrt(3.0);
   return cell.length * middle * (density(cell, middle - delta) + density(cell, middle + delta));
 }
+/* Exercise clipped voxel starts with CUDA's fused position arithmetic. The
+ * adjacent-start cases also prove that a positive-length interval is retained. */
+__global__ void evaluate_clipped_grids(CellResult *results)
+{
+  const int i = threadIdx.x;
+  if (i >= 24)
+    return;
+  const double rays[4][2] = {{-304.76766072190367, 0.91253751516342163},
+                             {-193.31958277894515, 0.707061631312155},
+                             {-228.2156701619392, 0.6650244287666001},
+                             {-252.95390239087573, 0.4812357726306221}};
+  const double o = rays[i/6][0], d = rays[i/6][1];
+  const double sign = (i/3)%2 ? 1.0 : -1.0;
+  const double crossing = (1-o)/d, end = crossing + .5/d;
+  const double start = i%3 == 0 ? nextafter(crossing, 0.0) :
+                       i%3 == 1 ? crossing : nextafter(crossing, end);
+  const double origin[3] = {sign*o, .25, .25}, direction[3] = {sign*d, 0, 0};
+  DeepGridCursor<double> cursor{};
+  DeepGridSegment<double> segment{};
+  bool valid = deep_grid_begin(&cursor, origin, direction, start, end, 3);
+  if (valid && start < crossing)
+    valid = deep_grid_next(&cursor, &segment) == DEEP_GRID_SEGMENT &&
+            segment.front == start && segment.back == crossing &&
+            segment.cell[0] == (sign > 0 ? 0 : -1);
+  if (valid)
+    valid = deep_grid_next(&cursor, &segment) == DEEP_GRID_SEGMENT &&
+            segment.front == (start > crossing ? start : crossing) && segment.back == end &&
+            segment.cell[0] == (sign > 0 ? 1 : -2) &&
+            deep_grid_next(&cursor, &segment) == DEEP_GRID_DONE;
+  results[i].grid_status = valid ? DEEP_GRID_DONE : DEEP_GRID_INVALID;
+}
 int main()
 {
   CellCase *device_cases = nullptr;
@@ -175,11 +206,18 @@ int main()
           throw std::runtime_error("CUDA cell chord bound failed");
       }
     }
+    evaluate_clipped_grids<<<1, 32>>>(device_results);
+    cuda_check(cudaGetLastError());
+    cuda_check(cudaMemcpy(results.data(), device_results, sizeof(CellResult)*24,
+                          cudaMemcpyDeviceToHost));
+    for (int i = 0; i < 24; ++i)
+      if (results[i].grid_status != DEEP_GRID_DONE)
+        throw std::runtime_error("CUDA clipped grid boundary regression failed");
     cuda_check(cudaFree(device_cases));
     device_cases = nullptr;
     cuda_check(cudaFree(device_results));
     device_results = nullptr;
-    std::cout << "PASS: 512 CUDA rays/cells, 101 probes each; maximum oracle error " << maximum << '\n';
+    std::cout << "PASS: 512 CUDA rays/cells, 101 probes each, 24 clipped-start rays; maximum oracle error " << maximum << '\n';
   }
   catch (const std::exception &error) {
     if (device_cases)

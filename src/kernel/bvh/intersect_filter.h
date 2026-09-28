@@ -281,7 +281,8 @@ ccl_device_forceinline bool bvh_volume_anyhit_triangle_filter(
     const int object,
     const int prim,
     const ccl_ray_data RaySelfPrimitives &ccl_restrict ray_self,
-    const uint ray_visibility)
+    const uint ray_visibility,
+    const bool volume_only = true)
 {
 #ifdef __VISIBILITY_FLAG__
   if constexpr (do_visibility_check) {
@@ -291,12 +292,16 @@ ccl_device_forceinline bool bvh_volume_anyhit_triangle_filter(
   }
 #endif
 
-  if ((kernel_data_fetch(object_flag, object) & SD_OBJECT_HAS_VOLUME) == 0) {
+  if (volume_only && (kernel_data_fetch(object_flag, object) & SD_OBJECT_HAS_VOLUME) == 0) {
     return true;
   }
 
   if (intersection_skip_self(ray_self, object, prim)) {
     return true;
+  }
+
+  if (!volume_only) {
+    return false;
   }
 
   const int shader = kernel_data_fetch(tri_shader, prim);
@@ -306,6 +311,25 @@ ccl_device_forceinline bool bvh_volume_anyhit_triangle_filter(
   }
 
   return false;
+}
+
+/* Keep the nearest bounded batch for deep visibility. Unlike a volume-stack
+ * query, deep cannot truncate an arbitrary subset or stop at an opaque hit. */
+ccl_device_inline void bvh_deep_record_intersection(ccl_private Intersection *hits,
+                                                   ccl_private uint &count,
+                                                   const uint capacity,
+                                                   const Intersection &hit)
+{
+  if (count < capacity) {
+    hits[count++] = hit;
+    return;
+  }
+  uint farthest = 0;
+  for (uint i = 1; i < count; ++i)
+    if (hits[i].t > hits[farthest].t)
+      farthest = i;
+  if (hit.t < hits[farthest].t)
+    hits[farthest] = hit;
 }
 
 CCL_NAMESPACE_END

@@ -368,21 +368,21 @@ static void xml_read_shader_graph(XMLReadState &state, Shader *shader, const xml
       snode = graph->create_node(node_type);
     }
 
-    if (node_name == "absorption_volume") {
+    if (node_name == "absorption_volume" || node_name == "scatter_volume") {
       /* Preserve invalid-input detection before fast-math socket setters. */
-      for (const char *name : {"density", "color"}) {
+      for (const char *name : {"density", "color", "anisotropy", "IOR", "backscatter", "alpha", "diameter"}) {
         const xml_attribute attr = node.attribute(name);
         if (!attr)
           continue;
         vector<string> tokens;
         string_split(tokens, attr.value());
         if (tokens.size() != (string(name) == "color" ? 3 : 1))
-          throw std::invalid_argument("Invalid absorption volume attribute");
+          throw std::invalid_argument("Invalid scalar volume attribute");
         for (const string &token : tokens) {
           char *end = nullptr;
           const float value = strtof(token.c_str(), &end);
           if (end == token.c_str() || *end != '\0' || !isfinite_safe(value))
-            throw std::invalid_argument("Absorption volume attributes must be finite numbers");
+            throw std::invalid_argument("Scalar volume attributes must be finite numbers");
         }
       }
     }

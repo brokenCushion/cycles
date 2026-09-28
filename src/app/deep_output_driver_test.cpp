@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "app/cycles_xml.h"
+#include "device/device.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
 #include "session/output_driver.h"
@@ -22,17 +23,20 @@ static void check(bool condition, const char *message)
 
 struct Result {
   int flat_calls = 0, deep_calls = 0;
+  int last_deep_flat_call = 0;
   int width = 0, height = 0, samples = 0;
   double expected_transmittance = 0;
   bool volume = false;
   bool supported = true, fail_flat = false, fail_deep = false, cancel_flat = false;
+  bool fail_device = false;
   std::vector<deep::IntervalSample> retained;
 };
 
 /* A host consuming samples directly, with no EXR writer or file output. */
 class MemoryDriver : public OutputDriver {
  public:
-  MemoryDriver(Result &result, Progress &progress) : result_(result), progress_(progress) {}
+  MemoryDriver(Result &result, Progress &progress, Device &device)
+      : result_(result), progress_(progress), device_(device) {}
   bool supports_deep_output() const override
   {
     return result_.supported;
@@ -46,11 +50,16 @@ class MemoryDriver : public OutputDriver {
     if (result_.cancel_flat) {
       progress_.set_cancel("test cancellation before deep delivery");
     }
+    if (result_.fail_device) {
+      device_.set_error("test device failure before deep delivery");
+    }
   }
   void write_deep_render_tile(const DeepTile &tile) override
   {
     ++result_.deep_calls;
-    check(result_.flat_calls == result_.deep_calls, "flat output must precede deep output");
+    check(result_.flat_calls > result_.last_deep_flat_call,
+          "each deep output must follow a new flat output");
+    result_.last_deep_flat_call = result_.flat_calls;
     check(!tile.cancelled(), "cancelled result delivered");
     check(tile.width == result_.width && tile.height == result_.height, "stale dimensions");
     check(tile.layer == "host-layer" && tile.view == "host-view", "missing host metadata");
@@ -106,9 +115,10 @@ class MemoryDriver : public OutputDriver {
  private:
   Result &result_;
   Progress &progress_;
+  Device &device_;
 };
 
-static void run(const char *fixture, int mode, const bool cuda = false)
+static void run(const char *fixture, int mode, const bool cuda = false, const bool volume = false)
 {
   SessionParams params;
   const auto devices = Device::available_devices(cuda ? DEVICE_MASK_CUDA : DEVICE_MASK_CPU);
@@ -120,12 +130,12 @@ static void run(const char *fixture, int mode, const bool cuda = false)
   params.threads = 2;
   params.deep.enabled = true;
   params.deep.transparent = mode == 6;
-  params.deep.volume = mode == 7;
+  params.deep.volume = volume || mode == 7;
   params.deep.max_events = cuda ? 64 : 16;
   SceneParams scene_params;
   Result result;
   result.expected_transmittance = mode == 6 ? 0.5 : 0;
-  result.volume = mode == 7;
+  result.volume = params.deep.volume;
   {
     Session session(params, scene_params);
     xml_read_file(session.scene.get(), fixture);
@@ -136,7 +146,8 @@ static void run(const char *fixture, int mode, const bool cuda = false)
     result.cancel_flat = mode == 2;
     result.fail_deep = mode == 3;
     result.fail_flat = mode == 4;
-    session.set_output_driver(make_unique<MemoryDriver>(result, session.progress));
+    result.fail_device = mode == 8;
+    session.set_output_driver(make_unique<MemoryDriver>(result, session.progress, *session.device));
     BufferParams buffers;
     buffers.layer = ustring("host-layer");
     buffers.view = ustring("host-view");
@@ -163,6 +174,12 @@ static void run(const char *fixture, int mode, const bool cuda = false)
       check(session.progress.get_cancel() && !session.progress.get_error() &&
                 result.flat_calls == 1 && result.deep_calls == 0,
             "cancelled render must not deliver deep output");
+    }
+    else if (mode == 8) {
+      check(session.device->have_error() && session.progress.get_error() &&
+                result.flat_calls == 1 && result.deep_calls == 0 &&
+                session.progress.get_error_message().find("test device failure") != string::npos,
+            "device error must reach progress and prevent deep delivery");
     }
     else if (mode == 3 || mode == 4) {
       check(session.progress.get_error(), "host callback failure must reach progress");
@@ -211,6 +228,11 @@ static void run(const char *fixture, int mode, const bool cuda = false)
       check(!session.progress.get_error() && !session.progress.get_cancel() &&
                 result.flat_calls == previous_flat + 1 && result.deep_calls == previous_deep,
             "session did not recover after failure/cancellation");
+      params.deep.enabled = true;
+      render(8, 6);
+      check(!session.progress.get_error() && !session.progress.get_cancel() &&
+                result.deep_calls == previous_deep + 1,
+            "deep capture did not recover after failure/cancellation");
     }
   }
   if (mode == 0) {
@@ -232,6 +254,10 @@ int main(int argc, const char **argv)
     }
     run(argv[3], 6, cuda);
     run(argv[4], 7, cuda);
+    for (int mode = 1; mode != 6; ++mode) {
+      run(argv[4], mode, cuda, true);
+    }
+    run(argv[4], 8, cuda, true);
     std::cout << "PASS: memory delivery, reset, disable, unsupported host, cancellation, "
                  "callback failures and crop rejection\n";
     return 0;

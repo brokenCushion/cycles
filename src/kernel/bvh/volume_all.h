@@ -29,7 +29,8 @@ ccl_device_inline
                                 const ccl_private Ray *ray,
                                 Intersection *isect_array,
                                 const uint max_hits,
-                                const uint visibility)
+                                const uint visibility,
+                                const bool volume_only)
 {
   /* todo:
    * - test if pushing distance on the stack helps (for non shadow rays)
@@ -55,7 +56,9 @@ ccl_device_inline
   float isect_t = ray->tmax;
 
   uint num_hits = 0;
-  isect_array->t = ray->tmax;
+  Intersection *const deep_hits = isect_array;
+  if (volume_only)
+    isect_array->t = ray->tmax;
 
   /* traversal loop */
   do {
@@ -134,12 +137,13 @@ ccl_device_inline
                                             object;
                 const int prim = kernel_data_fetch(prim_index, prim_addr);
                 if (bvh_volume_anyhit_triangle_filter<false>(
-                        kg, prim_object, prim, ray->self, visibility))
+                        kg, prim_object, prim, ray->self, visibility, volume_only))
                 {
                   continue;
                 }
+                Intersection candidate;
                 hit = triangle_intersect(kg,
-                                         isect_array,
+                                         volume_only ? isect_array : &candidate,
                                          P,
                                          dir,
                                          tmin,
@@ -149,6 +153,10 @@ ccl_device_inline
                                          prim,
                                          prim_addr);
                 if (hit) {
+                  if (!volume_only) {
+                    bvh_deep_record_intersection(deep_hits, num_hits, max_hits, candidate);
+                    continue;
+                  }
                   /* Move on to next entry in intersections array. */
                   isect_array++;
                   num_hits++;
@@ -172,12 +180,13 @@ ccl_device_inline
                                             object;
                 const int prim = kernel_data_fetch(prim_index, prim_addr);
                 if (bvh_volume_anyhit_triangle_filter<false>(
-                        kg, prim_object, prim, ray->self, visibility))
+                        kg, prim_object, prim, ray->self, visibility, volume_only))
                 {
                   continue;
                 }
+                Intersection candidate;
                 hit = motion_triangle_intersect(kg,
-                                                isect_array,
+                                                volume_only ? isect_array : &candidate,
                                                 P,
                                                 dir,
                                                 tmin,
@@ -188,6 +197,10 @@ ccl_device_inline
                                                 prim,
                                                 prim_addr);
                 if (hit) {
+                  if (!volume_only) {
+                    bvh_deep_record_intersection(deep_hits, num_hits, max_hits, candidate);
+                    continue;
+                  }
                   /* Move on to next entry in intersections array. */
                   isect_array++;
                   num_hits++;
@@ -209,14 +222,15 @@ ccl_device_inline
           /* instance push */
           object = kernel_data_fetch(prim_object, -prim_addr - 1);
           const uint object_flag = kernel_data_fetch(object_flag, object);
-          if (object_flag & SD_OBJECT_HAS_VOLUME) {
+          if (!volume_only || (object_flag & SD_OBJECT_HAS_VOLUME)) {
 #if BVH_FEATURE(BVH_MOTION)
             bvh_instance_motion_push(kg, object, ray, &P, &dir, &idir);
 #else
             bvh_instance_push(kg, object, ray, &P, &dir, &idir);
 #endif
 
-            isect_array->t = isect_t;
+            if (volume_only)
+              isect_array->t = isect_t;
 
             ++stack_ptr;
             kernel_assert(stack_ptr < BVH_STACK_SIZE);
@@ -253,9 +267,10 @@ ccl_device_inline uint BVH_FUNCTION_NAME(KernelGlobals kg,
                                          const ccl_private Ray *ray,
                                          Intersection *isect_array,
                                          const uint max_hits,
-                                         const uint visibility)
+                                         const uint visibility,
+                                         const bool volume_only = true)
 {
-  return BVH_FUNCTION_FULL_NAME(BVH)(kg, ray, isect_array, max_hits, visibility);
+  return BVH_FUNCTION_FULL_NAME(BVH)(kg, ray, isect_array, max_hits, visibility, volume_only);
 }
 
 #undef BVH_FUNCTION_NAME

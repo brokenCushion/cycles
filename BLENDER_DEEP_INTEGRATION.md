@@ -1,7 +1,7 @@
 # Blender deep output
 
 Custom Blender uses the same Cycles deep core as the standalone renderer.
-**M8 technical gates pass; final user review is pending.** See [release gates](DEEP_MILESTONES.md) and
+**M8 is complete; final user review passed on 2026-09-29.** See [release gates](DEEP_MILESTONES.md) and
 [measurements](DEEP_PERFORMANCE_AND_VDB.md) for current qualification.
 
 ## Build

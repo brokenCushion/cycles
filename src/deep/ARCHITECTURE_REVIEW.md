@@ -39,8 +39,8 @@ This is the current code map; the superseded patch plan remains in Git history.
 Native VDB CUDA uses 64 lanes with an explicit staging reservation. Final
 CPU/CUDA scene and failure suites pass; current kernel resource attributes match
 the previous qualified build. The updated exporter's release-scale scattering
-repeats and default-colour native matrix also pass. Final user review of the
-release candidate remains the M8 sign-off gate.
+repeats and default-colour native matrix also pass. The user approved the final
+Gaffer scene on 2026-09-29, completing M8 within the qualified support matrix.
 See [final evidence](M8_RELEASE_VALIDATION.md). Other backends belong to M9.
 
 [Release gates](../../DEEP_MILESTONES.md) | [Status](../../DEEP_IMPLEMENTATION_STATUS.md)

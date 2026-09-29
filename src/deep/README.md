@@ -1,10 +1,10 @@
 # Cycles deep alpha
 
 Produces **Z/ZBack/A camera visibility** with separate native beauty.
-**M8 technical gates pass; final user review of the release candidate is pending.** Deep RGB and
+**M8 is complete within the qualified CPU/CUDA support matrix.** Deep RGB and
 additional backends are deferred to M9.
 
-- [Release status](../../DEEP_IMPLEMENTATION_STATUS.md): what works and what blocks M8.
+- [Release status](../../DEEP_IMPLEMENTATION_STATUS.md): qualified capabilities and M8 sign-off.
 - [Milestones](../../DEEP_MILESTONES.md): M8 acceptance gates and M9 scope.
 - [Measured evidence](../../DEEP_PERFORMANCE_AND_VDB.md): results and artifact locations.
 - [Final M8 qualification](M8_RELEASE_VALIDATION.md): release matrix, regressions and review.

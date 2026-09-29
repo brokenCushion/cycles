@@ -1,8 +1,9 @@
 # M8 final deep-alpha qualification
 
 All technical release gates pass, including production-scale repeats, the full
-Blender asset regression and the default-colour native matrix. Final user review
-remains open; this is the M8 release candidate, pending that sign-off.
+Blender asset regression and the default-colour native matrix. The user approved
+the final Gaffer scene on 2026-09-29: "the gaffer scene for m8 looks good."
+**M8 is complete within the qualified CPU/CUDA support matrix.**
 The [support matrix](RELEASE_MATRIX.md) defines the scope; deep RGB and
 additional device backends belong to M9.
 
@@ -157,8 +158,9 @@ The final saved and reload-checked graph is
 All 15 boxes validate, with 12,775,584 displayed points in total (including two
 valid empty-medium boxes). It includes the CPU/CUDA production-scale renders,
 the final supported native matrix cases and the full Blender asset. A fresh
-Gaffer session was opened for user review; viewport appearance and final user
-sign-off are not asserted by the automated reload check.
+Gaffer session was opened for user review. The automated reload check verifies
+graph evaluation; final visual approval was supplied separately by the user on
+2026-09-29. Implementation and qualification were committed in `8e03847da`.
 
 [Release status](../../DEEP_IMPLEMENTATION_STATUS.md) |
 [Measurements](../../DEEP_PERFORMANCE_AND_VDB.md) |

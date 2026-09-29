@@ -1,7 +1,7 @@
 # M8 deep-alpha support matrix
 
-M8 is still in qualification. This document defines the release claim; it does
-not make the in-progress release production-ready. See
+M8 is complete, with technical qualification and user Gaffer approval recorded
+on 2026-09-29. Production readiness is limited to this support matrix. See
 [release status](../../DEEP_IMPLEMENTATION_STATUS.md).
 
 ## Scene and device contract
@@ -97,5 +97,5 @@ The final standalone audit passes all nine CTests, ten renderer/Gaffer suite
 groups and lifecycle tests. The final supplied host-asset regression passes with
 byte-identical deep output and unchanged beauty. CPU/CUDA production-scale
 scattering repeats pass accuracy, beauty, resource and size gates with
-byte-identical repeats per device. All technical gates pass; final user review
-of the release candidate remains pending.
+byte-identical repeats per device. All technical gates pass; the user approved
+the final Gaffer scene on 2026-09-29, completing M8.

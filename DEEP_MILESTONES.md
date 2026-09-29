@@ -4,8 +4,8 @@
 
 M0-M9 are ten numbered milestones. M0-M7 describe the foundations already
 developed. **M8 is the release gate for production-ready deep alpha.** M9 holds
-future development outside that release scope. M8 technical gates pass; the
-release candidate awaits final user review before production-readiness sign-off.
+future development outside that release scope. **M8 is complete:** all technical
+gates pass and the user approved the final Gaffer scene on 2026-09-29.
 
 Deep alpha means camera visibility represented by **Z, ZBack and A**. Beauty
 remains a separate native render. Deep RGB is not required to complete M8.
@@ -82,7 +82,7 @@ an M8 blocker; it must not be moved to M9 merely to make M8 pass.
   accuracy, beauty, resource and output-size targets with byte-identical repeats
   within each device. This checkpoint completes the supplied-VDB scale benchmark;
   final scene-matrix coverage, full Blender asset regression and release audit
-  also pass. Final release-candidate Gaffer review remains pending.
+  also pass. The user approved the final Gaffer scene on 2026-09-29, completing M8.
 - Bounded capture/spill, explicit failures and atomic publication tests.
 
 See [implementation status](DEEP_IMPLEMENTATION_STATUS.md),

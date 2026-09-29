@@ -1,6 +1,7 @@
 # Deep alpha: release status
 
-**M8 technical gates pass. Final user review of the release candidate is pending.**
+**M8 is complete. Deep alpha is production-ready within the qualified CPU/CUDA support matrix.**
+The user approved the final Gaffer scene on 2026-09-29.
 Output is Z/ZBack/A; beauty is separate. Deep RGB belongs to M9.
 See [release gates and roadmap](DEEP_MILESTONES.md).
 The explicit [support matrix](src/deep/RELEASE_MATRIX.md) separates surface
@@ -34,15 +35,15 @@ those results do not establish support for volume combinations.
 | Reduction | Pass. Bounded reconstruction merges and export coalescing keep the unchanged 1e-6 whole-curve budget. CPU overlap falls from 4,351,561 to 1,594,908 stored intervals; accepted-camera error 2.130e-7 and Gaffer cut error 6.757e-7. Final matrix and production repeats pass. |
 | Reliability | Final nine CTests and all ten renderer/Gaffer suite groups pass. CPU/CUDA callback/cancellation recovery, injected device-error suppression, reset/re-enable and capacity changes pass. Allocation/source-I/O/row-capacity failures preserve prior EXRs. Stream-write failures propagate; a real Windows locked destination preserves the completed EXR and cleans staging. |
 | Scattering | Pass. Final native CPU/CUDA VDB matches equivalent absorption byte-for-byte. Release-scale accepted-camera error is at most 2.49700e-7 and Gaffer cut error at most 2.04364e-7. Sampled CPU/CUDA curve comparison passes at 5.76589e-7. CPU beauty is exact; CUDA matches its ordinary repeat within the unchanged threshold. |
-| Release review | Full supplied Blender asset passes at 664x625/128 samples: legacy deep EXR byte-identical, fresh beauty exact, curve error 3.10044e-9, Gaffer cuts exact and valid 1M-point preview. All technical qualification is complete. Final release-candidate Gaffer review and user sign-off remain. |
+| Release review | Pass. Full supplied Blender asset passes at 664x625/128 samples: legacy deep EXR byte-identical, fresh beauty exact, curve error 3.10044e-9, Gaffer cuts exact and valid 1M-point preview. All technical qualification is complete. The user approved the final Gaffer scene on 2026-09-29. |
 
 Do not move failed promised capabilities into M9 to close M8.
 Boundary regression evidence: `builds/validation/m8-production/precise-boundary/`.
 The revised CPU/CUDA kernels pass 28 scenes and 19 rejection cases; nine CTests pass.
 Production qualification: `builds/validation/m8-production/final-scale/projected-1024-report.json`.
 The Gaffer review is `m8_production_1024_review.gfr` in that directory.
-The user reviewed that production-scale checkpoint; final M8 release review
-remains pending. Final matrix artifacts:
+The user reviewed that production-scale checkpoint and approved the final M8
+Gaffer scene on 2026-09-29. Final matrix artifacts:
 `builds/validation/m8-release-qualified/native-default-colour/`.
 Final scale report: `builds/validation/m8-release-scale/report.json`.
 Final review: `builds/validation/m8-release-qualified/m8_final_release_review.gfr`;

@@ -1,6 +1,6 @@
 # Native VDB deep alpha
 
-Part of **M8**, not a completed production release.
+Part of completed **M8**, within the qualified CPU/CUDA support matrix.
 [Release checklist](../../DEEP_MILESTONES.md) | [Evidence](../../DEEP_PERFORMANCE_AND_VDB.md)
 
 ## Current contract
@@ -61,8 +61,8 @@ The boundary fix and cumulative-depth FLOAT conversion pass the 1024x768
 production repeats, including memory and spill-I/O measurements. Final
 supported scene-matrix coverage passes. The repeated triangle scans use constant scratch;
 their cost on complex volume boundaries still needs testing.
-Final mixed-scene coverage passes; final Gaffer review remains the M8 sign-off
-gate. Deep RGB is deferred.
+Final mixed-scene coverage passes; the user approved the final Gaffer scene on
+2026-09-29, completing M8. Deep RGB is deferred.
 
 Fresh named-grid overlap qualification exposed a clipped voxel-start arithmetic
 disagreement. Grid initialization now reconciles the selected cell with incoming

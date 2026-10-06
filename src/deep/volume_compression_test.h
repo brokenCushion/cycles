@@ -44,7 +44,8 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
         deep_volume_compression_cell(&stream, background, 1e-5, 1e-8,
                                      events, density, 1, 8192, &count) != DEEP_ERROR_NONE ||
         deep_volume_compression_flush(&stream, 1e-8, events, density,
-                                      1, 8192, &count) != DEEP_ERROR_NONE || count != 2)
+                                      1, 8192, &count) != DEEP_ERROR_NONE || count != 2 ||
+        !stream.terminated || events[1].kind != DEEP_SURFACE || stream.cutoff < 4)
       return 9; /* Vacuum must preserve absorbed prefix, not force subdivisions. */
   }
   for (int mode = 0; mode < 2; ++mode) {
@@ -105,6 +106,11 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
                                               events, density, 1, 8192, &count);
         if (error != DEEP_ERROR_NONE || count == 0 || count > 1)
           return 2;
+        if (density[0].front != cell.front || density[0].back != cell.back)
+          return 13;
+        for (int i = 0; i < 4; ++i)
+          if (density[0].optical_depth[i] != cell.optical_depth[i])
+            return 14; /* Exact fallback is a byte-preserving cell copy. */
         for (int probe = 0; probe <= 8192; ++probe) {
           const double u = double(probe) / 8192;
           const double z = start + u;

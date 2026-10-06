@@ -121,6 +121,13 @@ class Capture {
   std::vector<KernelDeepEvent> events_;
   std::vector<KernelDeepDensity> density_;
   mutable std::mutex mutex_;
+  struct ReadScratch {
+    std::vector<KernelDeepEvent> events;
+    std::vector<KernelDeepDensity> density;
+  };
+  /* Capture owns worker scratch, so idle pool threads retain no buffers after
+   * capture destruction. The existing per-worker preflight covers capacity. */
+  mutable std::vector<std::shared_ptr<ReadScratch>> read_scratch_;
   /* Fixed identity index plus a sequential append stream of actual events. */
   struct SpillRecord {
     uint64_t event_offset;

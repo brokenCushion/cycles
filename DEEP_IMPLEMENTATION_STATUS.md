@@ -12,8 +12,9 @@ are in Section 6 of the plan.
 Phase 1 is accepted: sequential band export, nine CTests, CPU/CUDA matrices,
 boundary suites and both fixed landscapes pass. Strict data/headers are unchanged.
 587x250 export: 49.26 -> 34.52 s; spill reads: 3.85 -> 0.60 GB (1.15x amplification).
-The small case exports in 8.30 s vs 7.05 s; no speedup is claimed there.
-Phase 2 is next, after the phase summary is reviewed.
+The accepted scratch follow-up reduces export further: 34.52 -> 32.97 s
+and small 8.30 -> 7.99 s; all 81 strict identities and regressions pass.
+Phase 2 is profiling boundary pairing before choosing a kernel change.
 
 Checkpoint: `59963b932`. The beauty majorant experiment is isolated on
 `codex/volume-majorant-determinism` (`9a017f055`) and removed here (`44b44477e`).

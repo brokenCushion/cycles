@@ -34,6 +34,33 @@ template<typename F> static void rejects(F f)
 int main()
 {
   try {
+    for (const bool spill : {false, true}) {
+      /* Reused scratch sees growing, shrinking and empty records. Unused
+       * density slots must never leak from a previous cubic sample. */
+      Capture capture(1, 1, 4, 32 * 1024 * 1024, 3, spill, false, true, true);
+      const KernelDeepEvent events[] = {{DEEP_VOLUME_CUBIC, 1, 2, 0, 0},
+                                       {DEEP_SURFACE, 3, 3, .25f, 0},
+                                       {DEEP_VOLUME, 4, 5, 0, .2f}};
+      const KernelDeepDensity density[] = {{{.1f,.1f,.1f,.1f},1,2}, {}, {}};
+      capture.record_sample(0,0,0,{DEEP_COMPLETE,3,DEEP_ERROR_NONE},events,density);
+      capture.record_events(0,0,1,nullptr,0);
+      capture.record_events(0,0,2,events+2,1);
+      capture.record_sample(0,0,3,{DEEP_COMPLETE,1,DEEP_ERROR_NONE},events,density);
+      check(capture.finalize());
+      if (spill) capture.begin_export_row(0);
+      const double expected[] = {.75*std::exp(-double(.1f)-double(.2f)),1,
+                                 std::exp(-double(.2f)),std::exp(-double(.1f))};
+      for (int sample : {3,1,0,2,1,3,0}) {
+        const auto ray = capture.volume_sample(0,0,sample);
+        double transmittance = 1;
+        for (const auto &interval : ray.intervals)
+          transmittance *= std::exp(-interval.optical_depth);
+        for (const auto &surface : ray.camera.events)
+          transmittance *= 1-surface.alpha;
+        check(std::abs(transmittance-expected[sample]) < 1e-12);
+      }
+      if (spill) capture.end_export_row(0);
+    }
     {
       Capture memory(7, 130, 17, 16 * 1024 * 1024, 2, false, true);
       Capture disk(7, 130, 17, 32 * 1024 * 1024, 2, true, true);

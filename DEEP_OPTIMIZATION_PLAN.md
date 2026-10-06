@@ -515,6 +515,8 @@ Evidence: `builds/validation/landscape-cloud/optimization-phase1/{before,after}`
 Banded capture loads immutable export data sequentially; oversized bands use a
 checked per-row re-bucket. GPU kernels/scheduling and reconstruction are unchanged.
 All strict payload/header comparisons and regression gates pass.
+Host-only follow-up reuses count-sized worker scratch and removes capacity-wide
+clears, including re-bucketing. Evidence: the same root under `scratch`.
 Baseline (489,34) matches every checked raw pass in Phase 0 deep-off control 3
 within 4 FLOAT ULP, population 4 (Noisy R, Albedo R and Depth exceeded fresh K=5).
 After runs needed no pool resolutions and no additional controls.
@@ -562,3 +564,8 @@ Build/source provenance: `builds/validation/beauty-builds.json`.
 | 47x20 / max16 | Spill read amplification | 2.607345x | 1.000000x | `135624361` |
 | 587x250 / 4 | Spill read amplification | 7.570932x | 1.148825x | `135624361` |
 | Strict identity | Payload + deterministic headers | PASS | 81/81 PASS | `135624361` |
+
+| 47x20 / max16, scratch reuse | Export seconds | 8.30383 | 7.98998 (-3.8%) | `scratch follow-up` |
+| 587x250 / 4, scratch reuse | Export seconds | 34.5202 | 32.9664 (-4.5%) | `scratch follow-up` |
+| Scratch reuse | Strict payload + deterministic headers | 81/81 PASS | 81/81 PASS | `scratch follow-up` |
+| Scratch reuse | Regression set | 9 CTests; CPU14/CUDA4; each boundary33+17; both landscapes PASS | All PASS; CPU beauty exact; CUDA K=5 PASS | `scratch follow-up` |

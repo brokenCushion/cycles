@@ -4,9 +4,11 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <iterator>
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 namespace ccl::deep {
 Capture::Capture(const int width,
@@ -297,14 +299,16 @@ void Capture::read_record(const size_t index,
   }
   else {
     result = results_[index];
-    if (events)
-      std::copy_n(events_.data() + index * capacity_, capacity_, events);
-    if (density && volume_grid_)
-      std::copy_n(density_.data() + index * capacity_, capacity_, density);
   }
   if (result.count > capacity_ || result.error != DEEP_ERROR_NONE ||
       (result.status != DEEP_EMPTY && result.status != DEEP_COMPLETE))
     throw std::runtime_error("Invalid deep stored record");
+  if (!band) {
+    if (events)
+      std::copy_n(events_.data() + index * capacity_, result.count, events);
+    if (density && volume_grid_)
+      std::copy_n(density_.data() + index * capacity_, result.count, density);
+  }
   if (band && events) {
     const auto read = [&](size_t offset, unsigned char *destination, size_t bytes) {
       if (!exporting_)
@@ -316,11 +320,9 @@ void Capture::read_record(const size_t index,
           std::memcpy(destination, staged_events_.data() + offset, bytes);
       }
     };
-    std::fill_n(events, capacity_, KernelDeepEvent{});
     read(size_t(stored.event_offset), reinterpret_cast<unsigned char *>(events),
          result.count * sizeof(*events));
     if (density && volume_grid_) {
-      std::fill_n(density, capacity_, KernelDeepDensity{});
       size_t offset = size_t(stored.event_offset) + result.count * sizeof(*events);
       for (unsigned i = 0; i < result.count; ++i)
         if (events[i].kind == DEEP_VOLUME_CUBIC) {
@@ -528,19 +530,38 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
   if (sample < 0 || sample >= population(x, y))
     throw std::out_of_range("Deep camera sample outside population");
   KernelDeepResult result{};
-  std::array<KernelDeepEvent, DEEP_MAX_EVENTS> small_record{};
-  std::vector<KernelDeepEvent> grid_record(volume_grid_ ? capacity_ : 0);
-  KernelDeepEvent *record = volume_grid_ ? grid_record.data() : small_record.data();
-  std::vector<KernelDeepDensity> density(volume_grid_ ? capacity_ : 0);
+  thread_local std::unordered_map<const Capture *, std::weak_ptr<ReadScratch>> cache;
+  auto scratch = cache[this].lock();
+  if (!scratch) {
+    for (auto it = cache.begin(); it != cache.end();)
+      it = it->second.expired() ? cache.erase(it) : std::next(it);
+    scratch = std::make_shared<ReadScratch>();
+    {
+      const std::lock_guard<std::mutex> lock(mutex_);
+      read_scratch_.push_back(scratch);
+    }
+    cache[this] = scratch;
+  }
+  auto &events = scratch->events;
+  auto &density = scratch->density;
   {
     std::unique_lock<std::mutex> lock;
     if (!exporting_)
       lock = std::unique_lock<std::mutex>(bands_.empty() ? mutex_ : band_for_pixel(size_t(y) * width_ + x).mutex);
-    read_record(record_index(size_t(y) * width_ + x, sample), result, record, density.data());
+    const size_t index = record_index(size_t(y) * width_ + x, sample);
+    read_record(index, result, nullptr);
+    /* Keep the high-water size: shrinking/regrowing would zero the reused
+     * tail. Only new slots initialize; payload reads overwrite every used slot. */
+    if (events.size() < result.count)
+      events.resize(result.count);
+    if (volume_grid_ && density.size() < result.count)
+      density.resize(result.count);
+    read_record(index, result, events.data(), volume_grid_ ? density.data() : nullptr);
   }
   if (error_.load() != NONE || result.status != DEEP_COMPLETE)
     throw std::runtime_error("Cannot read incomplete deep capture");
   VolumeCameraSample output{{uint64_t(sample), 1, true, {}}, {}};
+  const KernelDeepEvent *record = events.data();
   double opaque_depth = std::numeric_limits<double>::infinity();
   for (unsigned i = 0; i < result.count; ++i)
     if (record[i].kind == DEEP_SURFACE && record[i].surface_alpha == 1)
@@ -700,8 +721,8 @@ void Capture::load_stream(Band &band, FILE *file, const size_t bytes,
 
 void Capture::rebucket(Band &band) const
 {
-  std::vector<KernelDeepEvent> events(capacity_);
-  std::vector<KernelDeepDensity> density(capacity_);
+  std::vector<KernelDeepEvent> events;
+  std::vector<KernelDeepDensity> density;
   if (capacity_ * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) > spill_memory_bytes_)
     throw std::runtime_error("Deep re-bucket scratch exceeds memory budget");
   for (int y = 0; y < band.rows; ++y) {
@@ -723,6 +744,8 @@ void Capture::rebucket(Band &band) const
         header.result.error != DEEP_ERROR_NONE)
       throw std::runtime_error("Invalid deep re-bucket record");
     const size_t event_bytes = header.result.count * sizeof(KernelDeepEvent);
+    if (events.size() < header.result.count)
+      events.resize(header.result.count);
     if (event_bytes > remaining ||
         (event_bytes && std::fread(events.data(), 1, event_bytes, band.events) != event_bytes))
       throw std::runtime_error("Deep re-bucket event read failed");
@@ -731,6 +754,8 @@ void Capture::rebucket(Band &band) const
     for (unsigned i = 0; i < header.result.count; ++i)
       densities += events[i].kind == DEEP_VOLUME_CUBIC;
     const size_t density_bytes = densities * sizeof(KernelDeepDensity);
+    if (density.size() < densities)
+      density.resize(densities);
     if (density_bytes > remaining ||
         (density_bytes && std::fread(density.data(), 1, density_bytes, band.events) != density_bytes))
       throw std::runtime_error("Deep re-bucket density read failed");

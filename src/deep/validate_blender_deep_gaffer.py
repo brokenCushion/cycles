@@ -4,6 +4,7 @@
 gaffer env python SCRIPT RENDER_DIRECTORY
 Requires render.json, beauty.exr, scene.deep.exr and its raw .samples.csv grid.
 """
+from validate_gaffer import deep_error
 import csv
 import json
 import math
@@ -76,7 +77,7 @@ for x,y in sorted(expected_grid):
             maximum = max(maximum,abs(expected-observed))
             checked += 1
     pixels[x,y] = cameras
-check(maximum<=1e-6 and checked>0, 'Deep reconstruction exceeds curve tolerance')
+check(maximum<=deep_error(reader['out']) and checked>0, 'Deep reconstruction exceeds curve tolerance')
 
 cut = add('SceneDepthCut', GafferImage.DeepSlice(), 0, 20)
 cut['in'].setInput(reader['out'])
@@ -99,7 +100,7 @@ for z in cuts:
         expected = 1-sum(math.prod(1-a for d,a in events if d<z)
                          for events in cameras)/len(cameras)
         slice_error = max(slice_error,abs(float(tiles[key][index])-expected))
-check(slice_error<=1e-6, 'Gaffer DeepSlice exceeds analytic raw-curve tolerance')
+check(slice_error<=deep_error(reader['out']), 'Gaffer DeepSlice exceeds analytic raw-curve tolerance')
 cut['farClip']['value'].setValue(cuts[-1])
 cut['farClip']['enabled'].setValue(False)
 cloud_cut = add('CloudDepthCut', GafferImage.DeepSlice(), 30, 20)

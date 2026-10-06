@@ -21,7 +21,7 @@ for case in ('beauty_failure','deep_failure'):
         target.mkdir(exist_ok=True)
     cmd=[str(exe),'--background','--quiet','--device','CPU','--samples','1','--threads','2',
          '--width','4','--height','4','--deep-transparent','--deep-max-events','64',
-         '--output',str(beauty),'--deep-output',str(target),str(source)]
+         '--output',str(beauty),'--deep-error', 'strict', '--deep-output',str(target),str(source)]
     p=subprocess.run(cmd,capture_output=True,text=True,timeout=60)
     check(p.returncode!=0,case+' falsely succeeded')
     if case=='beauty_failure':

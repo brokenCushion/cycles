@@ -13,6 +13,7 @@ struct DeepSettings {
   bool volume = false;
   /* Derived by scene preflight; not a host-facing rendering mode. */
   bool volume_grid = false;
+  float error = 1e-3f; /* 0 = strict, preserving legacy payload and headers. */
   int max_events = 16;
   size_t memory_bytes = size_t(64) * 1024 * 1024;
 };

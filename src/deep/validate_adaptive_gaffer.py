@@ -39,7 +39,7 @@ def render(name, source, adaptive=True, deep=True, samples=maximum, extra=(), fa
         '--samples', str(samples), '--threads', '4', '--width', str(W), '--height', str(H),
         '--output', str(beauty)]
     if deep:
-        command += ['--deep-output', str(target), '--deep-records', str(records)]
+        command += ['--deep-error', 'strict', '--deep-output', str(target), '--deep-records', str(records)]
         if not name.startswith('opaque'):
             command += ['--deep-transparent', '--deep-max-events', '4']
     if failure:

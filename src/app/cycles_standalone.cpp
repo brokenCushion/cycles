@@ -58,6 +58,7 @@ struct Options {
   string deep_output_filepath;
   string deep_records_filepath;
   int deep_memory_mb = 64;
+  string deep_error = "0.001";
   bool deep_transparent = false;
   bool deep_volume = false;
   int deep_max_events = 16;
@@ -189,6 +190,14 @@ static void session_init()
     deep.enabled = true;
     deep.transparent = options.deep_transparent;
     deep.volume = options.deep_volume;
+    if (options.deep_error == "strict")
+      deep.error = 0;
+    else {
+      size_t consumed = 0;
+      deep.error = std::stof(options.deep_error, &consumed);
+      if (consumed != options.deep_error.size() || !(deep.error > 0))
+        throw std::invalid_argument("Deep error must be strict or a positive tolerance");
+    }
     deep.max_events = options.deep_max_events;
     deep.memory_bytes = size_t(options.deep_memory_mb) * 1024 * 1024;
   }
@@ -476,6 +485,9 @@ static void options_parse(const int argc, const char **argv)
   ap.arg("--deep-records %s:CSV")
       .help("Optional raw camera sample CSV for validation")
       .action([&](auto argv) { parse_string(argv, &options.deep_records_filepath); });
+  ap.arg("--deep-error %s:ERROR")
+      .help("Absolute transmittance error: strict or (1e-6,0.01], default 0.001")
+      .action([&](auto argv) { parse_string(argv, &options.deep_error); });
   ap.arg("--deep-memory-mb %d:MIB")
       .help("Deep working memory budget in MiB (default 64; raw capture spills to temp disk)")
       .action([&](auto argv) { parse_int(argv, &options.deep_memory_mb); });
@@ -488,7 +500,7 @@ static void options_parse(const int argc, const char **argv)
           "Maximum intersections per M4 camera sample (1..64, default 16; overflow fails export)")
       .action([&](auto argv) { parse_int(argv, &options.deep_max_events); });
   ap.arg("--deep-reduce", &options.deep_reduce)
-      .help("Reduce reconstructed samples with maximum post-FLOAT transmittance error 0.001");
+      .help("Reduce surface samples within --deep-error (strict preserves legacy 0.001 reduction)");
 #endif
   ap.arg("--threads %d:THREADS").help("CPU Rendering Threads").action([&](auto argv) {
     parse_int(argv, &options.session_params.threads);

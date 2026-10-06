@@ -146,7 +146,7 @@ def run(exe, directory, device='CPU'):
                '--width',str(W),'--height',str(H),
                '--threads','4','--shadingsys',backend,'--output',str(beauty)]
         if deep:
-            cmd += ['--deep-output',str(output),'--deep-records',str(records),'--deep-transparent']
+            cmd += ['--deep-error', 'strict', '--deep-output',str(output),'--deep-records',str(records),'--deep-transparent']
         cmd += list(extra) + [str(source)]
         if failure: output.write_bytes(b'preserve-existing-output')
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)

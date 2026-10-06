@@ -23,7 +23,7 @@ import GafferScene
 import imath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from validate_gaffer import check, deep_pixel, tile_index, population_reference_error, beauty_repeat_gate
+from validate_gaffer import deep_error, check, deep_pixel, tile_index, population_reference_error, beauty_repeat_gate
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('directory', type=Path)
@@ -74,6 +74,11 @@ def add(name, node, x, y):
 reader = add('NativeVDBDeep', GafferImage.ImageReader(), 0, 40)
 reader['fileName'].setValue((directory / 'scene.deep.exr').as_posix())
 check(reader['out']['deep'].getValue(), 'Output is not deep')
+deep_tolerance = deep_error(reader['out'])
+if settings.get('deep_error', 0):
+    check('cycles:deepError' in reader['out']['metadata'].getValue() and
+          math.isclose(deep_tolerance, settings['deep_error'], rel_tol=1e-7),
+          'EXR bound differs from the requested setting')
 fmt = reader['out']['format'].getValue()
 width, height = fmt.width(), fmt.height()
 check([width, height] == [v * settings['percentage'] // 100 for v in settings['resolution']],
@@ -383,7 +388,7 @@ if diagnostic.exists() and args.oracle_python:
     check(not args.overlap_reference and not args.expect_empty,
           'Large-scene oracle mode is separate from named overlap/empty fixtures')
     stored_path = directory / 'stored_diagnostic_curves.json'
-    stored_path.write_text(json.dumps(dict(samples=settings['samples'], adaptive=settings['adaptive'],
+    stored_path.write_text(json.dumps(dict(samples=settings['samples'], adaptive=settings['adaptive'], deep_error=deep_tolerance,
         pixels=[dict(x=x, y=y, samples=deep_pixel(reader['out'], imath.V2i(x, height-1-y)))
                 for x, y in sorted({(i*(width-1)//8, j*(height-1)//8)
                                    for i in range(9) for j in range(9)})])))
@@ -433,7 +438,7 @@ elif diagnostic.exists():
                                      'actual': actual_value, 'expected': expected,
                                      'intervals': [len(intervals)] + [len(v) for v in sources]}
                 overlap_probes += 1
-        overlap_report = {'passed': overlap_error <= 1e-6, 'max_error': overlap_error,
+        overlap_report = {'passed': overlap_error <= deep_tolerance, 'max_error': overlap_error,
                           'probes': overlap_probes,
                           'worst': worst_overlap,
                           'references': [str(p.resolve()) for p in args.overlap_reference],
@@ -459,7 +464,7 @@ elif diagnostic.exists():
                 raw_error = max(raw_error, abs(expected-actual(z, before)))
                 raw_probes += 1
         raw_pixels += 1
-    check(raw_error <= 1e-6, 'EXR differs from accepted camera transmittance')
+    check(raw_error <= deep_tolerance, 'EXR differs from accepted camera transmittance')
 
 
 flat = add('FullDeepAlpha', GafferImage.DeepToFlat(), -15, 20)
@@ -538,8 +543,8 @@ loaded = Gaffer.ScriptNode()
 loaded['fileName'].setValue(review.as_posix())
 loaded.load()
 check(loaded.getFocus().isSame(loaded['VDBDeepPoints']), 'Review focus did not reload')
-report = {'passed': beauty_passed and slice_error <= 1e-6,
-          'beauty_passed': beauty_passed, 'depth_cuts_passed': slice_error <= 1e-6,
+report = {'deep_error': deep_tolerance, 'passed': beauty_passed and slice_error <= deep_tolerance,
+          'beauty_passed': beauty_passed, 'depth_cuts_passed': slice_error <= deep_tolerance,
           'scope': 'Gaffer EXR interoperability and beauty isolation',
           'expected_empty': args.expect_empty,
           'total_deep_samples': total_deep_samples, 'max_pixel_samples': max_pixel_samples,

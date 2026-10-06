@@ -32,7 +32,7 @@ def render(name, src, width, height, events, reduce=False, budget=32, failure=Fa
            '--samples','16','--width',str(width),'--height',str(height),
            '--output',str(out/(name+'.beauty.exr'))]
     if deep:
-        cmd += ['--deep-output',str(target),'--deep-transparent','--deep-max-events',str(events),
+        cmd += ['--deep-error', 'strict', '--deep-output',str(target),'--deep-transparent','--deep-max-events',str(events),
                 '--deep-memory-mb',str(budget)]
     if reduce: cmd += ['--deep-reduce']
     cmd += [str(src)]

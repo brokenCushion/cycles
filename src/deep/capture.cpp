@@ -20,10 +20,12 @@ Capture::Capture(const int width,
                  const bool adaptive,
                  const bool volume,
                  const bool volume_grid,
-                 const int export_workers)
-    : width_(width), height_(height), samples_(samples), max_events_(max_events), volume_(volume),
+                 const int export_workers,
+                 const float error)
+    : error_setting_(error), width_(width), height_(height), samples_(samples), max_events_(max_events), volume_(volume),
       volume_grid_(volume_grid)
 {
+  error_budget(error);
   if (export_workers <= 0)
     throw std::invalid_argument("Deep export requires positive worker count");
   if (max_events < 0 || max_events > int(volume_grid ? DEEP_MAX_VOLUME_EVENTS : DEEP_MAX_EVENTS) ||
@@ -908,6 +910,7 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   };
   if (!volume_ || error_.load() != NONE)
     throw std::runtime_error("Invalid volume capture reconstruction");
+  const auto budget = error_budget(error_setting_);
   std::vector<VolumeCameraSample> ledger;
   const int cameras = population(x, y);
   const bool compact_ray = volume_grid_ && samples_ > 8;
@@ -940,20 +943,20 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
     pair.push_back(std::move(left));
     pair.push_back(std::move(right));
     const auto curve = fit(std::move(pair),
-                                          volume_reconstruction_error / (2 * levels),
+                                          budget.reconstruction / (2 * levels),
                                           reconstruction_limit(),
-                                          volume_reconstruction_error / (2 * levels));
+                                          budget.reconstruction / (2 * levels));
     return from_curve(curve, id, weight);
   };
   size_t retained_bytes = 0;
   for (int i = 0; i < cameras; ++i) {
     auto sample = volume_sample(
-        x, y, i, compact_ray ? volume_density_error / 2 : volume_density_error);
+        x, y, i, compact_ray ? budget.density / 2 : budget.density);
     if (compact_ray) {
       /* Split the existing density allowance between integration and one-ray
        * reduction. Convex averaging preserves this per-ray absolute T bound. */
       const auto compact = fit(
-          {sample}, volume_reconstruction_error, reconstruction_limit(), volume_density_error / 2);
+          {sample}, budget.reconstruction, reconstruction_limit(), budget.density / 2);
       sample = from_curve(compact, sample.camera.id, sample.camera.weight);
     }
     size_t population = 1;
@@ -995,9 +998,9 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   /* Share the existing reconstruction allowance between mixture fitting and
    * streaming reduction; the total published error budget is unchanged. */
   return fit(std::move(ledger),
-                            volume_reconstruction_error / 2,
+                            budget.reconstruction / 2,
                             reconstruction_limit(),
-                            compact_ray ? 0 : volume_reconstruction_error / 2,
+                            compact_ray ? 0 : budget.reconstruction / 2,
                             volume_pixel_bytes_ ? volume_pixel_bytes_ :
                                                   std::numeric_limits<size_t>::max());
 }

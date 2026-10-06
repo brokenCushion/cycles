@@ -73,7 +73,7 @@ def render(name, xml, deep=True, extra=(), failure=False):
     cmd = [str(exe), '--background', '--quiet', '--device', device, '--shadingsys', 'osl' if name.startswith('osl_') else 'svm',
            '--samples', str(S), '--threads', '4', '--width', str(W), '--height', str(H), '--output', str(beauty)]
     if deep:
-        cmd += ['--deep-output', str(target), '--deep-records', str(records), '--deep-max-events', '4']
+        cmd += ['--deep-error', 'strict', '--deep-output', str(target), '--deep-records', str(records), '--deep-max-events', '4']
         if not name.startswith('opaque_'): cmd += ['--deep-transparent']
     if failure: target.write_bytes(b'previous-complete-frame')
     p = subprocess.run(cmd + list(extra) + [str(src)], capture_output=True, text=True, timeout=900)

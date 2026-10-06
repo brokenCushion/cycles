@@ -1,10 +1,8 @@
 # Blender deep output
 
 Custom Blender uses the same Cycles deep core as the standalone renderer.
-The historical M8 release passed user review on 2026-09-29. The requested full
-landscape production qualification is now an open M8 completion requirement.
-See [release gates](DEEP_MILESTONES.md) and
-[measurements](DEEP_PERFORMANCE_AND_VDB.md) for current qualification.
+Current work follows the [optimization plan](DEEP_OPTIMIZATION_PLAN.md).
+See its results and [current status](DEEP_IMPLEMENTATION_STATUS.md).
 
 ## Build
 
@@ -32,6 +30,15 @@ is separate and does not include this feature.
 & builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd env python src/deep/validate_blender_deep_gaffer.py builds/validation/blender-deep/scene-full-deep
 & builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd builds/validation/blender-deep/scene-full-deep/blender_deep_review.gfr
 ```
+
+`deep_error` defaults to `1e-3`. Set it to `0` in Blender for strict output;
+the render helper and standalone renderer use `--deep-error strict`.
+Non-strict values must exceed the fixed `1e-6` FLOAT precision floor and be
+at most `1e-2`. `cycles:deepError` records the effective FLOAT setting.
+Strict preserves the old payload and all deterministic headers, including
+`cycles:maxTransmittanceError`; validators read that legacy bound in strict.
+Surface `--deep-reduce` and volume coalescing share the same setting/budget.
+Phase 3a uses host fitting only; device compression is a later stop.
 
 For a beauty comparison, repeat into a separate output directory without `--deep`.
 Use identical device, samples and resolution. The helper preserves scene geometry,

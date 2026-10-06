@@ -31,7 +31,8 @@ class Capture {
           bool adaptive = false,
           bool volume = false,
           bool volume_grid = false,
-          int export_workers = 1);
+          int export_workers = 1,
+          float error = 0);
   ~Capture();
   void record(int x, int y, uint32_t sample, float depth);
   /* Only complete records count as accepted camera samples. */
@@ -47,6 +48,7 @@ class Capture {
   VolumeCameraSample volume_sample(int x, int y, int sample,
                                    double density_tolerance = volume_density_error) const;
   std::vector<IntervalSample> reconstruct_volume_pixel(int x, int y) const;
+  float error() const { return error_setting_; }
   bool volume() const
   {
     return volume_;
@@ -110,6 +112,7 @@ class Capture {
   void end_export_row(int y) const;
 
  private:
+  float error_setting_ = 0;
   size_t volume_row_sample_limit_ = 0;
   size_t volume_pixel_bytes_ = 0;
   int volume_export_workers_ = 1;

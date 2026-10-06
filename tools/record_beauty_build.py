@@ -6,17 +6,37 @@ overlay. This records provenance; it does not infer a build from an executable.
 """
 import hashlib
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 DEEP_HOST = {'src/app/deep_output.cpp', 'src/app/deep_output.h',
-             'src/integrator/path_trace_deep_tile.h', 'src/session/output_driver.h'}
+             'src/integrator/path_trace_deep_tile.h', 'src/session/output_driver.h',
+             'src/session/deep.h', 'src/session/deep.cpp'}
 
 
 def git(*args):
     return subprocess.check_output(['git', '-C', str(ROOT), *args])
+
+
+def without_deep_blocks(source):
+    """Exclude only explicitly guarded deep host/scheduling code, keep all else."""
+    output, depth = [], 0
+    for line in source.splitlines(keepends=True):
+        directive = re.match(rb'\s*#\s*(ifdef|ifndef|if|endif)\b(.*)', line)
+        if depth:
+            if directive:
+                depth += -1 if directive[1] == b'endif' else 1
+            continue
+        if directive and directive[1] == b'ifdef' and directive[2].strip() == b'WITH_CYCLES_DEEP_OPAQUE':
+            depth = 1
+        else:
+            output.append(line)
+    if depth:
+        raise ValueError('Unclosed deep conditional')
+    return b''.join(output)
 
 
 def beauty_identity(commit):
@@ -25,10 +45,16 @@ def beauty_identity(commit):
         metadata, path = line.split('\t')
         if path.startswith(('src/deep/', 'src/kernel/deep/')) or path in DEEP_HOST:
             continue
-        files[path] = metadata.split()[2]
+        if path in ('src/integrator/path_trace.cpp', 'src/app/cycles_standalone.cpp'):
+            files[path] = hashlib.sha256(without_deep_blocks(git('show', commit + ':' + path))).hexdigest()
+        else:
+            files[path] = metadata.split()[2]
     adapter = git('show', commit + ':tools/prepare_blender_deep.py')
-    # Only the deep output callback is excluded; all beauty compatibility edits
+    # Deep properties/sync and output callback are excluded; all beauty compatibility edits
     # and the pinned Blender revision remain in the source identity.
+    properties = adapter.index(b"edit('blender/addon/properties.py'")
+    driver = adapter.index(b"edit('blender/output_driver.h'", properties)
+    adapter = adapter[:properties] + adapter[driver:]
     begin = adapter.index(b"edit('blender/output_driver.cpp', 'CCL_NAMESPACE_END'")
     end = adapter.index(b'# Only the offline render driver', begin)
     files['tools/prepare_blender_deep.py:outside-deep-output'] = hashlib.sha256(

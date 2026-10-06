@@ -37,7 +37,7 @@ def render(name, xml, device='CPU', deep=True, extra=(), failure=False):
            '--threads', '4', '--samples', str(S), '--width', str(W), '--height', str(H),
            '--output', str(beauty)]
     if deep:
-        cmd += ['--deep-output', str(target), '--deep-records', str(records), '--deep-transparent', '--deep-max-events', '4']
+        cmd += ['--deep-error', 'strict', '--deep-output', str(target), '--deep-records', str(records), '--deep-transparent', '--deep-max-events', '4']
     if failure:
         target.write_bytes(b'previous-complete-frame')
     p = subprocess.run(cmd + list(extra) + [str(source)], capture_output=True, text=True, timeout=900)

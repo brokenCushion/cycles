@@ -35,7 +35,7 @@ for index, device in enumerate(('CPU', 'CUDA')):
     command = [str(exe), '--background', '--quiet', '--device', device,
         '--shadingsys', 'svm', '--samples', '16', '--threads', '12',
         '--width', '640', '--height', '480', '--output', str(beauty),
-        '--deep-output', str(deep), '--deep-transparent', '--deep-max-events', '8',
+        '--deep-error', 'strict', '--deep-output', str(deep), '--deep-transparent', '--deep-max-events', '8',
         '--deep-memory-mb', '32', str(source)]
     timing = {}
     if not existing_renders:

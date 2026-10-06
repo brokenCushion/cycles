@@ -64,6 +64,9 @@ def self_test():
 
 def validate(source, stored_path, report_path):
     stored = json.loads(stored_path.read_text())
+    tolerance = stored['deep_error']
+    if not (math.isfinite(tolerance) and 0 < tolerance <= 1e-2):
+        raise RuntimeError('Invalid EXR-derived error bound')
     outputs = {(p['x'], p['y']): p['samples'] for p in stored['pixels']}
     seen, populations = set(), []
     maximum, probes = 0.0, 0
@@ -127,12 +130,12 @@ def validate(source, stored_path, report_path):
             print('Checked pixel', pixel, 'cameras', len(functions), 'error', maximum, flush=True)
     if seen != set(outputs):
         raise RuntimeError('Missing diagnostic pixels')
-    report = dict(passed=maximum <= 1e-6, max_accepted_camera_error=maximum,
+    report = dict(passed=maximum <= tolerance, deep_error=tolerance, max_accepted_camera_error=maximum,
                   accepted_camera_probes=probes, accepted_camera_pixels=len(seen),
                   accepted_populations=populations, oracle='Independent NumPy extinction sweep; one pixel at a time')
     report_path.write_text(json.dumps(report, indent=2))
     if not report['passed']:
-        raise RuntimeError('Accepted-camera curve error exceeds 1e-6')
+        raise RuntimeError('Accepted-camera curve error exceeds EXR bound')
 
 
 if __name__ == '__main__':

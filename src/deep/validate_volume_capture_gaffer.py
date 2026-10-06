@@ -15,7 +15,7 @@ import Gaffer
 import GafferImage
 import GafferScene
 import imath
-from validate_gaffer import beauty_repeat_gate
+from validate_gaffer import beauty_repeat_gate, deep_error
 from cuda_beauty_gate import raw_pass_gate
 
 exe, out = (Path(p).resolve() for p in sys.argv[1:3])
@@ -103,7 +103,7 @@ def render(name, xml, w, h, samples, deep=True, extra=(), failure=False):
             '--width',str(w),'--height',str(h),'--samples',str(samples),'--threads','8',
             '--output',str(beauty)]
     if deep:
-        args += ['--deep-volume','--deep-output',str(deepfile),'--deep-records',str(ledger),
+        args += ['--deep-volume','--deep-error', 'strict', '--deep-output',str(deepfile),'--deep-records',str(ledger),
                  '--deep-memory-mb','64','--deep-max-events','16']
     if failure:
         deepfile.write_bytes(b'preserve')
@@ -248,8 +248,8 @@ def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=1
         check(difference <= 2e-6, name + ': CPU/CUDA raw transmittance mismatch')
     report['fixtures'][name] = stats
     print(name, stats, flush=True)
-    check(maximum <= 1e-6, name + ': Gaffer curve mismatch')
-    check(analytic_error <= 2e-6, name + ': independent geometry/extinction mismatch')
+    check(maximum <= deep_error(deep['out']), name + ': Gaffer curve mismatch')
+    check(analytic_error <= 2 * deep_error(deep['out']), name + ': independent geometry/extinction mismatch')
     check((cuda_raw_violations == 0) if device == 'CUDA' else
           beauty_repeat_gate(device, beauty_error, repeat_error),
           name + ': beauty accumulation bound exceeded')

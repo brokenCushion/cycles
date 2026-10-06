@@ -20,7 +20,7 @@ std::vector<VolumeInterval> integrate_cubic_density(
     const double tolerance,
     const size_t max_intervals)
 {
-  if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-3 || !max_intervals)
+  if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-2 || !max_intervals)
     throw std::invalid_argument("Invalid cubic integration budget");
   std::vector<std::pair<double, int>> boundaries;
   std::vector<std::pair<double, double>> completed;
@@ -122,7 +122,7 @@ std::vector<VolumeInterval> integrate_linear_density(
     const double tolerance,
     const size_t max_intervals)
 {
-  if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-3 || !max_intervals)
+  if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-2 || !max_intervals)
     throw std::invalid_argument("Invalid density integration budget");
   size_t active = 0;
   for (const auto &s : segments) {
@@ -373,7 +373,7 @@ std::vector<IntervalSample> reduce_interval_curve(const std::vector<IntervalSamp
                                                  const double tolerance)
 {
   validate_curve(source);
-  if (!std::isfinite(tolerance) || tolerance < 0 || tolerance > 1e-3)
+  if (!std::isfinite(tolerance) || tolerance < 0 || tolerance > 1e-2)
     throw std::invalid_argument("Invalid volume export reduction budget");
   std::vector<IntervalSample> result;
   result.reserve(source.size());
@@ -464,9 +464,9 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
                                               double reduction_tolerance,
                                               size_t max_working_bytes)
 {
-  if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-3 || !max_intervals ||
+  if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-2 || !max_intervals ||
       !std::isfinite(reduction_tolerance) || reduction_tolerance < 0 ||
-      reduction_tolerance > 1e-3)
+      reduction_tolerance > 1e-2)
     throw std::invalid_argument("Invalid volume reconstruction budget");
   std::unordered_set<uint64_t> ids;
   std::vector<double> boundaries;

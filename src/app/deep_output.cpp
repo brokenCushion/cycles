@@ -20,7 +20,8 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
   image.display_window = {0, 0, tile.width - 1, tile.height - 1};
   image.data_window = image.display_window;
   image.compression = deep::DeepCompression::Zips;
-  image.reduction_error = reduce ? 1e-3 : 0;
+  image.error = tile.error();
+  image.reduction_error = reduce ? (image.error ? deep::error_budget(image.error).effective : 1e-3) : 0;
   image.volume_row_sample_limit = tile.volume_row_sample_limit();
   image.volume_export_workers = tile.volume_export_workers();
   image.export_statistics = tile.export_statistics();

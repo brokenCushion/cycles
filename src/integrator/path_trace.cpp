@@ -750,7 +750,8 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
   deep_capture_ = make_unique<deep::Capture>(
       params.width, params.height, samples, capture_bytes,
       (settings.transparent || settings.volume) ? event_capacity : 0,
-      true, adaptive, settings.volume, settings.volume_grid, TaskScheduler::max_concurrency());
+      true, adaptive, settings.volume, settings.volume_grid, TaskScheduler::max_concurrency(),
+      settings.error);
   for (auto &work : path_trace_works_) {
     work->set_deep_capture(deep_capture_.get());
   }

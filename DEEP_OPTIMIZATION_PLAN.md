@@ -200,15 +200,16 @@ transmittance error, enforced by single-pass Lokovic-Veach style compression.
 Keep the existing exponential-interval representation (it matches the
 OpenEXR deep volumetric convention); do not switch to piecewise-linear T.
 
-3a. Setting
+3a. Setting (host path only; stop for review after results)
 - Add `float error` to `DeepSettings` (`src/session/deep.h`). Default `1e-3`.
   Range `[strict, 1e-2]`. `strict` = today's constants exactly.
 - Plumb through standalone (`--deep-error <float|strict>` in
   `src/app/cycles_standalone.cpp`) and Blender (`deep_error` property via
   `tools/prepare_blender_deep.py` patches; document in
   `BLENDER_DEEP_INTEGRATION.md`).
-- Write the effective value to the EXR header (`cycles:deepError`) so validators
-  read it instead of assuming 1e-6.
+- Non-strict writes the effective value as `cycles:deepError`. Strict keeps the
+  existing `cycles:maxTransmittanceError` only, preserving deterministic headers.
+  Validators read the published bound (new attribute, or legacy in strict).
 - Budget split (document in `src/deep/volume.h`): the FLOAT export/coefficient
   allowance is a precision floor and stays fixed. Split the remainder
   `E - export_floor` between device per-ray compression (50%) and host
@@ -222,7 +223,9 @@ OpenEXR deep volumetric convention); do not switch to piecewise-linear T.
   coalescing allowance must also derive from `DeepSettings::error`, inside the
   same documented budget split. Strict keeps today's values.
 
-3b. Device per-ray compression
+3b. Device per-ray compression (separate review stop)
+- Before coding 3b, document the error-bound derivation in `volume_grid.h`,
+  summarize it to the user, then add independent exact-cubic integration tests.
 - In the kernel, compress each object's ordered cell stream as it is produced
   (`deep_volume_grid_capture` in `src/kernel/deep/volume_grid.h`, and the
   homogeneous path in `volume.h`). Emit constant-extinction `DEEP_VOLUME` events
@@ -245,7 +248,7 @@ OpenEXR deep volumetric convention); do not switch to piecewise-linear T.
   depth and stop. Error <= eps_ray. Only enabled when `error` is not strict.
 - Strict mode keeps today's cubic records and host path untouched.
 
-3c. deepID-ready data (no output change yet; groundwork for Phase 6)
+3c. deepID-ready data (separate review stop; no output change; groundwork for Phase 6)
 - Add the object index to every captured event (surface hits and volume
   intervals) in `kernel/deep/types.h`, with updated layout asserts, GPU buffers
   and spill format. The kernel already traverses one object at a time

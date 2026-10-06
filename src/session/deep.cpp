@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "session/deep.h"
+#include "deep/volume.h"
 #include "scene/background.h"
 #include "scene/bake.h"
 #include "scene/camera.h"
@@ -381,6 +382,7 @@ static void validate_shader(Scene *scene, Shader *shader,
 
 void validate_deep_scene(Scene *scene, SessionParams &params)
 {
+  deep::error_budget(params.deep.error);
   const bool transparent = params.deep.transparent;
   const bool volume = params.deep.volume;
   params.deep.volume_grid = false;

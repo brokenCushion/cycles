@@ -67,7 +67,7 @@ def run(exe, directory):
         cmd = [str(exe), '--device', 'CPU', '--background', '--quiet', '--samples', str(SAMPLES),
                '--threads','4','--width',str(WIDTH),'--height',str(HEIGHT),'--output',str(beauty)]
         if deep:
-            cmd += ['--deep-output',str(output),'--deep-records',str(records)]
+            cmd += ['--deep-error', 'strict', '--deep-output',str(output),'--deep-records',str(records)]
         cmd += list(extra) + [str(source)]
         if expect_error:
             output.write_bytes(b'preserve-existing-output')
@@ -175,8 +175,8 @@ def run(exe, directory):
         ('panorama',valid.replace('camera_type="perspective"','camera_type="panorama"'),(), 'perspective'),
         ('volume',valid.replace('to="output surface"/></shader>', 'to="output surface"/><connect from="e emission" to="output volume"/></shader>'),(), 'volume'),
         ('invalid_budget',valid,('--deep-memory-mb','0'), 'budget'),
-        ('alias',valid,('--deep-output',str(directory/'reject_alias.exr')), 'distinct'),
-        ('output_directory',valid,('--deep-output',str(directory)), 'Deep render failed'),
+        ('alias',valid,('--deep-error', 'strict', '--deep-output',str(directory/'reject_alias.exr')), 'distinct'),
+        ('output_directory',valid,('--deep-error', 'strict', '--deep-output',str(directory)), 'Deep render failed'),
     ]
     for name,xml,extra,message in bad: render('reject_'+name,xml,True,extra,message)
     script=Gaffer.ScriptNode()

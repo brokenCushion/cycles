@@ -73,7 +73,7 @@ def render(name, selected):
     source=OUT/(name+'.xml'); source.write_text(xml+'</cycles>')
     cmd=[str(ROOT/'install/cycles-m4.exe'),'--background','--quiet','--device','CPU',
          '--width',str(W),'--height',str(H),'--samples',str(S),'--threads','8',
-         '--output',str(OUT/(name+'.beauty.exr')),'--deep-output',str(OUT/(name+'.deep.exr')),
+         '--output',str(OUT/(name+'.beauty.exr')),'--deep-error', 'strict', '--deep-output',str(OUT/(name+'.deep.exr')),
          '--deep-transparent','--deep-max-events','8','--deep-memory-mb','512',str(source)]
     result=subprocess.run(cmd,capture_output=True,text=True,timeout=600)
     (OUT/(name+'.log')).write_text(result.stdout+result.stderr)

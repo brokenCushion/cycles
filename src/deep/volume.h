@@ -6,6 +6,8 @@
 #include <atomic>
 #include <chrono>
 #include <limits>
+#include <cmath>
+#include <stdexcept>
 
 namespace ccl::deep {
 
@@ -34,6 +36,34 @@ struct ExportTimer {
 inline constexpr double volume_density_error = 1e-7;
 inline constexpr double volume_reconstruction_error = 5e-8;
 inline constexpr double volume_coefficient_error = 4e-8;
+
+/* One absolute transmittance bound E. Zero selects the legacy strict path.
+ * Non-strict: reserve F=1e-6 for FLOAT publication/coefficient rounding, then
+ * eps_ray=(E-F)/2 and eps_host=(E-F)/2. In 3a the existing host cubic fitter
+ * spends eps_ray (no device compression yet). Camera averaging is convex,
+ * so its per-ray bound survives averaging. Split eps_host equally between
+ * mixture fitting/reduction and export coalescing. Balanced averaging divides
+ * its allocation across levels; coalescing checks the complete curve.
+ * Thus eps_ray + eps_mixture + eps_coalesce + F = E, not one E per merge.
+ * F includes the fixed 4e-8 coefficient reserve. Surface reduction instead
+ * spends E-F on its globally bounded delayed steps, plus F for FLOAT export.
+ * Strict returns the original constants and preserves original arithmetic,
+ * including export allowance/coalescing and the optional 1e-3 surface mode. */
+struct ErrorBudget {
+  double density, reconstruction, coalescing, publication, effective;
+};
+inline ErrorBudget error_budget(const float error)
+{
+  if (error == 0)
+    return {volume_density_error, volume_reconstruction_error, 2.5e-7,
+            1e-6 - volume_density_error - volume_reconstruction_error - volume_coefficient_error,
+            1e-6};
+  if (!std::isfinite(error) || error <= 1e-6 || error > 1e-2)
+    throw std::invalid_argument("Deep error must be strict or greater than 1e-6, up to 0.01");
+  const double remainder = double(error) - 1e-6;
+  return {remainder / 2, remainder / 4, remainder / 4,
+          remainder / 4 + 1e-6 - volume_coefficient_error, double(error)};
+}
 
 struct VolumeInterval {
   double front, back;

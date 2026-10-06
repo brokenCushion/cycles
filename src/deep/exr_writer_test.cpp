@@ -7,6 +7,7 @@
 #include <OpenEXR/ImfHeader.h>
 #include <OpenEXR/ImfIO.h>
 #include <OpenEXR/ImfIntAttribute.h>
+#include <OpenEXR/ImfDoubleAttribute.h>
 #include <OpenEXR/ImfPartType.h>
 #include <OpenEXR/ImfStringAttribute.h>
 #include <OpenEXR/OpenEXRConfig.h>
@@ -406,6 +407,17 @@ int main(int argc, char **argv)
     std::filesystem::create_directories(directory);
     const auto source = ledgers();
     const auto base = fixture(source);
+    std::filesystem::create_directories(directory / "settings");
+    for (float error : {0.f, 1e-4f, 1e-3f}) {
+      auto image = base;
+      image.error = error;
+      const auto path = directory / "settings" / ("setting_" + std::to_string(error) + ".exr");
+      write_deep_exr(path, image);
+      Imf::DeepScanLineInputFile input(path.string().c_str());
+      const auto *attribute = input.header().findTypedAttribute<Imf::DoubleAttribute>("cycles:deepError");
+      require(error ? attribute && attribute->value() == double(error) : attribute == nullptr,
+              "Effective error header/strict header preservation mismatch");
+    }
     for (const auto compression : {DeepCompression::None, DeepCompression::Zips}) {
       const std::string suffix = compression == DeepCompression::None ? "none" : "zips";
       for (int window = 0; window < 3; ++window) {

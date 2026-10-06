@@ -18,7 +18,7 @@ out.mkdir(parents=True, exist_ok=True)
 command = [str(exe), '--background', '--quiet', '--device', 'CUDA',
            '--shadingsys', 'svm', '--samples', '16', '--threads', '4',
            '--width', '640', '--height', '480', '--output', str(out / 'CUDA.beauty.exr'),
-           '--deep-output', str(out / 'CUDA.deep.exr'), '--deep-transparent',
+           '--deep-error', 'strict', '--deep-output', str(out / 'CUDA.deep.exr'), '--deep-transparent',
            '--deep-max-events', '8', '--deep-memory-mb', '32', str(source)]
 p = subprocess.run(command, capture_output=True, text=True, timeout=1800)
 (out / 'CUDA.log').write_text(p.stdout + p.stderr)

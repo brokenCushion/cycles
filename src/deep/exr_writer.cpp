@@ -116,6 +116,9 @@ std::vector<FloatPixel> prepare(const SurfaceImage &image)
 
 Imf::Header make_header(const SurfaceImage &image)
 {
+  const auto budget = error_budget(image.error);
+  if (image.error && image.reduction_error && image.reduction_error != budget.effective)
+    throw std::invalid_argument("Surface reduction must use the shared deep error setting");
   const auto dw = box(image.data_window);
   Imf::Header header(box(image.display_window),
                      dw,
@@ -137,7 +140,10 @@ Imf::Header make_header(const SurfaceImage &image)
   header.insert("cycles:beautyIdentity", Imf::StringAttribute(image.beauty_identity));
   header.insert(
       "cycles:maxTransmittanceError",
-      Imf::DoubleAttribute(image.reduction_error ? image.reduction_error : export_error));
+      Imf::DoubleAttribute(image.error ? budget.effective :
+                          (image.reduction_error ? image.reduction_error : export_error)));
+  if (image.error)
+    header.insert("cycles:deepError", Imf::DoubleAttribute(budget.effective));
   /* Do not advertise deepImageState: distinct double depths can round together. */
   try {
     header.sanityCheck();
@@ -285,14 +291,14 @@ static std::vector<FloatPixel> prepare_volume(
      * absolute exp(-tau) error is below 2.2e-8. The reserve also covers
      * subnormal contributions from the bounded number of cell records. */
     double error = interval_curve_error(source[p], quantized);
-    const double allowance = export_error - volume_density_error - volume_reconstruction_error -
-                             volume_coefficient_error;
+    const auto budget = error_budget(image.error);
+    const double allowance = budget.publication;
     if (quantized.size() > 64) {
       /* Fewer small alpha contributions reduce consumer FLOAT accumulation
        * error as well as storage. Spend part of the existing export allowance;
        * the original source still checks EVERY boundary and interior extremum.
        * Do not merge steps/gaps or weaken the frame's 1e-6 curve budget. */
-      const auto reduced = reduce_interval_curve(quantized, 2.5e-7);
+      const auto reduced = reduce_interval_curve(quantized, budget.coalescing);
       if (reduced.size() < quantized.size()) {
         auto projected = project_volume_depths(reduced);
         const double candidate_error = interval_curve_error(source[p], projected);
@@ -460,8 +466,8 @@ void write_volume_exr_pixels(const std::filesystem::path &path,
 std::vector<SurfaceSample> reduce_surface(const std::vector<SurfaceSample> &source,
                                           const double tolerance)
 {
-  if (!std::isfinite(tolerance) || tolerance < 0 || tolerance > 1e-3)
-    throw std::invalid_argument("Deep reduction tolerance must be 0..0.001");
+  if (!std::isfinite(tolerance) || tolerance < 0 || tolerance > 1e-2)
+    throw std::invalid_argument("Deep reduction tolerance must be 0..0.01");
   if (tolerance == 0)
     return source;
   std::vector<SurfaceSample> result;
@@ -484,10 +490,10 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
                          const RowCallback &begin_row, const RowCallback &end_row)
 {
   if (!std::isfinite(image.reduction_error) || image.reduction_error < 0 ||
-      image.reduction_error > 1e-3 ||
+      image.reduction_error > 1e-2 ||
       (image.reduction_error > 0 && image.reduction_error <= export_error))
     throw std::invalid_argument(
-        "Deep reduction error must be zero or greater than 1e-6, up to 0.001");
+        "Deep reduction error must be zero or greater than 1e-6, up to 0.01");
   const auto header = make_header(image);
   const auto dw = header.dataWindow();
   const size_t width = size_t(int64_t(dw.max.x) - dw.min.x + 1);

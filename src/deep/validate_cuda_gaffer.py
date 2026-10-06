@@ -46,7 +46,7 @@ def render(name,xml,device='CUDA',deep=True,extra=(),failure=False):
     command=[str(exe),'--background','--quiet','--device',device,'--shadingsys','svm',
              '--samples','16','--threads','4','--width','16','--height','12','--output',str(beauty)]
     if deep:
-        command+=['--deep-output',str(target),'--deep-records',str(records)]
+        command+=['--deep-error', 'strict', '--deep-output',str(target),'--deep-records',str(records)]
         if not name.startswith('opaque_') or name.startswith('opaque_back_'):
             command+=['--deep-transparent']
         if name.startswith('layers64_'):

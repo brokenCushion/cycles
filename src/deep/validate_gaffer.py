@@ -21,6 +21,18 @@ def check(condition, message):
         raise RuntimeError(message)
 
 
+def deep_error(image):
+    """Read the published absolute curve bound; strict retains the legacy header."""
+    metadata = image['metadata'].getValue()
+    legacy = metadata.get('cycles:maxTransmittanceError')
+    check(legacy is not None, 'Missing EXR transmittance bound')
+    declared = metadata.get('cycles:deepError', legacy)
+    error = float(declared.value)
+    check(math.isfinite(error) and 0 < error <= 1e-2 and error == float(legacy.value),
+          'Invalid or inconsistent EXR transmittance bound')
+    return error
+
+
 def population_reference_error(value, population, references):
     """Compare every native reference with the same count; missing counts fail."""
     return max((abs(value - native) for native, count in references
@@ -121,7 +133,7 @@ def validate(directory):
                           f"Deep sample mismatch: {path.name}, pixel {i}")
                 target = 0.0 if empty else float(csv_pixels[i]["flattened_alpha"])
                 error = abs(flat_alpha(flat["out"], point) - target)
-                check(math.isfinite(error) and error <= 1e-6, f"Flattening mismatch: {path.name}, pixel {i}")
+                check(math.isfinite(error) and error <= deep_error(reader["out"]), f"Flattening mismatch: {path.name}, pixel {i}")
                 report["max_flat_alpha_error"] = max(report["max_flat_alpha_error"], error)
             for far in (1.125, 3.125, 9.125, 70.0):
                 clip["farClip"]["value"].setValue(far)
@@ -130,7 +142,7 @@ def validate(directory):
                     t = math.prod(1.0 - alpha for z, alpha in samples if z < far)
                     point = fmt.fromEXRSpace(imath.V2i(dw[0] + i % 4, dw[1] + i // 4))
                     error = abs(flat_alpha(clip["out"], point) - (1.0 - t))
-                    check(math.isfinite(error) and error <= 1e-6,
+                    check(math.isfinite(error) and error <= deep_error(reader["out"]),
                           f"Partial-depth mismatch: {path.name}, pixel {i}, depth {far}")
                     report["max_partial_alpha_error"] = max(report["max_partial_alpha_error"], error)
         report["files"].append(path.name)

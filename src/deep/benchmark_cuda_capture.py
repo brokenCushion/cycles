@@ -40,7 +40,7 @@ for name, source, capacity, transparent in cases:
                        '--shadingsys', 'svm', '--samples', '16', '--threads', '4',
                        '--width', '64', '--height', '48', '--output', str(out / (tag + '.beauty.exr'))]
             if enabled:
-                command += ['--deep-output', str(out / (tag + '.deep.exr')),
+                command += ['--deep-error', 'strict', '--deep-output', str(out / (tag + '.deep.exr')),
                             '--deep-max-events', str(capacity)]
                 if transparent:
                     command += ['--deep-transparent']

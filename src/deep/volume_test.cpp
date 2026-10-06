@@ -119,6 +119,26 @@ int main(int argc, char **argv)
     check(argc == 2 || argc == 3, "Expected output directory and optional captured-curve CSV");
     const std::filesystem::path directory(argv[1]);
     std::filesystem::create_directories(directory);
+    for (float error : {1e-4f, 1e-3f, 1e-2f}) {
+      const auto budget = error_budget(error);
+      check(std::abs(budget.density + budget.reconstruction + budget.coalescing + 1e-6 - error) < 1e-15,
+            "Shared error allocations do not sum to the user setting");
+      const std::vector<VolumeCameraSample> rays = {
+          {{0, 1, true, {{2.5, .2}}}, {{1, 4, 1.7}}},
+          {{1, 1, true, {}}, {{1.5, 5, .4}}}};
+      const auto fitted = reconstruct_volume(rays, budget.reconstruction / 2, 65536,
+                                             budget.reconstruction / 2);
+      for (int i = 0; i <= 10000; ++i) {
+        const double z = .5 + 5 * (i / 10000.0);
+        check(std::abs(oracle(rays, z) - interval_transmittance(fitted, z)) <= budget.reconstruction,
+              "Host mixture fit exceeded its allocation");
+      }
+    }
+    for (float error : {-1.f, 1e-7f, .02f, std::numeric_limits<float>::infinity()})
+      rejects([&] { error_budget(error); });
+    check(error_budget(0).density == volume_density_error &&
+              error_budget(0).reconstruction == volume_reconstruction_error,
+          "Strict budget changed");
     for (const int population : {9, 65, 1024}) {
       std::vector<VolumeCameraSample> rays;
       for (int i = 0; i < population; ++i) {

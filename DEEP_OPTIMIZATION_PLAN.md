@@ -382,75 +382,94 @@ host working set, device-wide GPU peak.
 
 ## 6. Results
 
-### Phase 0 - scope cleanup; acceptance failed
+### Phase 0 - CUDA qualification passes; literal boundary identity unresolved
 
 Checkpoint: `59963b932`. Snapshot experiment: `codex/volume-majorant-determinism`
-(`9a017f055`). Implementation: `44b44477e`. Both builds pass. The small landscape
-fails the raw CUDA beauty envelope, so Phase 0 is not accepted and Phase 1 has
-not started. No threshold was changed to pass; no additional repeat was sought.
+(`9a017f055`). Removal/build: `44b44477e`. K=5 input gate: `7efb85198`.
+Both builds and Phase 0's small-landscape acceptance checks pass. Literal
+boundary-file identity does not pass, so Phase 0 is not marked fully accepted
+under the strict byte contract; Phase 1 has not started. The explicit strict setting arrives in Phase 3; capture/export
+still use the unchanged legacy strict path.
 
-Single measurements, not speedup claims. Both runs use the legacy strict deep
-path; the explicit error setting arrives in Phase 3. Evidence:
-`builds/validation/landscape-cloud/optimization-phase0`.
+Single measurements, not speedup claims. Before controls used K=2; after uses
+the approved K=5, one global envelope per pass, count matching and four FLOAT
+ULP. Raw after differences are maxima against the closest count-matched
+reference. Evidence: `builds/validation/landscape-cloud/optimization-phase0/k5`.
 
 | Case | Metric | Before | After | Commit |
 | --- | --- | --- | --- | --- |
-| 47x20 / max16 | Capture | 5.675599 s | 5.804744 s | `44b44477e` |
-| 47x20 / max16 | Capture wait + readback | 4.562987 s | 4.647866 s | `44b44477e` |
-| 47x20 / max16 | GPU readback | 372,191,232 bytes | 372,191,232 bytes | `44b44477e` |
-| 47x20 / max16 | Spill stored | 13,006,224 bytes | 13,006,224 bytes | `44b44477e` |
-| 47x20 / max16 | Spill read | 34,173,856 bytes | 34,436,000 bytes | `44b44477e` |
-| 47x20 / max16 | Spill written | 14,805,816 bytes | 14,805,816 bytes | `44b44477e` |
-| 47x20 / max16 | Export | 8.25049 s | 8.1713 s | `44b44477e` |
-| 47x20 / max16 | EXR size | 4,445,714 bytes | 4,445,714 bytes | `44b44477e` |
-| 47x20 / max16 | Deep samples | 561,793 | 561,793 | `44b44477e` |
-| 47x20 / max16 | Peak process working set | 5,634,203,648 bytes | 5,553,156,096 bytes | `44b44477e` |
-| 47x20 / max16 | Device-wide GPU peak | 5,013 MiB | 5,217 MiB | `44b44477e` |
-| 47x20 / max16 | Max oracle error | 2.20131377e-07 | 2.20131377e-07 | `44b44477e` |
-| 47x20 / max16 | Max depth-cut error | 6.95131077e-07 | 6.95131077e-07 | `44b44477e` |
-| 47x20 / max16 | Raw beauty difference | 1.1920929e-07 | 2.38418579e-07 | `44b44477e` |
-| 47x20 / max16 | Raw ordinary-repeat envelope | 1.1920929e-07 | 1.78813934e-07 | `44b44477e` |
-| 47x20 / max16 | Denoised beauty difference | 0 | 0 | `44b44477e` |
-| 47x20 / max16 | Denoised ordinary-repeat envelope | 0 | 0 | `44b44477e` |
-| 47x20 / max16 | Beauty / oracle / depth gates | PASS / PASS / PASS | FAIL / PASS / PASS | `44b44477e` |
-| 587x250 / 4 | Capture | 71.598867 s | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | Capture wait + readback | 68.6113 s | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | GPU readback | 7,177,170,944 bytes | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | Spill stored | 508,375,136 bytes | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | Spill read | 3,850,327,984 bytes | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | Spill written | 564,666,368 bytes | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | Export | 50.1401 s | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | EXR size | 394,273,944 bytes | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | Deep samples | 52,189,081 | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | Peak process working set | 5,566,656,512 bytes | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | Device-wide GPU peak | 5,090 MiB | Not run: stopped at small beauty failure | `44b44477e` |
-| 587x250 / 4 | Max oracle error | 2.20799077e-07 | Not run | `44b44477e` |
-| 587x250 / 4 | Max depth-cut error | 8.2280344e-07 | Not run | `44b44477e` |
-| 587x250 / 4 | Raw beauty difference | 4.76837158e-07 | Not run | `44b44477e` |
-| 587x250 / 4 | Raw ordinary-repeat envelope | 4.76837158e-07 | Not run | `44b44477e` |
-| 587x250 / 4 | Denoised beauty difference | 0.407463074 | Not run | `44b44477e` |
-| 587x250 / 4 | Denoised ordinary-repeat envelope | 0.00909805298 | Not run | `44b44477e` |
-| 587x250 / 4 | Beauty / oracle / depth gates | FAIL / PASS / PASS | Not run | `44b44477e` |
-| 47x20 / max16 | Full deep EXR bytes | Reference | Identical SHA-256 | `44b44477e` |
-| CPU compatibility | Cases | 14/14 PASS | 14/14 PASS | `44b44477e` |
-| CPU compatibility | Summed case wall time | 82.516 s | 94.827 s | `44b44477e` |
-| CPU compatibility | Rendered deep EXR bytes | Reference | 9/9 identical | `44b44477e` |
-| CPU boundary | Renders / expected rejections | 33 / 17 PASS | 33 / 17 PASS | `44b44477e` |
-| CPU boundary | Deep sample-offset / Z / ZBack / A bits | Reference | 33/33 identical | `44b44477e` |
-| CPU boundary | Whole-file hash | Reference | 0/33 identical: beautyIdentity header differs | `44b44477e` |
-| CUDA compatibility | Cases | 4/4 PASS | 4/4 PASS | `44b44477e` |
-| CUDA compatibility | Summed case wall time | 56.719 s | 365.390 s | `44b44477e` |
-| CUDA compatibility | Rendered deep EXR bytes | Reference | 4/4 identical | `44b44477e` |
-| CUDA boundary | Renders / expected rejections | 33 / 17 PASS | 33 / 17 PASS | `44b44477e` |
-| CUDA boundary | Deep sample-offset / Z / ZBack / A bits | Reference | 33/33 identical | `44b44477e` |
-| CUDA boundary | Whole-file hash | Reference | 0/33 identical: beautyIdentity header differs | `44b44477e` |
-| Nine CTests | Result / wall time | 9/9 PASS / 17.28 s | 9/9 PASS / 24.59 s | `44b44477e` |
+| 47x20 / max16 | Capture | 5.675599 s | 5.804744 s | `7efb85198` |
+| 47x20 / max16 | Capture wait + readback | 4.562987 s | 4.647866 s | `7efb85198` |
+| 47x20 / max16 | GPU readback | 372,191,232 bytes | 372,191,232 bytes | `7efb85198` |
+| 47x20 / max16 | Spill stored | 13,006,224 bytes | 13,006,224 bytes | `7efb85198` |
+| 47x20 / max16 | Spill read | 34,173,856 bytes | 34,436,000 bytes | `7efb85198` |
+| 47x20 / max16 | Spill written | 14,805,816 bytes | 14,805,816 bytes | `7efb85198` |
+| 47x20 / max16 | Export | 8.25049 s | 8.1713 s | `7efb85198` |
+| 47x20 / max16 | EXR size | 4,445,714 bytes | 4,445,714 bytes | `7efb85198` |
+| 47x20 / max16 | Deep samples | 561,793 | 561,793 | `7efb85198` |
+| 47x20 / max16 | Peak process working set | 5,634,203,648 bytes | 5,553,156,096 bytes | `7efb85198` |
+| 47x20 / max16 | Device-wide GPU peak | 5,013 MiB | 5,217 MiB | `7efb85198` |
+| 47x20 / max16 | Max oracle error | 2.20131377e-07 | 2.20131377e-07 | `7efb85198` |
+| 47x20 / max16 | Max depth-cut error | 6.95131077e-07 | 6.95131077e-07 | `7efb85198` |
+| 47x20 / max16 | Raw beauty difference | 1.1920929e-07 | 1.1920929e-07 | `7efb85198` |
+| 47x20 / max16 | Raw ordinary-repeat envelope | 1.1920929e-07 | 3.57627869e-07 | `7efb85198` |
+| 47x20 / max16 | Denoised beauty difference | 0 | 0 | `7efb85198` |
+| 47x20 / max16 | Denoised ordinary-repeat envelope | 0 | 0.00544679165 | `7efb85198` |
+| 47x20 / max16 | Beauty / oracle / depth gates | PASS / PASS / PASS | PASS / PASS / PASS | `7efb85198` |
+| 587x250 / 4 | Capture | 71.598867 s | 71.649003 s | `7efb85198` |
+| 587x250 / 4 | Capture wait + readback | 68.6113 s | 68.6475 s | `7efb85198` |
+| 587x250 / 4 | GPU readback | 7,177,170,944 bytes | 7,177,011,200 bytes | `7efb85198` |
+| 587x250 / 4 | Spill stored | 508,375,136 bytes | 508,375,136 bytes | `7efb85198` |
+| 587x250 / 4 | Spill read | 3,850,327,984 bytes | 3,878,118,896 bytes | `7efb85198` |
+| 587x250 / 4 | Spill written | 564,666,368 bytes | 564,666,368 bytes | `7efb85198` |
+| 587x250 / 4 | Export | 50.1401 s | 49.0674 s | `7efb85198` |
+| 587x250 / 4 | EXR size | 394,273,944 bytes | 394,273,944 bytes | `7efb85198` |
+| 587x250 / 4 | Deep samples | 52,189,081 | 52,189,081 | `7efb85198` |
+| 587x250 / 4 | Peak process working set | 5,566,656,512 bytes | 5,750,951,936 bytes | `7efb85198` |
+| 587x250 / 4 | Device-wide GPU peak | 5,090 MiB | 5,227 MiB | `7efb85198` |
+| 587x250 / 4 | Max oracle error | 2.20799077e-07 | 2.20799077e-07 | `7efb85198` |
+| 587x250 / 4 | Max depth-cut error | 8.2280344e-07 | 8.2280344e-07 | `7efb85198` |
+| 587x250 / 4 | Raw beauty difference | 4.76837158e-07 | 4.76837158e-07 | `7efb85198` |
+| 587x250 / 4 | Raw ordinary-repeat envelope | 4.76837158e-07 | 0.0171391964 | `7efb85198` |
+| 587x250 / 4 | Denoised beauty difference | 0.407463074 | 0.0090982914 | `7efb85198` |
+| 587x250 / 4 | Denoised ordinary-repeat envelope | 0.00909805298 | 0.596702576 | `7efb85198` |
+| 587x250 / 4 | Beauty / oracle / depth gates | FAIL / PASS / PASS | PASS / PASS / PASS | `7efb85198` |
+| 47x20 / max16 | Full deep EXR bytes | Reference | Identical SHA-256 | `7efb85198` |
+| CPU compatibility | Cases | 14/14 PASS | 14/14 PASS | `7efb85198` |
+| CPU compatibility | Summed case wall time | 82.516 s | 91.719 s | `7efb85198` |
+| CPU compatibility | Rendered deep EXR bytes | Reference | 9/9 identical | `7efb85198` |
+| CPU boundary | Renders / expected rejections | 33 / 17 PASS | 33 / 17 PASS | `7efb85198` |
+| CPU boundary | Deep sample-offset / Z / ZBack / A bits | Reference | 33/33 identical | `7efb85198` |
+| CPU boundary | Whole-file hash | Reference | 0/33 identical: beautyIdentity header differs | `7efb85198` |
+| CUDA compatibility | Cases | 4/4 PASS | 4/4 PASS | `7efb85198` |
+| CUDA compatibility | Summed case wall time | 56.719 s | 87.547 s | `7efb85198` |
+| CUDA compatibility | Rendered deep EXR bytes | Reference | 4/4 identical | `7efb85198` |
+| CUDA boundary | Renders / expected rejections | 33 / 17 PASS | 33 / 17 PASS | `7efb85198` |
+| CUDA boundary | Deep sample-offset / Z / ZBack / A bits | Reference | 33/33 identical | `7efb85198` |
+| CUDA boundary | Whole-file hash | Reference | 0/33 identical: beautyIdentity header differs | `7efb85198` |
+| Nine CTests | Result / wall time | 9/9 PASS / 17.28 s | 9/9 PASS / 11.79 s | `7efb85198` |
+| 47x20 / max16 | Raw input violations / unmatched populations | Not checked per pass | 0 / 0 | `7efb85198` |
+| 587x250 / 4 | Raw input violations / unmatched populations | Not checked per pass | 0 / 0 | `7efb85198` |
+| 587x250 / 4 | Full deep EXR bytes | Reference | Identical SHA-256 | `7efb85198` |
 
-Boundary payload bits match; only the run-specific `cycles:beautyIdentity`
-header differs. Literal whole-file equality is therefore not satisfied there;
-no metadata exception was applied. Compatibility rejection sentinels are
-excluded from rendered-EXR identity counts. Regression wall times include cold
-CUDA compilation. Detailed stage/resource metrics were collected for the
-landscapes; suite aggregates record counts and wall times, not per-render
-resource peaks. The after-change performance case was skipped at the required
-acceptance stop.
+Historical denoised R outlier: pixel (505,96), deep 51.48297882 vs ordinary
+51.07551575, difference 0.40746307; all accepted counts were 4. Local raw inputs
+match, but neighboring noisy G at (505,93) is 0.84282809496 vs 0.84282815456
+(one FLOAT ULP; within the 4.76837158e-7 raw envelope). All 87 historical
+outliers have nearby noisy/albedo/normal differences, recorded in
+`k5/historical-oidn-neighbor-inputs.json`. OIDN filters spatial neighborhoods;
+input amplification is an inference, not an isolated causal replay. Depth was
+also checked but is not used to explain OIDN output. The post-cleanup K=5
+ordinary denoised envelope is 0.59670258, deep-on difference 0.00909829, with
+zero unexplained outliers and zero raw input violations. The earlier two-run
+envelope underestimated ordinary variation; no renderer tolerance was changed.
+
+Both boundary suites retain identical sample-offset / Z / ZBack / A bits.
+Their run-specific `cycles:beautyIdentity` headers contain output paths and
+beauty hashes, so whole-file equality across evidence directories is not met;
+no metadata exception or file normalization was applied. Rendered compatibility
+files and both landscapes are whole-file identical. Rejection sentinels are
+excluded from rendered-file counts. Suite times include control renders and
+validation, and are not performance comparisons. Detailed resource metrics are
+landscape-only. Wrong per-pixel-envelope diagnostics are retained separately;
+they were corrected to the plan's global per-pass definition using saved EXRs.

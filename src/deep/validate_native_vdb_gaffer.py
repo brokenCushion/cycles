@@ -14,6 +14,7 @@ import csv
 from pathlib import Path
 import sys
 import subprocess
+import os
 
 import CyclesDeep
 import Gaffer
@@ -39,7 +40,11 @@ parser.add_argument('--oracle-python', type=Path,
 parser.add_argument('--beauty-pool', type=Path, action='append', default=[],
                     help='Ordinary control directory with matching settings and unchanged beauty source')
 parser.add_argument('--beauty-builds', type=Path,
+                    default=os.environ.get('CYCLES_DEEP_BEAUTY_BUILDS'),
                     help='Recorded executable/beauty-source identities for cross-phase pooling')
+parser.add_argument('--beauty-pool-root', type=Path,
+                    default=Path(__file__).resolve().parents[2] / 'builds/validation',
+                    help='Search completed compatible controls across phases')
 args = parser.parse_args()
 directory, baseline = args.directory.resolve(), args.baseline.resolve()
 settings = json.loads((directory / 'render.json').read_text())
@@ -90,9 +95,36 @@ for y in range(0, height, tile):
             previous = offset
         total_deep_samples += previous
 if settings['device'] == 'CUDA' and not args.reader_only:
-    from cuda_beauty_gate import validate_cuda_beauty
+    from cuda_beauty_gate import validate_cuda_beauty, reference_pool
+    if args.beauty_builds:
+        args.beauty_pool += reference_pool(directory, args.beauty_pool_root, args.beauty_builds)
     cuda_report = validate_cuda_beauty(directory, [baseline] + (args.beauty_repeat or []),
                                     pool=args.beauty_pool, builds=args.beauty_builds)
+    # Extend only when raw states remain unmatched. Controls preserve the source
+    # scene/settings and never enable deep; the checker verifies every setting.
+    for attempt in range(1, 21):
+        if cuda_report['raw_passed'] or not args.beauty_builds:
+            break
+        registry = json.loads(args.beauty_builds.read_text())['builds']
+        blender = Path(registry[settings['renderer_sha256']]['executable'])
+        control = directory / ('beauty-control-%02d' % attempt)
+        if not control.exists():
+            control.mkdir()
+            command = [str(blender), '--factory-startup', '--background', '--disable-autoexec',
+                settings['source_file'], '--python-exit-code', '1', '--python',
+                str(Path(__file__).resolve().parents[2] / 'tools/render_blender_deep_scene.py'),
+                '--', '--output', str(control), '--samples', str(settings['samples']),
+                '--percentage', str(settings['percentage']), '--device', 'CUDA',
+                '--threads', str(settings['threads']), '--save-render-passes',
+                '--diagnostic-sample-count']
+            env = dict(os.environ)
+            for key in ('OCIO', 'CYCLES_KERNEL_PATH', 'CYCLES_DEEP_VALIDATE_CAPTURE_ONLY'):
+                env.pop(key, None)
+            with (control / 'process.log').open('w') as log:
+                subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+        args.beauty_pool.append(control)
+        cuda_report = validate_cuda_beauty(directory, [baseline] + (args.beauty_repeat or []),
+                                         pool=args.beauty_pool, builds=args.beauty_builds)
     beauty_error = cuda_report['max_deep_on_off']
     repeat_error = cuda_report['max_ordinary_repeat']
     beauty_peak = cuda_report['peak_absolute_value']

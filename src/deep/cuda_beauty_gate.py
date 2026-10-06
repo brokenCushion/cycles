@@ -6,6 +6,30 @@ import math
 from pathlib import Path
 import struct
 
+SETTINGS_KEYS = ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
+    'camera_world_matrix', 'camera_frame', 'frame', 'adaptive', 'adaptive_threshold',
+    'adaptive_min_samples', 'seed', 'use_animated_seed', 'denoising', 'denoiser',
+    'denoising_use_gpu', 'pixel_filter', 'threads', 'save_render_passes',
+    'diagnostic_sample_count_pass')
+
+
+def reference_pool(directory, root, builds):
+    """All completed deep-off controls with verified matching beauty/settings."""
+    settings = json.loads((Path(directory) / 'render.json').read_text())
+    registry = json.loads(Path(builds).read_text())['builds']
+    digest = settings['renderer_sha256']
+    result = []
+    for path in sorted(Path(root).rglob('render.json')):
+        other = json.loads(path.read_text())
+        sha = other.get('renderer_sha256')
+        same = sha == digest or (sha in registry and digest in registry and
+            registry[sha]['beauty_source_sha256'] == registry[digest]['beauty_source_sha256'])
+        if (same and not other.get('deep', True) and
+                all(other.get(k) == settings.get(k) for k in SETTINGS_KEYS) and
+                (path.parent / 'render-passes.exr').is_file()):
+            result.append(path.parent)
+    return result
+
 
 def float32_ulp(value):
     """FLOAT spacing at |value|, including zero, subnormals and negative values."""
@@ -53,10 +77,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     settings = [json.loads((p / 'render.json').read_text()) for p in paths]
     if settings[0]['device'] != 'CUDA' or not settings[0]['deep'] or any(s['deep'] for s in settings[1:]):
         raise ValueError('Expected one CUDA deep render and independent deep-off controls')
-    keys = ('source_sha256', 'samples', 'resolution', 'percentage', 'device', 'camera_world_matrix',
-            'camera_frame', 'frame', 'adaptive', 'adaptive_threshold', 'adaptive_min_samples',
-            'seed', 'use_animated_seed', 'denoising', 'denoiser', 'denoising_use_gpu', 'pixel_filter',
-            'threads', 'save_render_passes', 'diagnostic_sample_count_pass')
+    keys = SETTINGS_KEYS
     def executable(p, s):
         return s.get('renderer_sha256') or json.loads((p / 'measurement.json').read_text())['executable_sha256']
     digest = executable(directory, settings[0])

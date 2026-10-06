@@ -32,8 +32,8 @@ parser.add_argument('--expect-empty', action='store_true',
                     help='Require zero samples at every pixel for a zero-extinction fixture')
 parser.add_argument('--overlap-reference', nargs=2, type=Path,
                     help='Single-grid renders with matching cameras; check combined extinction')
-parser.add_argument('--beauty-repeat', type=Path,
-                    help='Independent CUDA repeat defining the raw and denoised beauty envelopes')
+parser.add_argument('--beauty-repeat', type=Path, action='append',
+                    help='Supply four times: five independent CUDA deep-off references including baseline')
 parser.add_argument('--oracle-python', type=Path,
                     help='Existing NumPy Python environment for bounded, large camera-CSV checks')
 args = parser.parse_args()
@@ -74,26 +74,6 @@ beauty['fileName'].setValue((directory / 'beauty.exr').as_posix())
 off = GafferImage.ImageReader()
 off['fileName'].setValue((baseline / 'beauty.exr').as_posix())
 check(off['out']['format'].getValue() == fmt, 'Beauty baseline format mismatch')
-repeat = None
-beauty_tolerance = 0.0
-if args.beauty_repeat:
-    check(settings['device'] == 'CUDA' and settings['samples'] > 1,
-          'Repeat tolerance is only for multisample CUDA fixtures')
-    repeat_directory = args.beauty_repeat.resolve()
-    check(repeat_directory != baseline and repeat_directory != directory,
-          'Beauty repeat must be an independent render directory')
-    repeated_settings = json.loads((repeat_directory / 'render.json').read_text())
-    for key in ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
-                'camera_world_matrix', 'camera_frame', 'frame', 'adaptive', 'denoising', 'deep'):
-        check(repeated_settings[key] == reference[key], 'Beauty repeat differs: ' + key)
-    for key in ('denoiser', 'denoising_use_gpu', 'save_render_passes'):
-        check(repeated_settings.get(key) == reference.get(key), 'Beauty repeat differs: ' + key)
-    if not args.reader_only:
-        check(repeated_settings.get('renderer_sha256') == settings['renderer_sha256'],
-              'Beauty repeat must use the same executable')
-    repeat = GafferImage.ImageReader()
-    repeat['fileName'].setValue((repeat_directory / 'beauty.exr').as_posix())
-    check(repeat['out']['format'].getValue() == fmt, 'Beauty repeat format mismatch')
 tile = GafferImage.ImagePlug.tileSize()
 total_deep_samples, max_pixel_samples = 0, 0
 for y in range(0, height, tile):
@@ -105,105 +85,141 @@ for y in range(0, height, tile):
             max_pixel_samples = max(max_pixel_samples, offset-previous)
             previous = offset
         total_deep_samples += previous
-beauty_error = 0.0
-repeat_error = 0.0
-beauty_peak = 0.0
-for y in range(0, height, tile):
-    for x in range(0, width, tile):
-        for channel in ('R', 'G', 'B', 'A'):
-            a = beauty['out'].channelData(channel, imath.V2i(x, y))
-            b = off['out'].channelData(channel, imath.V2i(x, y))
-            c = repeat['out'].channelData(channel, imath.V2i(x, y)) if repeat is not None else None
-            for j in range(min(tile, height-y)):
-                for i in range(min(tile, width-x)):
-                    av, bv = float(a[j*tile+i]), float(b[j*tile+i])
-                    check(math.isfinite(av) and math.isfinite(bv), 'Nonfinite beauty')
-                    beauty_error = max(beauty_error, abs(av-bv))
-                    beauty_peak = max(beauty_peak, abs(av), abs(bv))
-                    if c is not None:
-                        cv = float(c[j*tile+i])
-                        check(math.isfinite(cv), 'Nonfinite beauty repeat')
-                        beauty_peak = max(beauty_peak, abs(cv))
-                        repeat_error = max(repeat_error, abs(bv-cv))
-raw_error = raw_repeat_error = 0.0
-matched_raw_error = matched_repeat_error = 0.0
-unmatched_population_pixels = native_population_changes = 0
-population_matched = False
-raw_tolerance = beauty_tolerance
-denoised_repeat_gate = settings['denoising'] and repeat is not None
-if denoised_repeat_gate:
-    check(settings.get('save_render_passes') and reference.get('save_render_passes') and
-          repeated_settings.get('save_render_passes'), 'Denoised CUDA pairs require native noisy passes')
-    raw_readers = []
-    for source in (directory, baseline, repeat_directory):
-        node = GafferImage.ImageReader()
-        node['fileName'].setValue((source / 'render-passes.exr').as_posix())
-        check(node['out']['format'].getValue() == fmt, 'Noisy pass format mismatch')
-        raw_readers.append(node)
-    channels = [c for c in raw_readers[0]['out']['channelNames'].getValue() if '.Noisy Image.' in c]
-    check(bool(channels), 'Native noisy beauty pass is missing')
-    population_matched = all(s.get('diagnostic_sample_count_pass', False)
-                             for s in (settings, reference, repeated_settings))
-    count_channel = None
-    if population_matched:
-        count_names = [[c for c in node['out']['channelNames'].getValue()
-                        if 'Debug Sample Count' in c] for node in raw_readers]
-        check(all(len(names) == 1 and names == count_names[0] for names in count_names),
-              'Native sample-count pass missing or inconsistent')
-        count_channel = count_names[0][0]
+if settings['device'] == 'CUDA' and not args.reader_only:
+    from cuda_beauty_gate import validate_cuda_beauty
+    cuda_report = validate_cuda_beauty(directory, [baseline] + (args.beauty_repeat or []))
+    beauty_error = cuda_report['max_deep_on_off']
+    repeat_error = cuda_report['max_ordinary_repeat']
+    beauty_peak = cuda_report['peak_absolute_value']
+    beauty_tolerance = repeat_error
+    beauty_passed = cuda_report['passed']
+    beauty_report = dict(cuda_report, comparison='K=5 count-matched denoiser inputs; four FLOAT ULP floor',
+                         tolerance=beauty_tolerance)
+    (directory / 'beauty_validation.json').write_text(json.dumps(beauty_report, indent=2)+'\n')
+    print('CUDA beauty isolation:', json.dumps(dict(passed=beauty_passed,
+          K=cuda_report['K'], raw_passed=cuda_report['raw_passed'],
+          explained_outliers=cuda_report['explained_outlier_pixels'],
+          unexplained_outliers=cuda_report['unexplained_outlier_pixels'])), flush=True)
+else:
+    repeat = None
+    beauty_tolerance = 0.0
+    if args.beauty_repeat:
+        check(settings['device'] == 'CUDA' and settings['samples'] > 1,
+              'Repeat tolerance is only for multisample CUDA fixtures')
+        repeat_directory = args.beauty_repeat[0].resolve()
+        check(repeat_directory != baseline and repeat_directory != directory,
+              'Beauty repeat must be an independent render directory')
+        repeated_settings = json.loads((repeat_directory / 'render.json').read_text())
+        for key in ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
+                    'camera_world_matrix', 'camera_frame', 'frame', 'adaptive', 'denoising', 'deep'):
+            check(repeated_settings[key] == reference[key], 'Beauty repeat differs: ' + key)
+        for key in ('denoiser', 'denoising_use_gpu', 'save_render_passes'):
+            check(repeated_settings.get(key) == reference.get(key), 'Beauty repeat differs: ' + key)
+        if not args.reader_only:
+            check(repeated_settings.get('renderer_sha256') == settings['renderer_sha256'],
+                  'Beauty repeat must use the same executable')
+        repeat = GafferImage.ImageReader()
+        repeat['fileName'].setValue((repeat_directory / 'beauty.exr').as_posix())
+        check(repeat['out']['format'].getValue() == fmt, 'Beauty repeat format mismatch')
+    beauty_error = 0.0
+    repeat_error = 0.0
+    beauty_peak = 0.0
     for y in range(0, height, tile):
         for x in range(0, width, tile):
-            populations = None
-            if population_matched:
-                count_data = [node['out'].channelData(count_channel, imath.V2i(x, y))
-                              for node in raw_readers]
-                populations = []
+            for channel in ('R', 'G', 'B', 'A'):
+                a = beauty['out'].channelData(channel, imath.V2i(x, y))
+                b = off['out'].channelData(channel, imath.V2i(x, y))
+                c = repeat['out'].channelData(channel, imath.V2i(x, y)) if repeat is not None else None
                 for j in range(min(tile, height-y)):
                     for i in range(min(tile, width-x)):
-                        values = [float(d[j*tile+i]) * settings['samples'] for d in count_data]
-                        check(all(math.isfinite(v) and 1 <= round(v) <= settings['samples'] and
-                                  abs(v-round(v)) <= 1e-4 for v in values), 'Invalid native sample count')
-                        counts = [round(v) for v in values]
-                        populations.append(counts)
-                        unmatched_population_pixels += int(counts[0] not in counts[1:])
-                        native_population_changes += int(counts[1] != counts[2])
-            for channel in channels:
-                data = [node['out'].channelData(channel, imath.V2i(x, y)) for node in raw_readers]
-                pixel = 0
-                for j in range(min(tile, height-y)):
-                    for i in range(min(tile, width-x)):
-                        a, b, c = (float(d[j*tile+i]) for d in data)
-                        check(all(math.isfinite(v) for v in (a, b, c)), 'Nonfinite noisy beauty')
-                        raw_error = max(raw_error, abs(a-b))
-                        raw_repeat_error = max(raw_repeat_error, abs(b-c))
-                        if populations is not None:
-                            counts = populations[pixel]
-                            if counts[0] in counts[1:]:
-                                matched_raw_error = max(matched_raw_error,
-                                    population_reference_error(a, counts[0], [(b, counts[1]), (c, counts[2])]))
-                            if counts[1] == counts[2]:
-                                matched_repeat_error = max(matched_repeat_error, abs(b-c))
-                        pixel += 1
-    raw_tolerance = raw_repeat_error
-beauty_tolerance = repeat_error if settings['device'] == 'CUDA' else 0.0
-beauty_report = {'max_deep_on_off': beauty_error, 'max_ordinary_repeat': repeat_error,
-                 'peak_absolute_value': beauty_peak, 'comparison': 'ordinary-repeat envelope; CPU exact',
-                 'tolerance': beauty_tolerance}
-if denoised_repeat_gate:
-    beauty_report.update(comparison='independent native raw and denoised repeat envelopes',
-                         max_raw_deep_on_off=raw_error, max_raw_ordinary_repeat=raw_repeat_error,
-                         raw_tolerance=raw_tolerance)
-    if population_matched:
-        beauty_report.update(raw_comparison='Ordinary-repeat envelope; population matches are diagnostic only',
-                             max_population_matched_raw_error=matched_raw_error,
-                             max_same_population_native_repeat_error=matched_repeat_error,
-                             unmatched_population_pixels=unmatched_population_pixels,
-                             native_population_changes=native_population_changes)
-(directory / 'beauty_validation.json').write_text(json.dumps(beauty_report, indent=2)+'\n')
-raw_passed = beauty_repeat_gate(settings['device'], raw_error, raw_repeat_error)
-beauty_passed = (beauty_repeat_gate(settings['device'], beauty_error, repeat_error) and
-                 (not denoised_repeat_gate or raw_passed))
-print('Beauty isolation:', json.dumps(dict(passed=beauty_passed, **beauty_report)), flush=True)
+                        av, bv = float(a[j*tile+i]), float(b[j*tile+i])
+                        check(math.isfinite(av) and math.isfinite(bv), 'Nonfinite beauty')
+                        beauty_error = max(beauty_error, abs(av-bv))
+                        beauty_peak = max(beauty_peak, abs(av), abs(bv))
+                        if c is not None:
+                            cv = float(c[j*tile+i])
+                            check(math.isfinite(cv), 'Nonfinite beauty repeat')
+                            beauty_peak = max(beauty_peak, abs(cv))
+                            repeat_error = max(repeat_error, abs(bv-cv))
+    raw_error = raw_repeat_error = 0.0
+    matched_raw_error = matched_repeat_error = 0.0
+    unmatched_population_pixels = native_population_changes = 0
+    population_matched = False
+    raw_tolerance = beauty_tolerance
+    denoised_repeat_gate = settings['denoising'] and repeat is not None
+    if denoised_repeat_gate:
+        check(settings.get('save_render_passes') and reference.get('save_render_passes') and
+              repeated_settings.get('save_render_passes'), 'Denoised CUDA pairs require native noisy passes')
+        raw_readers = []
+        for source in (directory, baseline, repeat_directory):
+            node = GafferImage.ImageReader()
+            node['fileName'].setValue((source / 'render-passes.exr').as_posix())
+            check(node['out']['format'].getValue() == fmt, 'Noisy pass format mismatch')
+            raw_readers.append(node)
+        channels = [c for c in raw_readers[0]['out']['channelNames'].getValue() if '.Noisy Image.' in c]
+        check(bool(channels), 'Native noisy beauty pass is missing')
+        population_matched = all(s.get('diagnostic_sample_count_pass', False)
+                                 for s in (settings, reference, repeated_settings))
+        count_channel = None
+        if population_matched:
+            count_names = [[c for c in node['out']['channelNames'].getValue()
+                            if 'Debug Sample Count' in c] for node in raw_readers]
+            check(all(len(names) == 1 and names == count_names[0] for names in count_names),
+                  'Native sample-count pass missing or inconsistent')
+            count_channel = count_names[0][0]
+        for y in range(0, height, tile):
+            for x in range(0, width, tile):
+                populations = None
+                if population_matched:
+                    count_data = [node['out'].channelData(count_channel, imath.V2i(x, y))
+                                  for node in raw_readers]
+                    populations = []
+                    for j in range(min(tile, height-y)):
+                        for i in range(min(tile, width-x)):
+                            values = [float(d[j*tile+i]) * settings['samples'] for d in count_data]
+                            check(all(math.isfinite(v) and 1 <= round(v) <= settings['samples'] and
+                                      abs(v-round(v)) <= 1e-4 for v in values), 'Invalid native sample count')
+                            counts = [round(v) for v in values]
+                            populations.append(counts)
+                            unmatched_population_pixels += int(counts[0] not in counts[1:])
+                            native_population_changes += int(counts[1] != counts[2])
+                for channel in channels:
+                    data = [node['out'].channelData(channel, imath.V2i(x, y)) for node in raw_readers]
+                    pixel = 0
+                    for j in range(min(tile, height-y)):
+                        for i in range(min(tile, width-x)):
+                            a, b, c = (float(d[j*tile+i]) for d in data)
+                            check(all(math.isfinite(v) for v in (a, b, c)), 'Nonfinite noisy beauty')
+                            raw_error = max(raw_error, abs(a-b))
+                            raw_repeat_error = max(raw_repeat_error, abs(b-c))
+                            if populations is not None:
+                                counts = populations[pixel]
+                                if counts[0] in counts[1:]:
+                                    matched_raw_error = max(matched_raw_error,
+                                        population_reference_error(a, counts[0], [(b, counts[1]), (c, counts[2])]))
+                                if counts[1] == counts[2]:
+                                    matched_repeat_error = max(matched_repeat_error, abs(b-c))
+                            pixel += 1
+        raw_tolerance = raw_repeat_error
+    beauty_tolerance = repeat_error if settings['device'] == 'CUDA' else 0.0
+    beauty_report = {'max_deep_on_off': beauty_error, 'max_ordinary_repeat': repeat_error,
+                     'peak_absolute_value': beauty_peak, 'comparison': 'ordinary-repeat envelope; CPU exact',
+                     'tolerance': beauty_tolerance}
+    if denoised_repeat_gate:
+        beauty_report.update(comparison='independent native raw and denoised repeat envelopes',
+                             max_raw_deep_on_off=raw_error, max_raw_ordinary_repeat=raw_repeat_error,
+                             raw_tolerance=raw_tolerance)
+        if population_matched:
+            beauty_report.update(raw_comparison='Ordinary-repeat envelope; population matches are diagnostic only',
+                                 max_population_matched_raw_error=matched_raw_error,
+                                 max_same_population_native_repeat_error=matched_repeat_error,
+                                 unmatched_population_pixels=unmatched_population_pixels,
+                                 native_population_changes=native_population_changes)
+    (directory / 'beauty_validation.json').write_text(json.dumps(beauty_report, indent=2)+'\n')
+    raw_passed = beauty_repeat_gate(settings['device'], raw_error, raw_repeat_error)
+    beauty_passed = (beauty_repeat_gate(settings['device'], beauty_error, repeat_error) and
+                     (not denoised_repeat_gate or raw_passed))
+    print('Beauty isolation:', json.dumps(dict(passed=beauty_passed, **beauty_report)), flush=True)
 
 pixels = {}
 low, high = math.inf, 0

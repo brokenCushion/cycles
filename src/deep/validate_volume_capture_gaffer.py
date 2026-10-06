@@ -16,6 +16,7 @@ import GafferImage
 import GafferScene
 import imath
 from validate_gaffer import beauty_repeat_gate
+from cuda_beauty_gate import raw_pass_gate
 
 exe, out = (Path(p).resolve() for p in sys.argv[1:3])
 device = sys.argv[3] if len(sys.argv) > 3 else 'CPU'
@@ -157,9 +158,12 @@ def analytic(media, x, y, w, h, z, surface, near, far):
 
 def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=12, extra=(), scattering=None, xml_override=None):
     xml = xml_override if xml_override is not None else scene(media, surface, near, far, scattering)
+    check(ET.fromstring(xml).find('integrator').get('use_adaptive_sampling') == 'false',
+          'Boundary beauty gate requires known fixed accepted populations')
     paths = render(name, xml, w, h, samples, extra=extra)
     off = reader(render(name+'_off', xml, w, h, samples, False)[0])
-    repeated_off = reader(render(name+'_off_repeat', xml, w, h, samples, False)[0]) if device == 'CUDA' and samples > 1 else None
+    repeated_off = [reader(render(name+'_off_repeat_'+str(k), xml, w, h, samples, False)[0])
+                    for k in range(1,5)] if device == 'CUDA' else []
     on, deep = reader(paths[0]), reader(paths[1])
     check(deep['out']['deep'].getValue(), 'Not a deep EXR')
     raw, identities = {}, set()
@@ -194,19 +198,41 @@ def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=1
                 # Sample zero is the deterministic central camera ray, even in multisample runs.
                 analytic_error = max(analytic_error, abs(raw_t(raw[x,y,0],depth)-
                     analytic(media,x,y,w,h,depth,surface,near,far)))
+    cuda_raw_violations = 0
+    if repeated_off:
+        for y in range(0,h,tile_size):
+            for x in range(0,w,tile_size):
+                for channel in ('R','G','B','A'):
+                    data = [r['out'].channelData(channel,imath.V2i(x,y)) for r in [off]+repeated_off]
+                    for index in range(len(data[0])):
+                        native = [float(d[index]) for d in data]
+                        repeat_error = max(repeat_error,max(native)-min(native))
     for y in range(0,h,tile_size):
         for x in range(0,w,tile_size):
+            cuda_channels = []
             for channel in ('R','G','B','A'):
                 a = on['out'].channelData(channel,imath.V2i(x,y))
                 b = off['out'].channelData(channel,imath.V2i(x,y))
                 beauty_error = max(beauty_error, max(abs(p-q) for p,q in zip(a,b)))
                 if repeated_off:
-                    c = repeated_off['out'].channelData(channel,imath.V2i(x,y))
-                    repeat_error = max(repeat_error, max(abs(p-q) for p,q in zip(b,c)))
+                    c = [r['out'].channelData(channel,imath.V2i(x,y)) for r in repeated_off]
+                    cuda_channels.append([a,b]+c)
+                    for index, value in enumerate(a):
+                        native = [float(b[index])] + [float(d[index]) for d in c]
+                        repeat_error = max(repeat_error, max(native)-min(native))
+            if repeated_off:
+                for index in range(len(cuda_channels[0][0])):
+                    # These fixtures disable adaptive sampling; all accepted
+                    # populations equal samples. Match the whole RGBA pass.
+                    values = [float(c[0][index]) for c in cuda_channels]
+                    native = [[float(c[r+1][index]) for c in cuda_channels] for r in range(5)]
+                    cuda_raw_violations += int(not raw_pass_gate(values, samples, native, [samples]*5,
+                                                               repeat_error)['passed'])
     beauty_tolerance = repeat_error if repeated_off else 0
     stats = {'max_raw_cut_error':maximum, 'max_analytic_error':analytic_error,
              'max_beauty_difference':beauty_error, 'max_off_repeat_difference':repeat_error,
-             'beauty_tolerance':beauty_tolerance, 'size':[w,h], 'samples':samples}
+             'beauty_tolerance':beauty_tolerance, 'size':[w,h], 'samples':samples,
+             'ordinary_runs':5 if repeated_off else 1, 'cuda_raw_violations':cuda_raw_violations}
     if baseline:
         reference = {}
         for row in csv.DictReader((baseline / (name + '.csv')).open()):
@@ -224,7 +250,8 @@ def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=1
     print(name, stats, flush=True)
     check(maximum <= 1e-6, name + ': Gaffer curve mismatch')
     check(analytic_error <= 2e-6, name + ': independent geometry/extinction mismatch')
-    check(beauty_repeat_gate(device, beauty_error, repeat_error),
+    check((cuda_raw_violations == 0) if device == 'CUDA' else
+          beauty_repeat_gate(device, beauty_error, repeat_error),
           name + ': beauty accumulation bound exceeded')
     return paths
 

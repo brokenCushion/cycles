@@ -60,7 +60,7 @@ for name, case in manifest['cases'].items():
     start = time.monotonic()
     runs = ['deep'] if rejected else ['beauty', 'deep']
     if not rejected and device == 'CUDA':
-        runs.insert(1, 'beauty-repeat')
+        runs = ['beauty', 'beauty-repeat', 'beauty-repeat-2', 'beauty-repeat-3', 'beauty-repeat-4', 'deep']
     for kind in runs:
         destination = directory / kind
         destination.mkdir()
@@ -73,7 +73,9 @@ for name, case in manifest['cases'].items():
                    str(repo / 'tools/render_blender_deep_scene.py'), '--',
                    '--output', str(destination), '--samples', str(case['samples']), '--percentage', '100',
                    '--device', device]
-        if name in ('denoised_volume', 'adaptive_denoised_volume'):
+        if device == 'CUDA':
+            command += ['--save-render-passes', '--diagnostic-sample-count']
+        elif name in ('denoised_volume', 'adaptive_denoised_volume'):
             command += ['--save-render-passes']
         if kind == 'deep':
             command += ['--deep', '--deep-volume', '--deep-memory-mb', '1024',
@@ -96,7 +98,8 @@ for name, case in manifest['cases'].items():
         command = [sys.executable, str(repo / 'src/deep/validate_native_vdb_gaffer.py'),
                    str(directory / 'deep'), str(directory / 'beauty')]
         if device == 'CUDA':
-            command += ['--beauty-repeat', str(directory / 'beauty-repeat')]
+            for repeat in ('beauty-repeat', 'beauty-repeat-2', 'beauty-repeat-3', 'beauty-repeat-4'):
+                command += ['--beauty-repeat', str(directory / repeat)]
         if name == 'zero_extinction':
             command += ['--expect-empty']
         if run(command, directory / 'gaffer.log') != 0:
@@ -117,7 +120,8 @@ if all(n in manifest['cases'] for n in ('overlapping_grids', 'overlap_first_only
                str(directory / 'deep'), str(directory / 'beauty'), '--overlap-reference',
                str(output / 'overlap_first_only/deep'), str(output / 'overlap_second_only/deep')]
     if device == 'CUDA':
-        command += ['--beauty-repeat', str(directory / 'beauty-repeat')]
+        for repeat in ('beauty-repeat', 'beauty-repeat-2', 'beauty-repeat-3', 'beauty-repeat-4'):
+            command += ['--beauty-repeat', str(directory / repeat)]
     if run(command, directory / 'overlap.log') != 0:
         raise RuntimeError('Independent-layer overlap product failed: ' + str(directory / 'overlap.log'))
     report['overlap'] = json.loads((directory / 'deep/overlap_validation.json').read_text())

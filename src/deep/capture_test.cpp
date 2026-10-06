@@ -538,6 +538,22 @@ int main()
         check(std::abs(transmittance - expected) < 1e-7);
       }
     }
+    for (const bool spill : {false, true}) {
+      Capture compressed(1, 1, 1, 64 * 1024 * 1024, 4,
+                          spill, false, true, true, 1, 1e-4f);
+      const KernelDeepEvent event{DEEP_VOLUME, 1e8f, 1e8f, 0, .125f};
+      const KernelDeepDensity density{{.125f, 1e-10f, 0, 0}, 1e8, 1e8 + 1};
+      compressed.record_sample(0, 0, 0, {DEEP_COMPLETE, 1, DEEP_ERROR_NONE}, &event, &density);
+      check(compressed.finalize());
+      const auto sample = compressed.volume_sample(0, 0, 0);
+      check(sample.intervals.size() == 1);
+      check(sample.intervals[0].front == density.front && sample.intervals[0].back == density.back);
+      check(sample.intervals[0].optical_depth == double(.125f) + double(1e-10f));
+      compressed.begin_export_row(0);
+      const auto staged = compressed.volume_sample(0, 0, 0);
+      check(staged.intervals[0].optical_depth == sample.intervals[0].optical_depth);
+      compressed.end_export_row(0);
+    }
     std::cout
         << "Capture coverage, lifecycle, concurrent writes, bounds and budget checks passed\n";
   }

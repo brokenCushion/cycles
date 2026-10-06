@@ -78,6 +78,37 @@ __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
     }
     if (stored_tau != result.tau)
       result.error = DEEP_ERROR_EXTINCTION;
+    const size_t extra = size_t(count) * DEEP_MAX_VOLUME_EVENTS;
+    for (int mode = 0; mode < 2; ++mode) {
+      const double eps = mode ? 4.995e-4 : 4.95e-5;
+      const auto reduced = deep_volume_grid_capture(
+          accessor, ray.origin, ray.direction, 0.0, 1.0, .02, ray.length, 1.0, 100.0,
+          events + extra + i, density + extra + i, count, DEEP_MAX_VOLUME_EVENTS, 0, 16384, eps);
+      if (reduced.status != DEEP_COMPLETE) {
+        result.error = reduced.error;
+        break;
+      }
+      for (int probe = 0; probe <= 256; ++probe) {
+        const double z = 1 + 100 * double(probe) / 256;
+        double exact = 0, approximate = 0;
+        for (unsigned j = 0; j < captured.count; ++j) {
+          const auto &span = density[j * count + i];
+          double u = (z - span.front) / (span.back - span.front);
+          u = u < 0 ? 0 : (u > 1 ? 1 : u);
+          const double b[4] = {span.optical_depth[0], span.optical_depth[1],
+                               span.optical_depth[2], span.optical_depth[3]};
+          exact += compression_exact_tau(b, u);
+        }
+        for (unsigned j = 0; j < reduced.count; ++j) {
+          const auto &span = density[extra + j * count + i];
+          double u = (z - span.front) / (span.back - span.front);
+          u = u < 0 ? 0 : (u > 1 ? 1 : u);
+          approximate += u * (double(span.optical_depth[0]) + double(span.optical_depth[1]));
+        }
+        if (fabs(exp(-exact) - exp(-approximate)) > eps)
+          result.error = DEEP_ERROR_EXTINCTION;
+      }
+    }
     if (captured.count > 0) {
       // Append a real grid after other media's reserved records, exercising
       // the final lane addresses at the expanded capacity, not only its prefix.
@@ -156,8 +187,8 @@ int main(int argc, char **argv)
     check_cuda(cudaMalloc(&device_grid, grid.size()));
     check_cuda(cudaMalloc(&device_rays, rays.size() * sizeof(AssetRay)));
     check_cuda(cudaMalloc(&device_results, results.size() * sizeof(AssetResult)));
-    check_cuda(cudaMalloc(&device_events, rays.size() * DEEP_MAX_VOLUME_EVENTS * sizeof(KernelDeepEvent)));
-    check_cuda(cudaMalloc(&device_density, rays.size() * DEEP_MAX_VOLUME_EVENTS * sizeof(KernelDeepDensity)));
+    check_cuda(cudaMalloc(&device_events, 2 * rays.size() * DEEP_MAX_VOLUME_EVENTS * sizeof(KernelDeepEvent)));
+    check_cuda(cudaMalloc(&device_density, 2 * rays.size() * DEEP_MAX_VOLUME_EVENTS * sizeof(KernelDeepDensity)));
     compression_oracle<<<1, 1>>>(device_events, device_density, device_results);
     check_cuda(cudaGetLastError());
     AssetResult compression{};

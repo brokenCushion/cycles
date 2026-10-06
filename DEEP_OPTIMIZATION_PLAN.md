@@ -86,6 +86,26 @@ Root causes, in code:
    The one-pixel 448 vs 464 adaptive-sample difference was reproduced with deep
    disabled; it is Cycles GPU nondeterminism, not a deep defect.
 
+   Exact CUDA gate definition (user decision, 2026-10-06; supersedes any
+   single-repeat envelope):
+   - Envelope: render K = 5 ordinary deep-off runs. For each pass, the envelope
+     is the maximum per-pixel absolute difference over all pairs of those runs.
+     A single pair underestimates GPU run-to-run variation.
+   - Raw (noisy) passes: each deep-on pixel must be within
+     `max(envelope, 4 ULP of that pixel's value)` of at least one deep-off run
+     with the same accepted sample count (keep the existing matched-count rule;
+     unknown counts fail). 4 ULP is float accumulation-order noise.
+   - Every pass the denoiser consumes (noisy beauty, denoising albedo, normal,
+     depth, sample count) is checked the same way, not only the beauty.
+   - Denoised beauty: report its difference vs. the K-run denoised envelope.
+     It is not a pass/fail gate by itself, BUT any denoised difference outside
+     the envelope must be explained by locating the pixels and showing which
+     input pass differs. If a denoiser input pass differs beyond the raw gate,
+     that is a real deep-to-beauty leak and must be fixed.
+   - The 587x250 baseline showed denoised difference 0.407 vs envelope 0.0091.
+     Phase 0 is accepted only after this is explained with the method above on
+     the post-Phase-0 build.
+
 Acceptance: build passes, nine CTests pass, small landscape (47x20/max16) deep
 and beauty checks pass with the new gate.
 
@@ -166,6 +186,11 @@ OpenEXR deep volumetric convention); do not switch to piecewise-linear T.
   the `tolerance > 1e-3` guards in `volume.cpp` to the new maximum.
 - Update Gaffer validators (`src/deep/validate_*_gaffer.py`) to compare against
   the header tolerance.
+- One knob, not several: the existing optional surface reduction
+  (`reduce_surface` in `src/deep/exr_writer.cpp`, hard-coded `1e-3` via
+  `image.reduction_error` in `src/app/deep_output.cpp`) and the export
+  coalescing allowance must also derive from `DeepSettings::error`, inside the
+  same documented budget split. Strict keeps today's values.
 
 3b. Device per-ray compression
 - In the kernel, compress each object's ordered cell stream as it is produced
@@ -189,6 +214,15 @@ OpenEXR deep volumetric convention); do not switch to piecewise-linear T.
   T is also <= eps_ray (extinction adds). Emit an opaque surface event at that
   depth and stop. Error <= eps_ray. Only enabled when `error` is not strict.
 - Strict mode keeps today's cubic records and host path untouched.
+
+3c. deepID-ready data (no output change yet; groundwork for Phase 6)
+- Add the object index to every captured event (surface hits and volume
+  intervals) in `kernel/deep/types.h`, with updated layout asserts, GPU buffers
+  and spill format. The kernel already traverses one object at a time
+  (`deep_volume_object`), so per-ray compression must run per object stream and
+  never merge across objects.
+- Host reconstruction ignores the index for now (output identical), but the
+  data path must carry it end to end so Phase 6 is output work only.
 
 Acceptance:
 - Strict: everything byte-identical to Phase 2.
@@ -232,16 +266,87 @@ Acceptance: `0` byte-identical to Phase 4; N=64 passes alpha oracle, depth
 cuts and beauty gate; report edge-alpha difference vs. N=all on the small
 landscape as information (not a gate).
 
-### Phase 6 - Landscape production run
+### Phase 6 - deepID
+
+Placed before the production run (Phase 9) so that one landscape run covers the final
+pipeline, and so the per-sample data format changes only once (Phase 3c).
+
+Standard production deep compositing uses a per-sample object/instance ID
+(per-object holdouts, isolating one cloud, DeepCryptomatte-style selection).
+- deepID is a per-sample channel in the deep EXR, next to Z/ZBack/A. It is NOT
+  a Cycles render pass or AOV: passes/AOVs are flat (one value per pixel) and
+  live in the render buffers, while one deep pixel holds samples from several
+  objects at different depths. Do not add a `PassType` or use the AOV system.
+- Source: the object index already carried end to end since Phase 3c.
+- Output: a UINT channel named `id`, plus a manifest in the EXR header mapping
+  id -> object name. Use the same name hashing as Cycles Cryptomatte so deep and
+  flat Cryptomatte selections refer to the same objects.
+- Host setting: `DeepSettings::ids` (`--deep-ids`, Blender `use_deep_ids`
+  checkbox beside the other deep settings). Off by default (larger files).
+- With ids on, reconstruction, reduction and averaging only merge samples with
+  the same ID. Overlapping media of different objects become separate,
+  overlapping deep samples instead of summed extinction.
+
+Acceptance: ids off is byte-identical to Phase 5. With ids on: combined alpha
+(after deep flatten/merge) matches ids off within the header tolerance on the
+compatibility matrices and small landscape; Gaffer and the OpenEXR reader load
+the overlapping samples correctly; selecting one object's id isolates it
+(checked on an overlap fixture with known per-object alpha).
+
+### Phase 7 - Single regression command and repo hygiene
+
+Goal: make every future change cheap to verify, so effort goes into code rather
+than evidence writing.
+- One entry point (e.g. `ctest -L deep` plus `tools/run_deep_regression.py`)
+  that renders a small fixed set of golden scenes (surface, transparency,
+  homogeneous, VDB, overlap, camera-inside, adaptive, DOF, motion, small
+  landscape), runs the alpha oracle and depth-cut checks, and prints one
+  pass/fail table. Target: under 15 minutes on this machine.
+- Gaffer remains optional for interactive review; numerical checks should run
+  through the OpenEXR Python bindings without launching Gaffer.
+- Consolidate the many `validate_*_gaffer.py` scripts into that harness where
+  they overlap. Archive (Git history) the per-milestone `*_VALIDATION.md`
+  evidence files; keep `RELEASE_MATRIX.md`, this plan, and one short status page.
+- Keep the Cycles core footprint small for future rebases onto newer
+  Cycles/Blender: list every non-`deep/` file touched (`kernel/types.h`
+  `KernelShader` field, `kernel/util/nanovdb.h` accessor, `surface_shader.h`
+  template parameter, film/pass plumbing) in `src/deep/README.md` with the
+  reason for each.
+
+### Phase 8 - OptiX backend
+
+Most NVIDIA users render with OptiX; today enabling deep forces the slower CUDA
+backend for the whole render. The visibility chain is mostly BVH traversal, so
+RT cores should also speed up capture itself.
+- Add the `deep_surface` kernel to the OptiX module using the existing shared
+  kernel code; OptiX `scene_intersect`/`scene_intersect_volume` paths already
+  exist in Cycles.
+- Run the native VDB grid code under OptiX with the same CUDA double-precision
+  qualification (`volume_grid.h` currently gates on `__KERNEL_CUDA__`).
+- Acceptance: CPU/CUDA/OptiX matrices; OptiX deep alpha within header tolerance
+  of CUDA; beauty gate vs. OptiX deep-off.
+
+### Phase 9 - Landscape production run (last)
+
+Run only after Phases 0-8 pass and the user confirms. One run validates the
+final pipeline. Use OptiX if Phase 8 passed (CUDA otherwise; record which).
 
 Run the full landscape (1175x500, max 1024 adaptive, GPU OIDN) with
-`--deep-error 1e-3 --deep-samples 64`, then the same with `1e-4`. Report
-capture time, export time, peak host/GPU memory, EXR size, alpha oracle,
-Gaffer cuts, beauty gate. Create the connected Gaffer review only after gates
-pass. Optionally run strict for comparison only if the earlier phases make it
-practical (< 12 h).
+`--deep-error 1e-3 --deep-samples 64 --deep-ids`, then `1e-3` with ids off
+for the size/time comparison. Report capture time, export time, peak host/GPU
+memory, EXR size, alpha oracle, Gaffer cuts, beauty gate. Create the connected
+Gaffer review only after gates pass. Optionally run `1e-4`, and strict only if
+the earlier phases make it practical (< 12 h).
 
-### Later (not in this plan's acceptance)
+### Not recommended now: deep RGB
+
+Compositing deep alpha with the flat beauty (Nuke DeepRecolor) already covers
+the main use, holding out CG or FX inside clouds. True deep colour needs path
+contributions attributed to depth for scattering volumes: a large research
+project. Revisit only if a concrete comp need appears that DeepRecolor cannot
+handle.
+
+### Later
 
 - General volume shader fallback: instead of graph pattern matching in
   `src/session/deep.cpp` (Ray Depth / multiply / add / power), evaluate the real

@@ -1002,10 +1002,10 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
   const int initial_capacity = capture->volume_grid() ? min(64, event_capacity) : event_capacity;
   const int event_slots = capture->volume_grid() ?
                               deep_grid_batch_size * int(DEEP_DEFAULT_VOLUME_EVENTS) :
-                              512 * event_capacity;
+                              deep_surface_batch_size * event_capacity;
   const int initial_batch = capture->volume_grid() ?
                                 min(event_slots / 64, event_slots / initial_capacity) :
-                                512;
+                                deep_surface_batch_size;
   /* Native grid staging is reserved separately in PathTrace::reset_deep.
    * Reallocate when reset changes capacity; every previous batch has already
    * been consumed. No kernel-thread allocation or extra synchronization. */

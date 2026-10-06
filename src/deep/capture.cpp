@@ -49,7 +49,7 @@ Capture::Capture(const int width,
     throw std::invalid_argument("Deep adaptive populations exceed memory budget");
   const size_t population_bytes = adaptive ? count / samples * sizeof(uint32_t) : 0;
   if (spill) {
-    /* Two MiB covers 512-lane host/device events and 64 media (1,863,680 bytes),
+    /* Two MiB covers 480-lane host/device events and 64 media (1,994,496 bytes),
      * fixed scratch and I/O. Beauty/shader memory remains outside this budget. */
     const uint64_t events = uint64_t(samples) * capacity_;
     const uint64_t output_events = volume ? reconstruction_limit() : events;

@@ -32,6 +32,12 @@ class PathTraceWorkGPU : public PathTraceWork {
    * Keep the reservation shared with PathTrace's allocation preflight. */
   /* 24-byte object-tagged events retain the existing 32 MiB staging gate. */
   static constexpr int deep_grid_batch_size = 62;
+  static constexpr int deep_surface_batch_size = 480;
+  static_assert(2 * size_t(deep_surface_batch_size) *
+                    (DEEP_MAX_EVENTS * sizeof(KernelDeepEvent) + sizeof(KernelDeepRecord) +
+                     DEEP_MAX_MEDIA * sizeof(KernelDeepMedium)) +
+                    DEEP_MAX_EVENTS * sizeof(KernelDeepEvent) < 2 * 1024 * 1024,
+                "Deep surface GPU staging exceeds its preflight reservation");
   static constexpr size_t deep_grid_staging_bytes = 32 * 1024 * 1024;
   static_assert(2 * size_t(deep_grid_batch_size) * DEEP_DEFAULT_VOLUME_EVENTS *
                         (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) +

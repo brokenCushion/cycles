@@ -288,6 +288,8 @@ With per-ray output now small and bounded, rework `capture_deep_tiles`:
 Acceptance: deep EXR byte-identical to Phase 3 for the same settings; CUDA
 cancellation/error-injection suites pass; capture time and GPU peak memory
 reported (stay within the existing 8192 MiB device gate).
+Report both **bytes actually written by lanes** and **bytes copied**, before/after,
+so compression savings are distinguishable from plane padding and copy overhead.
 
 ### Phase 5 - Deep sample count setting
 
@@ -724,7 +726,7 @@ both fixed cases, and their header-driven accepted-camera/depth-cut checks.
 
 No pixel required a reproduced-state pool resolution.
 
-### Phase 3b - acceptance checks pass; review stop
+### Phase 3b - accepted
 
 Implementation: `e1bebb202`; stronger fallback/tail assertions: `17d3bd411`.
 No expansion; exact cubic fallback; bounded per-object opaque tails.
@@ -821,4 +823,85 @@ Evidence: `builds/validation/landscape-cloud/optimization-phase3b-rework/after/p
 | 587x250 / max4 / 1e-3 | Max uncompressed camera oracle error | 0.000403479216 | 0.00031719342 | `e1bebb202` |
 
 The larger 1e-4 EXR grows about 5% and host fitting increases; capture,
-readback and spill improve in both numeric modes. Phase 3c has not started.
+readback and spill improve in both numeric modes.
+
+### Phase 3c - checks pass; review stop
+
+Implementation: `00c2fd7fd`; cross-object rejection test: `cb0208aef`.
+Native object indices survive CPU/CUDA capture, strided readback, direct spill,
+re-bucketing and staged host reads. Reconstruction ignores them; no new error
+allowance or EXR channel. Strict payload and deterministic headers: **81/81 identical**.
+Numeric identity: **30/30**, covering both fixed cases and all rendered matrix
+cases at 1e-4/1e-3. Final-build smoke: 3/3 identical. Nine CTests, all three-mode
+CPU14/CUDA4 matrices, both boundary suites and independent CPU/CUDA oracles pass.
+The event is now 24 B (was 20 B); companion records remain 32 B. Batch capacity
+changes from 64 to 62 to retain the 32 MiB staging reservation. Beauty source
+comparison passes; the GPU host header uses the existing guarded-block rule.
+Surface/homogeneous batches use 480 lanes, retaining their 2 MiB reservation
+(`57f61ec02`). Matrices/boundaries use this final build; measured native-grid
+code is unchanged. All 75 common CUDA resource signatures remain unchanged.
+
+Before: six fresh runs with accepted 3b. Times exclude compiler warm-up.
+Fitting and other host stages are aggregate worker seconds, not additive wall time.
+Evidence: `builds/validation/landscape-cloud/optimization-phase3c/after/phase-results.json`;
+fresh measurements: `before/`; source comparison and kernel resources in its parent.
+
+| Case | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| 47x20 / max16 / strict | Capture (s) | 2.950011 | 2.842184 | `00c2fd7fd` |
+| 47x20 / max16 / strict | Wait + readback (s) | 1.83937 | 1.742509 | `00c2fd7fd` |
+| 47x20 / max16 / strict | GPU bytes copied | 372,191,232 | 387,364,096 | `00c2fd7fd` |
+| 47x20 / max16 / strict | Spill stored / read / written (B) | 13,367,184.0 / 13,367,184.0 / 13,728,144.0 | 14,443,168.0 / 14,443,168.0 / 14,804,128.0 | `00c2fd7fd` |
+| 47x20 / max16 / strict | Export (s) | 8.38273 | 8.0145 | `00c2fd7fd` |
+| 47x20 / max16 / strict | Density / mixture fit (worker s) | 2.70522 / 22.8514 | 2.40496 / 20.3233 | `00c2fd7fd` |
+| 47x20 / max16 / strict | Read / staging / ledger / quantize / serialize (worker s) | 0.0068113 / 0.0040885 / 0.678403 / 2.4811 / 0.0844292 | 0.0059449 / 0.004244 / 0.609406 / 2.27037 / 0.0809585 | `00c2fd7fd` |
+| 47x20 / max16 / strict | Deep samples / EXR bytes | 561,793 / 4,445,714 | 561,793 / 4,445,714 | `00c2fd7fd` |
+| 47x20 / max16 / strict | Peak host bytes / device-wide MiB | 5,585,858,560 / 6174 | 5,571,067,904 / 6183 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-4 | Capture (s) | 2.297569 | 2.236982 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-4 | Wait + readback (s) | 1.153981 | 1.1478093 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-4 | GPU bytes copied | 215,568,384 | 223,319,040 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-4 | Spill stored / read / written (B) | 9,163,356.0 / 9,163,356.0 / 9,524,316.0 | 9,894,856.0 / 9,894,856.0 / 10,255,816.0 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-4 | Export (s) | 3.82664 | 3.82082 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-4 | Density / mixture fit (worker s) | 0.268856 / 0.969461 | 0.266714 / 0.95528 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-4 | Read / staging / ledger / quantize / serialize (worker s) | 0.0041683 / 0.0029566 / 0.0413897 / 0.122729 / 0.0139647 | 0.0040686 / 0.0030499 / 0.0414437 / 0.119347 / 0.0146214 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-4 | Deep samples / EXR bytes | 88,699 / 609,496 | 88,699 / 609,496 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-4 | Peak host bytes / device-wide MiB | 5,567,250,432 / 6172 | 5,603,799,040 / 6174 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-3 | Capture (s) | 2.270727 | 2.214799 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-3 | Wait + readback (s) | 1.1575605 | 1.1300219 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-3 | GPU bytes copied | 199,434,240 | 205,986,816 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-3 | Spill stored / read / written (B) | 8,183,848.0 / 8,183,848.0 / 8,544,808.0 | 8,839,824.0 / 8,839,824.0 / 9,200,784.0 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-3 | Export (s) | 3.79466 | 3.73446 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-3 | Density / mixture fit (worker s) | 0.189328 / 0.376931 | 0.187253 / 0.370986 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-3 | Read / staging / ledger / quantize / serialize (worker s) | 0.0040472 / 0.0028103 / 0.0273725 / 0.045606 / 0.0103334 | 0.0039051 / 0.00289 / 0.027272 / 0.0444759 / 0.0106183 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-3 | Deep samples / EXR bytes | 53,113 / 357,145 | 53,113 / 357,145 | `00c2fd7fd` |
+| 47x20 / max16 / 1e-3 | Peak host bytes / device-wide MiB | 5,693,763,584 / 6172 | 5,561,847,808 / 6174 | `00c2fd7fd` |
+| 587x250 / max4 / strict | Capture (s) | 44.006672 | 34.166353 | `00c2fd7fd` |
+| 587x250 / max4 / strict | Wait + readback (s) | 40.4466 | 31.11158 | `00c2fd7fd` |
+| 587x250 / max4 / strict | GPU bytes copied | 7,177,170,944 | 7,695,868,544 | `00c2fd7fd` |
+| 587x250 / max4 / strict | Spill stored / read / written (B) | 522,463,136.0 / 600,218,816.0 / 576,484,544.0 | 564,528,704.0 / 641,974,304.0 / 618,486,776.0 | `00c2fd7fd` |
+| 587x250 / max4 / strict | Export (s) | 33.8851 | 32.9733 | `00c2fd7fd` |
+| 587x250 / max4 / strict | Density / mixture fit (worker s) | 81.8269 / 247.658 | 77.6507 / 241.461 | `00c2fd7fd` |
+| 587x250 / max4 / strict | Read / staging / ledger / quantize / serialize (worker s) | 0.224979 / 0.219892 / 1.5585 / 144.609 / 7.3259 | 0.222217 / 0.229087 / 1.50808 / 141.263 / 7.26714 | `00c2fd7fd` |
+| 587x250 / max4 / strict | Deep samples / EXR bytes | 52,189,081 / 394,273,944 | 52,189,081 / 394,273,944 | `00c2fd7fd` |
+| 587x250 / max4 / strict | Peak host bytes / device-wide MiB | 5,636,321,280 / 6291 | 5,563,826,176 / 6257 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-4 | Capture (s) | 26.698422 | 27.105229 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-4 | Wait + readback (s) | 24.00399 | 24.36521 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-4 | GPU bytes copied | 4,397,510,656 | 4,743,196,416 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-4 | Spill stored / read / written (B) | 358,081,036.0 / 437,199,436.0 / 413,133,844.0 | 386,674,056.0 / 465,351,816.0 / 441,611,904.0 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-4 | Export (s) | 3.82545 | 3.85133 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-4 | Density / mixture fit (worker s) | 5.53602 / 17.584 | 5.39616 / 17.374 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-4 | Read / staging / ledger / quantize / serialize (worker s) | 0.147879 / 0.149887 / 0.536136 / 7.17478 / 1.04653 | 0.145314 / 0.162715 / 0.543304 / 7.10275 / 1.05699 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-4 | Deep samples / EXR bytes | 6,813,973 / 59,210,585 | 6,813,973 / 59,210,585 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-4 | Peak host bytes / device-wide MiB | 5,546,123,264 / 6276 | 5,551,501,312 / 6238 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-3 | Capture (s) | 26.246567 | 26.623797 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-3 | Wait + readback (s) | 23.64787 | 23.97672 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-3 | GPU bytes copied | 4,089,827,328 | 4,411,939,840 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-3 | Spill stored / read / written (B) | 319,349,160.0 / 398,116,680.0 / 374,707,800.0 | 344,954,864.0 / 423,342,944.0 / 400,152,008.0 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-3 | Export (s) | 2.15671 | 2.18591 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-3 | Density / mixture fit (worker s) | 2.0061 / 7.02473 | 1.95087 / 6.96777 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-3 | Read / staging / ledger / quantize / serialize (worker s) | 0.137136 / 0.132579 / 0.48058 / 2.40472 / 0.450634 | 0.137164 / 0.152549 / 0.488909 / 2.38537 / 0.463073 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-3 | Deep samples / EXR bytes | 3,076,802 / 22,398,061 | 3,076,802 / 22,398,061 | `00c2fd7fd` |
+| 587x250 / max4 / 1e-3 | Peak host bytes / device-wide MiB | 5,617,336,320 / 6243 | 5,767,208,960 / 6224 | `00c2fd7fd` |
+
+Phase 4 has not started. Its measurements must distinguish lane-written bytes
+from copied bytes; object tagging adds storage and makes that distinction necessary.

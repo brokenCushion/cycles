@@ -45,6 +45,15 @@ report = {
     'adaptive': scene.cycles.use_adaptive_sampling,
     'denoise': scene.cycles.use_denoising,
     'motion': scene.render.use_motion_blur,
+    'volume_ray_marching': scene.cycles.volume_biased,
+    # Cycles VolumeMeshBuilder uses six bounding-box quads when ray marching
+    # is disabled. Sparse ray-marching meshes need renderer-side counts.
+    'volume_bounds': [
+        {'object': o.name, 'data': o.data.name, 'file': bpy.path.abspath(o.data.filepath),
+         'bound_triangles_if_nonempty': None if scene.cycles.volume_biased else 12,
+         'count_basis': 'src/scene/volume.cpp:generate_vertices_and_quads',
+         'precision': o.data.render.precision}
+        for o in scene.objects if o.type == 'VOLUME'],
     'camera_dof': scene.camera.data.dof.use_dof if scene.camera else None,
     'object_types': dict(collections.Counter(o.type for o in scene.objects)),
     'modifiers': dict(collections.Counter(m.type for o in scene.objects for m in o.modifiers if m.show_render)),

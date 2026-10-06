@@ -565,7 +565,31 @@ Build/source provenance: `builds/validation/beauty-builds.json`.
 | 587x250 / 4 | Spill read amplification | 7.570932x | 1.148825x | `135624361` |
 | Strict identity | Payload + deterministic headers | PASS | 81/81 PASS | `135624361` |
 
-| 47x20 / max16, scratch reuse | Export seconds | 8.30383 | 7.98998 (-3.8%) | `scratch follow-up` |
-| 587x250 / 4, scratch reuse | Export seconds | 34.5202 | 32.9664 (-4.5%) | `scratch follow-up` |
-| Scratch reuse | Strict payload + deterministic headers | 81/81 PASS | 81/81 PASS | `scratch follow-up` |
-| Scratch reuse | Regression set | 9 CTests; CPU14/CUDA4; each boundary33+17; both landscapes PASS | All PASS; CPU beauty exact; CUDA K=5 PASS | `scratch follow-up` |
+| 47x20 / max16, scratch reuse | Export seconds | 8.30383 | 7.98998 (-3.8%) | `b602877dc` |
+| 587x250 / 4, scratch reuse | Export seconds | 34.5202 | 32.9664 (-4.5%) | `b602877dc` |
+| Scratch reuse | Strict payload + deterministic headers | 81/81 PASS | 81/81 PASS | `b602877dc` |
+| Scratch reuse | Regression set | 9 CTests; CPU14/CUDA4; each boundary33+17; both landscapes PASS | All PASS; CPU beauty exact; CUDA K=5 PASS | `b602877dc` |
+
+### Phase 2 - profiling in progress
+
+Baseline: `builds/validation/landscape-cloud/optimization-phase2/baseline.json`
+reuses the fully qualified scratch build and both fixed cases. Nsight evidence:
+`optimization-phase2/nsys/{timeline.nsys-rep,timeline.sqlite,stats.csv}`.
+The profiled deep output is strictly identical. No boundary implementation change.
+Nsight Compute PC sampling failed with `ERR_NVGPUCTRPERM`; instruction-only
+collection works, but cannot establish triangle-loop versus grid-traversal time.
+Phase 2 is not accepted pending counter access. The scene inventory records ten
+native volumes, ray marching disabled: the renderer creates 12 triangles per
+nonempty bound. Counts are derived from the construction branch, not GPU telemetry.
+Kernel, copy and wait durations overlap and must not be summed.
+
+| Case | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| 47x20 / max16 | Unprofiled capture / export seconds | 5.72722 / 7.98998 | Pending | `b602877dc` baseline |
+| 587x250 / 4 | Unprofiled capture / export seconds | 71.654783 / 32.9664 | Pending | `b602877dc` baseline |
+| 587x250 / 4 | Nsight deep kernel seconds / launches | 66.259845 / 810 | Pending | `b602877dc` baseline |
+| 587x250 / 4 | Capture wait + readback seconds | 68.7772 | Pending | `b602877dc` baseline |
+| 587x250 / 4 | Device-to-host copy seconds in capture window | 2.216751 (includes other renderer reads) | Pending | `b602877dc` baseline |
+| 587x250 / 4 | Host spill seconds | 1.250789 | Pending | `b602877dc` baseline |
+| 587x250 / 4 | Triangle-loop versus grid time | Counter permission denied | Pending | `b602877dc` baseline |
+| 587x250 / 4 | Profiled strict identity | PASS | No implementation change | `b602877dc` baseline |

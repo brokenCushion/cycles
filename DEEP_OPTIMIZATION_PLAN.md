@@ -54,8 +54,15 @@ Root causes, in code:
   side-channel. (See Phase 0 for the existing violation.)
 - Keep the numerical contract explicit: every approximation has a stated
   absolute transmittance bound, and the bounds sum to the user-visible setting.
-- Strict mode must reproduce today's behaviour so existing qualification suites
-  keep passing unchanged (`--deep-error strict`).
+- Strict mode must reproduce today's behaviour (`--deep-error strict`). Strict
+  identity means bit-identical deep payload (sample counts, Z, ZBack, A and any
+  other data channels) and deterministic headers. Exclude only run metadata:
+  `cycles:beautyIdentity` and attributes recording paths, dates or run IDs.
+  Data-describing headers remain mandatory, including `deepError`, `deepSamples`,
+  `deepScope`, manifests, channel types and compression. The comparator uses an
+  explicit run-metadata allowlist; unknown attributes are compared, not guessed.
+  `tools/compare_deep_identity.py` checks every encoded count/pixel chunk and
+  every deterministic header byte; files are never rewritten for comparison.
 - Measure before and after every phase on the same fixed cases (Section 4).
   Report numbers; do not claim speedups without them.
 - If a phase cannot meet its acceptance criteria, stop and report. Do not
@@ -382,14 +389,15 @@ host working set, device-wide GPU peak.
 
 ## 6. Results
 
-### Phase 0 - CUDA qualification passes; literal boundary identity unresolved
+### Phase 0 - accepted
 
 Checkpoint: `59963b932`. Snapshot experiment: `codex/volume-majorant-determinism`
 (`9a017f055`). Removal/build: `44b44477e`. K=5 input gate: `7efb85198`.
-Both builds and Phase 0's small-landscape acceptance checks pass. Literal
-boundary-file identity does not pass, so Phase 0 is not marked fully accepted
-under the strict byte contract; Phase 1 has not started. The explicit strict
-setting arrives in Phase 3; capture/export still use the legacy strict path.
+Both builds, the K=5 landscape checks and regressions pass. Strict identity
+passes under the user-approved Section 2 definition: 66 boundary renders,
+13 rendered matrix cases and both landscapes. Evidence: `k5/strict-identity.json`.
+The explicit strict setting arrives in Phase 3; capture/export use the unchanged
+legacy strict path. Phase 1 begins with fresh fixed-case measurements.
 
 Single measurements, not speedup claims. Before controls used K=2; after uses
 the approved K=5, one global envelope per pass, count matching and four FLOAT
@@ -447,6 +455,8 @@ reference. Evidence: `builds/validation/landscape-cloud/optimization-phase0/k5`.
 | CUDA boundary | Renders / expected rejections | 33 / 17 PASS | 33 / 17 PASS | `7efb85198` |
 | CUDA boundary | Deep sample-offset / Z / ZBack / A bits | Reference | 33/33 identical | `7efb85198` |
 | CUDA boundary | Whole-file hash | Reference | 0/33 identical: beautyIdentity header differs | `7efb85198` |
+| CPU boundary | Strict payload + deterministic headers | Reference | 33/33 identical | metadata decision / identity comparator |
+| CUDA boundary | Strict payload + deterministic headers | Reference | 33/33 identical | metadata decision / identity comparator |
 | Nine CTests | Result / wall time | 9/9 PASS / 17.28 s | 9/9 PASS / 11.79 s | `7efb85198` |
 | 47x20 / max16 | Raw input violations / unmatched populations | Not checked per pass | 0 / 0 | `7efb85198` |
 | 587x250 / 4 | Raw input violations / unmatched populations | Not checked per pass | 0 / 0 | `7efb85198` |
@@ -468,9 +478,8 @@ Both boundary suites retain identical sample-offset / Z / ZBack / A bits.
 Their run-specific `cycles:beautyIdentity` headers contain output paths and
 beauty hashes. Beauty EXRs contain `capDate`: 32/33 CPU and 30/33 CUDA beauty
 files differ only in this timestamp; the remaining cases also differ in beauty
-pixels. Thus whole-file identity conflicts with retaining the exact live beauty
-pairing. Evidence: `k5/boundary-beauty-timestamp-diagnostic.json`. No file was
-modified, and no metadata exception or normalization was accepted as a gate. Rendered compatibility
+pixels. Whole-file hashes therefore differ while strict identity passes. Evidence: `k5/boundary-beauty-timestamp-diagnostic.json`. No file was
+modified, and the user-approved comparison excludes only run metadata as defined in Section 2. Rendered compatibility
 files and both landscapes are whole-file identical. Rejection sentinels are
 excluded from rendered-file counts. Suite times include control renders and
 validation, and are not performance comparisons. Detailed resource metrics are

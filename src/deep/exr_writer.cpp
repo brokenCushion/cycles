@@ -383,7 +383,11 @@ void write_volume_exr_pixels(Imf::OStream &stream,
         metadata.data_window = {file_x, int(y), file_x, int(y)};
         std::vector<std::vector<IntervalSample>> source(1);
         source[0] = pixel(file_x, int(y));
-        auto converted = prepare_volume(metadata, source);
+        std::vector<FloatPixel> converted;
+        {
+          ExportTimer timer{image.export_statistics, ExportStatistics::Quantize};
+          converted = prepare_volume(metadata, source);
+        }
         /* Capture reserves DOUBLE fitting scratch separately. The scanline
          * retains only the final FLOAT arrays, including their capacities. */
         const size_t retained = std::max({converted[0].z.capacity(),
@@ -423,7 +427,10 @@ void write_volume_exr_pixels(Imf::OStream &stream,
         fb.insert(channel.first, Imf::DeepSlice(Imf::FLOAT, s.base, s.xStride, s.yStride, sizeof(float)));
       }
       file.setFrameBuffer(fb);
-      file.writePixels(1);
+      {
+        ExportTimer timer{image.export_statistics, ExportStatistics::Serialize};
+        file.writePixels(1);
+      }
       if (end_row) end_row(int(y));
     }
   }
@@ -528,7 +535,10 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
                 Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
       fb.insert("A", Imf::DeepSlice(Imf::FLOAT, as.base, as.xStride, as.yStride, sizeof(float)));
       file.setFrameBuffer(fb);
-      file.writePixels(1);
+      {
+        ExportTimer timer{image.export_statistics, ExportStatistics::Serialize};
+        file.writePixels(1);
+      }
       if (end_row) end_row(int(y));
     }
   }

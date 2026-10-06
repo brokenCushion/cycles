@@ -74,6 +74,7 @@ class OutputDriver {
      * Streaming file hosts must enforce it before allocating a converted pixel. */
     virtual size_t volume_row_sample_limit() const = 0;
     virtual int volume_export_workers() const { return 1; }
+    virtual deep::ExportStatistics *export_statistics() const { return nullptr; }
     /* Actual accepted camera population, including misses. Diagnostic reads
      * expose local surface alpha and volume optical depth, before reconstruction. */
     virtual int population(int x, int y) const = 0;

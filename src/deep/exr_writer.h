@@ -26,6 +26,7 @@ struct SurfaceImage {
   DeepCompression compression = DeepCompression::None;
   std::string beauty_identity;
   double reduction_error = 0.0;
+  ExportStatistics *export_statistics = nullptr;
   /* Streaming volume row capacity supplied by capture memory preflight.
    * Zero leaves synthetic/non-renderer callers responsible for their memory. */
   size_t volume_row_sample_limit = 0;

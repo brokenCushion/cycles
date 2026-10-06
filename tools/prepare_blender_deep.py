@@ -148,6 +148,7 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.compression = deep::DeepCompression::Zips;
   image.volume_row_sample_limit = tile.volume_row_sample_limit();
   image.volume_export_workers = tile.volume_export_workers();
+  image.export_statistics = tile.export_statistics();
   const auto check_cancel = [&] {
     if (tile.cancelled())
       throw std::runtime_error("Blender deep export cancelled; final file preserved");

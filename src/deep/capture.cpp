@@ -545,6 +545,7 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
   auto &events = scratch->events;
   auto &density = scratch->density;
   {
+    ExportTimer timer{&export_statistics, ExportStatistics::Read};
     std::unique_lock<std::mutex> lock;
     if (!exporting_)
       lock = std::unique_lock<std::mutex>(bands_.empty() ? mutex_ : band_for_pixel(size_t(y) * width_ + x).mutex);
@@ -585,6 +586,7 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
       output.intervals.push_back({event.front, event.back, event.optical_depth});
   }
   if (!cubic.empty()) {
+    ExportTimer timer{&export_statistics, ExportStatistics::DensityFit};
     const auto fitted = integrate_cubic_density(cubic, density_tolerance, reconstruction_limit());
     if (output.intervals.size() > reconstruction_limit() ||
         fitted.size() > reconstruction_limit() - output.intervals.size())
@@ -781,6 +783,7 @@ void Capture::rebucket(Band &band) const
 
 void Capture::begin_export_row(const int y) const
 {
+  ExportTimer timer{&export_statistics, ExportStatistics::Staging};
   if (bands_.empty())
     return;
   if (!exporting_) {
@@ -897,6 +900,12 @@ std::vector<SurfaceSample> Capture::reconstruct_pixel(const int x, const int y) 
 }
 std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const int y) const
 {
+  ExportTimer pixel_timer{&export_statistics, ExportStatistics::Pixel};
+  auto fit = [&](std::vector<VolumeCameraSample> samples, double tolerance, size_t limit,
+                 double reduction, size_t bytes = std::numeric_limits<size_t>::max()) {
+    ExportTimer timer{&export_statistics, ExportStatistics::MixtureFit};
+    return reconstruct_volume(std::move(samples), tolerance, limit, reduction, bytes);
+  };
   if (!volume_ || error_.load() != NONE)
     throw std::runtime_error("Invalid volume capture reconstruction");
   std::vector<VolumeCameraSample> ledger;
@@ -930,7 +939,7 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
     std::vector<VolumeCameraSample> pair;
     pair.push_back(std::move(left));
     pair.push_back(std::move(right));
-    const auto curve = reconstruct_volume(std::move(pair),
+    const auto curve = fit(std::move(pair),
                                           volume_reconstruction_error / (2 * levels),
                                           reconstruction_limit(),
                                           volume_reconstruction_error / (2 * levels));
@@ -943,7 +952,7 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
     if (compact_ray) {
       /* Split the existing density allowance between integration and one-ray
        * reduction. Convex averaging preserves this per-ray absolute T bound. */
-      const auto compact = reconstruct_volume(
+      const auto compact = fit(
           {sample}, volume_reconstruction_error, reconstruction_limit(), volume_density_error / 2);
       sample = from_curve(compact, sample.camera.id, sample.camera.weight);
     }
@@ -985,7 +994,7 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   }
   /* Share the existing reconstruction allowance between mixture fitting and
    * streaming reduction; the total published error budget is unchanged. */
-  return reconstruct_volume(std::move(ledger),
+  return fit(std::move(ledger),
                             volume_reconstruction_error / 2,
                             reconstruction_limit(),
                             compact_ray ? 0 : volume_reconstruction_error / 2,

@@ -23,6 +23,7 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
   image.reduction_error = reduce ? 1e-3 : 0;
   image.volume_row_sample_limit = tile.volume_row_sample_limit();
   image.volume_export_workers = tile.volume_export_workers();
+  image.export_statistics = tile.export_statistics();
   const auto check_cancel = [&] {
     if (cancelled())
       throw std::runtime_error("Deep export cancelled; final EXR was not replaced");

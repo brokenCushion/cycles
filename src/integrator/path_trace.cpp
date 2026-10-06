@@ -781,6 +781,17 @@ void PathTrace::write_deep_output()
   LOG_INFO_IMPORTANT << "Deep output: export_workers=" << tile.volume_export_workers();
   output_driver_->write_deep_render_tile(tile);
   deep_written_ = true;
+  const auto &timing = deep_capture_->export_statistics;
+  using Stage = deep::ExportStatistics;
+  LOG_INFO_IMPORTANT << "Deep export timing: aggregate_worker_seconds"
+      << " read=" << timing.seconds(Stage::Read)
+      << " staging=" << timing.seconds(Stage::Staging)
+      << " density_fit=" << timing.seconds(Stage::DensityFit)
+      << " mixture_fit=" << timing.seconds(Stage::MixtureFit)
+      << " ledger_decode=" << timing.seconds(Stage::Pixel) - timing.seconds(Stage::Read) -
+                                   timing.seconds(Stage::DensityFit) - timing.seconds(Stage::MixtureFit)
+      << " quantize_coalesce=" << timing.seconds(Stage::Quantize)
+      << " serialize=" << timing.seconds(Stage::Serialize);
   const deep::Capture::SpillStatistics spill = deep_capture_->spill_statistics();
   LOG_INFO_IMPORTANT << "Deep output: export_seconds=" << time_dt() - export_start
                      << " spill_read_bytes=" << spill.read_bytes

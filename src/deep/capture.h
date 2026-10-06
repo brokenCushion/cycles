@@ -103,6 +103,7 @@ class Capture {
     uint64_t read_bytes = 0, write_bytes = 0, file_bytes = 0;
   };
   SpillStatistics spill_statistics() const;
+  mutable ExportStatistics export_statistics;
   /* Sequential Y-down export: prepare on the caller thread before parallel
    * pixel reads; finish only after the row has been serialized. */
   void begin_export_row(int y) const;

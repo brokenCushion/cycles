@@ -3,9 +3,32 @@
 
 #include "deep/reconstruction.h"
 #include <cstddef>
+#include <atomic>
+#include <chrono>
 #include <limits>
 
 namespace ccl::deep {
+
+/* Aggregate host-worker elapsed times, not additive frame wall time. Nested
+ * pixel time includes read and fitting; subtract those for ledger/decode time.
+ * Diagnostics never enter the EXR header or affect numerical decisions. */
+struct ExportStatistics {
+  enum Stage { Read, Staging, DensityFit, MixtureFit, Pixel, Quantize, Serialize, Count };
+  std::atomic<uint64_t> nanoseconds[Count]{};
+  double seconds(Stage stage) const { return nanoseconds[stage].load() * 1e-9; }
+};
+struct ExportTimer {
+  ExportStatistics *statistics;
+  ExportStatistics::Stage stage;
+  std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+  ~ExportTimer()
+  {
+    if (statistics)
+      statistics->nanoseconds[stage].fetch_add(
+          std::chrono::duration_cast<std::chrono::nanoseconds>(
+              std::chrono::steady_clock::now() - start).count(), std::memory_order_relaxed);
+  }
+};
 
 /* Shared error allocations for capture and FLOAT publication. */
 inline constexpr double volume_density_error = 1e-7;

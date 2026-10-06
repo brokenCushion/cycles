@@ -7,7 +7,12 @@ Branch: `codex/landscape-cloud-compatibility`.
 Phase 0 is accepted: both builds, nine CTests, CPU/CUDA compatibility matrices,
 boundary suites and K=5 landscape checks pass. Strict payload and deterministic
 headers are identical under the user-approved run-metadata exclusion. Results
-are in Section 6 of the plan. Phase 1 starts with fixed-case baseline measurement.
+are in Section 6 of the plan.
+
+Phase 1 baseline measurement is complete; implementation stopped at a fresh
+587x250 K=5 raw-input failure. The same pixel state exists in an earlier deep-off
+control, but is absent from the fresh five. The gate remains unchanged. Details
+and all before measurements are in the Phase 1 table; spill storage is unchanged.
 
 Checkpoint: `59963b932`. The beauty majorant experiment is isolated on
 `codex/volume-majorant-determinism` (`9a017f055`) and removed here (`44b44477e`).

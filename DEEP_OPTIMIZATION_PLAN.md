@@ -485,3 +485,53 @@ excluded from rendered-file counts. Suite times include control renders and
 validation, and are not performance comparisons. Detailed resource metrics are
 landscape-only. Wrong per-pixel-envelope diagnostics are retained separately;
 they were corrected to the plan's global per-pass definition using saved EXRs.
+
+### Phase 1 - baseline measured; stopped before implementation
+
+Source/binary unchanged from accepted Phase 0. Fresh evidence:
+`builds/validation/landscape-cloud/optimization-phase1/before`.
+The 587x250 raw gate fails at (489,34), all accepted populations 4. Existing
+Phase 0 **deep-off control 3** has exactly the same noisy/albedo/depth values as
+this fresh deep-on pixel (`failed-pixel-existing-controls.json`). This establishes
+ordinary variation, but the fresh five controls missed that state. The current
+gate still fails; no reference was substituted, no threshold changed, and no
+spill-layout code was implemented. All strict identity checks pass.
+
+| Case | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| 47x20 / max16 | Capture seconds | 5.793281 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Capture wait + readback seconds | 4.660442 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | GPU readback bytes | 372191232 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Spill stored bytes | 13006224 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Spill read bytes | 33911712 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Spill written bytes | 14805816 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Export seconds | 7.05423 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | EXR bytes | 4445714 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Peak process working-set bytes | 5531406336 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Device-wide GPU peak MiB | 5067 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Deep samples | 561793 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Max oracle error | 2.201313769045754e-07 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Max depth-cut error | 6.95131076811073e-07 | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Beauty / alpha / depth | PASS / PASS / PASS | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Capture seconds | 71.385669 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Capture wait + readback seconds | 68.399 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | GPU readback bytes | 7177170944 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Spill stored bytes | 508375136 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Spill read bytes | 3848873808 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Spill written bytes | 564666368 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Export seconds | 49.2628 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | EXR bytes | 394273944 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Peak process working-set bytes | 5538512896 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Device-wide GPU peak MiB | 5175 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Deep samples | 52189081 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Max oracle error | 2.2079907672709065e-07 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Max depth-cut error | 8.228034402701923e-07 | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Beauty / alpha / depth | FAIL / PASS / PASS | Not implemented | `bfd12882f` |
+| Nine CTests | Regression | 9/9 PASS | Not implemented | `bfd12882f` |
+| CPU compatibility | Regression | 14/14 PASS | Not implemented | `bfd12882f` |
+| CUDA compatibility | Regression | 4/4 PASS | Not implemented | `bfd12882f` |
+| CPU boundary | Regression | 33 renders / 17 rejections PASS | Not implemented | `bfd12882f` |
+| CUDA boundary | Regression | 33 renders / 17 rejections PASS | Not implemented | `bfd12882f` |
+| 587x250 / 4 at (489,34) | Noisy R: difference / allowed bound | 0.017139196395874023 / 9.5367431640625e-07 FAIL | Not implemented | `bfd12882f` |
+| 587x250 / 4 at (489,34) | Albedo R: difference / allowed bound | 0.13999241590499878 / 2.384185791015625e-07 FAIL | Not implemented | `bfd12882f` |
+| 587x250 / 4 at (489,34) | Depth: difference / allowed bound | 0.105224609375 / 0.000244140625 FAIL | Not implemented | `bfd12882f` |

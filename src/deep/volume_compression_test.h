@@ -19,6 +19,19 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
   const double cases[6][4] = {{.02, .02, .02, .02}, {0, 0, 0, 2},
                               {2, 0, 0, 0}, {0, 8, 8, 0},
                               {8, 0, 0, 8}, {0, 0, 0, 0}};
+  {
+    DeepVolumeCompression stream{};
+    int count = 0;
+    const KernelDeepDensity foreground{{20, 20, 20, 20}, 1, 2};
+    const KernelDeepDensity background{{0, 8, 8, 0}, 4, 5};
+    if (deep_volume_compression_cell(&stream, foreground, 1e-5, 1e-8,
+                                     events, density, 1, 8192, &count) != DEEP_ERROR_NONE ||
+        deep_volume_compression_cell(&stream, background, 1e-5, 1e-8,
+                                     events, density, 1, 8192, &count) != DEEP_ERROR_NONE ||
+        deep_volume_compression_flush(&stream, 1e-8, events, density,
+                                      1, 8192, &count) != DEEP_ERROR_NONE || count != 2)
+      return 9; /* Vacuum must preserve absorbed prefix, not force subdivisions. */
+  }
   for (int mode = 0; mode < 2; ++mode) {
     const double eps = mode ? 1e-4 : 1e-3;
     {

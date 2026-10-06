@@ -119,7 +119,9 @@ ccl_device KernelDeepError deep_volume_compression_cell(
   }
   if (!stream->active) {
     stream->anchor = stream->last = cell.front;
-    stream->anchor_tau = stream->tau = 0;
+    /* Vacuum changes depth, never the optical-depth prefix. Keeping this prefix
+     * also avoids over-refining cells behind already absorbed density. */
+    stream->anchor_tau = stream->tau;
     stream->lower = 0;
     stream->upper = 1.7976931348623157e308;
     stream->active = true;

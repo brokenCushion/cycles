@@ -38,7 +38,7 @@ def raw_pass_gate(values, population, references, populations, envelope=None):
                 envelope=[envelope]*len(values), limits=limits)
 
 
-def validate_cuda_beauty(directory, references, qualification=True, output=None):
+def validate_cuda_beauty(directory, references, qualification=True, output=None, pool=(), builds=None):
     """Check all stored denoiser inputs; trace every denoised outlier at its pixel."""
     import GafferImage
     import imath
@@ -65,6 +65,16 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None)
             raise ValueError('Reference executable/settings mismatch: ' + str(p))
         if not s.get('save_render_passes') or not s.get('diagnostic_sample_count_pass'):
             raise ValueError('CUDA gate needs saved denoiser inputs and accepted sample counts')
+    pool = list(dict.fromkeys(Path(p).resolve() for p in list(references) + list(pool)))
+    identities = json.loads(Path(builds).read_text())['builds'] if builds else {}
+    for p in pool:
+        s = json.loads((p / 'render.json').read_text())
+        other = executable(p, s)
+        same_beauty = (other == digest or
+            (digest in identities and other in identities and
+             identities[digest]['beauty_source_sha256'] == identities[other]['beauty_source_sha256']))
+        if not same_beauty or s['deep'] or any(s.get(k) != settings[0].get(k) for k in keys):
+            raise ValueError('Pool beauty source/settings mismatch: ' + str(p))
 
     def readers(filename):
         result = []
@@ -74,12 +84,20 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None)
             result.append(node)
         return result
     raw, beauty = readers('render-passes.exr'), readers('beauty.exr')
+    pool_raw = []
+    for p in pool:
+        node = GafferImage.ImageReader()
+        node['fileName'].setValue((p / 'render-passes.exr').as_posix())
+        pool_raw.append(node)
     fmt = raw[0]['out']['format'].getValue()
     if any(n['out']['format'].getValue() != fmt for n in raw + beauty):
         raise ValueError('Reference image size mismatch')
     names = list(raw[0]['out']['channelNames'].getValue())
     if any(list(n['out']['channelNames'].getValue()) != names for n in raw):
         raise ValueError('Denoiser input channel mismatch')
+    if any(n['out']['format'].getValue() != fmt or
+           list(n['out']['channelNames'].getValue()) != names for n in pool_raw):
+        raise ValueError('Pool image/channel mismatch')
     counts = [c for c in names if 'Debug Sample Count' in c]
     if len(counts) != 1:
         raise ValueError('Missing accepted sample-count channel')
@@ -97,7 +115,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None)
         if not combined:
             raise ValueError('Missing raw combined pass')
         groups[combined[0].rsplit('.', 1)[0]] = combined
-    stats = {g: dict(channels=cs, violations=0, max_envelope=0.0, max_matching_error=0.0,
+    stats = {g: dict(channels=cs, violations=0, k5_violations=0, max_envelope=0.0, max_matching_error=0.0,
                      max_four_ulp=0.0, worst=None, worst_violation=None) for g, cs in groups.items()}
     report = dict(passed=False, qualification=qualification, K=len(references),
                   renderer_sha256=digest, references=[str(p) for p in references],
@@ -107,6 +125,8 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None)
                   max_deep_on_off=0.0, max_ordinary_repeat=0.0, peak_absolute_value=0.0,
                   denoised_outlier_pixels=0, explained_outlier_pixels=0,
                   unexplained_outlier_pixels=0, worst_denoised_pixels=[])
+    report['pool'] = [str(p) for p in pool]
+    report['reproduced_pixels'] = []
     output = Path(output) if output else directory / 'cuda_beauty_validation.json'
     output.parent.mkdir(parents=True, exist_ok=True)
     trace = output.with_suffix('.pixels.csv')
@@ -177,13 +197,16 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None)
                         closest = min(candidates, key=lambda r: max(abs(v-n) for v, n in zip(actual, native[r]))) if candidates else 0
                         differences = [abs(v-n) for v, n in zip(actual, native[closest])]
                         outlier = bool(matched) and not inside
-                        changes, evidence = [], {}
+                        changes, evidence, failed_groups = [], {}, []
                         for group, cs in groups.items():
                             v = [float(raw_data[c][0][index]) for c in cs]
                             refs = [[float(raw_data[c][r+1][index]) for c in cs] for r in range(len(references))]
                             gate = raw_pass_gate(v, populations[0], refs, populations[1:], envelopes[group])
                             s = stats[group]
                             s['violations'] += int(not gate['passed'])
+                            s['k5_violations'] += int(not gate['passed'])
+                            if not gate['passed']:
+                                failed_groups.append(group)
                             s['max_envelope'] = max(s['max_envelope'], max(gate['envelope']))
                             s['max_four_ulp'] = max(s['max_four_ulp'], max(4*float32_ulp(a) for a in v))
                             error = min((max(abs(a-b) for a,b in zip(v, refs[r])) for r in gate['matched']), default=0)
@@ -206,6 +229,24 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None)
                                         changes.append(detail)
                                 if changed:
                                     evidence[group] = changed
+                        if failed_groups or not matched:
+                            cs = [c for group in groups for c in groups[group]]
+                            v = [float(raw_data[c][0][index]) for c in cs]
+                            for p, node in zip(pool, pool_raw):
+                                n = float(node['out'].channelData(counts[0], origin)[index]) * maximum_samples
+                                if not math.isfinite(n) or abs(n-round(n)) > 1e-4 or round(n) != populations[0]:
+                                    continue
+                                ref = [float(node['out'].channelData(c, origin)[index]) for c in cs]
+                                gate = raw_pass_gate(v, populations[0], [ref], [round(n)], envelope=0)
+                                if gate['passed']:
+                                    for group in failed_groups:
+                                        stats[group]['violations'] -= 1
+                                    report['unmatched_population_pixels'] -= int(not matched)
+                                    report['reproduced_pixels'].append(dict(file_pixel=[x+i,height-1-(y+j)],
+                                        sample_count=populations[0], checked_passes=list(groups),
+                                        k5_failed_passes=failed_groups, matching_pool_run=str(p),
+                                        channels=cs, values=v, reference=ref, limits=gate['limits']))
+                                    break
                         if outlier:
                             report['denoised_outlier_pixels'] += 1
                             explained = bool(changes)

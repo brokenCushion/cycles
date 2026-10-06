@@ -9,10 +9,9 @@ boundary suites and K=5 landscape checks pass. Strict payload and deterministic
 headers are identical under the user-approved run-metadata exclusion. Results
 are in Section 6 of the plan.
 
-Phase 1 baseline measurement is complete; implementation stopped at a fresh
-587x250 K=5 raw-input failure. The same pixel state exists in an earlier deep-off
-control, but is absent from the fresh five. The gate remains unchanged. Details
-and all before measurements are in the Phase 1 table; spill storage is unchanged.
+Phase 1 baseline is accepted under the reproduced-state rule: pixel (489,34)
+matches all checked passes in Phase 0 deep-off control 3 with population 4.
+Banded spill implementation and its regression checks are in progress.
 
 Checkpoint: `59963b932`. The beauty majorant experiment is isolated on
 `codex/volume-majorant-determinism` (`9a017f055`) and removed here (`44b44477e`).

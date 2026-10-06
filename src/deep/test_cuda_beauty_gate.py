@@ -17,6 +17,10 @@ assert not raw_pass_gate([-1], 8, [[1],[2],[2],[2],[2]], [16,8,8,8,8])['passed']
 assert not raw_pass_gate([.5,2.5],16,[[1,1],[2,2],[1,1],[2,2],[1,1]],[16]*5)['passed']
 assert raw_pass_gate([1e-8],16,[[0]]*5,[16]*5,envelope=1e-7)['passed']
 assert not raw_pass_gate([3e-7],16,[[0]]*5,[16]*5,envelope=1e-7)['passed']
+# A reproduced state must match one render across all flattened input passes.
+assert raw_pass_gate([.74,891.6,2.59],4,[[.74,891.6,2.59]],[4],envelope=0)['passed']
+assert not raw_pass_gate([.74,891.6,2.59],4,[[.74,891.7,2.59],[.73,891.6,2.59]],
+                         [4,4],envelope=0)['passed']
 for invalid in (math.nan, math.inf):
     try:
         raw_pass_gate([invalid], 16, refs, [16]*5)

@@ -509,16 +509,15 @@ validation, and are not performance comparisons. Detailed resource metrics are
 landscape-only. Wrong per-pixel-envelope diagnostics are retained separately;
 they were corrected to the plan's global per-pass definition using saved EXRs.
 
-### Phase 1 - baseline measured; stopped before implementation
+### Phase 1 - baseline accepted; implementation in progress
 
-Source/binary unchanged from accepted Phase 0. Fresh evidence:
-`builds/validation/landscape-cloud/optimization-phase1/before`.
-The 587x250 raw gate fails at (489,34), all accepted populations 4. Existing
-Phase 0 **deep-off control 3** has exactly the same noisy/albedo/depth values as
-this fresh deep-on pixel (`failed-pixel-existing-controls.json`). This establishes
-ordinary variation, but the fresh five controls missed that state. The current
-gate still fails; no reference was substituted, no threshold changed, and no
-spill-layout code was implemented. All strict identity checks pass.
+Fresh before evidence: `builds/validation/landscape-cloud/optimization-phase1/before`.
+The reproduced-state rule resolves (489,34): all checked noisy RGBA, albedo RGB,
+normal XYZ, depth and sample-count passes match Phase 0 deep-off control 3 within
+4 FLOAT ULP, accepted population 4. K=5 outliers were Noisy R, Albedo R and Depth;
+no additional control renders were needed. The full reader/oracle check passes.
+`performance/deep/cuda_beauty_validation.json` records the complete matched vector.
+CPU exact beauty and all strict identity/regression checks pass.
 
 | Case | Metric | Before | After | Commit |
 | --- | --- | --- | --- | --- |
@@ -549,12 +548,12 @@ spill-layout code was implemented. All strict identity checks pass.
 | 587x250 / 4 | Deep samples | 52189081 | Not implemented | `bfd12882f` |
 | 587x250 / 4 | Max oracle error | 2.2079907672709065e-07 | Not implemented | `bfd12882f` |
 | 587x250 / 4 | Max depth-cut error | 8.228034402701923e-07 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Beauty / alpha / depth | FAIL / PASS / PASS | Not implemented | `bfd12882f` |
+| 587x250 / 4 | Beauty / alpha / depth | PASS (pool control 3) / PASS / PASS | Not implemented | `bfd12882f` |
 | Nine CTests | Regression | 9/9 PASS | Not implemented | `bfd12882f` |
 | CPU compatibility | Regression | 14/14 PASS | Not implemented | `bfd12882f` |
 | CUDA compatibility | Regression | 4/4 PASS | Not implemented | `bfd12882f` |
 | CPU boundary | Regression | 33 renders / 17 rejections PASS | Not implemented | `bfd12882f` |
 | CUDA boundary | Regression | 33 renders / 17 rejections PASS | Not implemented | `bfd12882f` |
-| 587x250 / 4 at (489,34) | Noisy R: difference / allowed bound | 0.017139196395874023 / 9.5367431640625e-07 FAIL | Not implemented | `bfd12882f` |
-| 587x250 / 4 at (489,34) | Albedo R: difference / allowed bound | 0.13999241590499878 / 2.384185791015625e-07 FAIL | Not implemented | `bfd12882f` |
-| 587x250 / 4 at (489,34) | Depth: difference / allowed bound | 0.105224609375 / 0.000244140625 FAIL | Not implemented | `bfd12882f` |
+| 587x250 / 4 at (489,34) | Noisy R: difference / allowed bound | 0.017139196395874023 / 9.5367431640625e-07; pool control 3 PASS | Not implemented | `bfd12882f` |
+| 587x250 / 4 at (489,34) | Albedo R: difference / allowed bound | 0.13999241590499878 / 2.384185791015625e-07; pool control 3 PASS | Not implemented | `bfd12882f` |
+| 587x250 / 4 at (489,34) | Depth: difference / allowed bound | 0.105224609375 / 0.000244140625; pool control 3 PASS | Not implemented | `bfd12882f` |

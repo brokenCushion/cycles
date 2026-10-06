@@ -36,6 +36,10 @@ parser.add_argument('--beauty-repeat', type=Path, action='append',
                     help='Supply four times: five independent CUDA deep-off references including baseline')
 parser.add_argument('--oracle-python', type=Path,
                     help='Existing NumPy Python environment for bounded, large camera-CSV checks')
+parser.add_argument('--beauty-pool', type=Path, action='append', default=[],
+                    help='Ordinary control directory with matching settings and unchanged beauty source')
+parser.add_argument('--beauty-builds', type=Path,
+                    help='Recorded executable/beauty-source identities for cross-phase pooling')
 args = parser.parse_args()
 directory, baseline = args.directory.resolve(), args.baseline.resolve()
 settings = json.loads((directory / 'render.json').read_text())
@@ -87,7 +91,8 @@ for y in range(0, height, tile):
         total_deep_samples += previous
 if settings['device'] == 'CUDA' and not args.reader_only:
     from cuda_beauty_gate import validate_cuda_beauty
-    cuda_report = validate_cuda_beauty(directory, [baseline] + (args.beauty_repeat or []))
+    cuda_report = validate_cuda_beauty(directory, [baseline] + (args.beauty_repeat or []),
+                                    pool=args.beauty_pool, builds=args.beauty_builds)
     beauty_error = cuda_report['max_deep_on_off']
     repeat_error = cuda_report['max_ordinary_repeat']
     beauty_peak = cuda_report['peak_absolute_value']

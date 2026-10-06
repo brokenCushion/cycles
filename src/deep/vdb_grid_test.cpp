@@ -174,6 +174,16 @@ int main(int argc, char **argv)
           0, DEEP_MAX_MEDIA, nullptr, ray + 7);
       if (captured.status != DEEP_COMPLETE)
         throw std::runtime_error("Native cell capture failed");
+      if (ray == 0) {
+        DeepVolumeCompression wrong_object{};
+        wrong_object.object = ray + 8;
+        const auto rejected = ccl::deep_volume_grid_capture(
+            accessor, origin, direction, 0, 1, .02, length, 1, 100,
+            events.data(), coefficients.data(), 1, DEEP_MAX_VOLUME_EVENTS, 0, 16384,
+            4.95e-5, DEEP_MAX_MEDIA, &wrong_object, ray + 7);
+        if (rejected.status != DEEP_FAILED || rejected.error != DEEP_ERROR_STATE)
+          throw std::runtime_error("Compression accepted a different object's stream");
+      }
       maximum_records = std::max(maximum_records, size_t(captured.count));
       std::vector<ccl::deep::CubicDensityInterval> cubic;
       double stored_tau = 0;

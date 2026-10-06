@@ -12,7 +12,8 @@ ccl_device KernelDeepResult deep_volume_interval(
     KernelGlobals kg, IntegratorState state, ShaderData *sd, const Ray &ray,
     const int object, const double start, const double end,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
-    const int stride, const int capacity, int count, const double eps_ray)
+    const int stride, const int capacity, int count, const double eps_ray,
+    ccl_private DeepVolumeCompression *object_stream)
 {
   const VolumeStack entry = {sd->object, sd->shader};
   const float grid_scale = kernel_data_fetch(shaders, sd->shader & SHADER_MASK).deep_density_scale;
@@ -26,7 +27,7 @@ ccl_device KernelDeepResult deep_volume_interval(
     sd->shader_flag = kernel_data_fetch(shaders, entry.shader & SHADER_MASK).flags;
     sd->object_flag = kernel_data_fetch(object_flag, object);
     const KernelDeepResult captured = deep_volume_native(
-        kg, sd, &ray, start, end, grid_scale, events, density, stride, capacity, count, eps_ray);
+        kg, sd, &ray, start, end, grid_scale, events, density, stride, capacity, count, eps_ray, object_stream);
     if (captured.status != DEEP_COMPLETE)
       return captured;
     count = int(captured.count);
@@ -63,10 +64,25 @@ ccl_device KernelDeepResult deep_volume_interval(
                                  double(camera_z.z) * ray.D.z;
 #if defined(WITH_NANOVDB) && (!defined(__KERNEL_GPU__) || defined(__KERNEL_CUDA__))
       if (eps_ray > 0 && density) {
+        const double front = depth_origin + start * depth_per_t;
+        const double allowance = .75 * eps_ray / kernel_data.film.pad1;
+        if (::exp(-object_stream->tau + object_stream->prefix_error) <= allowance) {
+          float z = float(front);
+          if (double(z) < front)
+            z = nextafterf(z, FLT_MAX);
+          events[count * stride] = {DEEP_SURFACE, z, z, 1, 0};
+          object_stream->terminated = true;
+          object_stream->cutoff = z;
+          return {DEEP_COMPLETE, unsigned(count + 1), DEEP_ERROR_NONE};
+        }
+        const double tau = double(sigma.x) * (end - start) * len(ray.D);
         const auto error = deep_volume_constant(
             depth_origin + start * depth_per_t, depth_origin + end * depth_per_t,
-            double(sigma.x) * (end - start) * len(ray.D), .25 * eps_ray / capacity,
+            tau, .25 * eps_ray / capacity,
             events, density, stride, capacity, &count);
+        object_stream->tau += tau;
+        object_stream->prefix_error += 64 * 2.2204460492503131e-16 *
+                                       (1 + object_stream->tau + tau);
         return error == DEEP_ERROR_NONE ? KernelDeepResult{DEEP_COMPLETE, unsigned(count), error} :
                                          KernelDeepResult{DEEP_FAILED, 0, error};
       }
@@ -162,13 +178,25 @@ ccl_device_inline bool deep_volume_nearest_bvh(
 }
 #endif
 
+/* The opaque event depth is rounded upward, so this clip cannot discard any
+ * visible portion before the depth whose remaining transmittance was bounded. */
+ccl_device void deep_volume_clamp(KernelGlobals kg, const Ray &ray,
+                                  const double depth, double &clip_end)
+{
+  const float4 z = kernel_data.cam.worldtocamera.z;
+  const double origin = double(z.x)*ray.P.x + double(z.y)*ray.P.y + double(z.z)*ray.P.z + z.w;
+  const double direction = double(z.x)*ray.D.x + double(z.y)*ray.D.y + double(z.z)*ray.D.z;
+  const double end = (depth - origin) / direction;
+  clip_end = clip_end < end ? clip_end : end;
+}
+
 /* The BVH discovers objects. Pair their actual triangle crossings in double:
  * FLOAT all-hit queries may omit a grazing exit or include a false edge hit.
  * Nearest-hit queries use bounded scratch, including for nonconvex VDB
  * boundary meshes; no per-thread allocation or fixed face-count truncation. */
 ccl_device KernelDeepResult deep_volume_object(
     KernelGlobals kg, IntegratorState state, ShaderData *sd, const Ray &ray,
-    const int object, const double clip_start, const double clip_end,
+    const int object, const double clip_start, double &clip_end,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
     const int stride, const int capacity, int count, const double eps_ray,
     const bool initially_inside = false)
@@ -191,6 +219,7 @@ ccl_device KernelDeepResult deep_volume_object(
   }
   const int first = kernel_data_fetch(object_prim_offset, object);
   const int size = kernel_data_fetch(objects, object).numprims;
+  DeepVolumeCompression object_stream{};
   const int shader = sd->shader;
   double cursor = clip_start, start = initially_inside ? clip_start : -1;
   int cursor_prim = -1;
@@ -217,8 +246,11 @@ ccl_device KernelDeepResult deep_volume_object(
     if (near_prim < 0 || nearest >= clip_end) {
       if (start >= 0 && clip_end > start) {
         sd->shader = shader;
-        return deep_volume_interval(kg, state, sd, ray, object, start, clip_end,
-                                    events, density, stride, capacity, count, eps_ray);
+        const auto result = deep_volume_interval(kg, state, sd, ray, object, start, clip_end,
+                                    events, density, stride, capacity, count, eps_ray, &object_stream);
+        if (object_stream.terminated)
+          deep_volume_clamp(kg, ray, object_stream.cutoff, clip_end);
+        return result;
       }
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
     }
@@ -242,10 +274,14 @@ ccl_device KernelDeepResult deep_volume_object(
       if (end > start) {
         sd->shader = shader;
         const KernelDeepResult result = deep_volume_interval(
-            kg, state, sd, ray, object, start, end, events, density, stride, capacity, count, eps_ray);
+            kg, state, sd, ray, object, start, end, events, density, stride, capacity, count, eps_ray, &object_stream);
         if (result.status != DEEP_COMPLETE)
           return result;
         count = int(result.count);
+        if (object_stream.terminated) {
+          deep_volume_clamp(kg, ray, object_stream.cutoff, clip_end);
+          return result;
+        }
       }
       start = -1;
     }
@@ -272,7 +308,8 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
 #ifdef __VOLUME__
   Ray ray;
   integrator_state_read_ray(state, &ray);
-  const float clip_start = ray.tmin, clip_end = ray.tmax;
+  const float clip_start = ray.tmin;
+  double clip_end = ray.tmax;
   ray.tmax = FLT_MAX;
   ray.self.object = ray.self.light_object = OBJECT_NONE;
   ray.self.prim = ray.self.light_prim = PRIM_NONE;
@@ -332,6 +369,8 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
   }
   int steps = 0;
   while (steps < (density ? 16384 : 128)) {
+    if (eps_ray > 0 && ray.tmin >= clip_end)
+      return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
     uint boundary_count = scene_intersect_volume(
         kg, &ray, boundaries, boundary_capacity, PATH_RAY_VISIBILITY_CAMERA, false);
     if (boundary_count == 0) {
@@ -362,6 +401,8 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
       if (++steps > (density ? 16384 : 128))
         return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
       const Intersection hit = boundaries[boundary];
+      if (eps_ray > 0 && hit.t > clip_end)
+        return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
       if (hit.type != PRIMITIVE_TRIANGLE)
         return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
       ShaderDataTinyStorage storage;

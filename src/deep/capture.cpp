@@ -954,7 +954,7 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   size_t retained_bytes = 0;
   for (int i = 0; i < cameras; ++i) {
     auto sample = volume_sample(
-        x, y, i, compact_ray ? budget.density / 2 : budget.density);
+        x, y, i, (compact_ray || (volume_grid_ && error_setting_ > 0)) ? budget.density / 2 : budget.density);
     if (compact_ray && error_setting_ == 0) {
       /* Split the existing density allowance between integration and one-ray
        * reduction. Convex averaging preserves this per-ray absolute T bound. */

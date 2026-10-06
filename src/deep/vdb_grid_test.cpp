@@ -190,7 +190,7 @@ int main(int argc, char **argv)
         const auto reduced = ccl::deep_volume_grid_capture(
             accessor, origin, direction, 0, 1, .02, length, 1, 100,
             compressed.data(), spans.data(), 1, 8192, 0, 16384, eps);
-        if (reduced.status != DEEP_COMPLETE)
+        if (reduced.status != DEEP_COMPLETE || reduced.count > captured.count)
           throw std::runtime_error("Compressed asset capture failed: " +
                                    std::to_string(reduced.error));
         for (int probe = 0; probe <= 256; ++probe) {
@@ -203,8 +203,7 @@ int main(int argc, char **argv)
           }
           for (unsigned i = 0; i < reduced.count; ++i) {
             const auto &span = spans[i];
-            const double u = std::clamp((z - span.front) / (span.back - span.front), 0.0, 1.0);
-            approximate += u * (double(span.optical_depth[0]) + double(span.optical_depth[1]));
+            approximate += ccl::compression_record_tau(compressed[i], span, z);
           }
           if (std::abs(std::exp(-exact) - std::exp(-approximate)) > eps)
             throw std::runtime_error("Compressed asset exceeds exact cubic oracle allowance");

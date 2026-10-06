@@ -554,6 +554,17 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
       }
     }
   }
+  /* Reuse film padding: deep gets a scene bound without changing any beauty
+   * constant offsets or kernel layout. Film updates leave this slot untouched. */
+  int volume_objects = 0;
+  for (Object *object : scene->objects)
+    if (object->get_geometry())
+      for (Node *node : object->get_geometry()->get_used_shaders())
+        if (static_cast<Shader *>(node)->graph->output()->input("Volume")->link) {
+          ++volume_objects;
+          break;
+        }
+  scene->dscene.data.film.pad1 = std::max(1, std::min(volume_objects, int(DEEP_MAX_MEDIA)));
   for (Object *object : scene->objects) {
     if (volume) {
       const auto &tfm = object->get_tfm();

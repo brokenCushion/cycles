@@ -11,6 +11,21 @@ ccl_device double compression_exact_tau(const double *b, const double u)
          (-b[0] + 3 * b[1] - 3 * b[2] + b[3]) * u * u * u * u / 4;
 }
 
+/* Mixed exact/linear records, with opaque tails represented explicitly. */
+ccl_device double compression_record_tau(const KernelDeepEvent event,
+                                          const KernelDeepDensity span, const double z)
+{
+  if (event.kind == DEEP_SURFACE)
+    return z >= event.front ? 1.7976931348623157e308 : 0;
+  double u = (z - span.front) / (span.back - span.front);
+  u = u < 0 ? 0 : (u > 1 ? 1 : u);
+  if (event.kind == DEEP_VOLUME)
+    return u * (double(span.optical_depth[0]) + double(span.optical_depth[1]));
+  const double b[4] = {span.optical_depth[0], span.optical_depth[1],
+                       span.optical_depth[2], span.optical_depth[3]};
+  return compression_exact_tau(b, u);
+}
+
 ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
                                         ccl_global KernelDeepDensity *density)
 {
@@ -47,11 +62,15 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
                                            eps * .25 / 8192,
                                            events, density, 1, 8192, &count) != DEEP_ERROR_NONE)
             return 6;
+          if (stream.terminated)
+            break;
         }
         if (deep_volume_compression_flush(&stream, eps * .25 / 8192,
                                           events, density, 1, 8192, &count) != DEEP_ERROR_NONE)
           return 7;
       }
+      if (count > 24)
+        return 10; /* No ray may expand relative to its exact cell stream. */
       for (int probe = 0; probe <= 8192; ++probe) {
         const double z = 20 * double(probe) / 8192;
         double exact = 0, approximate = 0;
@@ -63,10 +82,7 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
             exact += compression_exact_tau(cases[(cell + object) % 6], u);
           }
         for (int i = 0; i < count; ++i) {
-          double u = (z - density[i].front) / (density[i].back - density[i].front);
-          u = u < 0 ? 0 : (u > 1 ? 1 : u);
-          approximate += u * (double(density[i].optical_depth[0]) +
-                              double(density[i].optical_depth[1]));
+          approximate += compression_record_tau(events[i], density[i], z);
         }
         if (fabs(exp(-exact) - exp(-approximate)) > eps)
           return 8;
@@ -87,19 +103,16 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
           return 1;
         error = deep_volume_compression_flush(&stream, eps * .25 / 8192,
                                               events, density, 1, 8192, &count);
-        if (error != DEEP_ERROR_NONE || count == 0 || count > 8192)
+        if (error != DEEP_ERROR_NONE || count == 0 || count > 1)
           return 2;
         for (int probe = 0; probe <= 8192; ++probe) {
           const double u = double(probe) / 8192;
           const double z = start + u;
           double tau = 0;
           for (int i = 0; i < count; ++i) {
-            if (events[i].kind != DEEP_VOLUME || !(density[i].back > density[i].front))
-              return 3;
-            double fraction = (z - density[i].front) / (density[i].back - density[i].front);
-            fraction = fraction < 0 ? 0 : (fraction > 1 ? 1 : fraction);
-            tau += (double(density[i].optical_depth[0]) +
-                    double(density[i].optical_depth[1])) * fraction;
+            if (events[i].kind != DEEP_VOLUME_CUBIC || !(density[i].back > density[i].front))
+              return 3; /* A singleton retains its exact cubic bytes. */
+            tau += compression_record_tau(events[i], density[i], z);
           }
           if (fabs(exp(-tau) - exp(-compression_exact_tau(cases[test], u))) > eps)
             return 4;
@@ -116,6 +129,19 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
           return 5;
       }
     }
+  }
+  {
+    DeepVolumeCompression stream{};
+    int count = 0;
+    for (int i = 0; i < 10; ++i) {
+      const KernelDeepDensity cell{{.02f,.02f,.02f,.02f}, double(i+1), double(i+2)};
+      if (deep_volume_compression_cell(&stream, cell, 1e-5, 1e-8,
+                                       events, density, 1, 8192, &count) != DEEP_ERROR_NONE)
+        return 11;
+    }
+    if (deep_volume_compression_flush(&stream, 1e-8, events, density, 1, 8192, &count) !=
+        DEEP_ERROR_NONE || count != 1 || events[0].kind != DEEP_VOLUME)
+      return 12;
   }
   return 0;
 }

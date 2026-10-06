@@ -70,3 +70,10 @@ static_assert(sizeof(KernelDeepDensity) == 32, "Deep density layout");
 static_assert(sizeof(KernelDeepResult) == 12, "Deep result layout");
 static_assert(sizeof(KernelDeepRecord) == 28, "Deep metadata layout");
 static_assert(sizeof(KernelDeepMedium) == 8, "Deep medium layout");
+struct DeepVolumeCompression {
+  double anchor, last, anchor_tau, tau, lower, upper, roundoff, cutoff;
+  double prefix_error, anchor_error;
+  KernelDeepDensity singleton;
+  int cells;
+  bool active, terminated;
+};

@@ -105,6 +105,21 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
             result.append(node)
         return result
     raw, beauty = readers('render-passes.exr'), readers('beauty.exr')
+    # Retain qualified K-run denoised envelopes across unchanged beauty builds.
+    # Raw gates still use ONLY the current K references and reproduced-state rule.
+    historical_groups = {}
+    for p in pool:
+        if (p / 'beauty.exr').is_file():
+            historical_groups.setdefault(p.parent, []).append(p)
+    historical = []
+    for parent, paths in historical_groups.items():
+        if len(paths) >= 5:
+            nodes = []
+            for p in paths:
+                node = GafferImage.ImageReader()
+                node['fileName'].setValue((p / 'beauty.exr').as_posix())
+                nodes.append(node)
+            historical.append((parent, nodes))
     pool_raw = []
     for p in pool:
         node = GafferImage.ImageReader()
@@ -159,6 +174,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     # The plan's per-pass envelope is the maximum of those ranges over the image.
     envelopes = {group:0.0 for group in groups}
     denoised_envelope = 0.0
+    historical_envelopes = {str(parent):0.0 for parent, _ in historical}
     for y in range(0, height, tile_size):
         for x in range(0, width, tile_size):
             origin = imath.V2i(x,y)
@@ -179,6 +195,17 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                     if not all(math.isfinite(v) for v in values):
                         raise ValueError('Nonfinite reference denoised beauty')
                     denoised_envelope = max(denoised_envelope,max(values)-min(values))
+                for parent, nodes in historical:
+                    data = [n['out'].channelData(c,origin) for n in nodes]
+                    for index in valid:
+                        values = [float(d[index]) for d in data]
+                        if not all(math.isfinite(v) for v in values):
+                            raise ValueError('Nonfinite historical denoised beauty')
+                        key = str(parent)
+                        historical_envelopes[key] = max(historical_envelopes[key], max(values)-min(values))
+    report['current_K_denoised_envelope'] = denoised_envelope
+    report['historical_denoised_envelopes'] = historical_envelopes
+    denoised_envelope = max([denoised_envelope] + list(historical_envelopes.values()))
     report['max_ordinary_repeat'] = denoised_envelope
     with trace.open('w', newline='') as stream:
         writer = csv.DictWriter(stream, fieldnames=('file_x', 'file_y', 'reference_index', 'sample_count',

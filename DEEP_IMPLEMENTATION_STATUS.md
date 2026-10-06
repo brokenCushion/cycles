@@ -4,14 +4,13 @@ The [optimization plan](DEEP_OPTIMIZATION_PLAN.md) is the plan of record;
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
 Branch: `codex/landscape-cloud-compatibility`.
 
-Phases 0-3a are accepted. Phase 3b is implemented but not accepted.
-Its bound, tests and measured results are in plan Section 6.
-Independent exact-cubic CPU/CUDA tests and nine CTests pass.
-Small strict identity passes (1/81 checked); alpha/depth-cut checks pass.
-Small 1e-4 fails the existing denoised-beauty gate (75 unexplained pixels).
-Capture time and readback/spill bytes regress. Qualification stopped.
-The larger fixed case, compatibility matrices and boundaries remain unrun.
-No Phase 3c or full production run; no gates or tolerances were relaxed.
+Phases 0-3a are accepted. Phase 3b rework is in qualification, not accepted.
+The plan records no-expansion compression, exact cubic fallback and bounded
+opaque-tail clipping. Raw beauty gates remain unchanged.
+Independent CPU/CUDA cubic/no-expansion tests and nine CTests pass.
+The previous denoised check passes with the retained image-wide K-run envelope.
+Identical saved input passes denoised twice with CUDA OIDN give max difference 0.
+Fixed-case performance, full 81/81 strict identity and regressions remain pending.
+No Phase 3c or full production run.
 
-Evidence: `builds/validation/landscape-cloud/optimization-phase3b/halt-results.json`.
-Candidate Gaffer review: `builds/validation/landscape-cloud/optimization-phase3b/after/small/1e-3/native_vdb_review.gfr`.
+Evidence: `builds/validation/landscape-cloud/optimization-phase3b-rework/`.

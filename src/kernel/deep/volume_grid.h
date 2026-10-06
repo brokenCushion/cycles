@@ -7,42 +7,30 @@
 
 CCL_NAMESPACE_BEGIN
 
-/* Non-strict per-object compression: absolute transmittance error proof.
- *
- * For an anchor (za, taua), let Ta = exp(-taua). Nonnegative extinction gives
- * |Ta*exp(-u) - Ta*exp(-v)| <= Ta*|u-v| for u,v >= 0. A cell's exact optical
- * depth primitive is quartic: deep_density_chord_error bounds its deviation q
- * from the endpoint chord at EVERY depth by the Bernstein convex-hull property.
- * If a replacement line differs from that cell chord by at most delta at BOTH
- * endpoints, linear interpolation bounds their difference by delta everywhere.
- * Thus Ta*(q+delta) bounds the absolute T error, including cell interiors.
- * Boundary tests alone are insufficient for a curved cell.
- *
- * Allocate eps_object so sum(eps_object) <= eps_ray over all contributing
- * objects. The product telescoping inequality, |product(Tj)-product(Tj')| <=
- * sum(|Tj-Tj'|), proves the ray bound even for overlapping media. Never spend
- * eps_ray independently on each object. Convex camera-sample averaging retains
- * eps_ray. Device compression replaces the host per-ray approximation budget;
- * it must not be charged a second time by the host fitter.
- *
- * After reserving representation error, split the object's remaining allowance
- * equally between cell curvature and boundary displacement. Subdivide a cell
- * until q <= eps_object/(2*Ta); use delta = eps_object/(2*Ta) at its boundaries.
- * This is a conservative instance of delta_i = eps_object/Ta - q_i, avoiding
- * retrospective cone changes when the next cell has greater curvature.
- * Each boundary (zi,taui) intersects the feasible nonnegative slope cone with
- * [(taui-taua-delta)/(zi-za), (taui-taua+delta)/(zi-za)]. Extend only when the
- * exact newest endpoint slope is feasible; otherwise emit the last feasible
- * endpoint and re-anchor. Exact integrated endpoint depths prevent error from
- * accumulating across emitted segments; preserve vacuum gaps explicitly.
- *
- * The proof above is in exact arithmetic. FLOAT tau/depth conversion is not
- * free: bound accumulated endpoint rounding and interior depth displacement,
- * charge them to the reserved allowance, and fail explicitly if it is exceeded.
- * Thin intervals must retain double boundaries until publication; a collapsed
- * FLOAT interval cannot silently be dropped. Subdivision/progress and event
- * capacity failures invalidate the sample. All state is bounded; no allocation.
- * Strict (zero allowance) bypasses compression and retains the cubic path.
+/* Non-strict no-expansion bound (absolute transmittance).
+ * Host density fitting and device capture each receive half the density budget.
+ * Host preflight supplies N=min(scene volume objects, DEEP_MAX_MEDIA), N>=1;
+ * eps_object=eps_ray/N. Product telescoping bounds overlapping media by the
+ * sum of object errors; convex camera averaging preserves eps_ray.
+ * Reserve 1/4 of eps_ray for record/integration roundoff, charged per record.
+ * For an exact optical prefix taua, Ta=exp(-taua), nonnegative extinction gives
+ * |Ta exp(-u)-Ta exp(-v)| <= Ta |u-v|. The Bernstein hull bounds each cell's
+ * quartic primitive's chord error q at EVERY interior depth. Require
+ * q<=delta=.75*eps_object/(2*Ta), and intersect the boundary slope cones with
+ * +/-delta. Then Ta*(q+delta)<=.75*eps_object. Exact integrated endpoints
+ * prevent accumulation across segments. Vacuum retains the object's prefix.
+ * Carry a conservative prefix roundoff bound: use exp(-tau+prefix_error)
+ * for both slope allowances and the termination test, never an optimistic T.
+ * Curvature rejection emits the original cubic unchanged: no subdivision.
+ * A singleton also stays cubic; linear spans replace at least two records.
+ * Host fits retained cubics within its separate half of the density budget.
+ * Once exact T_obj<=.75*eps_object, replacing the subsequent tail by opacity
+ * has error <=.75*eps_object. This is disjoint from the earlier curve error,
+ * so their maximum, not their sum, is charged. Use the next occupied cell's
+ * record slot for opacity: no expansion, even without any successful merge.
+ * Round its depth upward; attenuation is already bounded before that depth.
+ * Clamp later objects to this cutoff. All failures invalidate the sample.
+ * Strict bypasses this path, retaining every original byte and operation.
  */
 
 /* Initial numerical qualification is CPU/CUDA double evaluation followed by
@@ -79,79 +67,98 @@ ccl_device KernelDeepError deep_volume_constant(
   return DEEP_ERROR_NONE;
 }
 
-struct DeepVolumeCompression {
-  double anchor, last, anchor_tau, tau, lower, upper, roundoff;
-  bool active;
-};
+ccl_device KernelDeepError deep_volume_exact(
+    const KernelDeepDensity cell, ccl_global KernelDeepEvent *events,
+    ccl_global KernelDeepDensity *density, const int stride, const int capacity,
+    ccl_private int *count)
+{
+  if (*count == capacity)
+    return DEEP_ERROR_EVENT_CAPACITY;
+  events[*count * stride] = {DEEP_VOLUME_CUBIC, float(cell.front), float(cell.back), 0, 0};
+  density[*count * stride] = cell;
+  ++*count;
+  return DEEP_ERROR_NONE;
+}
 
 ccl_device KernelDeepError deep_volume_compression_flush(
     ccl_private DeepVolumeCompression *stream, const double rounding_allowance,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
     const int stride, const int capacity, ccl_private int *count)
 {
-  if (!stream->active || stream->last == stream->anchor)
+  if (!stream->active)
     return DEEP_ERROR_NONE;
-  const KernelDeepError error = deep_volume_constant(
-      stream->anchor, stream->last, stream->tau - stream->anchor_tau,
-      rounding_allowance - stream->roundoff, events, density, stride, capacity, count);
-  stream->anchor = stream->last;
-  stream->anchor_tau = stream->tau;
-  stream->lower = 0;
-  stream->upper = 1.7976931348623157e308;
-  stream->roundoff = 0;
+  const KernelDeepError error = stream->cells == 1 ?
+      deep_volume_exact(stream->singleton, events, density, stride, capacity, count) :
+      deep_volume_constant(stream->anchor, stream->last, stream->tau - stream->anchor_tau,
+          rounding_allowance - stream->roundoff, events, density, stride, capacity, count);
+  stream->active = false;
+  stream->cells = 0;
   return error;
 }
 
-/* Restrict/subdivide the original cubic, rather than sampling a fitted curve.
- * A rejected vertex is replayed after flushing, so no extinction is lost. */
 ccl_device KernelDeepError deep_volume_compression_cell(
     ccl_private DeepVolumeCompression *stream, const KernelDeepDensity cell,
     const double allowance, const double rounding_allowance,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
     const int stride, const int capacity, ccl_private int *count)
 {
+  if (stream->terminated)
+    return DEEP_ERROR_STATE;
   if (stream->active && cell.front != stream->last) {
-    const KernelDeepError error = deep_volume_compression_flush(
+    const auto error = deep_volume_compression_flush(
         stream, rounding_allowance, events, density, stride, capacity, count);
     if (error != DEEP_ERROR_NONE)
       return error;
-    stream->active = false;
   }
-  if (!stream->active) {
-    stream->anchor = stream->last = cell.front;
-    /* Vacuum changes depth, never the optical-depth prefix. Keeping this prefix
-     * also avoids over-refining cells behind already absorbed density. */
-    stream->anchor_tau = stream->tau;
-    stream->lower = 0;
-    stream->upper = 1.7976931348623157e308;
-    stream->active = true;
+  if (::exp(-stream->tau + stream->prefix_error) <= allowance) {
+    const auto error = deep_volume_compression_flush(
+        stream, rounding_allowance, events, density, stride, capacity, count);
+    if (error != DEEP_ERROR_NONE)
+      return error;
+    if (*count == capacity)
+      return DEEP_ERROR_EVENT_CAPACITY;
+    float z = float(cell.front);
+    if (double(z) < cell.front)
+      z = nextafterf(z, FLT_MAX);
+    events[*count * stride] = {DEEP_SURFACE, z, z, 1, 0};
+    ++*count;
+    stream->cutoff = z;
+    stream->terminated = true;
+    return DEEP_ERROR_NONE;
   }
   const DeepCubicDensity<double> original = {{cell.optical_depth[0], cell.optical_depth[1],
                                              cell.optical_depth[2], cell.optical_depth[3]}};
-  double u = 0, width = 1;
-  for (int steps = 0; u < 1; ++steps) {
-    if (steps == 16384)
-      return DEEP_ERROR_GRID_STEPS;
-    const double v = u + width < 1 ? u + width : 1;
-    const double end = v == 1 ? cell.back : cell.front + v * (cell.back - cell.front);
-    if (!(v > u && end > stream->last))
-      return DEEP_ERROR_PROGRESS;
-    const auto piece = deep_density_restrict(original, u, v);
-    const double delta = allowance / (2 * ::exp(-stream->anchor_tau));
-    if (deep_density_chord_error(piece, v - u) > delta) {
-      width /= 2;
-      continue;
+  const double increment = deep_density_integral(original, 1.0);
+  for (int attempt = 0; attempt < 2; ++attempt) {
+    if (!stream->active) {
+      stream->anchor = stream->last = cell.front;
+      stream->anchor_tau = stream->tau;
+      stream->anchor_error = stream->prefix_error;
+      stream->lower = 0;
+      stream->upper = 1.7976931348623157e308;
+      stream->roundoff = 0;
+      stream->cells = 0;
     }
-    const double increment = deep_density_integral(piece, v - u);
+    const double delta = allowance / (2 * ::exp(-stream->anchor_tau + stream->anchor_error));
+    if (deep_density_chord_error(original, 1.0) > delta) {
+      const auto error = deep_volume_compression_flush(
+          stream, rounding_allowance, events, density, stride, capacity, count);
+      if (error != DEEP_ERROR_NONE)
+        return error;
+      const auto exact = deep_volume_exact(cell, events, density, stride, capacity, count);
+      stream->tau += increment;
+      stream->prefix_error += 64 * 2.2204460492503131e-16 * (1 + stream->tau + increment);
+      return exact;
+    }
     const double tau = stream->tau + increment;
-    const double distance = end - stream->anchor;
+    const double distance = cell.back - stream->anchor;
     double lower = (tau - stream->anchor_tau - delta) / distance;
     double upper = (tau - stream->anchor_tau + delta) / distance;
     lower = lower > stream->lower ? lower : stream->lower;
     upper = upper < stream->upper ? upper : stream->upper;
     const double slope = (tau - stream->anchor_tau) / distance;
     if (slope < lower || slope > upper) {
-      const KernelDeepError error = deep_volume_compression_flush(
+      const auto error = deep_volume_compression_flush(
           stream, rounding_allowance, events, density, stride, capacity, count);
       if (error != DEEP_ERROR_NONE)
         return error;
@@ -159,16 +166,19 @@ ccl_device KernelDeepError deep_volume_compression_cell(
     }
     stream->lower = lower;
     stream->upper = upper;
-    stream->last = end;
+    stream->last = cell.back;
     stream->tau = tau;
+    stream->prefix_error += 64 * 2.2204460492503131e-16 * (1 + tau + increment);
     stream->roundoff += 64 * 2.2204460492503131e-16 *
                        (1 + tau + original.b[0] + original.b[1] +
                         original.b[2] + original.b[3]);
-    u = v;
-    /* ponytail: keep the accepted subdivision width for this cell; grow it
-     * only in a later optimization if subdivision work is measured significant. */
+    if (!stream->cells)
+      stream->singleton = cell;
+    ++stream->cells;
+    stream->active = true;
+    return DEEP_ERROR_NONE;
   }
-  return DEEP_ERROR_NONE;
+  return DEEP_ERROR_PROGRESS;
 }
 
 template<typename BuildT>
@@ -239,7 +249,9 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
     const int capacity,
     const int first,
     const int traversal_limit,
-    const double eps_ray = 0)
+    const double eps_ray = 0,
+    const int volume_objects = DEEP_MAX_MEDIA,
+    ccl_private DeepVolumeCompression *object_stream = nullptr)
 {
   if (!events || !density || stride <= 0 || capacity <= 0 || first < 0 || first > capacity ||
       !(depth_per_t > 0 && physical_length_per_t > 0 && extinction_scale >= 0))
@@ -248,12 +260,11 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
   if (!deep_grid_begin(&cursor, origin, direction, start, end, traversal_limit))
     return {DEEP_FAILED, 0, DEEP_ERROR_PROGRESS};
   int count = first;
-  DeepVolumeCompression compressed{};
-  /* Reserve 1/4 for arithmetic/record rounding. The ray can visit at most
-   * DEEP_MAX_MEDIA objects; allocating equally is conservative for sparse rays.
-   * Exact endpoint integration means disconnected spans do not compound the
-   * curvature error; rounding is charged per emitted event across the ray. */
-  const double eps_object = .75 * eps_ray / DEEP_MAX_MEDIA;
+  DeepVolumeCompression local_stream{};
+  DeepVolumeCompression &compressed = object_stream ? *object_stream : local_stream;
+  if (eps_ray > 0 && !(volume_objects >= 1 && volume_objects <= DEEP_MAX_MEDIA))
+    return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
+  const double eps_object = .75 * eps_ray / volume_objects;
   const double eps_record = .25 * eps_ray / capacity;
   DeepGridSegment<double> segment{};
   DeepGridStep step;
@@ -321,6 +332,8 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
           events, density, stride, capacity, &count);
       if (error != DEEP_ERROR_NONE)
         return {DEEP_FAILED, 0, error};
+      if (compressed.terminated)
+        return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
       continue;
     }
     events[count * stride] = {DEEP_VOLUME_CUBIC, float(a), float(b), 0, 0};

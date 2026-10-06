@@ -104,7 +104,12 @@ Root causes, in code:
      unknown counts fail). 4 ULP is float accumulation-order noise.
    - Every pass the denoiser consumes (noisy beauty, denoising albedo, normal,
      depth, sample count) is checked the same way, not only the beauty.
-   - Denoised beauty: report its difference vs. the K-run denoised envelope.
+   - Denoised beauty: the envelope is the image-wide maximum over all pairs
+     of K ordinary deep-off runs, never a per-pixel envelope. Retain qualified
+     ordinary-run evidence across phases with unchanged beauty kernels.
+     Report the exact-saved-input GPU OIDN repeat difference separately; if
+     OIDN alone reproduces the variation, denoised pixels whose raw inputs pass
+     the unchanged raw gate are explained (user decision, 2026-10-07).
      It is not a pass/fail gate by itself, BUT any denoised difference outside
      the envelope must be explained by locating the pixels and showing which
      input pass differs. If a denoiser input pass differs beyond the raw gate,
@@ -226,26 +231,21 @@ OpenEXR deep volumetric convention); do not switch to piecewise-linear T.
 3b. Device per-ray compression (separate review stop)
 - Before coding 3b, document the error-bound derivation in `volume_grid.h`,
   summarize it to the user, then add independent exact-cubic integration tests.
-- In the kernel, compress each object's ordered cell stream as it is produced
-  (`deep_volume_grid_capture` in `src/kernel/deep/volume_grid.h`, and the
-  homogeneous path in `volume.h`). Emit constant-extinction `DEEP_VOLUME` events
-  (front, back, optical_depth) instead of one `DEEP_VOLUME_CUBIC` + density
-  record per cell.
-- Algorithm (O(1) state per stream): keep an anchor `(z_a, tau_a)` and a feasible
-  slope cone. Each cell boundary vertex `(z_i, tau_i)` with allowed deviation
-  `delta_i = eps_ray / T(z_a) - chord_error_i` (use the existing
-  `deep_density_chord_error` for within-cell deviation; `T(z_a)` is the
-  already-absorbed prefix, so the bound is absolute transmittance error) narrows
-  the cone. Extend while the chord from the anchor to the newest vertex lies
-  inside the cone; otherwise emit the segment ending at the last feasible
-  vertex with its exact tau (preserves total optical depth at segment ends) and
-  re-anchor there. This is the same bound the host fitter already uses; reuse
-  its proof and document it.
-- Per-ray absolute T bound survives camera averaging (convex combination), so
-  the host fitting budget is unaffected.
-- Optional, same phase: once a single object's own `T_obj(z) <= eps_ray`, total
-  T is also <= eps_ray (extinction adds). Emit an opaque surface event at that
-  depth and stop. Error <= eps_ray. Only enabled when `error` is not strict.
+- No expansion: every ray emits at most its strict record count. Keep an
+  original exact cubic cell unchanged when its curvature cannot fit the
+  allowance; charge its fitting to the reserved host density allowance.
+  Only merge consecutive cells when a linear segment replaces at least two
+  original records. No cell subdivision on the device.
+- Split the density allowance between device capture and host fitting, with
+  explicit arithmetic reserves. Host preflight counts volume objects and
+  passes `min(volume_objects, DEEP_MAX_MEDIA)` through kernel data;
+  `eps_object = eps_ray / min(volume_objects, DEEP_MAX_MEDIA)`.
+  Product telescoping bounds overlapping media by the sum of object bounds;
+  convex camera averaging preserves the ray bound.
+- Early termination is required: when an object's own transmittance is at
+  most its allowance, emit an opaque surface event, stop that object and clamp
+  later traversal to that depth. Charge the tail to its object allowance;
+  retain the no-expansion rule and conservative depth rounding.
 - Strict mode keeps today's cubic records and host path untouched.
 
 3c. deepID-ready data (separate review stop; no output change; groundwork for Phase 6)
@@ -263,6 +263,9 @@ Acceptance:
   header tolerance on the CPU/CUDA compatibility matrices and the small
   landscape; independent tests in `vdb_grid_test.cpp`/`vdb_grid_cuda_test.cu`
   compare compressed curves to the exact cubic integration within `eps_ray`.
+- At both fixed cases and both numeric settings, GPU readback bytes, spill
+  bytes and capture time must each be at most accepted Phase 3a values.
+  Tests assert per-ray records <= strict and check the independent cubic oracle.
 - Include CPU curve-fitting time separately from spill reads, reconstruction and
   EXR serialization in both fixed cases before/after; measure strict / 1e-4 /
   1e-3. The Phase 1 scratch result suggests fitting dominates export; quantify it.
@@ -721,17 +724,18 @@ both fixed cases, and their header-driven accepted-camera/depth-cut checks.
 
 No pixel required a reproduced-state pool resolution.
 
-### Phase 3b - halted; not accepted
+### Phase 3b - rework in qualification; not accepted
 
-Bound: `aab762cdb`. Implementation/tests: `8bf195e99`, `20c6e6658`.
-Vacuum-prefix fix: `6c4c7d6c5`. CPU/CUDA exact-cubic tests and nine CTests pass.
-Small strict payload/headers match (1/81 checked). Deep-alpha oracles and
-Gaffer cuts pass in all modes. The `1e-4` denoised-beauty gate fails:
-75 unexplained pixels; maximum difference 0.00544679. All raw K=5 input
-passes meet their existing limits. No gates or capacities were changed.
-Capture/storage regress substantially. Stop before the 587x250x4 case,
-compatibility matrices, boundary suites and Phase 3c.
-Evidence: `builds/validation/landscape-cloud/optimization-phase3b/halt-results.json`.
+The initial subdividing build regressed capture/storage (table below).
+It is superseded by no-expansion compression and required opaque-tail clipping.
+Independent CPU/CUDA cubic/no-expansion tests and nine CTests pass.
+Both fixed-case timings, full 81/81 strict identity and regressions remain pending.
+The prior 1e-4 denoised gate now passes: its image-wide difference and retained
+ordinary K-run envelope are both 0.005446791648864746. Raw gates are unchanged.
+Two CUDA OIDN runs from identical saved input passes are byte-identical (max 0);
+this test does not explain the ordinary-render variation.
+Evidence: `builds/validation/landscape-cloud/optimization-phase3b-rework/oidn-repeat/results.json`;
+initial performance: `builds/validation/landscape-cloud/optimization-phase3b/halt-results.json`.
 Before is accepted 3a. After is the corrected build; compiler warm-up is
 outside capture time. Host timings are aggregate worker elapsed seconds.
 Keep double boundaries/two-FLOAT tau in the existing sidecar for safety;

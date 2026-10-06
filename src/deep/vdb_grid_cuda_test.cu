@@ -84,7 +84,7 @@ __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
       const auto reduced = deep_volume_grid_capture(
           accessor, ray.origin, ray.direction, 0.0, 1.0, .02, ray.length, 1.0, 100.0,
           events + extra + i, density + extra + i, count, DEEP_MAX_VOLUME_EVENTS, 0, 16384, eps);
-      if (reduced.status != DEEP_COMPLETE) {
+      if (reduced.status != DEEP_COMPLETE || reduced.count > captured.count) {
         result.error = reduced.error;
         break;
       }
@@ -101,9 +101,7 @@ __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
         }
         for (unsigned j = 0; j < reduced.count; ++j) {
           const auto &span = density[extra + j * count + i];
-          double u = (z - span.front) / (span.back - span.front);
-          u = u < 0 ? 0 : (u > 1 ? 1 : u);
-          approximate += u * (double(span.optical_depth[0]) + double(span.optical_depth[1]));
+          approximate += compression_record_tau(events[extra + j * count + i], span, z);
         }
         if (fabs(exp(-exact) - exp(-approximate)) > eps)
           result.error = DEEP_ERROR_EXTINCTION;

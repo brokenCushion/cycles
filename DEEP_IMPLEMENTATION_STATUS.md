@@ -4,20 +4,16 @@ The [optimization plan](DEEP_OPTIMIZATION_PLAN.md) is the plan of record;
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
 Branch: `codex/landscape-cloud-compatibility`.
 
-Phase 0 is accepted: both builds, nine CTests, CPU/CUDA compatibility matrices,
-boundary suites and K=5 landscape checks pass. Strict payload and deterministic
-headers are identical under the user-approved run-metadata exclusion. Results
-are in Section 6 of the plan.
+Phases 0 and 1 are accepted. Phase 2 acceptance checks pass: native CUDA BVH
+boundary candidates reduce 587x250/four-sample capture from 71.65 to 33.28 s
+(2.15x); export remains 32.94 s. All 81 strict payload/header comparisons,
+nine CTests, CPU14/CUDA4 matrices, both boundary suites and both landscapes pass.
+CPU beauty is exact; CUDA follows the approved reference-pool rule.
+Profiling, resource costs and the resolved pixel are in plan Section 6.
+Gaffer review: `builds/validation/landscape-cloud/optimization-phase2/after/performance/deep/native_vdb_review.gfr`.
 
-Phase 1 is accepted: sequential band export, nine CTests, CPU/CUDA matrices,
-boundary suites and both fixed landscapes pass. Strict data/headers are unchanged.
-587x250 export: 49.26 -> 34.52 s; spill reads: 3.85 -> 0.60 GB (1.15x amplification).
-The accepted scratch follow-up reduces export further: 34.52 -> 32.97 s
-and small 8.30 -> 7.99 s; all 81 strict identities and regressions pass.
-Phase 2 timeline is captured; triangle-versus-grid timing awaits NVIDIA counter
-access (`ERR_NVGPUCTRPERM`). No boundary kernel change; Phase 2 is not accepted.
-
-Checkpoint: `59963b932`. The beauty majorant experiment is isolated on
-`codex/volume-majorant-determinism` (`9a017f055`) and removed here (`44b44477e`).
-Deep RGB remains deferred. No Phase 9 production run before Phases 0–8 pass
-and the user confirms.
+Next: Phase 3 error budgets and device compression, with a separate CPU
+curve-fitting time breakdown before/after. Stop for phase review first.
+Deep RGB is deferred. No Phase 9 production run before Phases 0â€“8 pass
+and the user confirms. The beauty majorant experiment remains isolated on
+`codex/volume-majorant-determinism`.

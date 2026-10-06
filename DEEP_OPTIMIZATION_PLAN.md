@@ -573,26 +573,86 @@ Build/source provenance: `builds/validation/beauty-builds.json`.
 | Scratch reuse | Strict payload + deterministic headers | 81/81 PASS | 81/81 PASS | `b602877dc` |
 | Scratch reuse | Regression set | 9 CTests; CPU14/CUDA4; each boundary33+17; both landscapes PASS | All PASS; CPU beauty exact; CUDA K=5 PASS | `b602877dc` |
 
-### Phase 2 - profiling in progress
+### Phase 2 - acceptance checks passed
 
-Baseline: `builds/validation/landscape-cloud/optimization-phase2/baseline.json`
-reuses the fully qualified scratch build and both fixed cases. Nsight evidence:
-`optimization-phase2/nsys/{timeline.nsys-rep,timeline.sqlite,stats.csv}`.
-The profiled deep output is strictly identical. No boundary implementation change.
-Counter access was enabled and verified; source-mapped Nsight Compute sampling
-shows significant triangle pairing. The CUDA BVH candidate search is implemented
-and awaiting strict identity, regression and timing checks. Phase 2 is not accepted. The scene inventory records ten
-native volumes, ray marching disabled: the renderer creates 12 triangles per
-nonempty bound. Counts are derived from the construction branch, not GPU telemetry.
-Kernel, copy and wait durations overlap and must not be summed.
+CUDA boundary pairing uses native BVH candidates, refined by the unchanged
+double-precision triangle test and tie rules. Small bounds and other backends
+retain the scan. Stack overflow fails explicitly. No beauty kernel or sampling
+change; no approximation was introduced.
+
+Baseline: `optimization-phase2/baseline.json` (qualified `b602877dc`). Clean
+build/results: `optimization-phase2/after/phase-results.json` (`f6f9316d8`).
+Evidence paths below are relative to `builds/validation/landscape-cloud/`.
+Nsight Systems: `optimization-phase2/{nsys,nsys-after}/timeline.nsys-rep`,
+`stats.csv`, `deep-only-timeline.json`. Counter access passed; no restart needed.
+Nsight Compute: `optimization-phase2/ncu-stratified/deep-surface.ncu-repz` and
+`source-attribution.json`. Fourteen invocations spanning the image/retry sequence
+(including the longest launch) indicate 64.9% triangle work versus 6.7% grid
+traversal. These are warp-residency PC shares weighted by launch duration,
+not exclusive function timers or a whole-frame census. Clocks/caches were not
+controlled. Kernel and host wait overlap; do not add them. Residual copy-API
+wait subtracts GPU copy duration from API elapsed time and mostly waits for
+queued kernels. Correlated deep-only copies account for all 7,177,170,944 bytes.
+
+Actual renderer bound counts (`optimization-phase2/scene-inventory-measured.json`):
+`Plane.030`: 22; `water2`: 2296; `cloud_01_variant_0000`, `cloud_02_variant_0000`,
+`cloud_04_variant_0000`, `cloud_05_variant_0000`, `cloud_06_variant_0000`: 12 each;
+`Cylinder.003`, `.005`, `.006`, `.007`, `.008`, `.009`, `.010`, `.011`, `.012`,
+`.014`, `.015`: 124 each. Counts come from the updated renderer scene, not
+viewport estimates; five other cloud objects are excluded from this render.
+
+CPU beauty remains exact. The CUDA performance pixel (489,34) fails the fresh
+K=5 envelope for noisy colour, albedo and depth but matches **all** checked
+passes exactly in one retained ordinary render, Phase 0 K=5 performance off-3,
+with four samples. It passes the approved reproduced-state rule; no new
+controls or relaxed thresholds were needed. Small CUDA beauty passes K=5.
+Both landscapes have zero unexplained denoised outliers.
 
 | Case | Metric | Before | After | Commit |
 | --- | --- | --- | --- | --- |
-| 47x20 / max16 | Unprofiled capture / export seconds | 5.72722 / 7.98998 | Pending | `b602877dc` baseline |
-| 587x250 / 4 | Unprofiled capture / export seconds | 71.654783 / 32.9664 | Pending | `b602877dc` baseline |
-| 587x250 / 4 | Nsight deep kernel seconds / launches | 66.259845 / 810 | Pending | `b602877dc` baseline |
-| 587x250 / 4 | Capture wait + readback seconds | 68.7772 | Pending | `b602877dc` baseline |
-| 587x250 / 4 | Device-to-host copy seconds in capture window | 2.216751 (includes other renderer reads) | Pending | `b602877dc` baseline |
-| 587x250 / 4 | Host spill seconds | 1.250789 | Pending | `b602877dc` baseline |
-| 587x250 / 4 | Triangle-loop versus grid time | Counter permission denied | Pending | `b602877dc` baseline |
-| 587x250 / 4 | Profiled strict identity | PASS | No implementation change | `b602877dc` baseline |
+| 47x20 / max16 | Unprofiled capture seconds | 5.72722 | 2.892841 | `f6f9316d8` |
+| 47x20 / max16 | Export seconds | 7.98998 | 7.98948 | `f6f9316d8` |
+| 47x20 / max16 | Capture wait + readback seconds | 4.595921 | 1.7916789999999998 | `f6f9316d8` |
+| 47x20 / max16 | GPU readback bytes | 372191232 | 372191232 | `f6f9316d8` |
+| 47x20 / max16 | Spill stored bytes | 13367184 | 13367184 | `f6f9316d8` |
+| 47x20 / max16 | Spill read bytes | 13367184 | 13367184 | `f6f9316d8` |
+| 47x20 / max16 | Spill written bytes | 13728144 | 13728144 | `f6f9316d8` |
+| 47x20 / max16 | EXR bytes | 4445714 | 4445714 | `f6f9316d8` |
+| 47x20 / max16 | Peak process working-set bytes | 5525803008 | 5581307904 | `f6f9316d8` |
+| 47x20 / max16 | Device-wide GPU peak MiB | 4980 | 4892 | `f6f9316d8` |
+| 47x20 / max16 | Spill read amplification | 1 | 1 | `f6f9316d8` |
+| 47x20 / max16 | Deep samples | 561793 | 561793 | `f6f9316d8` |
+| 47x20 / max16 | Max oracle error | 2.201313769045754e-07 | 2.201313769045754e-07 | `f6f9316d8` |
+| 47x20 / max16 | Max depth-cut error | 6.95131076811073e-07 | 6.95131076811073e-07 | `f6f9316d8` |
+| 47x20 / max16 | Beauty / alpha / depth | PASS / PASS / PASS | PASS / PASS / PASS | `f6f9316d8` |
+| 587x250 / 4 | Unprofiled capture seconds | 71.654783 | 33.279297 | `f6f9316d8` |
+| 587x250 / 4 | Export seconds | 32.9664 | 32.9423 | `f6f9316d8` |
+| 587x250 / 4 | Capture wait + readback seconds | 68.6366 | 30.32968 | `f6f9316d8` |
+| 587x250 / 4 | GPU readback bytes | 7177170944 | 7177170944 | `f6f9316d8` |
+| 587x250 / 4 | Spill stored bytes | 522463136 | 522463136 | `f6f9316d8` |
+| 587x250 / 4 | Spill read bytes | 600218816 | 600218816 | `f6f9316d8` |
+| 587x250 / 4 | Spill written bytes | 576484544 | 576484544 | `f6f9316d8` |
+| 587x250 / 4 | EXR bytes | 394273944 | 394273944 | `f6f9316d8` |
+| 587x250 / 4 | Peak process working-set bytes | 5583224832 | 5564792832 | `f6f9316d8` |
+| 587x250 / 4 | Device-wide GPU peak MiB | 5053 | 4967 | `f6f9316d8` |
+| 587x250 / 4 | Spill read amplification | 1.1488251986452112 | 1.1488251986452112 | `f6f9316d8` |
+| 587x250 / 4 | Deep samples | 52189081 | 52189081 | `f6f9316d8` |
+| 587x250 / 4 | Max oracle error | 2.2079907672709065e-07 | 2.2079907672709065e-07 | `f6f9316d8` |
+| 587x250 / 4 | Max depth-cut error | 8.228034402701923e-07 | 8.228034402701923e-07 | `f6f9316d8` |
+| 587x250 / 4 | Beauty / alpha / depth | PASS / PASS / PASS | PASS / PASS / PASS | `f6f9316d8` |
+| 587x250 / 4 | Nsight deep kernel seconds | 66.259845126 | 28.063985331 | `f6f9316d8` |
+| 587x250 / 4 | Deep kernel launches | 810 | 810 | `f6f9316d8` |
+| 587x250 / 4 | Nsight capture wait + readback seconds | 68.7772 | 30.53258 | `f6f9316d8` |
+| 587x250 / 4 | Deep-only device-to-host copy seconds | 2.208866966 | 2.189934185 | `f6f9316d8` |
+| 587x250 / 4 | Copy API residual wait seconds | 66.502660044 | 28.281092466 | `f6f9316d8` |
+| 587x250 / 4 | Explicit stream synchronization seconds | 0.012228238 | 0.010263851 | `f6f9316d8` |
+| 587x250 / 4 | Host spill seconds | 1.2507890000000002 | 1.076664 | `f6f9316d8` |
+| 14 source-sampled invocations | Triangle / grid estimated share | 64.9% / 6.7% | BVH enabled for CUDA bounds >32 triangles | `f6f9316d8` |
+| sm_86 deep kernel | Registers / local bytes per thread | 168 / 7312 | 168 / 8000 (+688 bytes) | `f6f9316d8` |
+| sm_86 deep kernel | Compiler spill store / load bytes | 80 / 76 | 80 / 76 | `f6f9316d8` |
+| 75 common beauty kernels | Changed driver attribute sets | 0 | 0 | `f6f9316d8` |
+| Nine CTests | Regression | 9/9 PASS | 9/9 PASS | `f6f9316d8` |
+| CPU / CUDA compatibility | Regression | 14/14 / 4/4 PASS | 14/14 / 4/4 PASS | `f6f9316d8` |
+| CPU and CUDA boundaries, each | Regression | 33 renders + 17 rejections PASS | 33 renders + 17 rejections PASS | `f6f9316d8` |
+| Both landscapes | Strict payload + deterministic headers | 81/81 PASS | 81/81 PASS; profiled render also identical | `f6f9316d8` |
+| 587x250 / 4, pixel (489,34) | CUDA reproduced state | Qualified reference pool retained | All checked passes exactly match Phase 0 K=5 performance off-3; 4 samples | `f6f9316d8` |

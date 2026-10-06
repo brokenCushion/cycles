@@ -37,14 +37,13 @@ does not qualify other backends.
 [Release gates](../../DEEP_MILESTONES.md) | [Current evidence](../../DEEP_PERFORMANCE_AND_VDB.md)
 ## Current boundary traversal
 
-The nearest-crossing batch uses fixed 128-hit scratch, with explicit tie overflow.
-The refined-boundary standalone and Blender sm_86 kernels use 168 registers, no shared memory
-and 16,784 local bytes (144 more than the previous batched traversal). All 75
-common beauty kernels keep their previous attributes. Driver-recommended block
-size is 384 threads; this is not measured utilization.
-`builds/validation/m8-production/precise-kernel-resources.json` and
-`precise-blender-kernel-resources.json` in the same directory record this cost.
-Local kernel storage is distinct from the host-preallocated event/medium pools.
-The qualified 1024x768/four-sample repeats use 4038 / 4203 MiB device-wide peak
-memory and take 1466.219 / 1422.766 seconds. See
-`builds/validation/m8-production/final-scale/projected-1024-report.json`.
+Phase 2 uses native BVH candidates for CUDA bounds larger than 32 triangles;
+smaller bounds and other backends retain the scan. Exact double-precision
+refinement and crossing order are unchanged; stack overflow fails explicitly.
+The current Blender sm_86 deep kernel uses 168 registers, no shared memory
+and 8000 local bytes (7312 before Phase 2). Compiler spills remain 80-byte
+stores / 76-byte loads. All 75 common beauty kernels retain their attributes.
+Driver-recommended block size is 384 threads; this is not measured utilization.
+Resources: `builds/validation/landscape-cloud/optimization-phase2/resources-{before,after}.json`.
+The 587x250/four-sample run peaks at 4967 MiB device-wide; capture is 33.28 s.
+See [plan results](../../DEEP_OPTIMIZATION_PLAN.md#6-results).

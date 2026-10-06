@@ -113,6 +113,29 @@ Root causes, in code:
      Phase 0 is accepted only after this is explained with the method above on
      the post-Phase-0 build.
 
+   Reproduced-state rule (user decision, 2026-10-06, after Phase 1 baseline):
+   GPU runs sometimes take a different discrete outcome at a pixel (a camera
+   sample hits a different surface: albedo/depth/noisy all jump together). No
+   fixed K can be guaranteed to contain every such outcome, so a K-run envelope
+   alone does not terminate.
+   - Reference pool: every ordinary deep-off render of the same scene and
+     settings made with a renderer whose beauty kernels are unchanged from the
+     current build (verify with the recorded executable hash, or with source
+     identity of everything outside `src/deep`, `src/kernel/deep` and the deep
+     host/scheduling code). Pools accumulate across phases; keep the files.
+   - A deep-on pixel that fails the K-run gate passes if ALL of its checked
+     input passes match one single pool render at that pixel within 4 ULP
+     (same accepted sample count). The match must be one render, not a mix.
+   - If no pool render matches, render up to 20 additional deep-off controls,
+     adding each to the pool, and re-check. Only a pixel still unmatched after
+     that is a failure to investigate as a possible deep-to-beauty leak.
+   - Report every pixel resolved this way (pixel, passes, matching pool run).
+   - CPU stays exact equality; it is the primary proof that deep does not alter
+     beauty. The CUDA check is a regression guard.
+   - Host-only phases (1 and 7) change no kernel or GPU scheduling code. For
+     them, the CUDA beauty gate runs once at the end of the phase, not as a
+     before-implementation blocker.
+
 Acceptance: build passes, nine CTests pass, small landscape (47x20/max16) deep
 and beauty checks pass with the new gate.
 

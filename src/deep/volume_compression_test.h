@@ -36,6 +36,7 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
                               {8, 0, 0, 8}, {0, 0, 0, 0}};
   {
     DeepVolumeCompression stream{};
+    stream.object = 17;
     int count = 0;
     const KernelDeepDensity foreground{{20, 20, 20, 20}, 1, 2};
     const KernelDeepDensity background{{0, 8, 8, 0}, 4, 5};
@@ -45,7 +46,8 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
                                      events, density, 1, 8192, &count) != DEEP_ERROR_NONE ||
         deep_volume_compression_flush(&stream, 1e-8, events, density,
                                       1, 8192, &count) != DEEP_ERROR_NONE || count != 2 ||
-        !stream.terminated || events[1].kind != DEEP_SURFACE || stream.cutoff < 4)
+        !stream.terminated || events[1].kind != DEEP_SURFACE || stream.cutoff < 4 ||
+        events[0].object != 17 || events[1].object != 17)
       return 9; /* Vacuum must preserve absorbed prefix, not force subdivisions. */
   }
   for (int mode = 0; mode < 2; ++mode) {
@@ -54,6 +56,8 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
       int count = 0;
       for (int object = 0; object < 2; ++object) {
         DeepVolumeCompression stream{};
+        stream.object = object + 7;
+        const int first = count;
         for (int cell = 0; cell < 12; ++cell) {
           const double front = 1 + object * 2.5 + cell + (cell >= 6 ? 2 : 0);
           const double *b = cases[(cell + object) % 6];
@@ -69,6 +73,9 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
         if (deep_volume_compression_flush(&stream, eps * .25 / 8192,
                                           events, density, 1, 8192, &count) != DEEP_ERROR_NONE)
           return 7;
+        for (int i = first; i < count; ++i)
+          if (events[i].object != object + 7)
+            return 15; // Exact, compressed and opaque records retain their object.
       }
       if (count > 24)
         return 10; /* No ray may expand relative to its exact cell stream. */
@@ -138,6 +145,7 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
   }
   {
     DeepVolumeCompression stream{};
+    stream.object = 17;
     int count = 0;
     for (int i = 0; i < 10; ++i) {
       const KernelDeepDensity cell{{.02f,.02f,.02f,.02f}, double(i+1), double(i+2)};
@@ -146,7 +154,7 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
         return 11;
     }
     if (deep_volume_compression_flush(&stream, 1e-8, events, density, 1, 8192, &count) !=
-        DEEP_ERROR_NONE || count != 1 || events[0].kind != DEEP_VOLUME)
+        DEEP_ERROR_NONE || count != 1 || events[0].kind != DEEP_VOLUME || events[0].object != 17)
       return 12;
   }
   return 0;

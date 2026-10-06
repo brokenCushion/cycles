@@ -70,7 +70,7 @@ ccl_device KernelDeepResult deep_volume_interval(
           float z = float(front);
           if (double(z) < front)
             z = nextafterf(z, FLT_MAX);
-          events[count * stride] = {DEEP_SURFACE, z, z, 1, 0};
+          events[count * stride] = {DEEP_SURFACE, z, z, 1, 0, object};
           object_stream->terminated = true;
           object_stream->cutoff = z;
           return {DEEP_COMPLETE, unsigned(count + 1), DEEP_ERROR_NONE};
@@ -79,7 +79,7 @@ ccl_device KernelDeepResult deep_volume_interval(
         const auto error = deep_volume_constant(
             depth_origin + start * depth_per_t, depth_origin + end * depth_per_t,
             tau, .25 * eps_ray / capacity,
-            events, density, stride, capacity, &count);
+            events, density, stride, capacity, &count, object);
         object_stream->tau += tau;
         object_stream->prefix_error += 64 * 2.2204460492503131e-16 *
                                        (1 + object_stream->tau + tau);
@@ -92,7 +92,7 @@ ccl_device KernelDeepResult deep_volume_interval(
       if (!(rear > front) || !(front > 0))
         return {DEEP_FAILED, 0, DEEP_ERROR_DEPTH};
       events[count * stride] = {
-          DEEP_VOLUME, front, rear, 0, float(double(sigma.x) * (end - start) * len(ray.D))};
+          DEEP_VOLUME, front, rear, 0, float(double(sigma.x) * (end - start) * len(ray.D)), object};
       ++count;
     }
   }
@@ -220,6 +220,7 @@ ccl_device KernelDeepResult deep_volume_object(
   const int first = kernel_data_fetch(object_prim_offset, object);
   const int size = kernel_data_fetch(objects, object).numprims;
   DeepVolumeCompression object_stream{};
+  object_stream.object = object;
   const int shader = sd->shader;
   double cursor = clip_start, start = initially_inside ? clip_start : -1;
   int cursor_prim = -1;
@@ -463,7 +464,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
               return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
             const float z = deep_camera_depth(
                 kernel_data.cam, kernel_data_array(camera_motion), ray.time, ray.P + hit.t * ray.D);
-            events[count * stride] = {DEEP_SURFACE, z, z, 1 - t.x, 0};
+            events[count * stride] = {DEEP_SURFACE, z, z, 1 - t.x, 0, hit.object};
             ++count;
             /* Exact opacity makes every later depth query zero. Stop visibility
              * traversal without an opacity threshold or changes to beauty. */

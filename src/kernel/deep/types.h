@@ -44,10 +44,12 @@ struct KernelDeepEvent {
    * opacity; optical_depth is integrated scalar extinction along a ray segment. */
   float surface_alpha;
   float optical_depth;
+  /* Native Cycles object index; -1 is reserved for synthetic reference records. */
+  int object = -1;
 };
 /* Optional companion buffer for native grid cells, indexed like events.
  * Cubic Bernstein coefficients include physical ray-segment length, so their
- * average is the cell's optical depth. Surface records keep their 20-byte layout.
+ * average is the cell's optical depth. All event kinds share the same object-index layout.
  * The host allocates this buffer; kernels never allocate it per thread. */
 struct KernelDeepDensity {
   float optical_depth[4];
@@ -65,7 +67,7 @@ struct KernelDeepRecord {
 };
 
 static_assert(sizeof(unsigned int) == 4 && sizeof(float) == 4, "Deep record scalar layout");
-static_assert(sizeof(KernelDeepEvent) == 20, "Deep event layout");
+static_assert(sizeof(KernelDeepEvent) == 24, "Deep event layout");
 static_assert(sizeof(KernelDeepDensity) == 32, "Deep density layout");
 static_assert(sizeof(KernelDeepResult) == 12, "Deep result layout");
 static_assert(sizeof(KernelDeepRecord) == 28, "Deep metadata layout");
@@ -75,5 +77,6 @@ struct DeepVolumeCompression {
   double prefix_error, anchor_error;
   KernelDeepDensity singleton;
   int cells;
+  int object = -1;
   bool active, terminated;
 };

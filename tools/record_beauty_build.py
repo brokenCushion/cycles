@@ -47,6 +47,7 @@ def beauty_identity(commit):
             continue
         if path in ('src/integrator/path_trace.cpp', 'src/app/cycles_standalone.cpp',
                     'src/integrator/path_trace_work_cpu.cpp', 'src/integrator/path_trace_work_gpu.cpp',
+                    'src/integrator/path_trace_work_gpu.h',
                     'src/device/cpu/kernel.h', 'src/kernel/device/cpu/kernel_arch.h',
                     'src/kernel/device/cpu/kernel_arch_impl.h'):
             files[path] = hashlib.sha256(without_deep_blocks(git('show', commit + ':' + path))).hexdigest()

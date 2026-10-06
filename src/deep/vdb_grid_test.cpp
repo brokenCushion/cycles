@@ -170,13 +170,16 @@ int main(int argc, char **argv)
         throw std::runtime_error("Native traversal did not complete");
       const auto captured = ccl::deep_volume_grid_capture(
           accessor, origin, direction, 0.0, 1.0, .02, length, 1.0, 100.0,
-          events.data(), coefficients.data(), 1, DEEP_MAX_VOLUME_EVENTS, 0, 16384);
+          events.data(), coefficients.data(), 1, DEEP_MAX_VOLUME_EVENTS, 0, 16384,
+          0, DEEP_MAX_MEDIA, nullptr, ray + 7);
       if (captured.status != DEEP_COMPLETE)
         throw std::runtime_error("Native cell capture failed");
       maximum_records = std::max(maximum_records, size_t(captured.count));
       std::vector<ccl::deep::CubicDensityInterval> cubic;
       double stored_tau = 0;
       for (unsigned i = 0; i < captured.count; ++i) {
+        if (events[i].object != ray + 7)
+          throw std::runtime_error("Strict grid capture lost object index");
         const auto &b = coefficients[i].optical_depth;
         cubic.push_back({coefficients[i].front, coefficients[i].back, {b[0], b[1], b[2], b[3]}});
         for (float value : b)
@@ -189,10 +192,14 @@ int main(int argc, char **argv)
         std::vector<KernelDeepDensity> spans(8192);
         const auto reduced = ccl::deep_volume_grid_capture(
             accessor, origin, direction, 0, 1, .02, length, 1, 100,
-            compressed.data(), spans.data(), 1, 8192, 0, 16384, eps);
+            compressed.data(), spans.data(), 1, 8192, 0, 16384, eps,
+            DEEP_MAX_MEDIA, nullptr, ray + 7);
         if (reduced.status != DEEP_COMPLETE || reduced.count > captured.count)
           throw std::runtime_error("Compressed asset capture failed: " +
                                    std::to_string(reduced.error));
+        for (unsigned i = 0; i < reduced.count; ++i)
+          if (compressed[i].object != ray + 7)
+            throw std::runtime_error("Compressed grid capture lost object index");
         for (int probe = 0; probe <= 256; ++probe) {
           const double z = 1 + 100 * double(probe) / 256;
           double exact = 0, approximate = 0;

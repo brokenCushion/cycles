@@ -410,7 +410,8 @@ void Capture::fail(const KernelDeepError reason)
                                    reason == DEEP_ERROR_NONE ? DEEP_ERROR_STATE : reason);
   set_error(UNSUPPORTED_STATE);
 }
-void Capture::record(const int x, const int y, const uint32_t sample, const float depth)
+void Capture::record(const int x, const int y, const uint32_t sample, const float depth,
+                     const int object)
 {
   if (max_events_) {
     fail();
@@ -420,7 +421,7 @@ void Capture::record(const int x, const int y, const uint32_t sample, const floa
     set_error(INVALID_DEPTH);
     return;
   }
-  const KernelDeepEvent event{DEEP_SURFACE, depth, depth, 1, 0};
+  const KernelDeepEvent event{DEEP_SURFACE, depth, depth, 1, 0, object};
   record_sample(x, y, sample, {DEEP_COMPLETE, depth == 0 ? 0u : 1u, DEEP_ERROR_NONE}, &event);
 }
 void Capture::record_events(const int x,
@@ -483,7 +484,7 @@ void Capture::record_sample(const int x,
           return;
         }
     }
-    if (!std::isfinite(e.front) || e.front <= 0 || !std::isfinite(e.back) ||
+    if (e.object < -1 || !std::isfinite(e.front) || e.front <= 0 || !std::isfinite(e.back) ||
         !std::isfinite(e.surface_alpha) || !std::isfinite(e.optical_depth) ||
         (surface ? (e.back != e.front || e.surface_alpha < 0 || e.surface_alpha > 1 ||
                     e.optical_depth != 0) :

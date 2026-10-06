@@ -73,13 +73,13 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
     const nanovdb::CachedReadAccessor<nanovdb::Fp16> accessor(grid->tree().root());
     return deep_volume_grid_capture(accessor, origin, direction, start, end, scale,
                                     physical_length, depth_origin, depth_per_t,
-                                    events, density, stride, capacity, first, 16384, eps_ray, kernel_data.film.pad1, object_stream);
+                                    events, density, stride, capacity, first, 16384, eps_ray, kernel_data.film.pad1, object_stream, sd->object);
   }
   const auto *grid = (ccl_global nanovdb::NanoGrid<float> *)info.data;
   const nanovdb::CachedReadAccessor<float> accessor(grid->tree().root());
   return deep_volume_grid_capture(accessor, origin, direction, start, end, scale,
                                   physical_length, depth_origin, depth_per_t,
-                                  events, density, stride, capacity, first, 16384, eps_ray, kernel_data.film.pad1, object_stream);
+                                  events, density, stride, capacity, first, 16384, eps_ray, kernel_data.film.pad1, object_stream, sd->object);
 #else
   return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
 #endif

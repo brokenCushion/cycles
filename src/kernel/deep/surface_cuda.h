@@ -39,7 +39,7 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
     if (!isfinite(depth) || depth <= 0)
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_DEPTH};
     if (!max_events) {
-      events[0] = {DEEP_SURFACE, depth, depth, 1, 0};
+      events[0] = {DEEP_SURFACE, depth, depth, 1, 0, isect.object};
       return {DEEP_COMPLETE, 1, DEEP_ERROR_NONE};
     }
     ShaderDataTinyStorage storage;
@@ -73,7 +73,7 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
         transparency.x < 0 || transparency.x > 1 || transparency.y != transparency.x ||
         transparency.z != transparency.x)
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_EXTINCTION};
-    events[count * event_stride] = {DEEP_SURFACE, depth, depth, 1 - transparency.x, 0};
+    events[count * event_stride] = {DEEP_SURFACE, depth, depth, 1 - transparency.x, 0, isect.object};
     ++count;
     if (transparency.x == 0)
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};

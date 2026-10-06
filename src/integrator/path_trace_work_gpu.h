@@ -30,7 +30,8 @@ class PathTraceWorkGPU : public PathTraceWork {
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   /* Host/device mirrors, medium tracking and contiguous readback scratch.
    * Keep the reservation shared with PathTrace's allocation preflight. */
-  static constexpr int deep_grid_batch_size = 64;
+  /* 24-byte object-tagged events retain the existing 32 MiB staging gate. */
+  static constexpr int deep_grid_batch_size = 62;
   static constexpr size_t deep_grid_staging_bytes = 32 * 1024 * 1024;
   static_assert(2 * size_t(deep_grid_batch_size) * DEEP_DEFAULT_VOLUME_EVENTS *
                         (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) +

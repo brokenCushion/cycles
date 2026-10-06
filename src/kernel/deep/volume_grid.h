@@ -43,7 +43,7 @@ CCL_NAMESPACE_BEGIN
 ccl_device KernelDeepError deep_volume_constant(
     const double front, const double back, const double tau, const double rounding_allowance,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
-    const int stride, const int capacity, ccl_private int *count)
+    const int stride, const int capacity, ccl_private int *count, const int object = -1)
 {
   if (*count == capacity)
     return DEEP_ERROR_EVENT_CAPACITY;
@@ -61,7 +61,7 @@ ccl_device KernelDeepError deep_volume_constant(
   if (!(::fabs(stored - tau) + 32 * 2.2204460492503131e-16 * (1 + tau) <=
         rounding_allowance))
     return DEEP_ERROR_EXTINCTION;
-  events[*count * stride] = {DEEP_VOLUME, float(front), float(back), 0, float(tau)};
+  events[*count * stride] = {DEEP_VOLUME, float(front), float(back), 0, float(tau), object};
   density[*count * stride] = {{high, low, 0, 0}, front, back};
   ++*count;
   return DEEP_ERROR_NONE;
@@ -70,11 +70,11 @@ ccl_device KernelDeepError deep_volume_constant(
 ccl_device KernelDeepError deep_volume_exact(
     const KernelDeepDensity cell, ccl_global KernelDeepEvent *events,
     ccl_global KernelDeepDensity *density, const int stride, const int capacity,
-    ccl_private int *count)
+    ccl_private int *count, const int object = -1)
 {
   if (*count == capacity)
     return DEEP_ERROR_EVENT_CAPACITY;
-  events[*count * stride] = {DEEP_VOLUME_CUBIC, float(cell.front), float(cell.back), 0, 0};
+  events[*count * stride] = {DEEP_VOLUME_CUBIC, float(cell.front), float(cell.back), 0, 0, object};
   density[*count * stride] = cell;
   ++*count;
   return DEEP_ERROR_NONE;
@@ -88,9 +88,9 @@ ccl_device KernelDeepError deep_volume_compression_flush(
   if (!stream->active)
     return DEEP_ERROR_NONE;
   const KernelDeepError error = stream->cells == 1 ?
-      deep_volume_exact(stream->singleton, events, density, stride, capacity, count) :
+      deep_volume_exact(stream->singleton, events, density, stride, capacity, count, stream->object) :
       deep_volume_constant(stream->anchor, stream->last, stream->tau - stream->anchor_tau,
-          rounding_allowance - stream->roundoff, events, density, stride, capacity, count);
+          rounding_allowance - stream->roundoff, events, density, stride, capacity, count, stream->object);
   stream->active = false;
   stream->cells = 0;
   return error;
@@ -120,7 +120,7 @@ ccl_device KernelDeepError deep_volume_compression_cell(
     float z = float(cell.front);
     if (double(z) < cell.front)
       z = nextafterf(z, FLT_MAX);
-    events[*count * stride] = {DEEP_SURFACE, z, z, 1, 0};
+    events[*count * stride] = {DEEP_SURFACE, z, z, 1, 0, stream->object};
     ++*count;
     stream->cutoff = z;
     stream->terminated = true;
@@ -145,7 +145,7 @@ ccl_device KernelDeepError deep_volume_compression_cell(
           stream, rounding_allowance, events, density, stride, capacity, count);
       if (error != DEEP_ERROR_NONE)
         return error;
-      const auto exact = deep_volume_exact(cell, events, density, stride, capacity, count);
+      const auto exact = deep_volume_exact(cell, events, density, stride, capacity, count, stream->object);
       stream->tau += increment;
       stream->prefix_error += 64 * 2.2204460492503131e-16 * (1 + stream->tau + increment);
       return exact;
@@ -251,7 +251,8 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
     const int traversal_limit,
     const double eps_ray = 0,
     const int volume_objects = DEEP_MAX_MEDIA,
-    ccl_private DeepVolumeCompression *object_stream = nullptr)
+    ccl_private DeepVolumeCompression *object_stream = nullptr,
+    const int object = -1)
 {
   if (!events || !density || stride <= 0 || capacity <= 0 || first < 0 || first > capacity ||
       !(depth_per_t > 0 && physical_length_per_t > 0 && extinction_scale >= 0))
@@ -261,6 +262,9 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
     return {DEEP_FAILED, 0, DEEP_ERROR_PROGRESS};
   int count = first;
   DeepVolumeCompression local_stream{};
+  local_stream.object = object;
+  if (object_stream && object_stream->object != object)
+    return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
   DeepVolumeCompression &compressed = object_stream ? *object_stream : local_stream;
   if (eps_ray > 0 && !(volume_objects >= 1 && volume_objects <= DEEP_MAX_MEDIA))
     return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
@@ -336,7 +340,7 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
         return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
       continue;
     }
-    events[count * stride] = {DEEP_VOLUME_CUBIC, float(a), float(b), 0, 0};
+    events[count * stride] = {DEEP_VOLUME_CUBIC, float(a), float(b), 0, 0, object};
     density[count * stride] = coefficients;
     ++count;
   }

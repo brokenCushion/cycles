@@ -212,7 +212,7 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
                                                 kernel_globals->camera_motion.data,
                                                 state->ray.time, p);
           if (depth > 0.0f)
-            capture->record(work_tile.x, work_tile.y, state->path.sample, depth);
+            capture->record(work_tile.x, work_tile.y, state->path.sample, depth, state->isect.object);
           else
             capture->fail();
         }

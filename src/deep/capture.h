@@ -21,6 +21,7 @@ namespace ccl::deep {
  * Its budget preflights a conservative scanline/pixel export working set.
  * In-memory mode's budget covers raw capture only. Reads require joined workers. */
 class Capture {
+  friend struct CaptureTestAccess;
  public:
   Capture(int width,
           int height,
@@ -34,7 +35,7 @@ class Capture {
           int export_workers = 1,
           float error = 0);
   ~Capture();
-  void record(int x, int y, uint32_t sample, float depth);
+  void record(int x, int y, uint32_t sample, float depth, int object = -1);
   /* Only complete records count as accepted camera samples. */
   void record_sample(int x,
                      int y,

@@ -61,14 +61,15 @@ __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
   if (result.error == DEEP_ERROR_NONE) {
     const auto captured = deep_volume_grid_capture(
         accessor, ray.origin, ray.direction, 0.0, 1.0, .02, ray.length, 1.0, 100.0,
-        events + i, density + i, count, DEEP_MAX_VOLUME_EVENTS, 0, 16384);
+        events + i, density + i, count, DEEP_MAX_VOLUME_EVENTS, 0, 16384,
+        0, DEEP_MAX_MEDIA, nullptr, i + 7);
     if (captured.status != DEEP_COMPLETE)
       result.error = captured.error;
     double stored_tau = 0;
     float previous = 0;
     for (unsigned j = 0; j < captured.count; ++j) {
       const auto &event = events[j * count + i];
-      if (event.kind != DEEP_VOLUME_CUBIC || event.front < previous ||
+      if (event.object != i + 7 || event.kind != DEEP_VOLUME_CUBIC || event.front < previous ||
           !(density[j * count + i].back > density[j * count + i].front) ||
           event.back < event.front || event.surface_alpha != 0 || event.optical_depth != 0)
         result.error = DEEP_ERROR_DEPTH;
@@ -83,11 +84,15 @@ __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
       const double eps = mode ? 4.995e-4 : 4.95e-5;
       const auto reduced = deep_volume_grid_capture(
           accessor, ray.origin, ray.direction, 0.0, 1.0, .02, ray.length, 1.0, 100.0,
-          events + extra + i, density + extra + i, count, DEEP_MAX_VOLUME_EVENTS, 0, 16384, eps);
+          events + extra + i, density + extra + i, count, DEEP_MAX_VOLUME_EVENTS, 0, 16384, eps,
+          DEEP_MAX_MEDIA, nullptr, i + 7);
       if (reduced.status != DEEP_COMPLETE || reduced.count > captured.count) {
         result.error = reduced.error;
         break;
       }
+      for (unsigned j = 0; j < reduced.count; ++j)
+        if (events[extra + j * count + i].object != i + 7)
+          result.error = DEEP_ERROR_STATE;
       for (int probe = 0; probe <= 256; ++probe) {
         const double z = 1 + 100 * double(probe) / 256;
         double exact = 0, approximate = 0;

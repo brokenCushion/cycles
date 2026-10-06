@@ -11,7 +11,24 @@
 #include <thread>
 #include <type_traits>
 
+namespace ccl::deep {
+struct CaptureTestAccess {
+  static std::vector<KernelDeepEvent> events(const Capture &capture, int x, int y, int sample)
+  {
+    const size_t index = capture.record_index(size_t(y) * capture.width_ + x, sample);
+    KernelDeepResult result{};
+    capture.read_record(index, result, nullptr);
+    std::vector<KernelDeepEvent> events(result.count);
+    capture.read_record(index, result, events.data());
+    return events;
+  }
+};
+}
 using ccl::deep::Capture;
+using ccl::deep::CaptureTestAccess;
+static_assert(std::is_trivially_copyable_v<KernelDeepEvent>);
+static_assert(std::is_standard_layout_v<KernelDeepEvent>);
+static_assert(offsetof(KernelDeepEvent, object) == 20);
 static_assert(std::is_trivially_copyable_v<KernelDeepRecord>);
 static_assert(std::is_standard_layout_v<KernelDeepRecord>);
 static void check_impl(bool condition, int line)
@@ -31,6 +48,8 @@ template<typename F> static void rejects(F f)
   }
   check(rejected);
 }
+constexpr size_t single_record_bytes = sizeof(KernelDeepResult) + sizeof(KernelDeepEvent);
+constexpr size_t chain_bytes = 2 * (sizeof(KernelDeepResult) + 2 * sizeof(KernelDeepEvent));
 int main()
 {
   try {
@@ -38,16 +57,27 @@ int main()
       /* Reused scratch sees growing, shrinking and empty records. Unused
        * density slots must never leak from a previous cubic sample. */
       Capture capture(1, 1, 4, 32 * 1024 * 1024, 3, spill, false, true, true);
-      const KernelDeepEvent events[] = {{DEEP_VOLUME_CUBIC, 1, 2, 0, 0},
-                                       {DEEP_SURFACE, 3, 3, .25f, 0},
-                                       {DEEP_VOLUME, 4, 5, 0, .2f}};
+      const KernelDeepEvent events[] = {{DEEP_VOLUME_CUBIC, 1, 2, 0, 0, 7},
+                                       {DEEP_SURFACE, 3, 3, .25f, 0, 31},
+                                       {DEEP_VOLUME, 4, 5, 0, .2f, 42}};
       const KernelDeepDensity density[] = {{{.1f,.1f,.1f,.1f},1,2}, {}, {}};
       capture.record_sample(0,0,0,{DEEP_COMPLETE,3,DEEP_ERROR_NONE},events,density);
       capture.record_events(0,0,1,nullptr,0);
       capture.record_events(0,0,2,events+2,1);
       capture.record_sample(0,0,3,{DEEP_COMPLETE,1,DEEP_ERROR_NONE},events,density);
       check(capture.finalize());
+      auto check_objects = [&] {
+        const int counts[] = {3, 0, 1, 1};
+        for (int sample = 0; sample < 4; ++sample) {
+          const auto stored = CaptureTestAccess::events(capture, 0, 0, sample);
+          check(stored.size() == counts[sample]);
+          for (size_t i = 0; i < stored.size(); ++i)
+            check(stored[i].object == events[sample == 2 ? 2 : i].object);
+        }
+      };
+      check_objects(); // Memory or direct spill reads.
       if (spill) capture.begin_export_row(0);
+      check_objects(); // Staged reads use the same complete event payload.
       const double expected[] = {.75*std::exp(-double(.1f)-double(.2f)),1,
                                  std::exp(-double(.2f)),std::exp(-double(.1f))};
       for (int sample : {3,1,0,2,1,3,0}) {
@@ -109,7 +139,7 @@ int main()
       Capture disk(4, 130, 8, 64 * 1024 * 1024, 8192, true, false, true, true);
       std::vector<KernelDeepEvent> events(8192);
       for (size_t i = 0; i < events.size(); ++i)
-        events[i] = {DEEP_VOLUME, float(i + 1), float(i + 2), 0, .001f};
+        events[i] = {DEEP_VOLUME, float(i + 1), float(i + 2), 0, .001f, int(i % 64)};
       for (int y = 0; y < 130; ++y)
         for (int x = 0; x < 4; ++x)
           for (int sample = 0; sample < 8; ++sample)
@@ -119,6 +149,10 @@ int main()
         disk.begin_export_row(y);
         for (int x = 0; x < 4; ++x)
           for (int sample = 0; sample < 8; ++sample) {
+            const auto raw = CaptureTestAccess::events(disk, x, y, sample);
+            check(raw.size() == (y < 3 ? 8192 : 0));
+            for (size_t i = 0; i < raw.size(); ++i)
+              check(raw[i].object == int(i % 64));
             const auto ray = disk.volume_sample(x, y, sample);
             check(ray.intervals.size() == (y < 3 ? 8192 : 0));
             if (y < 3) {
@@ -343,7 +377,7 @@ int main()
     rejects([] { Capture c(1, 1, 4097, 1024); });
     rejects([] { Capture c(1000, 1000, 1000, 1024); });
     rejects([] { Capture c(INT32_MAX, INT32_MAX, 4096, SIZE_MAX); });
-    Capture capture(2, 1, 4, 256);
+    Capture capture(2, 1, 4, 8 * single_record_bytes);
     check(!capture.finalize());
     rejects([&] { capture.reconstruct_pixel(0, 0); });
     std::thread a([&] {
@@ -369,25 +403,25 @@ int main()
     for (float invalid :
          {-1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
     {
-      Capture c(1, 1, 1, 32);
+      Capture c(1, 1, 1, single_record_bytes);
       c.record(0, 0, 0, invalid);
       check(!c.finalize());
     }
-    Capture bounds(1, 1, 1, 32);
+    Capture bounds(1, 1, 1, single_record_bytes);
     bounds.record(1, 0, 0, 0);
     check(!bounds.finalize());
-    Capture sample(1, 1, 1, 32);
+    Capture sample(1, 1, 1, single_record_bytes);
     sample.record(0, 0, 1, 0);
     check(!sample.finalize());
-    Capture state(1, 1, 1, 32);
+    Capture state(1, 1, 1, single_record_bytes);
     state.fail();
     state.record(0, 0, 0, 0);
     check(!state.finalize());
-    Capture miss(1, 1, 1, 32);
+    Capture miss(1, 1, 1, single_record_bytes);
     miss.record(0, 0, 0, 0);
     check(miss.finalize());
     check(miss.reconstruct_pixel(0, 0).empty());
-    Capture chains(1, 1, 2, 104, 2);
+    Capture chains(1, 1, 2, chain_bytes, 2);
     const KernelDeepEvent stack[] = {{DEEP_SURFACE, 2, 2, .25f, 0}, {DEEP_SURFACE, 8, 8, .5f, 0}};
     chains.record_events(0, 0, 0, stack, 2);
     check(!chains.finalize());
@@ -398,15 +432,15 @@ int main()
     check(std::abs((1 - p[0].alpha) * (1 - p[1].alpha) - .6875) < 1e-12);
     chains.record_events(0, 0, 0, stack, 2);
     check(!chains.finalize());
-    rejects([] { Capture c(1, 1, 2, 103, 2); });
+    rejects([] { Capture c(1, 1, 2, chain_bytes - 1, 2); });
     rejects([] { Capture c(1, 1, 1, 1000, 65); });
     for (const float alpha : {-1.f, 1.1f, std::numeric_limits<float>::quiet_NaN()}) {
-      Capture c(1, 1, 1, 32, 1);
+      Capture c(1, 1, 1, single_record_bytes, 1);
       const KernelDeepEvent event[] = {{DEEP_SURFACE, 2, 2, alpha, 0}};
       c.record_events(0, 0, 0, event, 1);
       check(!c.finalize());
     }
-    Capture overflow(1, 1, 1, 32, 1);
+    Capture overflow(1, 1, 1, single_record_bytes, 1);
     overflow.record_events(0, 0, 0, stack, 2);
     check(!overflow.finalize());
     for (const bool spill : {false, true}) {
@@ -428,7 +462,8 @@ int main()
       check(!skipped.finalize());
       skipped.record_sample(0, 0, 0, {DEEP_COMPLETE, 0, DEEP_ERROR_NONE}, nullptr);
       check(skipped.finalize() && skipped.reconstruct_pixel(0, 0).empty());
-      for (const KernelDeepEvent invalid : {KernelDeepEvent{DEEP_SURFACE, 2, 3, .5f, 0},
+      for (const KernelDeepEvent invalid : {KernelDeepEvent{DEEP_SURFACE, 2, 2, .5f, 0, -2},
+                                            KernelDeepEvent{DEEP_SURFACE, 2, 3, .5f, 0},
                                             KernelDeepEvent{DEEP_SURFACE, 2, 2, .5f, 1},
                                             KernelDeepEvent{DEEP_VOLUME, 2, 2, 0, 1},
                                             KernelDeepEvent{DEEP_VOLUME, 2, 3, .5f, 1},

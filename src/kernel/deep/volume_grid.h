@@ -49,6 +49,126 @@ CCL_NAMESPACE_BEGIN
  * FLOAT coefficients. The stored layout does not require device double support.
  * Other backends must qualify their arithmetic before enabling this path. */
 #if !defined(__KERNEL_GPU__) || defined(__KERNEL_CUDA__)
+/* A compressed native event keeps double boundaries and a two-FLOAT,
+ * nonnegative optical-depth expansion in the existing companion buffer.
+ * This avoids spending the publication precision allowance during capture. */
+ccl_device KernelDeepError deep_volume_constant(
+    const double front, const double back, const double tau, const double rounding_allowance,
+    ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
+    const int stride, const int capacity, ccl_private int *count)
+{
+  if (*count == capacity)
+    return DEEP_ERROR_EVENT_CAPACITY;
+  if (!(front > 0 && back > front && back <= 3.4028234663852886e38 &&
+        tau >= 0 && tau <= 3.4028234663852886e38))
+    return DEEP_ERROR_DEPTH;
+  float high = float(tau);
+  if (double(high) > tau)
+    high = nextafterf(high, 0.0f);
+  const float low = float(tau - double(high));
+  const double stored = double(high) + double(low);
+  /* Include double addition/integration roundoff, not just FLOAT conversion.
+   * Each event gets 1/capacity of the ray's representation reserve, so the
+   * sum remains bounded even across objects and disconnected intervals. */
+  if (!(::fabs(stored - tau) + 32 * 2.2204460492503131e-16 * (1 + tau) <=
+        rounding_allowance))
+    return DEEP_ERROR_EXTINCTION;
+  events[*count * stride] = {DEEP_VOLUME, float(front), float(back), 0, float(tau)};
+  density[*count * stride] = {{high, low, 0, 0}, front, back};
+  ++*count;
+  return DEEP_ERROR_NONE;
+}
+
+struct DeepVolumeCompression {
+  double anchor, last, anchor_tau, tau, lower, upper, roundoff;
+  bool active;
+};
+
+ccl_device KernelDeepError deep_volume_compression_flush(
+    ccl_private DeepVolumeCompression *stream, const double rounding_allowance,
+    ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
+    const int stride, const int capacity, ccl_private int *count)
+{
+  if (!stream->active || stream->last == stream->anchor)
+    return DEEP_ERROR_NONE;
+  const KernelDeepError error = deep_volume_constant(
+      stream->anchor, stream->last, stream->tau - stream->anchor_tau,
+      rounding_allowance - stream->roundoff, events, density, stride, capacity, count);
+  stream->anchor = stream->last;
+  stream->anchor_tau = stream->tau;
+  stream->lower = 0;
+  stream->upper = 1.7976931348623157e308;
+  stream->roundoff = 0;
+  return error;
+}
+
+/* Restrict/subdivide the original cubic, rather than sampling a fitted curve.
+ * A rejected vertex is replayed after flushing, so no extinction is lost. */
+ccl_device KernelDeepError deep_volume_compression_cell(
+    ccl_private DeepVolumeCompression *stream, const KernelDeepDensity cell,
+    const double allowance, const double rounding_allowance,
+    ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
+    const int stride, const int capacity, ccl_private int *count)
+{
+  if (stream->active && cell.front != stream->last) {
+    const KernelDeepError error = deep_volume_compression_flush(
+        stream, rounding_allowance, events, density, stride, capacity, count);
+    if (error != DEEP_ERROR_NONE)
+      return error;
+    stream->active = false;
+  }
+  if (!stream->active) {
+    stream->anchor = stream->last = cell.front;
+    stream->anchor_tau = stream->tau = 0;
+    stream->lower = 0;
+    stream->upper = 1.7976931348623157e308;
+    stream->active = true;
+  }
+  const DeepCubicDensity<double> original = {{cell.optical_depth[0], cell.optical_depth[1],
+                                             cell.optical_depth[2], cell.optical_depth[3]}};
+  double u = 0, width = 1;
+  for (int steps = 0; u < 1; ++steps) {
+    if (steps == 16384)
+      return DEEP_ERROR_GRID_STEPS;
+    const double v = u + width < 1 ? u + width : 1;
+    const double end = v == 1 ? cell.back : cell.front + v * (cell.back - cell.front);
+    if (!(v > u && end > stream->last))
+      return DEEP_ERROR_PROGRESS;
+    const auto piece = deep_density_restrict(original, u, v);
+    const double delta = allowance / (2 * ::exp(-stream->anchor_tau));
+    if (deep_density_chord_error(piece, v - u) > delta) {
+      width /= 2;
+      continue;
+    }
+    const double increment = deep_density_integral(piece, v - u);
+    const double tau = stream->tau + increment;
+    const double distance = end - stream->anchor;
+    double lower = (tau - stream->anchor_tau - delta) / distance;
+    double upper = (tau - stream->anchor_tau + delta) / distance;
+    lower = lower > stream->lower ? lower : stream->lower;
+    upper = upper < stream->upper ? upper : stream->upper;
+    const double slope = (tau - stream->anchor_tau) / distance;
+    if (slope < lower || slope > upper) {
+      const KernelDeepError error = deep_volume_compression_flush(
+          stream, rounding_allowance, events, density, stride, capacity, count);
+      if (error != DEEP_ERROR_NONE)
+        return error;
+      continue;
+    }
+    stream->lower = lower;
+    stream->upper = upper;
+    stream->last = end;
+    stream->tau = tau;
+    stream->roundoff += 64 * 2.2204460492503131e-16 *
+                       (1 + tau + original.b[0] + original.b[1] +
+                        original.b[2] + original.b[3]);
+    u = v;
+    /* ponytail: keep the accepted subdivision width for this cell; grow it
+     * only in a later optimization if subdivision work is measured significant. */
+  }
+  return DEEP_ERROR_NONE;
+}
+
 template<typename BuildT>
 ccl_device KernelDeepError deep_volume_grid_cell(
     const ccl_private nanovdb::CachedReadAccessor<BuildT> &accessor,
@@ -116,7 +236,8 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
     const int stride,
     const int capacity,
     const int first,
-    const int traversal_limit)
+    const int traversal_limit,
+    const double eps_ray = 0)
 {
   if (!events || !density || stride <= 0 || capacity <= 0 || first < 0 || first > capacity ||
       !(depth_per_t > 0 && physical_length_per_t > 0 && extinction_scale >= 0))
@@ -125,6 +246,13 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
   if (!deep_grid_begin(&cursor, origin, direction, start, end, traversal_limit))
     return {DEEP_FAILED, 0, DEEP_ERROR_PROGRESS};
   int count = first;
+  DeepVolumeCompression compressed{};
+  /* Reserve 1/4 for arithmetic/record rounding. The ray can visit at most
+   * DEEP_MAX_MEDIA objects; allocating equally is conservative for sparse rays.
+   * Exact endpoint integration means disconnected spans do not compound the
+   * curvature error; rounding is charged per emitted event across the ray. */
+  const double eps_object = .75 * eps_ray / DEEP_MAX_MEDIA;
+  const double eps_record = .25 * eps_ray / capacity;
   DeepGridSegment<double> segment{};
   DeepGridStep step;
   while (true) {
@@ -146,8 +274,15 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
           }
         }
         if (interior && exit > cursor.current) {
-          if (exit == cursor.end)
+          if (exit == cursor.end) {
+            if (eps_ray > 0) {
+              const auto error = deep_volume_compression_flush(
+                  &compressed, eps_record, events, density, stride, capacity, &count);
+              if (error != DEEP_ERROR_NONE)
+                return {DEEP_FAILED, 0, error};
+            }
             return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
+          }
           const int remaining = cursor.remaining - 1;
           if (!remaining)
             return {DEEP_FAILED, 0, DEEP_ERROR_GRID_STEPS};
@@ -170,7 +305,7 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
       occupied |= coefficients.optical_depth[i] > 0;
     if (!occupied)
       continue;
-    if (count == capacity)
+    if (eps_ray == 0 && count == capacity)
       return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
     const double a = depth_origin + segment.front * depth_per_t;
     const double b = depth_origin + segment.back * depth_per_t;
@@ -178,12 +313,26 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
       return {DEEP_FAILED, 0, DEEP_ERROR_DEPTH};
     coefficients.front = a;
     coefficients.back = b;
+    if (eps_ray > 0) {
+      const auto error = deep_volume_compression_cell(
+          &compressed, coefficients, eps_object, eps_record,
+          events, density, stride, capacity, &count);
+      if (error != DEEP_ERROR_NONE)
+        return {DEEP_FAILED, 0, error};
+      continue;
+    }
     events[count * stride] = {DEEP_VOLUME_CUBIC, float(a), float(b), 0, 0};
     density[count * stride] = coefficients;
     ++count;
   }
   if (step != DEEP_GRID_DONE)
     return {DEEP_FAILED, 0, step == DEEP_GRID_LIMIT ? DEEP_ERROR_GRID_STEPS : DEEP_ERROR_PROGRESS};
+  if (eps_ray > 0) {
+    const auto error = deep_volume_compression_flush(
+        &compressed, eps_record, events, density, stride, capacity, &count);
+    if (error != DEEP_ERROR_NONE)
+      return {DEEP_FAILED, 0, error};
+  }
   return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
 }
 #endif

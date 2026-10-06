@@ -101,7 +101,8 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
                              ccl_global KernelDeepRecord *records,
                              ccl_global KernelDeepEvent *events,
                              ccl_global KernelDeepMedium *media,
-                             ccl_global KernelDeepDensity *density)
+                             ccl_global KernelDeepDensity *density,
+                             const float eps_ray)
 {
   const int index = ccl_gpu_global_id_x();
   if (index >= count)
@@ -150,7 +151,7 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
     else
       record->result = deep_volume(
           nullptr, state, events + index, media + index, event_stride, max_events,
-          density ? density + index : nullptr);
+          density ? density + index : nullptr, eps_ray);
   }
   else {
     record->result = deep_surface_cuda(nullptr, state, events + index, event_stride, max_events);

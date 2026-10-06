@@ -8,11 +8,12 @@ ccl_device KernelDeepResult deep_volume_cpu(const ThreadKernelGlobalsCPU *kg,
                                             const IntegratorStateCPU *camera,
                                             KernelDeepEvent *events,
                                             const int capacity,
-                                            KernelDeepDensity *density)
+                                            KernelDeepDensity *density,
+                                            const double eps_ray)
 {
   IntegratorStateCPU private_state = *camera;
   KernelDeepMedium media[DEEP_MAX_MEDIA];
-  return deep_volume(kg, &private_state, events, media, 1, capacity, density);
+  return deep_volume(kg, &private_state, events, media, 1, capacity, density, eps_ray);
 }
 
 CCL_NAMESPACE_END

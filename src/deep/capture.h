@@ -179,6 +179,11 @@ class Capture {
   mutable std::vector<unsigned char> staged_events_;
   mutable int staged_first_y_ = -1, staged_rows_ = 0, next_export_y_ = -1;
   mutable bool exporting_ = false, export_row_open_ = false;
+  bool has_density(KernelDeepEventKind kind) const
+  {
+    return kind == DEEP_VOLUME_CUBIC ||
+           (kind == DEEP_VOLUME && volume_grid_ && error_setting_ > 0);
+  }
   void decode_index(size_t index, size_t &pixel, uint32_t &sample) const;
   Band &band_for_pixel(size_t pixel) const;
   size_t band_record_index(const Band &band, size_t pixel, uint32_t sample) const;

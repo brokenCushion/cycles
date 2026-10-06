@@ -327,7 +327,7 @@ void Capture::read_record(const size_t index,
     if (density && volume_grid_) {
       size_t offset = size_t(stored.event_offset) + result.count * sizeof(*events);
       for (unsigned i = 0; i < result.count; ++i)
-        if (events[i].kind == DEEP_VOLUME_CUBIC) {
+        if (has_density(events[i].kind)) {
           read(offset, reinterpret_cast<unsigned char *>(density + i), sizeof(*density));
           offset += sizeof(*density);
         }
@@ -354,7 +354,7 @@ void Capture::store_record(const size_t index,
       const size_t event_bytes = result.count * sizeof(KernelDeepEvent);
       size_t bytes = sizeof(SpillRecord) + event_bytes;
       for (unsigned i = 0; i < result.count; ++i)
-        if (events[i].kind == DEEP_VOLUME_CUBIC)
+        if (has_density(events[i].kind))
           bytes += sizeof(KernelDeepDensity);
       if (band.event_bytes > size_t(INT64_MAX) - bytes)
         throw std::runtime_error("Deep event file offset overflow");
@@ -370,7 +370,7 @@ void Capture::store_record(const size_t index,
           (event_bytes && std::fwrite(events, 1, event_bytes, band.events) != event_bytes))
         throw std::runtime_error("Deep event file append failed");
       for (unsigned i = 0; i < result.count; ++i)
-        if (events[i].kind == DEEP_VOLUME_CUBIC &&
+        if (has_density(events[i].kind) &&
             std::fwrite(density + i, 1, sizeof(*density), band.events) != sizeof(*density))
           throw std::runtime_error("Deep density file append failed");
       band.write_bytes += bytes;
@@ -389,7 +389,7 @@ void Capture::store_record(const size_t index,
         std::copy_n(events, result.count, events_.data() + index * capacity_);
       if (volume_grid_)
         for (unsigned i = 0; i < result.count; ++i)
-          if (events[i].kind == DEEP_VOLUME_CUBIC)
+          if (has_density(events[i].kind))
             density_[index * capacity_ + i] = density[i];
     }
     ++completed_;
@@ -466,8 +466,8 @@ void Capture::record_sample(const int x,
     const KernelDeepEvent &e = events[i];
     const bool surface = e.kind == DEEP_SURFACE;
     const bool cubic = e.kind == DEEP_VOLUME_CUBIC;
-    if (cubic) {
-      if (!volume_grid_ || !density || e.optical_depth != 0) {
+    if (has_density(e.kind)) {
+      if (!volume_grid_ || !density || (cubic && e.optical_depth != 0)) {
         set_error(INVALID_DEPTH);
         return;
       }
@@ -488,7 +488,7 @@ void Capture::record_sample(const int x,
         (surface ? (e.back != e.front || e.surface_alpha < 0 || e.surface_alpha > 1 ||
                     e.optical_depth != 0) :
                    ((!cubic && e.kind != DEEP_VOLUME) || !volume_ ||
-                    (cubic ? e.back < e.front : e.back <= e.front) ||
+                    (has_density(e.kind) ? e.back < e.front : e.back <= e.front) ||
                     e.optical_depth < 0 || e.surface_alpha != 0)) ||
         (!volume_ && i && e.front < events[i - 1].front) ||
         (!max_events_ && (!surface || e.surface_alpha != 1)))
@@ -574,7 +574,7 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
     const auto &event = record[i];
     /* A fully opaque surface makes all deeper extinction invisible to every
      * depth query. This is exact occlusion, with no opacity threshold. */
-    const double front = event.kind == DEEP_VOLUME_CUBIC ? density[i].front : event.front;
+    const double front = has_density(event.kind) ? density[i].front : event.front;
     if (front > opaque_depth ||
         (event.kind != DEEP_SURFACE && front == opaque_depth))
       continue;
@@ -584,6 +584,9 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
       const auto &b = density[i].optical_depth;
       cubic.push_back({density[i].front, density[i].back, {b[0], b[1], b[2], b[3]}});
     }
+    else if (has_density(event.kind))
+      output.intervals.push_back({density[i].front, density[i].back,
+          double(density[i].optical_depth[0]) + double(density[i].optical_depth[1])});
     else
       output.intervals.push_back({event.front, event.back, event.optical_depth});
   }
@@ -711,7 +714,7 @@ void Capture::load_stream(Band &band, FILE *file, const size_t bytes,
     for (unsigned i = 0; i < header.result.count; ++i) {
       KernelDeepEvent event;
       std::memcpy(&event, staged_events_.data() + offset + i * sizeof(event), sizeof(event));
-      if (event.kind == DEEP_VOLUME_CUBIC)
+      if (has_density(event.kind))
         density_bytes += sizeof(KernelDeepDensity);
     }
     offset += event_bytes;
@@ -756,7 +759,7 @@ void Capture::rebucket(Band &band) const
     remaining -= event_bytes;
     size_t densities = 0;
     for (unsigned i = 0; i < header.result.count; ++i)
-      densities += events[i].kind == DEEP_VOLUME_CUBIC;
+      densities += has_density(events[i].kind);
     const size_t density_bytes = densities * sizeof(KernelDeepDensity);
     if (density.size() < densities)
       density.resize(densities);
@@ -952,7 +955,7 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   for (int i = 0; i < cameras; ++i) {
     auto sample = volume_sample(
         x, y, i, compact_ray ? budget.density / 2 : budget.density);
-    if (compact_ray) {
+    if (compact_ray && error_setting_ == 0) {
       /* Split the existing density allowance between integration and one-ray
        * reduction. Convex averaging preserves this per-ray absolute T bound. */
       const auto compact = fit(

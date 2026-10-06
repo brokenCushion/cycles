@@ -1063,6 +1063,8 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
             capture->fail();
             return;
           }
+          const float eps_ray = capture->volume_grid() && capture->error() > 0 ?
+                                     std::nextafter(float(deep::error_budget(capture->error()).density), 0.0f) : 0;
           const DeviceKernelArguments args(&tiles,
                                            &tile,
                                            &offset,
@@ -1073,7 +1075,8 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
                                            &records,
                                            &events,
                                            &media,
-                                           &density);
+                                           &density,
+                                           &eps_ray);
           const double readback_start = time_dt();
           if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, args)) {
             capture->fail();

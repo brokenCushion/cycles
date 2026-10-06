@@ -193,7 +193,9 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
           density = deep_grid_density_.data() + offset;
         }
         const KernelDeepResult result = kernels_.deep_surface(
-            kernel_globals, state, events, capture->max_events(), capture->volume(), density);
+            kernel_globals, state, events, capture->max_events(), capture->volume(), density,
+            capture->volume_grid() ? deep::error_budget(capture->error()).density *
+                                        (capture->error() > 0) : 0);
         capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, events, density);
       }
       else {

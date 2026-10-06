@@ -34,7 +34,7 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
                                             KernelDeepEvent *events,
                                             int max_events,
                                             bool volume,
-                                            KernelDeepDensity *density);
+                                            KernelDeepDensity *density, double eps_ray);
 #endif
 KERNEL_INTEGRATOR_SHADE_FUNCTION(megakernel);
 

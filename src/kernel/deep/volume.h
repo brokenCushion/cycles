@@ -12,7 +12,7 @@ ccl_device KernelDeepResult deep_volume_interval(
     KernelGlobals kg, IntegratorState state, ShaderData *sd, const Ray &ray,
     const int object, const double start, const double end,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
-    const int stride, const int capacity, int count)
+    const int stride, const int capacity, int count, const double eps_ray)
 {
   const VolumeStack entry = {sd->object, sd->shader};
   const float grid_scale = kernel_data_fetch(shaders, sd->shader & SHADER_MASK).deep_density_scale;
@@ -26,7 +26,7 @@ ccl_device KernelDeepResult deep_volume_interval(
     sd->shader_flag = kernel_data_fetch(shaders, entry.shader & SHADER_MASK).flags;
     sd->object_flag = kernel_data_fetch(object_flag, object);
     const KernelDeepResult captured = deep_volume_native(
-        kg, sd, &ray, start, end, grid_scale, events, density, stride, capacity, count);
+        kg, sd, &ray, start, end, grid_scale, events, density, stride, capacity, count, eps_ray);
     if (captured.status != DEEP_COMPLETE)
       return captured;
     count = int(captured.count);
@@ -61,6 +61,16 @@ ccl_device KernelDeepResult deep_volume_interval(
                                   double(camera_z.z) * ray.P.z + camera_z.w;
       const double depth_per_t = double(camera_z.x) * ray.D.x + double(camera_z.y) * ray.D.y +
                                  double(camera_z.z) * ray.D.z;
+#if defined(WITH_NANOVDB) && (!defined(__KERNEL_GPU__) || defined(__KERNEL_CUDA__))
+      if (eps_ray > 0 && density) {
+        const auto error = deep_volume_constant(
+            depth_origin + start * depth_per_t, depth_origin + end * depth_per_t,
+            double(sigma.x) * (end - start) * len(ray.D), .25 * eps_ray / capacity,
+            events, density, stride, capacity, &count);
+        return error == DEEP_ERROR_NONE ? KernelDeepResult{DEEP_COMPLETE, unsigned(count), error} :
+                                         KernelDeepResult{DEEP_FAILED, 0, error};
+      }
+#endif
       const float front = float(depth_origin + start * depth_per_t);
       const float rear = float(depth_origin + end * depth_per_t);
       if (!(rear > front) || !(front > 0))
@@ -160,7 +170,8 @@ ccl_device KernelDeepResult deep_volume_object(
     KernelGlobals kg, IntegratorState state, ShaderData *sd, const Ray &ray,
     const int object, const double clip_start, const double clip_end,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
-    const int stride, const int capacity, int count, const bool initially_inside = false)
+    const int stride, const int capacity, int count, const double eps_ray,
+    const bool initially_inside = false)
 {
   double origin[3] = {ray.P.x, ray.P.y, ray.P.z};
   double direction[3] = {ray.D.x, ray.D.y, ray.D.z};
@@ -207,7 +218,7 @@ ccl_device KernelDeepResult deep_volume_object(
       if (start >= 0 && clip_end > start) {
         sd->shader = shader;
         return deep_volume_interval(kg, state, sd, ray, object, start, clip_end,
-                                    events, density, stride, capacity, count);
+                                    events, density, stride, capacity, count, eps_ray);
       }
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
     }
@@ -231,7 +242,7 @@ ccl_device KernelDeepResult deep_volume_object(
       if (end > start) {
         sd->shader = shader;
         const KernelDeepResult result = deep_volume_interval(
-            kg, state, sd, ray, object, start, end, events, density, stride, capacity, count);
+            kg, state, sd, ray, object, start, end, events, density, stride, capacity, count, eps_ray);
         if (result.status != DEEP_COMPLETE)
           return result;
         count = int(result.count);
@@ -255,7 +266,8 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
                                         ccl_global KernelDeepMedium *media,
                                         const int stride,
                                         const int capacity,
-                                        ccl_global KernelDeepDensity *density = nullptr)
+                                        ccl_global KernelDeepDensity *density = nullptr,
+                                        const double eps_ray = 0)
 {
 #ifdef __VOLUME__
   Ray ray;
@@ -313,7 +325,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
     ++object_count;
     const KernelDeepResult result = deep_volume_object(
         kg, state, &sd, ray, hit.object, clip_start, clip_end,
-        events, density, stride, capacity, count, true);
+        events, density, stride, capacity, count, eps_ray, true);
     if (result.status != DEEP_COMPLETE)
       return result;
     count = int(result.count);
@@ -381,7 +393,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
             ++object_count;
             const KernelDeepResult result = deep_volume_object(
                 kg, state, &sd, ray, hit.object, clip_start, clip_end,
-                events, density, stride, capacity, count);
+                events, density, stride, capacity, count, eps_ray);
             if (result.status != DEEP_COMPLETE)
               return result;
             count = int(result.count);

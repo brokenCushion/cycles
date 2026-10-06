@@ -19,7 +19,8 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
                                                ccl_global KernelDeepDensity *density,
                                                const int stride,
                                                const int capacity,
-                                               const int first)
+                                               const int first,
+                                               const double eps_ray)
 {
 #if defined(WITH_NANOVDB) && (!defined(__KERNEL_GPU__) || defined(__KERNEL_CUDA__))
   if ((sd->object_flag & SD_OBJECT_MOTION) || kernel_data.cam.num_motion_steps ||
@@ -71,13 +72,13 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
     const nanovdb::CachedReadAccessor<nanovdb::Fp16> accessor(grid->tree().root());
     return deep_volume_grid_capture(accessor, origin, direction, start, end, scale,
                                     physical_length, depth_origin, depth_per_t,
-                                    events, density, stride, capacity, first, 16384);
+                                    events, density, stride, capacity, first, 16384, eps_ray);
   }
   const auto *grid = (ccl_global nanovdb::NanoGrid<float> *)info.data;
   const nanovdb::CachedReadAccessor<float> accessor(grid->tree().root());
   return deep_volume_grid_capture(accessor, origin, direction, start, end, scale,
                                   physical_length, depth_origin, depth_per_t,
-                                  events, density, stride, capacity, first, 16384);
+                                  events, density, stride, capacity, first, 16384, eps_ray);
 #else
   return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
 #endif

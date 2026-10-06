@@ -12,6 +12,7 @@
 #include <vector>
 #include "kernel/device/cuda/compat.h"
 #include "kernel/deep/volume_grid.h"
+#include "deep/volume_compression_test.h"
 
 struct AssetRay {
   double origin[3], direction[3], length, expected_tau;
@@ -20,6 +21,11 @@ struct AssetResult {
   double tau;
   int error, cells;
 };
+__global__ void compression_oracle(KernelDeepEvent *events, KernelDeepDensity *density,
+                                   AssetResult *result)
+{
+  result->error = check_volume_compression(events, density);
+}
 __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
                                const AssetRay *rays,
                                AssetResult *results,
@@ -152,6 +158,14 @@ int main(int argc, char **argv)
     check_cuda(cudaMalloc(&device_results, results.size() * sizeof(AssetResult)));
     check_cuda(cudaMalloc(&device_events, rays.size() * DEEP_MAX_VOLUME_EVENTS * sizeof(KernelDeepEvent)));
     check_cuda(cudaMalloc(&device_density, rays.size() * DEEP_MAX_VOLUME_EVENTS * sizeof(KernelDeepDensity)));
+    compression_oracle<<<1, 1>>>(device_events, device_density, device_results);
+    check_cuda(cudaGetLastError());
+    AssetResult compression{};
+    check_cuda(cudaMemcpy(&compression, device_results, sizeof(compression), cudaMemcpyDeviceToHost));
+    if (compression.error)
+      throw std::runtime_error("CUDA compression cubic oracle failed: " +
+                               std::to_string(compression.error));
+    std::cout << "PASS: CUDA compressed curves against independent exact cubic integration\n";
     check_cuda(cudaMemcpy(device_grid, grid.data(), grid.size(), cudaMemcpyHostToDevice));
     check_cuda(cudaMemcpy(device_rays, rays.data(), rays.size() * sizeof(AssetRay), cudaMemcpyHostToDevice));
     integrate_grid<<<(rays.size() + 63) / 64, 64>>>(

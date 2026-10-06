@@ -5,6 +5,7 @@
 #include <openvdb/io/File.h>
 #include <openvdb/tools/Interpolation.h>
 #include "kernel/deep/volume_grid.h"
+#include "deep/volume_compression_test.h"
 #include "deep/volume.h"
 
 #include <algorithm>
@@ -99,7 +100,15 @@ int main(int argc, char **argv)
   try {
     if (argc != 3)
       throw std::runtime_error("Usage: cycles_deep_vdb_grid_test INPUT.vdb OUTPUT_DIR");
-    openvdb::initialize();
+      openvdb::initialize();
+      {
+        std::vector<KernelDeepEvent> events(8192);
+        std::vector<KernelDeepDensity> density(8192);
+        const int failure = ccl::check_volume_compression(events.data(), density.data());
+        if (failure)
+          throw std::runtime_error("Compression cubic oracle failed: " + std::to_string(failure));
+        std::cout << "PASS: compressed curves against independent exact cubic integration\n";
+      }
       test_half_precision();
       test_empty_tiles<float>(32);
       test_empty_tiles<ccl::nanovdb::Fp16>(16);
@@ -175,6 +184,32 @@ int main(int argc, char **argv)
       }
       if (stored_tau != actual_tau)
         throw std::runtime_error("Native capture changed optical depth");
+      for (const double eps : {4.95e-5, 4.995e-4}) {
+        std::vector<KernelDeepEvent> compressed(8192);
+        std::vector<KernelDeepDensity> spans(8192);
+        const auto reduced = ccl::deep_volume_grid_capture(
+            accessor, origin, direction, 0, 1, .02, length, 1, 100,
+            compressed.data(), spans.data(), 1, 8192, 0, 16384, eps);
+        if (reduced.status != DEEP_COMPLETE)
+          throw std::runtime_error("Compressed asset capture failed: " +
+                                   std::to_string(reduced.error));
+        for (int probe = 0; probe <= 256; ++probe) {
+          const double z = 1 + 100 * double(probe) / 256;
+          double exact = 0, approximate = 0;
+          for (const auto &span : cubic) {
+            double u = (z - span.front) / (span.back - span.front);
+            u = std::clamp(u, 0.0, 1.0);
+            exact += ccl::compression_exact_tau(span.optical_depth, u);
+          }
+          for (unsigned i = 0; i < reduced.count; ++i) {
+            const auto &span = spans[i];
+            const double u = std::clamp((z - span.front) / (span.back - span.front), 0.0, 1.0);
+            approximate += u * (double(span.optical_depth[0]) + double(span.optical_depth[1]));
+          }
+          if (std::abs(std::exp(-exact) - std::exp(-approximate)) > eps)
+            throw std::runtime_error("Compressed asset exceeds exact cubic oracle allowance");
+        }
+      }
       const auto fitted = ccl::deep::integrate_cubic_density(cubic, 1e-7, 65536);
       maximum_intervals = std::max(maximum_intervals, fitted.size());
       /* Independent boundary enumeration + OpenVDB BoxSampler + exact cubic

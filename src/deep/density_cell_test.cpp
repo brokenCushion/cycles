@@ -183,6 +183,15 @@ int main()
 {
   try {
     {
+      const double lo[3] = {0, 0, 0}, hi[3] = {1, 1, 1};
+      const double origin[3] = {0, .5, -1}, direction[3] = {0, 0, 1};
+      const double miss[3] = {2, .5, -1};
+      check(ccl::deep_volume_bounds(origin, direction, lo, hi, 1, 1),
+            "Parallel edge or equal-distance BVH candidate lost");
+      check(!ccl::deep_volume_bounds(miss, direction, lo, hi, 0, 10),
+            "Parallel ray outside BVH bound admitted");
+    }
+    {
       /* Captured production rays: a true interval narrower than one FLOAT ULP,
        * and a false grazing exit accepted by the native FLOAT triangle test.
        * Compare triangle crossings with an independent axis-aligned slab oracle. */
@@ -217,6 +226,8 @@ int main()
             double t, u, v;
             bool back;
             if (ccl::deep_volume_triangle(origins[ray], directions[ray], triangle, t, u, v, back)) {
+              check(ccl::deep_volume_bounds(origins[ray], directions[ray], lo, hi, t, t),
+                    "Conservative BVH bounds lost an exact grazing crossing");
               check(std::abs(t - (back ? exit : enter)) < 1e-10,
                     "Boundary crossing differs from slab oracle");
               back ? ++exits : ++entries;

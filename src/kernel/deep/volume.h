@@ -73,9 +73,88 @@ ccl_device KernelDeepResult deep_volume_interval(
   return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
 }
 
+ccl_device_inline void deep_volume_candidate(
+    KernelGlobals kg, const int object, const int prim,
+    const double origin[3], const double direction[3], const double cursor,
+    const int cursor_prim, double &nearest, double &near_u, double &near_v,
+    int &near_prim, bool &back)
+{
+  float3 vertices[3];
+  triangle_vertices(kg, object, prim, vertices);
+  const double points[3][3] = {{vertices[0].x, vertices[0].y, vertices[0].z},
+                               {vertices[1].x, vertices[1].y, vertices[1].z},
+                               {vertices[2].x, vertices[2].y, vertices[2].z}};
+  double t, u, v;
+  bool candidate_back;
+  if (!deep_volume_triangle(origin, direction, points, t, u, v, candidate_back) ||
+      t < cursor || (t == cursor && prim <= cursor_prim) ||
+      t > nearest || (t == nearest && near_prim >= 0 && prim > near_prim))
+    return;
+  nearest = t; near_u = u; near_v = v; near_prim = prim; back = candidate_back;
+}
+
+#ifdef __KERNEL_CUDA__
+/* Reuse the native BVH2 object root and leaf mapping, without FLOAT triangle
+ * filtering. Non-aligned nodes are visited conservatively. No hit array or
+ * candidate limit: refine every visited triangle; stack overflow fails. */
+ccl_device_inline bool deep_volume_nearest_bvh(
+    KernelGlobals kg, const int object, const double origin[3], const double direction[3],
+    const double cursor, const int cursor_prim, double &nearest, double &near_u,
+    double &near_v, int &near_prim, bool &back)
+{
+  int stack[BVH_STACK_SIZE];
+  int pending = 0, node = kernel_data_fetch(object_node, object);
+  if (node == 0)
+    node = kernel_data.bvh.root;
+  const bool instance = !(kernel_data_fetch(object_flag, object) & SD_OBJECT_TRANSFORM_APPLIED);
+  while (true) {
+    if (node >= 0) {
+      const float4 links = kernel_data_fetch(bvh_nodes, node);
+      int mask = 3;
+      if (!(__float_as_uint(links.x) & PATH_RAY_VISIBILITY_NODE_UNALIGNED)) {
+        const float4 x = kernel_data_fetch(bvh_nodes, node + 1);
+        const float4 y = kernel_data_fetch(bvh_nodes, node + 2);
+        const float4 z = kernel_data_fetch(bvh_nodes, node + 3);
+        const double lo[2][3] = {{x.x, y.x, z.x}, {x.y, y.y, z.y}};
+        const double hi[2][3] = {{x.z, y.z, z.z}, {x.w, y.w, z.w}};
+        mask = int(deep_volume_bounds(origin, direction, lo[0], hi[0], cursor, nearest)) |
+               (int(deep_volume_bounds(origin, direction, lo[1], hi[1], cursor, nearest)) << 1);
+      }
+      if (mask) {
+        if (mask == 3) {
+          if (pending == BVH_STACK_SIZE)
+            return false;
+          stack[pending++] = __float_as_int(links.w);
+        }
+        node = __float_as_int((mask & 1) ? links.z : links.w);
+        continue;
+      }
+    }
+    else {
+      const float4 leaf = kernel_data_fetch(bvh_leaf_nodes, -node - 1);
+      const int first = __float_as_int(leaf.x), end = __float_as_int(leaf.y);
+      if (first >= 0 && (__float_as_uint(leaf.w) & PRIMITIVE_ALL) == PRIMITIVE_TRIANGLE) {
+        for (int i = first; i < end; ++i) {
+          if (!instance && kernel_data_fetch(prim_object, i) != object)
+            continue;
+          deep_volume_candidate(kg, object, kernel_data_fetch(prim_index, i),
+                                origin, direction, cursor, cursor_prim,
+                                nearest, near_u, near_v, near_prim, back);
+        }
+      }
+      /* Other instance leaves cannot contain this object: its own root is used
+       * when transforms are unapplied, as in the native local traversal. */
+    }
+    if (!pending)
+      return true;
+    node = stack[--pending];
+  }
+}
+#endif
+
 /* The BVH discovers objects. Pair their actual triangle crossings in double:
  * FLOAT all-hit queries may omit a grazing exit or include a false edge hit.
- * Repeated nearest-hit scans use constant scratch, including for nonconvex VDB
+ * Nearest-hit queries use bounded scratch, including for nonconvex VDB
  * boundary meshes; no per-thread allocation or fixed face-count truncation. */
 ccl_device KernelDeepResult deep_volume_object(
     KernelGlobals kg, IntegratorState state, ShaderData *sd, const Ray &ray,
@@ -110,20 +189,19 @@ ccl_device KernelDeepResult deep_volume_object(
     double nearest = double(FLT_MAX), near_u = 0, near_v = 0;
     int near_prim = -1;
     bool back = false;
-    for (int i = 0; i < size; ++i) {
-      const int prim = first + i;
-      float3 vertices[3];
-      triangle_vertices(kg, object, prim, vertices);
-      const double points[3][3] = {{vertices[0].x, vertices[0].y, vertices[0].z},
-                                   {vertices[1].x, vertices[1].y, vertices[1].z},
-                                   {vertices[2].x, vertices[2].y, vertices[2].z}};
-      double t, u, v;
-      bool candidate_back;
-      if (!deep_volume_triangle(origin, direction, points, t, u, v, candidate_back) ||
-          t < cursor || (t == cursor && prim <= cursor_prim) ||
-          t > nearest || (t == nearest && near_prim >= 0 && prim > near_prim))
-        continue;
-      nearest = t; near_u = u; near_v = v; near_prim = prim; back = candidate_back;
+#ifdef __KERNEL_CUDA__
+    if (size > 32) {
+      if (!deep_volume_nearest_bvh(kg, object, origin, direction, cursor, cursor_prim,
+                                   nearest, near_u, near_v, near_prim, back))
+        return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
+    }
+    else
+#endif
+    {
+      /* Small bounds and CPU/other backends retain the exact reference scan. */
+      for (int i = 0; i < size; ++i)
+        deep_volume_candidate(kg, object, first + i, origin, direction, cursor, cursor_prim,
+                              nearest, near_u, near_v, near_prim, back);
     }
     if (near_prim < 0 || nearest >= clip_end) {
       if (start >= 0 && clip_end > start) {

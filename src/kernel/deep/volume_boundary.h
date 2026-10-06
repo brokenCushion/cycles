@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
 #include "util/defines.h"
+#include <float.h>
 
 CCL_NAMESPACE_BEGIN
 
@@ -47,6 +48,36 @@ ccl_device_inline bool deep_volume_triangle(const double origin[3],
   u = weight[0] / total;
   v = weight[1] / total;
   back = denominator < 0;
+  return true;
+}
+
+/* Conservative broad phase only: padding admits extra candidates, never changes
+ * the exact triangle test. Include origin magnitude to cover distant-ray
+ * subtraction; zero directions and equality are handled without reciprocals. */
+ccl_device_inline bool deep_volume_bounds(const double origin[3],
+                                           const double direction[3],
+                                           const double lower[3], const double upper[3],
+                                           double start, double end)
+{
+  for (int axis = 0; axis < 3; ++axis) {
+    const double scale = (origin[axis] < 0 ? -origin[axis] : origin[axis]) +
+                         (lower[axis] < 0 ? -lower[axis] : lower[axis]) +
+                         (upper[axis] < 0 ? -upper[axis] : upper[axis]) + 1;
+    const double pad = 4 * double(FLT_EPSILON) * scale;
+    const double lo = lower[axis] - pad, hi = upper[axis] + pad;
+    if (direction[axis] == 0) {
+      if (origin[axis] < lo || origin[axis] > hi)
+        return false;
+      continue;
+    }
+    const double a = (lo - origin[axis]) / direction[axis];
+    const double b = (hi - origin[axis]) / direction[axis];
+    const double tnear = a < b ? a : b, tfar = a > b ? a : b;
+    start = start > tnear ? start : tnear;
+    end = end < tfar ? end : tfar;
+    if (end < start)
+      return false;
+  }
   return true;
 }
 

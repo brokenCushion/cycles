@@ -2,6 +2,7 @@
 import bpy
 import collections
 import json
+import re
 from pathlib import Path
 import sys
 
@@ -32,6 +33,23 @@ for material in bpy.data.materials:
     materials.append({'name': material.name,
                       'nodes': dict(collections.Counter(n.bl_idname for n in shader_nodes)),
                       'transmission': transmission})
+# Include mesh-shaped media: the deep triangle loop scans the entire evaluated
+# mesh, including triangles using surface-only materials.
+volume_materials = {m for m in bpy.data.materials if m.node_tree and any(
+    n.type == 'OUTPUT_MATERIAL' and n.is_active_output and n.inputs['Volume'].is_linked
+    for n in m.node_tree.nodes)}
+mesh_volume_bounds = []
+for obj in scene.objects:
+    if obj.type != 'MESH' or not any(m in volume_materials for m in obj.data.materials):
+        continue
+    evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    mesh = evaluated.to_mesh()
+    try:
+        mesh.calc_loop_triangles()
+        mesh_volume_bounds.append({'object': obj.name, 'bound_triangles': len(mesh.loop_triangles),
+                                   'count_basis': 'evaluated mesh, all material slots'})
+    finally:
+        evaluated.to_mesh_clear()
 report = {
     'blender': bpy.app.version_string,
     'build_hash': bpy.app.build_hash.decode(),
@@ -45,6 +63,7 @@ report = {
     'adaptive': scene.cycles.use_adaptive_sampling,
     'denoise': scene.cycles.use_denoising,
     'motion': scene.render.use_motion_blur,
+    'mesh_volume_bounds': mesh_volume_bounds,
     'volume_ray_marching': scene.cycles.volume_biased,
     # Cycles VolumeMeshBuilder uses six bounding-box quads when ray marching
     # is disabled. Sparse ray-marching meshes need renderer-side counts.
@@ -62,6 +81,15 @@ report = {
     'images': [{'name': i.name, 'path': i.filepath, 'packed': bool(i.packed_file),
                 'source': i.source} for i in bpy.data.images],
 }
+if '--renderer-log' in sys.argv:
+    renderer_log = Path(sys.argv[sys.argv.index('--renderer-log') + 1])
+    report['renderer_volume_bounds'] = [
+        {'object': name, 'bound_triangles': int(count)}
+        for name, count in re.findall(r'Deep volume bound: object=(.*?) triangles=(\d+)',
+                                     renderer_log.read_text())]
+    if not report['renderer_volume_bounds']:
+        raise ValueError('Renderer log contains no measured volume bounds')
+    report['renderer_volume_bounds_log'] = str(renderer_log.resolve())
 output.parent.mkdir(parents=True, exist_ok=True)
 output.write_text(json.dumps(report, indent=2))
 print('DEEP_SCENE_INVENTORY', output)

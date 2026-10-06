@@ -260,6 +260,9 @@ Acceptance:
   header tolerance on the CPU/CUDA compatibility matrices and the small
   landscape; independent tests in `vdb_grid_test.cpp`/`vdb_grid_cuda_test.cu`
   compare compressed curves to the exact cubic integration within `eps_ray`.
+- Include CPU curve-fitting time separately from spill reads, reconstruction and
+  EXR serialization in both fixed cases before/after; measure strict / 1e-4 /
+  1e-3. The Phase 1 scratch result suggests fitting dominates export; quantify it.
 - Report on 587x250x4 landscape: readback bytes, spill bytes, deep samples in
   EXR, EXR size, capture and export time, for strict / 1e-4 / 1e-3.
 
@@ -576,9 +579,9 @@ Baseline: `builds/validation/landscape-cloud/optimization-phase2/baseline.json`
 reuses the fully qualified scratch build and both fixed cases. Nsight evidence:
 `optimization-phase2/nsys/{timeline.nsys-rep,timeline.sqlite,stats.csv}`.
 The profiled deep output is strictly identical. No boundary implementation change.
-Nsight Compute PC sampling failed with `ERR_NVGPUCTRPERM`; instruction-only
-collection works, but cannot establish triangle-loop versus grid-traversal time.
-Phase 2 is not accepted pending counter access. The scene inventory records ten
+Counter access was enabled and verified; source-mapped Nsight Compute sampling
+shows significant triangle pairing. The CUDA BVH candidate search is implemented
+and awaiting strict identity, regression and timing checks. Phase 2 is not accepted. The scene inventory records ten
 native volumes, ray marching disabled: the renderer creates 12 triangles per
 nonempty bound. Counts are derived from the construction branch, not GPU telemetry.
 Kernel, copy and wait durations overlap and must not be summed.

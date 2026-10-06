@@ -12,8 +12,8 @@ cases, and both 33-render / 17-rejection boundary suites pass.
 
 Landscape and compatibility deep EXRs are byte-identical. Boundary sample data
 is bit-identical, but whole files differ in run-specific beautyIdentity headers.
-Literal boundary byte identity remains unresolved; Phase 0 is not marked fully
-accepted. Measurements and the historical denoised-pixel investigation are in
+Literal boundary byte identity conflicts with timestamp-dependent beauty pairing.
+The user decision on that contract is pending; Phase 0 is not marked fully accepted. Measurements and the historical denoised-pixel investigation are in
 Section 6 of the plan. Phase 1 has not started.
 
 M8 remains open. No production render starts before prerequisite phases pass

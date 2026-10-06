@@ -388,8 +388,8 @@ Checkpoint: `59963b932`. Snapshot experiment: `codex/volume-majorant-determinism
 (`9a017f055`). Removal/build: `44b44477e`. K=5 input gate: `7efb85198`.
 Both builds and Phase 0's small-landscape acceptance checks pass. Literal
 boundary-file identity does not pass, so Phase 0 is not marked fully accepted
-under the strict byte contract; Phase 1 has not started. The explicit strict setting arrives in Phase 3; capture/export
-still use the unchanged legacy strict path.
+under the strict byte contract; Phase 1 has not started. The explicit strict
+setting arrives in Phase 3; capture/export still use the legacy strict path.
 
 Single measurements, not speedup claims. Before controls used K=2; after uses
 the approved K=5, one global envelope per pass, count matching and four FLOAT
@@ -466,8 +466,11 @@ envelope underestimated ordinary variation; no renderer tolerance was changed.
 
 Both boundary suites retain identical sample-offset / Z / ZBack / A bits.
 Their run-specific `cycles:beautyIdentity` headers contain output paths and
-beauty hashes, so whole-file equality across evidence directories is not met;
-no metadata exception or file normalization was applied. Rendered compatibility
+beauty hashes. Beauty EXRs contain `capDate`: 32/33 CPU and 30/33 CUDA beauty
+files differ only in this timestamp; the remaining cases also differ in beauty
+pixels. Thus whole-file identity conflicts with retaining the exact live beauty
+pairing. Evidence: `k5/boundary-beauty-timestamp-diagnostic.json`. No file was
+modified, and no metadata exception or normalization was accepted as a gate. Rendered compatibility
 files and both landscapes are whole-file identical. Rejection sentinels are
 excluded from rendered-file counts. Suite times include control renders and
 validation, and are not performance comparisons. Detailed resource metrics are

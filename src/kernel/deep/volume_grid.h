@@ -7,6 +7,44 @@
 
 CCL_NAMESPACE_BEGIN
 
+/* Non-strict per-object compression: absolute transmittance error proof.
+ *
+ * For an anchor (za, taua), let Ta = exp(-taua). Nonnegative extinction gives
+ * |Ta*exp(-u) - Ta*exp(-v)| <= Ta*|u-v| for u,v >= 0. A cell's exact optical
+ * depth primitive is quartic: deep_density_chord_error bounds its deviation q
+ * from the endpoint chord at EVERY depth by the Bernstein convex-hull property.
+ * If a replacement line differs from that cell chord by at most delta at BOTH
+ * endpoints, linear interpolation bounds their difference by delta everywhere.
+ * Thus Ta*(q+delta) bounds the absolute T error, including cell interiors.
+ * Boundary tests alone are insufficient for a curved cell.
+ *
+ * Allocate eps_object so sum(eps_object) <= eps_ray over all contributing
+ * objects. The product telescoping inequality, |product(Tj)-product(Tj')| <=
+ * sum(|Tj-Tj'|), proves the ray bound even for overlapping media. Never spend
+ * eps_ray independently on each object. Convex camera-sample averaging retains
+ * eps_ray. Device compression replaces the host per-ray approximation budget;
+ * it must not be charged a second time by the host fitter.
+ *
+ * After reserving representation error, split the object's remaining allowance
+ * equally between cell curvature and boundary displacement. Subdivide a cell
+ * until q <= eps_object/(2*Ta); use delta = eps_object/(2*Ta) at its boundaries.
+ * This is a conservative instance of delta_i = eps_object/Ta - q_i, avoiding
+ * retrospective cone changes when the next cell has greater curvature.
+ * Each boundary (zi,taui) intersects the feasible nonnegative slope cone with
+ * [(taui-taua-delta)/(zi-za), (taui-taua+delta)/(zi-za)]. Extend only when the
+ * exact newest endpoint slope is feasible; otherwise emit the last feasible
+ * endpoint and re-anchor. Exact integrated endpoint depths prevent error from
+ * accumulating across emitted segments; preserve vacuum gaps explicitly.
+ *
+ * The proof above is in exact arithmetic. FLOAT tau/depth conversion is not
+ * free: bound accumulated endpoint rounding and interior depth displacement,
+ * charge them to the reserved allowance, and fail explicitly if it is exceeded.
+ * Thin intervals must retain double boundaries until publication; a collapsed
+ * FLOAT interval cannot silently be dropped. Subdivision/progress and event
+ * capacity failures invalidate the sample. All state is bounded; no allocation.
+ * Strict (zero allowance) bypasses compression and retains the cubic path.
+ */
+
 /* Initial numerical qualification is CPU/CUDA double evaluation followed by
  * FLOAT coefficients. The stored layout does not require device double support.
  * Other backends must qualify their arithmetic before enabling this path. */

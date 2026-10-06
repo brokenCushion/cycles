@@ -509,51 +509,56 @@ validation, and are not performance comparisons. Detailed resource metrics are
 landscape-only. Wrong per-pixel-envelope diagnostics are retained separately;
 they were corrected to the plan's global per-pass definition using saved EXRs.
 
-### Phase 1 - baseline accepted; implementation in progress
+### Phase 1 - accepted
 
-Fresh before evidence: `builds/validation/landscape-cloud/optimization-phase1/before`.
-The reproduced-state rule resolves (489,34): all checked noisy RGBA, albedo RGB,
-normal XYZ, depth and sample-count passes match Phase 0 deep-off control 3 within
-4 FLOAT ULP, accepted population 4. K=5 outliers were Noisy R, Albedo R and Depth;
-no additional control renders were needed. The full reader/oracle check passes.
-`performance/deep/cuda_beauty_validation.json` records the complete matched vector.
-CPU exact beauty and all strict identity/regression checks pass.
+Evidence: `builds/validation/landscape-cloud/optimization-phase1/{before,after}`.
+Banded capture loads immutable export data sequentially; oversized bands use a
+checked per-row re-bucket. GPU kernels/scheduling and reconstruction are unchanged.
+All strict payload/header comparisons and regression gates pass.
+Baseline (489,34) matches every checked raw pass in Phase 0 deep-off control 3
+within 4 FLOAT ULP, population 4 (Noisy R, Albedo R and Depth exceeded fresh K=5).
+After runs needed no pool resolutions and no additional controls.
+Validation tools: commit 65fcfd1d3.
+Build/source provenance: `builds/validation/beauty-builds.json`.
 
 | Case | Metric | Before | After | Commit |
 | --- | --- | --- | --- | --- |
-| 47x20 / max16 | Capture seconds | 5.793281 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Capture wait + readback seconds | 4.660442 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | GPU readback bytes | 372191232 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Spill stored bytes | 13006224 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Spill read bytes | 33911712 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Spill written bytes | 14805816 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Export seconds | 7.05423 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | EXR bytes | 4445714 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Peak process working-set bytes | 5531406336 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Device-wide GPU peak MiB | 5067 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Deep samples | 561793 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Max oracle error | 2.201313769045754e-07 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Max depth-cut error | 6.95131076811073e-07 | Not implemented | `bfd12882f` |
-| 47x20 / max16 | Beauty / alpha / depth | PASS / PASS / PASS | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Capture seconds | 71.385669 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Capture wait + readback seconds | 68.399 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | GPU readback bytes | 7177170944 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Spill stored bytes | 508375136 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Spill read bytes | 3848873808 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Spill written bytes | 564666368 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Export seconds | 49.2628 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | EXR bytes | 394273944 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Peak process working-set bytes | 5538512896 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Device-wide GPU peak MiB | 5175 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Deep samples | 52189081 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Max oracle error | 2.2079907672709065e-07 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Max depth-cut error | 8.228034402701923e-07 | Not implemented | `bfd12882f` |
-| 587x250 / 4 | Beauty / alpha / depth | PASS (pool control 3) / PASS / PASS | Not implemented | `bfd12882f` |
-| Nine CTests | Regression | 9/9 PASS | Not implemented | `bfd12882f` |
-| CPU compatibility | Regression | 14/14 PASS | Not implemented | `bfd12882f` |
-| CUDA compatibility | Regression | 4/4 PASS | Not implemented | `bfd12882f` |
-| CPU boundary | Regression | 33 renders / 17 rejections PASS | Not implemented | `bfd12882f` |
-| CUDA boundary | Regression | 33 renders / 17 rejections PASS | Not implemented | `bfd12882f` |
-| 587x250 / 4 at (489,34) | Noisy R: difference / allowed bound | 0.017139196395874023 / 9.5367431640625e-07; pool control 3 PASS | Not implemented | `bfd12882f` |
-| 587x250 / 4 at (489,34) | Albedo R: difference / allowed bound | 0.13999241590499878 / 2.384185791015625e-07; pool control 3 PASS | Not implemented | `bfd12882f` |
-| 587x250 / 4 at (489,34) | Depth: difference / allowed bound | 0.105224609375 / 0.000244140625; pool control 3 PASS | Not implemented | `bfd12882f` |
+| 47x20 / max16 | Capture seconds | 5.793281 | 5.705214 | `135624361` |
+| 47x20 / max16 | Capture wait + readback seconds | 4.660442 | 4.562865 | `135624361` |
+| 47x20 / max16 | GPU readback bytes | 372191232 | 372191232 | `135624361` |
+| 47x20 / max16 | Spill stored bytes | 13006224 | 13367184 | `135624361` |
+| 47x20 / max16 | Spill read bytes | 33911712 | 13367184 | `135624361` |
+| 47x20 / max16 | Spill written bytes | 14805816 | 13728144 | `135624361` |
+| 47x20 / max16 | Export seconds | 7.05423 | 8.30383 | `135624361` |
+| 47x20 / max16 | EXR bytes | 4445714 | 4445714 | `135624361` |
+| 47x20 / max16 | Peak process working-set bytes | 5531406336 | 5555224576 | `135624361` |
+| 47x20 / max16 | Device-wide GPU peak MiB | 5067 | 5107 | `135624361` |
+| 47x20 / max16 | Deep samples | 561793 | 561793 | `135624361` |
+| 47x20 / max16 | Max oracle error | 2.201313769045754e-07 | 2.201313769045754e-07 | `135624361` |
+| 47x20 / max16 | Max depth-cut error | 6.95131076811073e-07 | 6.95131076811073e-07 | `135624361` |
+| 47x20 / max16 | Beauty / alpha / depth | PASS / PASS / PASS | PASS / PASS / PASS | `135624361` |
+| 587x250 / 4 | Capture seconds | 71.385669 | 71.729304 | `135624361` |
+| 587x250 / 4 | Capture wait + readback seconds | 68.399 | 68.6604 | `135624361` |
+| 587x250 / 4 | GPU readback bytes | 7177170944 | 7177170944 | `135624361` |
+| 587x250 / 4 | Spill stored bytes | 508375136 | 522463136 | `135624361` |
+| 587x250 / 4 | Spill read bytes | 3848873808 | 600218816 | `135624361` |
+| 587x250 / 4 | Spill written bytes | 564666368 | 576484544 | `135624361` |
+| 587x250 / 4 | Export seconds | 49.2628 | 34.5202 | `135624361` |
+| 587x250 / 4 | EXR bytes | 394273944 | 394273944 | `135624361` |
+| 587x250 / 4 | Peak process working-set bytes | 5538512896 | 5676564480 | `135624361` |
+| 587x250 / 4 | Device-wide GPU peak MiB | 5175 | 5192 | `135624361` |
+| 587x250 / 4 | Deep samples | 52189081 | 52189081 | `135624361` |
+| 587x250 / 4 | Max oracle error | 2.2079907672709065e-07 | 2.2079907672709065e-07 | `135624361` |
+| 587x250 / 4 | Max depth-cut error | 8.228034402701923e-07 | 8.228034402701923e-07 | `135624361` |
+| 587x250 / 4 | Beauty / alpha / depth | PASS (pool control 3) / PASS / PASS | PASS / PASS / PASS | `135624361` |
+| Nine CTests | Regression | 9/9 PASS | 9/9 PASS | `135624361` |
+| CPU compatibility | Regression | 14/14 PASS | 14/14 PASS | `135624361` |
+| CUDA compatibility | Regression | 4/4 PASS | 4/4 PASS | `135624361` |
+| CPU boundary | Regression | 33 renders / 17 rejections PASS | 33 renders / 17 rejections PASS | `135624361` |
+| CUDA boundary | Regression | 33 renders / 17 rejections PASS | 33 renders / 17 rejections PASS | `135624361` |
+| 587x250 / 4 at (489,34) | Noisy R: difference / allowed bound | 0.017139196395874023 / 9.5367431640625e-07; pool control 3 PASS | PASS fresh K=5; no pool resolution | `135624361` |
+| 587x250 / 4 at (489,34) | Albedo R: difference / allowed bound | 0.13999241590499878 / 2.384185791015625e-07; pool control 3 PASS | PASS fresh K=5; no pool resolution | `135624361` |
+| 587x250 / 4 at (489,34) | Depth: difference / allowed bound | 0.105224609375 / 0.000244140625; pool control 3 PASS | PASS fresh K=5; no pool resolution | `135624361` |
+| 47x20 / max16 | Spill read amplification | 2.607345x | 1.000000x | `135624361` |
+| 587x250 / 4 | Spill read amplification | 7.570932x | 1.148825x | `135624361` |
+| Strict identity | Payload + deterministic headers | PASS | 81/81 PASS | `135624361` |

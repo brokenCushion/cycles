@@ -9,9 +9,11 @@ boundary suites and K=5 landscape checks pass. Strict payload and deterministic
 headers are identical under the user-approved run-metadata exclusion. Results
 are in Section 6 of the plan.
 
-Phase 1 baseline is accepted under the reproduced-state rule: pixel (489,34)
-matches all checked passes in Phase 0 deep-off control 3 with population 4.
-Banded spill implementation and its regression checks are in progress.
+Phase 1 is accepted: sequential band export, nine CTests, CPU/CUDA matrices,
+boundary suites and both fixed landscapes pass. Strict data/headers are unchanged.
+587x250 export: 49.26 -> 34.52 s; spill reads: 3.85 -> 0.60 GB (1.15x amplification).
+The small case exports in 8.30 s vs 7.05 s; no speedup is claimed there.
+Phase 2 is next, after the phase summary is reviewed.
 
 Checkpoint: `59963b932`. The beauty majorant experiment is isolated on
 `codex/volume-majorant-determinism` (`9a017f055`) and removed here (`44b44477e`).

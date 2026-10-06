@@ -22,7 +22,7 @@ import GafferScene
 import imath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from validate_gaffer import check, deep_pixel, tile_index, population_reference_error
+from validate_gaffer import check, deep_pixel, tile_index, population_reference_error, beauty_repeat_gate
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('directory', type=Path)
@@ -33,7 +33,7 @@ parser.add_argument('--expect-empty', action='store_true',
 parser.add_argument('--overlap-reference', nargs=2, type=Path,
                     help='Single-grid renders with matching cameras; check combined extinction')
 parser.add_argument('--beauty-repeat', type=Path,
-                    help='Independent CUDA repeat; fixed raw gate, native repeat envelope for denoised beauty')
+                    help='Independent CUDA repeat defining the raw and denoised beauty envelopes')
 parser.add_argument('--oracle-python', type=Path,
                     help='Existing NumPy Python environment for bounded, large camera-CSV checks')
 args = parser.parse_args()
@@ -48,6 +48,10 @@ for key in ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
     check(settings[key] == reference[key], 'Beauty baseline differs: ' + key)
 for key in ('denoiser', 'denoising_use_gpu', 'save_render_passes'):
     check(settings.get(key) == reference.get(key), 'Beauty baseline differs: ' + key)
+if not args.reader_only:
+    check(settings.get('renderer_sha256') is not None and
+          settings['renderer_sha256'] == reference.get('renderer_sha256'),
+          'Beauty baseline must use the same executable')
 script = Gaffer.ScriptNode()
 
 
@@ -84,13 +88,12 @@ if args.beauty_repeat:
         check(repeated_settings[key] == reference[key], 'Beauty repeat differs: ' + key)
     for key in ('denoiser', 'denoising_use_gpu', 'save_render_passes'):
         check(repeated_settings.get(key) == reference.get(key), 'Beauty repeat differs: ' + key)
+    if not args.reader_only:
+        check(repeated_settings.get('renderer_sha256') == settings['renderer_sha256'],
+              'Beauty repeat must use the same executable')
     repeat = GafferImage.ImageReader()
     repeat['fileName'].setValue((repeat_directory / 'beauty.exr').as_posix())
     check(repeat['out']['format'].getValue() == fmt, 'Beauty repeat format mismatch')
-    # Fixed absolute regression gate, including HDR. Do not scale the tolerance
-    # with brightness or the observed repeat error. This is a fixture acceptance
-    # criterion, not a universal floating-point bound for arbitrary HDR renders.
-    beauty_tolerance = settings['samples'] * 2**-23
 tile = GafferImage.ImagePlug.tileSize()
 total_deep_samples, max_pixel_samples = 0, 0
 for y in range(0, height, tile):
@@ -181,30 +184,24 @@ if denoised_repeat_gate:
                             if counts[1] == counts[2]:
                                 matched_repeat_error = max(matched_repeat_error, abs(b-c))
                         pixel += 1
-    # Record all independent gates before returning failure, so a beauty
-    # regression does not hide the accepted-camera and compositor results.
-    # Denoisers can amplify native floating-point variation. Keep the raw gate
-    # fixed and compare final beauty against the independently measured ordinary
-    # repeat envelope, plus that same fixed allowance.
-    beauty_tolerance = repeat_error + raw_tolerance
+    raw_tolerance = raw_repeat_error
+beauty_tolerance = repeat_error if settings['device'] == 'CUDA' else 0.0
 beauty_report = {'max_deep_on_off': beauty_error, 'max_ordinary_repeat': repeat_error,
-                 'peak_absolute_value': beauty_peak, 'comparison': 'fixed absolute error',
+                 'peak_absolute_value': beauty_peak, 'comparison': 'ordinary-repeat envelope; CPU exact',
                  'tolerance': beauty_tolerance}
 if denoised_repeat_gate:
-    beauty_report.update(comparison='native denoised repeat envelope plus fixed raw allowance',
+    beauty_report.update(comparison='independent native raw and denoised repeat envelopes',
                          max_raw_deep_on_off=raw_error, max_raw_ordinary_repeat=raw_repeat_error,
                          raw_tolerance=raw_tolerance)
     if population_matched:
-        beauty_report.update(raw_comparison='Every pixel against all native references with its accepted sample count',
+        beauty_report.update(raw_comparison='Ordinary-repeat envelope; population matches are diagnostic only',
                              max_population_matched_raw_error=matched_raw_error,
                              max_same_population_native_repeat_error=matched_repeat_error,
                              unmatched_population_pixels=unmatched_population_pixels,
                              native_population_changes=native_population_changes)
 (directory / 'beauty_validation.json').write_text(json.dumps(beauty_report, indent=2)+'\n')
-raw_passed = (unmatched_population_pixels == 0 and
-              max(matched_raw_error, matched_repeat_error) <= raw_tolerance) if population_matched else (
-              max(raw_error, raw_repeat_error) <= raw_tolerance)
-beauty_passed = (beauty_error <= beauty_tolerance and repeat_error <= beauty_tolerance and
+raw_passed = beauty_repeat_gate(settings['device'], raw_error, raw_repeat_error)
+beauty_passed = (beauty_repeat_gate(settings['device'], beauty_error, repeat_error) and
                  (not denoised_repeat_gate or raw_passed))
 print('Beauty isolation:', json.dumps(dict(passed=beauty_passed, **beauty_report)), flush=True)
 

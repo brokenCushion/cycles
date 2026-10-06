@@ -97,7 +97,6 @@ const NodeEnum *Pass::get_type_enum()
     pass_type_enum.insert("denoising_previous", PASS_DENOISING_PREVIOUS);
     pass_type_enum.insert("volume_majorant", PASS_VOLUME_MAJORANT);
     pass_type_enum.insert("volume_majorant_sample_count", PASS_VOLUME_MAJORANT_SAMPLE_COUNT);
-    pass_type_enum.insert("volume_majorant_snapshot", PASS_VOLUME_MAJORANT_SNAPSHOT);
     pass_type_enum.insert("render_time", PASS_RENDER_TIME);
 
     pass_type_enum.insert("shadow_catcher", PASS_SHADOW_CATCHER);
@@ -304,10 +303,6 @@ PassInfo Pass::get_info(const PassType type,
       break;
     case PASS_VOLUME_MAJORANT_SAMPLE_COUNT:
       pass_info.num_components = 1;
-      pass_info.use_filter = false;
-      break;
-    case PASS_VOLUME_MAJORANT_SNAPSHOT:
-      pass_info.num_components = 2;
       pass_info.use_filter = false;
       break;
 

@@ -424,8 +424,6 @@ enum PassType {
    * When reading this pass, it is converted to majorant transmittance */
   PASS_VOLUME_MAJORANT,
   PASS_VOLUME_MAJORANT_SAMPLE_COUNT,
-  /* Internal sum/count frozen at volume guiding updates. */
-  PASS_VOLUME_MAJORANT_SNAPSHOT,
   PASS_CATEGORY_DATA_END = 63,
 
   /* Denoising passes */

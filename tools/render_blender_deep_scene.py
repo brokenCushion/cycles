@@ -93,6 +93,7 @@ if args.deep:
 elif hasattr(scene.cycles, 'use_deep_output'):
     scene.cycles.use_deep_output = False
 report = {
+    'renderer_sha256': hashlib.sha256(Path(bpy.app.binary_path).read_bytes()).hexdigest(),
     'blender': bpy.app.version_string,
     'build_hash': bpy.app.build_hash.decode(),
     'source_file': bpy.data.filepath,

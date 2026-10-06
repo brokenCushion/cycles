@@ -27,6 +27,13 @@ def population_reference_error(value, population, references):
                 if count == population), default=math.inf)
 
 
+def beauty_repeat_gate(device, difference, ordinary_repeat):
+    """CPU is exact; CUDA uses the independently measured repeat envelope."""
+    check(device in ('CPU', 'CUDA'), 'Unknown beauty device')
+    return (all(math.isfinite(v) and v >= 0 for v in (difference, ordinary_repeat)) and
+            difference <= (ordinary_repeat if device == 'CUDA' else 0))
+
+
 def tile_index(point):
     size = GafferImage.ImagePlug.tileSize()
     origin = imath.V2i((point.x // size) * size, (point.y // size) * size)

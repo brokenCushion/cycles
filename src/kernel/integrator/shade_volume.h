@@ -1054,16 +1054,20 @@ struct VolumeSampleReservoir {
   }
 };
 
-/* Estimate volume majorant optical depth `\sum\sigma_{max}t` from a completed guiding epoch.
- * Reading the live accumulators makes concurrent samples depend on execution order. */
+/* Estimate volume majorant optical depth `\sum\sigma_{max}t` along the ray, by accumulating the
+ * result from previous samples in a render buffer. */
 ccl_device_inline float volume_majorant_optical_depth(KernelGlobals kg,
                                                       const ccl_global float *buffer)
 {
-  kernel_assert(kernel_data.film.pass_volume_majorant_snapshot != PASS_UNUSED);
-  const ccl_global float *snapshot = buffer + kernel_data.film.pass_volume_majorant_snapshot;
+  kernel_assert(kernel_data.film.pass_volume_majorant != PASS_UNUSED);
+  kernel_assert(kernel_data.film.pass_volume_majorant_sample_count != PASS_UNUSED);
+
+  const ccl_global float *accumulated_optical_depth = buffer +
+                                                      kernel_data.film.pass_volume_majorant;
+  const ccl_global float *count = buffer + kernel_data.film.pass_volume_majorant_sample_count;
 
   /* Assume `FLT_MAX` when we have no information of the optical depth. */
-  return (snapshot[1] == 0.0f) ? FLT_MAX : snapshot[0] / snapshot[1];
+  return (*count == 0.0f) ? FLT_MAX : *accumulated_optical_depth / *count;
 }
 
 /* Compute guided volume scatter probability and the majorant scale needed for achieving the

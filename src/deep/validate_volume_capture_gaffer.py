@@ -15,6 +15,7 @@ import Gaffer
 import GafferImage
 import GafferScene
 import imath
+from validate_gaffer import beauty_repeat_gate
 
 exe, out = (Path(p).resolve() for p in sys.argv[1:3])
 device = sys.argv[3] if len(sys.argv) > 3 else 'CPU'
@@ -202,9 +203,7 @@ def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=1
                 if repeated_off:
                     c = repeated_off['out'].channelData(channel,imath.V2i(x,y))
                     repeat_error = max(repeat_error, max(abs(p-q) for p,q in zip(b,c)))
-    # Same CUDA FLOAT accumulation bound used by the qualified DOF suite.
-    # Single-contribution CUDA and all CPU comparisons remain exact.
-    beauty_tolerance = samples * 2**-23 if repeated_off else 0
+    beauty_tolerance = repeat_error if repeated_off else 0
     stats = {'max_raw_cut_error':maximum, 'max_analytic_error':analytic_error,
              'max_beauty_difference':beauty_error, 'max_off_repeat_difference':repeat_error,
              'beauty_tolerance':beauty_tolerance, 'size':[w,h], 'samples':samples}
@@ -225,7 +224,7 @@ def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=1
     print(name, stats, flush=True)
     check(maximum <= 1e-6, name + ': Gaffer curve mismatch')
     check(analytic_error <= 2e-6, name + ': independent geometry/extinction mismatch')
-    check(beauty_error <= beauty_tolerance and repeat_error <= beauty_tolerance,
+    check(beauty_repeat_gate(device, beauty_error, repeat_error),
           name + ': beauty accumulation bound exceeded')
     return paths
 

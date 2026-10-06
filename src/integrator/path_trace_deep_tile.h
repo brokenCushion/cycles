@@ -46,6 +46,8 @@ class PathTraceDeepTile final : public OutputDriver::DeepTile {
   deep::VolumeCameraSample get_camera_sample(int x, int y, int sample) const override
   {
     if (volume) {
+      /* Include diagnostic decoding in the same outer scope as its read/fit timers. */
+      deep::ExportTimer timer{&capture_.export_statistics, deep::ExportStatistics::Pixel};
       return capture_.volume_sample(x, y, sample);
     }
     return {{uint64_t(sample), 1.0, true, capture_.events(x, y, sample)}, {}};

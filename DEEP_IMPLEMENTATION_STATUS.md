@@ -4,17 +4,17 @@ The approved [optimization plan](DEEP_OPTIMIZATION_PLAN.md) is the plan of recor
 [Peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
 Development branch: `codex/landscape-cloud-compatibility`.
 
-Phase 0 is in progress. Checkpoint `59963b932` preserves the previous work.
-The volume-majorant snapshot experiment is isolated in
-`codex/volume-majorant-determinism` (`9a017f055`) and removed here.
-Deep output remains Z/ZBack/A, with separate beauty. Deep RGB is deferred.
+Phase 0 cleanup is committed (`44b44477e`); acceptance failed on the small
+landscape's raw CUDA beauty gate. Difference: 2.38418579e-7; independently
+measured repeat envelope: 1.78813934e-7. Denoised beauty is exactly identical.
+Deep EXR bytes, alpha and depth checks pass. Phase 1 has not started.
 
-The Phase 0 baseline passes nine CTests, the 14 CPU / 4 CUDA compatibility
-matrices, both 33-render / 17-rejection boundary suites, and the small landscape.
-The 587x250/four-sample baseline passes alpha and depth checks but fails
-denoised beauty isolation. Before/after evidence belongs in Section 6 of
-the plan and `builds/validation/landscape-cloud/optimization-phase0`.
+Both builds, nine CTests, 14 CPU / 4 CUDA compatibility cases, and both
+33-render / 17-rejection boundary suites pass. Measurements and identity
+limitations are recorded in Section 6 of the plan.
 
-M8 is open. Full-resolution production rendering requires Phases 0-5 to pass
-and explicit user confirmation for Phase 6. The interrupted original-settings
-run remains unqualified; its partial output is preserved.
+Checkpoint `59963b932` preserves the previous work. The removed beauty-sampling
+experiment lives on `codex/volume-majorant-determinism` (`9a017f055`).
+Deep output remains Z/ZBack/A, with separate beauty; RGB is deferred.
+M8 is open. Production rendering requires the prerequisite phases to pass
+and explicit user confirmation.

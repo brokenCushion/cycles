@@ -277,4 +277,75 @@ host working set, device-wide GPU peak.
 
 ## 6. Results
 
-Add one table per phase here (case, metric, before, after, commit).
+### Phase 0 - scope cleanup; acceptance failed
+
+Checkpoint: `59963b932`. Snapshot experiment: `codex/volume-majorant-determinism`
+(`9a017f055`). Implementation: `44b44477e`. Both builds pass. The small landscape
+fails the raw CUDA beauty envelope, so Phase 0 is not accepted and Phase 1 has
+not started. No threshold was changed to pass; no additional repeat was sought.
+
+Single measurements, not speedup claims. Both runs use the legacy strict deep
+path; the explicit error setting arrives in Phase 3. Evidence:
+`builds/validation/landscape-cloud/optimization-phase0`.
+
+| Case | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| 47x20 / max16 | Capture | 5.675599 s | 5.804744 s | `44b44477e` |
+| 47x20 / max16 | Capture wait + readback | 4.562987 s | 4.647866 s | `44b44477e` |
+| 47x20 / max16 | GPU readback | 372,191,232 bytes | 372,191,232 bytes | `44b44477e` |
+| 47x20 / max16 | Spill stored | 13,006,224 bytes | 13,006,224 bytes | `44b44477e` |
+| 47x20 / max16 | Spill read | 34,173,856 bytes | 34,436,000 bytes | `44b44477e` |
+| 47x20 / max16 | Spill written | 14,805,816 bytes | 14,805,816 bytes | `44b44477e` |
+| 47x20 / max16 | Export | 8.25049 s | 8.1713 s | `44b44477e` |
+| 47x20 / max16 | EXR size | 4,445,714 bytes | 4,445,714 bytes | `44b44477e` |
+| 47x20 / max16 | Deep samples | 561,793 | 561,793 | `44b44477e` |
+| 47x20 / max16 | Peak process working set | 5,634,203,648 bytes | 5,553,156,096 bytes | `44b44477e` |
+| 47x20 / max16 | Device-wide GPU peak | 5,013 MiB | 5,217 MiB | `44b44477e` |
+| 47x20 / max16 | Max oracle error | 2.20131377e-07 | 2.20131377e-07 | `44b44477e` |
+| 47x20 / max16 | Max depth-cut error | 6.95131077e-07 | 6.95131077e-07 | `44b44477e` |
+| 47x20 / max16 | Raw beauty difference | 1.1920929e-07 | 2.38418579e-07 | `44b44477e` |
+| 47x20 / max16 | Raw ordinary-repeat envelope | 1.1920929e-07 | 1.78813934e-07 | `44b44477e` |
+| 47x20 / max16 | Denoised beauty difference | 0 | 0 | `44b44477e` |
+| 47x20 / max16 | Denoised ordinary-repeat envelope | 0 | 0 | `44b44477e` |
+| 47x20 / max16 | Beauty / oracle / depth gates | PASS / PASS / PASS | FAIL / PASS / PASS | `44b44477e` |
+| 587x250 / 4 | Capture | 71.598867 s | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | Capture wait + readback | 68.6113 s | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | GPU readback | 7,177,170,944 bytes | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | Spill stored | 508,375,136 bytes | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | Spill read | 3,850,327,984 bytes | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | Spill written | 564,666,368 bytes | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | Export | 50.1401 s | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | EXR size | 394,273,944 bytes | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | Deep samples | 52,189,081 | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | Peak process working set | 5,566,656,512 bytes | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | Device-wide GPU peak | 5,090 MiB | Not run: stopped at small beauty failure | `44b44477e` |
+| 587x250 / 4 | Max oracle error | 2.20799077e-07 | Not run | `44b44477e` |
+| 587x250 / 4 | Max depth-cut error | 8.2280344e-07 | Not run | `44b44477e` |
+| 587x250 / 4 | Raw beauty difference | 4.76837158e-07 | Not run | `44b44477e` |
+| 587x250 / 4 | Raw ordinary-repeat envelope | 4.76837158e-07 | Not run | `44b44477e` |
+| 587x250 / 4 | Denoised beauty difference | 0.407463074 | Not run | `44b44477e` |
+| 587x250 / 4 | Denoised ordinary-repeat envelope | 0.00909805298 | Not run | `44b44477e` |
+| 587x250 / 4 | Beauty / oracle / depth gates | FAIL / PASS / PASS | Not run | `44b44477e` |
+| 47x20 / max16 | Full deep EXR bytes | Reference | Identical SHA-256 | `44b44477e` |
+| CPU compatibility | Cases | 14/14 PASS | 14/14 PASS | `44b44477e` |
+| CPU compatibility | Summed case wall time | 82.516 s | 94.827 s | `44b44477e` |
+| CPU compatibility | Rendered deep EXR bytes | Reference | 9/9 identical | `44b44477e` |
+| CPU boundary | Renders / expected rejections | 33 / 17 PASS | 33 / 17 PASS | `44b44477e` |
+| CPU boundary | Deep sample-offset / Z / ZBack / A bits | Reference | 33/33 identical | `44b44477e` |
+| CPU boundary | Whole-file hash | Reference | 0/33 identical: beautyIdentity header differs | `44b44477e` |
+| CUDA compatibility | Cases | 4/4 PASS | 4/4 PASS | `44b44477e` |
+| CUDA compatibility | Summed case wall time | 56.719 s | 365.390 s | `44b44477e` |
+| CUDA compatibility | Rendered deep EXR bytes | Reference | 4/4 identical | `44b44477e` |
+| CUDA boundary | Renders / expected rejections | 33 / 17 PASS | 33 / 17 PASS | `44b44477e` |
+| CUDA boundary | Deep sample-offset / Z / ZBack / A bits | Reference | 33/33 identical | `44b44477e` |
+| CUDA boundary | Whole-file hash | Reference | 0/33 identical: beautyIdentity header differs | `44b44477e` |
+| Nine CTests | Result / wall time | 9/9 PASS / 17.28 s | 9/9 PASS / 24.59 s | `44b44477e` |
+
+Boundary payload bits match; only the run-specific `cycles:beautyIdentity`
+header differs. Literal whole-file equality is therefore not satisfied there;
+no metadata exception was applied. Compatibility rejection sentinels are
+excluded from rendered-EXR identity counts. Regression wall times include cold
+CUDA compilation. Detailed stage/resource metrics were collected for the
+landscapes; suite aggregates record counts and wall times, not per-render
+resource peaks. The after-change performance case was skipped at the required
+acceptance stop.

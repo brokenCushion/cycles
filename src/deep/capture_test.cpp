@@ -4,17 +4,22 @@
 #include <iostream>
 #include <limits>
 #include <stdexcept>
+#include <string>
+#include <algorithm>
+#include <numeric>
+#include <random>
 #include <thread>
 #include <type_traits>
 
 using ccl::deep::Capture;
 static_assert(std::is_trivially_copyable_v<KernelDeepRecord>);
 static_assert(std::is_standard_layout_v<KernelDeepRecord>);
-static void check(bool condition)
+static void check_impl(bool condition, int line)
 {
   if (!condition)
-    throw std::runtime_error("capture test failed");
+    throw std::runtime_error("capture test failed at line " + std::to_string(line));
 }
+#define check(condition) check_impl((condition), __LINE__)
 template<typename F> static void rejects(F f)
 {
   bool rejected = false;
@@ -29,6 +34,76 @@ template<typename F> static void rejects(F f)
 int main()
 {
   try {
+    {
+      Capture memory(7, 130, 17, 16 * 1024 * 1024, 2, false, true);
+      Capture disk(7, 130, 17, 32 * 1024 * 1024, 2, true, true);
+      std::vector<int> identities(7 * 130 * 17);
+      std::iota(identities.begin(), identities.end(), 0);
+      std::mt19937 random(42);
+      std::shuffle(identities.begin(), identities.end(), random);
+      for (int identity : identities) {
+        const int pixel = identity / 17, sample = identity % 17;
+        const int x = pixel % 7, y = pixel / 7, population = 1 + pixel % 17;
+        if (sample >= population) continue;
+        const float z = 1 + float(identity) / 1024;
+        const KernelDeepEvent events[] = {{DEEP_SURFACE, z, z, .25f, 0}};
+        for (Capture *capture : {&memory, &disk})
+          capture->record_events(x, y, sample, events, identity % 5 ? 1 : 0);
+      }
+      for (int y = 0; y < 130; ++y)
+        for (int x = 0; x < 7; ++x)
+          for (Capture *capture : {&memory, &disk})
+            capture->set_population(x, y, 1 + (y * 7 + x) % 17);
+      check(memory.finalize() && disk.finalize());
+      rejects([&] { disk.begin_export_row(0); });
+      for (int y = 129; y >= 0; --y) {
+        disk.begin_export_row(y);
+        for (int x = 0; x < 7; ++x) {
+          const auto a = memory.reconstruct_pixel(x, y), b = disk.reconstruct_pixel(x, y);
+          check(a.size() == b.size());
+          for (size_t i = 0; i < a.size(); ++i)
+            check(a[i].depth == b[i].depth && a[i].alpha == b[i].alpha);
+        }
+        disk.end_export_row(y);
+      }
+      const auto io = disk.spill_statistics();
+      std::cout << "Multi-band read bytes " << io.read_bytes << ", stored " << io.file_bytes << '\n';
+      check(io.read_bytes <= io.file_bytes * 1.25);
+      check(disk.finalize());
+      rejects([&] { disk.begin_export_row(0); });
+      Capture duplicate(1, 130, 1, 32 * 1024 * 1024, 0, true);
+      duplicate.record(0, 129, 0, 1);
+      duplicate.record(0, 0, 0, 1);
+      duplicate.record(0, 129, 0, 1);
+      check(!duplicate.finalize());
+    }
+    {
+      /* A three-row band exceeds staging; each row fits. Re-bucket once. */
+      Capture disk(4, 130, 8, 64 * 1024 * 1024, 8192, true, false, true, true);
+      std::vector<KernelDeepEvent> events(8192);
+      for (size_t i = 0; i < events.size(); ++i)
+        events[i] = {DEEP_VOLUME, float(i + 1), float(i + 2), 0, .001f};
+      for (int y = 0; y < 130; ++y)
+        for (int x = 0; x < 4; ++x)
+          for (int sample = 0; sample < 8; ++sample)
+            disk.record_events(x, y, sample, events.data(), y < 3 ? 8192 : 0);
+      check(disk.finalize());
+      for (int y = 129; y >= 0; --y) {
+        disk.begin_export_row(y);
+        for (int x = 0; x < 4; ++x)
+          for (int sample = 0; sample < 8; ++sample) {
+            const auto ray = disk.volume_sample(x, y, sample);
+            check(ray.intervals.size() == (y < 3 ? 8192 : 0));
+            if (y < 3) {
+              check(ray.intervals.front().front == 1 && ray.intervals.back().back == 8193);
+              check(ray.intervals.back().optical_depth == double(.001f));
+            }
+          }
+        disk.end_export_row(y);
+      }
+      const auto io = disk.spill_statistics();
+      std::cout << "Re-bucket read bytes " << io.read_bytes << ", stored " << io.file_bytes << '\n';
+    }
     {
       /* Wider rows share a bounded total capacity instead of reserving every
        * pixel's worst case. Leave 32 MiB for the production GPU staging pool. */
@@ -201,7 +276,9 @@ int main()
         const auto read_io = thin.spill_statistics();
         thin.volume_sample(0, 0, 0);
         check(thin.spill_statistics().read_bytes == read_io.read_bytes);  // Cached reread.
-        const uint64_t payload = sizeof(thin_event) + sizeof(thin_density);
+        /* One completion header is appended beside each event payload. For
+         * this one-record index its size equals the initial file size. */
+        const uint64_t payload = sizeof(thin_event) + sizeof(thin_density) + initial_io.file_bytes;
         check(captured_io.file_bytes == initial_io.file_bytes + (spill ? payload : 0));
         check(captured_io.write_bytes == (spill ? 2 * initial_io.file_bytes + payload : 0));
         check(read_io.read_bytes == captured_io.read_bytes + (spill ? payload : 0));

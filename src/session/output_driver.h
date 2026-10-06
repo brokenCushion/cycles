@@ -77,6 +77,9 @@ class OutputDriver {
     /* Actual accepted camera population, including misses. Diagnostic reads
      * expose local surface alpha and volume optical depth, before reconstruction. */
     virtual int population(int x, int y) const = 0;
+    /* Prepare immutable host storage before pixel workers; release after write. */
+    virtual void begin_row(int y) const {}
+    virtual void end_row(int y) const {}
     virtual deep::VolumeCameraSample get_camera_sample(int x, int y, int sample) const = 0;
     virtual bool cancelled() const = 0;
   };

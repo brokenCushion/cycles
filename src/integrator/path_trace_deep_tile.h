@@ -34,6 +34,8 @@ class PathTraceDeepTile final : public OutputDriver::DeepTile {
   {
     return capture_.population(x, y);
   }
+  void begin_row(int y) const override { capture_.begin_export_row(y); }
+  void end_row(int y) const override { capture_.end_export_row(y); }
   size_t volume_row_sample_limit() const override
   {
     return capture_.volume_row_sample_limit();

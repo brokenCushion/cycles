@@ -161,9 +161,11 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
     records.exceptions(std::ios::badbit | std::ios::failbit);
     records << "file_x,file_y,sample,front,back,value,kind,event\\n"
             << std::setprecision(std::numeric_limits<double>::max_digits10);
-    for (int gy = 0; gy < 9; ++gy) {
-      const int y = gy * (tile.height - 1) / 8;
+    const auto begin_row = [&](const int y) {
       check_cancel();
+      tile.begin_row(tile.height - 1 - y);
+      for (int gy = 0; gy < 9; ++gy) {
+        if (gy * (tile.height - 1) / 8 != y) continue;
       for (int gx = 0; gx < 9; ++gx) {
         const int x = gx * (tile.width - 1) / 8;
         for (int sample = 0; sample < tile.population(x, tile.height - 1 - y); ++sample) {
@@ -180,15 +182,21 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
         }
       }
     }
-    records.close();
-    check_cancel();
-    diagnostic.publish();
+    };
+    const auto end_row = [&](const int y) {
+      tile.end_row(tile.height - 1 - y);
+      if (y == tile.height - 1) {
+        records.close();
+        check_cancel();
+        diagnostic.publish();
+      }
+    };
     deep::write_volume_exr_pixels(deep_path_, image, [&](const int x, const int y) {
       check_cancel();
       auto pixel = tile.get_pixel(x, tile.height - 1 - y);
       check_cancel();
       return pixel;
-    }, check_cancel);
+    }, check_cancel, begin_row, end_row);
     return;
   }
   /* Small, reproducible diagnostic grid for independent reader validation.
@@ -198,10 +206,11 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   records.exceptions(std::ios::badbit | std::ios::failbit);
   records << "file_x,file_y,sample,depth,alpha,event\\n"
           << std::setprecision(std::numeric_limits<float>::max_digits10);
-  for (int y = 0; y < tile.height; ++y) {
-    if (y % std::max(1, tile.height / 8) && y != tile.height - 1)
-      continue;
+  const auto begin_row = [&](const int y) {
     check_cancel();
+    tile.begin_row(tile.height - 1 - y);
+    if (y % std::max(1, tile.height / 8) && y != tile.height - 1)
+      return;
     for (int x = 0; x < tile.width; ++x) {
       if (x % std::max(1, tile.width / 8) && x != tile.width - 1)
         continue;
@@ -216,10 +225,15 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
         }
       }
     }
-  }
-  records.close();
-  check_cancel();
-  records_publication.publish();
+  };
+  const auto end_row = [&](const int y) {
+    tile.end_row(tile.height - 1 - y);
+    if (y == tile.height - 1) {
+      records.close();
+      check_cancel();
+      records_publication.publish();
+    }
+  };
   deep::write_deep_exr_rows(deep_path_, image, [&](const int y) {
     check_cancel();
     std::vector<std::vector<deep::SurfaceSample>> row(tile.width);
@@ -229,7 +243,7 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
     }
     check_cancel();
     return row;
-  }, check_cancel);
+  }, check_cancel, begin_row, end_row);
 }
 #endif
 

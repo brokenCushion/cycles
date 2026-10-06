@@ -207,6 +207,8 @@ int main(int argc, char **argv)
        * same file with bounded parallel reconstruction, including offset windows. */
       Capture capture(24, 2, 17, size_t(512) * 1024 * 1024,
                       4, true, true, true, true, 4);
+      Capture reference(24, 2, 17, size_t(512) * 1024 * 1024,
+                        4, false, true, true, true);
       check(capture.volume_export_workers() == 3);
       for (int y = 0; y < 2; ++y)
         for (int x = 0; x < 24; ++x) {
@@ -215,9 +217,11 @@ int main(int argc, char **argv)
             const KernelDeepEvent events[] = {
                 {DEEP_VOLUME, 2, 8, 0, .1f + .01f * (sample % 5)},
                 {DEEP_SURFACE, 9 + .01f * sample, 9 + .01f * sample, .3f, 0}};
-            capture.record_events(x, y, sample, events, sample % 7 ? 2 : 0);
+            for (Capture *storage : {&capture, &reference})
+              storage->record_events(x, y, sample, events, sample % 7 ? 2 : 0);
           }
           capture.set_population(x, y, count);
+          reference.set_population(x, y, count);
         }
       check(capture.finalize());
       SurfaceImage threaded{{-5, 9, 18, 10}, {-5, 9, 18, 10}};
@@ -225,10 +229,9 @@ int main(int argc, char **argv)
       threaded.volume_row_sample_limit = capture.volume_row_sample_limit();
       const auto reference_path = directory / "parallel-reference.exr";
       const auto parallel_path = directory / "parallel.exr";
-      const auto provider = [&](int x, int y) {
-        return capture.reconstruct_volume_pixel(x + 5, y - 9);
-      };
-      write_volume_exr_pixels(reference_path, threaded, provider);
+      write_volume_exr_pixels(reference_path, threaded, [&](int x, int y) {
+        return reference.reconstruct_volume_pixel(x + 5, 10 - y);
+      });
       threaded.volume_export_workers = capture.volume_export_workers();
       std::atomic<int> active{0}, peak{0};
       write_volume_exr_pixels(parallel_path, threaded, [&](int x, int y) {
@@ -236,10 +239,11 @@ int main(int argc, char **argv)
         int previous = peak.load();
         while (previous < current && !peak.compare_exchange_weak(previous, current)) {}
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
-        auto result = provider(x, y);
+        auto result = capture.reconstruct_volume_pixel(x + 5, 10 - y);
         active.fetch_sub(1);
         return result;
-      });
+      }, {}, [&](int y) { capture.begin_export_row(10 - y); },
+             [&](int y) { capture.end_export_row(10 - y); });
       check(active == 0 && peak <= 4);
       if (std::thread::hardware_concurrency() > 1)
         check(peak > 1);
@@ -249,7 +253,7 @@ int main(int argc, char **argv)
       };
       const auto expected = contents(reference_path);
       check(contents(parallel_path) == expected);
-      for (int failure = 0; failure < 3; ++failure) {
+      for (int failure = 0; failure < 4; ++failure) {
         threaded.volume_row_sample_limit = failure == 2 ? 1 : capture.volume_row_sample_limit();
         rejects([&] {
           write_volume_exr_pixels(parallel_path, threaded, [&](int x, int) {
@@ -262,6 +266,9 @@ int main(int argc, char **argv)
           }, [&] {
             if (failure == 1)
               throw std::runtime_error("cancelled before parallel publication");
+          }, [&](int y) {
+            if (failure == 3 && y == 10)
+              throw std::ios_base::failure("injected sequential band read failure");
           });
         });
         check(active == 0 && contents(parallel_path) == expected);

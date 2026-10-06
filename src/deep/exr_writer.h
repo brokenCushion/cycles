@@ -53,14 +53,19 @@ void write_volume_exr(const std::filesystem::path &path,
  * Callback coordinates are file x/y. With multiple export workers the provider
  * must support concurrent calls; callbacks join before writing the row. */
 using VolumePixelProvider = std::function<std::vector<IntervalSample>(int, int)>;
+using RowCallback = std::function<void(int)>;
 void write_volume_exr_pixels(const std::filesystem::path &path,
                            const SurfaceImage &image,
                            const VolumePixelProvider &pixel,
-                           const std::function<void()> &before_publish = {});
+                           const std::function<void()> &before_publish = {},
+                           const RowCallback &begin_row = {},
+                           const RowCallback &end_row = {});
 /* Caller owns stream flush/close; shared with the atomic path and fault tests. */
 void write_volume_exr_pixels(Imf::OStream &stream,
                             const SurfaceImage &image,
-                            const VolumePixelProvider &pixel);
+                            const VolumePixelProvider &pixel,
+                            const RowCallback &begin_row = {},
+                            const RowCallback &end_row = {});
 /* Streaming production path. Callback supplies one increasing-file-Y row.
  * FLOAT export and optional reduction are checked together against the
  * original curve before each row is written. Final name is atomic. */
@@ -68,8 +73,11 @@ using RowProvider = std::function<std::vector<std::vector<SurfaceSample>>(int)>;
 void write_deep_exr_rows(const std::filesystem::path &path,
                          const SurfaceImage &image,
                          const RowProvider &row,
-                         const std::function<void()> &before_publish = {});
-void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const RowProvider &row);
+                         const std::function<void()> &before_publish = {},
+                         const RowCallback &begin_row = {},
+                         const RowCallback &end_row = {});
+void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const RowProvider &row,
+                         const RowCallback &begin_row = {}, const RowCallback &end_row = {});
 std::vector<SurfaceSample> reduce_surface(const std::vector<SurfaceSample> &source,
                                           double tolerance);
 

@@ -357,7 +357,8 @@ void write_volume_exr(const std::filesystem::path &path,
 
 void write_volume_exr_pixels(Imf::OStream &stream,
                             const SurfaceImage &image,
-                            const VolumePixelProvider &pixel)
+                            const VolumePixelProvider &pixel,
+                            const RowCallback &begin_row, const RowCallback &end_row)
 {
   if (image.volume_export_workers <= 0)
     throw std::invalid_argument("Deep export requires positive worker count");
@@ -373,6 +374,7 @@ void write_volume_exr_pixels(Imf::OStream &stream,
      * buffer instead of the two allocated for one worker (capture budget). */
     Imf::DeepScanLineOutputFile file(stream, header, 0);
     for (int64_t y = dw.min.y; y <= dw.max.y; ++y) {
+      if (begin_row) begin_row(int(y));
       std::vector<FloatPixel> pixels(width);
       std::atomic<size_t> row_samples{0};
       const auto prepare_pixel = [&](const size_t x) {
@@ -422,6 +424,7 @@ void write_volume_exr_pixels(Imf::OStream &stream,
       }
       file.setFrameBuffer(fb);
       file.writePixels(1);
+      if (end_row) end_row(int(y));
     }
   }
 }
@@ -429,7 +432,8 @@ void write_volume_exr_pixels(Imf::OStream &stream,
 void write_volume_exr_pixels(const std::filesystem::path &path,
                             const SurfaceImage &image,
                             const VolumePixelProvider &pixel,
-                            const std::function<void()> &before_publish)
+                            const std::function<void()> &before_publish,
+                            const RowCallback &begin_row, const RowCallback &end_row)
 {
   AtomicOutput publication(path);
   std::ofstream output;
@@ -437,7 +441,7 @@ void write_volume_exr_pixels(const std::filesystem::path &path,
   output.open(publication.temporary(), std::ios::binary | std::ios::trunc);
   {
     Imf::StdOFStream stream(output, path.string().c_str());
-    write_volume_exr_pixels(stream, image, pixel);
+    write_volume_exr_pixels(stream, image, pixel, begin_row, end_row);
   }
   output.flush();
   output.close();
@@ -469,7 +473,8 @@ std::vector<SurfaceSample> reduce_surface(const std::vector<SurfaceSample> &sour
   return result;
 }
 
-void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const RowProvider &row)
+void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const RowProvider &row,
+                         const RowCallback &begin_row, const RowCallback &end_row)
 {
   if (!std::isfinite(image.reduction_error) || image.reduction_error < 0 ||
       image.reduction_error > 1e-3 ||
@@ -482,6 +487,7 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
   {
     Imf::DeepScanLineOutputFile file(stream, header, 1);
     for (int64_t y = dw.min.y; y <= dw.max.y; ++y) {
+      if (begin_row) begin_row(int(y));
       SurfaceImage scanline;
       scanline.display_window = image.display_window;
       scanline.pixel_aspect = image.pixel_aspect;
@@ -523,6 +529,7 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
       fb.insert("A", Imf::DeepSlice(Imf::FLOAT, as.base, as.xStride, as.yStride, sizeof(float)));
       file.setFrameBuffer(fb);
       file.writePixels(1);
+      if (end_row) end_row(int(y));
     }
   }
 }
@@ -530,7 +537,8 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
 void write_deep_exr_rows(const std::filesystem::path &path,
                          const SurfaceImage &image,
                          const RowProvider &row,
-                         const std::function<void()> &before_publish)
+                         const std::function<void()> &before_publish,
+                         const RowCallback &begin_row, const RowCallback &end_row)
 {
   AtomicOutput publication(path);
   std::ofstream output;
@@ -538,7 +546,7 @@ void write_deep_exr_rows(const std::filesystem::path &path,
   output.open(publication.temporary(), std::ios::binary | std::ios::trunc);
   {
     Imf::StdOFStream stream(output, path.string().c_str());
-    write_deep_exr_rows(stream, image, row);
+    write_deep_exr_rows(stream, image, row, begin_row, end_row);
   }
   output.flush();
   output.close();

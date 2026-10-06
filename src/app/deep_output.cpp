@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 
 CCL_NAMESPACE_BEGIN
@@ -49,15 +50,20 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
     image.beauty_identity = "fnv1a64:" + std::to_string(hash) + ":bytes:" + std::to_string(bytes) +
                             ":path:" + beauty_path;
   }
+  std::unique_ptr<deep::AtomicOutput> publication;
+  std::ofstream records;
   if (!records_path.empty()) {
-    deep::AtomicOutput publication(records_path);
-    std::ofstream records(publication.temporary());
+    publication = std::make_unique<deep::AtomicOutput>(records_path);
+    records.open(publication->temporary());
     records.exceptions(std::ios::badbit | std::ios::failbit);
     records << (tile.volume ? "file_x,file_y,sample,front,back,value,kind,event\n" :
                                     "file_x,file_y,sample,depth,alpha,event\n")
             << std::setprecision(std::numeric_limits<float>::max_digits10);
-    for (int y = 0; y < tile.height; ++y) {
-      check_cancel();
+  }
+  const auto begin_row = [&](const int y) {
+    check_cancel();
+    tile.begin_row(tile.height - 1 - y);
+    if (publication) {
       for (int x = 0; x < tile.width; ++x)
         for (int sample = 0; sample < tile.population(x, tile.height - 1 - y); ++sample) {
           if (tile.volume) {
@@ -81,17 +87,22 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
                     << events[i].alpha << ',' << i << '\n';
         }
     }
-    records.close();
-    check_cancel();
-    publication.publish();
-  }
+  };
+  const auto end_row = [&](const int y) {
+    tile.end_row(tile.height - 1 - y);
+    if (publication && y == tile.height - 1) {
+      records.close();
+      check_cancel();
+      publication->publish();
+    }
+  };
   if (tile.volume) {
     deep::write_volume_exr_pixels(path, image, [&](const int x, const int y) {
       check_cancel();
       auto pixel = tile.get_pixel(x, tile.height - 1 - y);
       check_cancel();
       return pixel;
-    }, check_cancel);
+    }, check_cancel, begin_row, end_row);
     return;
   }
   deep::write_deep_exr_rows(
@@ -110,7 +121,7 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
         check_cancel();
         return row;
       },
-      check_cancel);
+      check_cancel, begin_row, end_row);
 }
 DeepOutputDriver::DeepOutputDriver(const string_view beauty_path, const string_view pass,
                                     LogFunction log, const string_view deep_path,

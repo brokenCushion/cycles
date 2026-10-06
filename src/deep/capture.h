@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <mutex>
+#include <memory>
 #include <vector>
 
 namespace ccl::deep {
@@ -102,9 +103,12 @@ class Capture {
     uint64_t read_bytes = 0, write_bytes = 0, file_bytes = 0;
   };
   SpillStatistics spill_statistics() const;
+  /* Sequential Y-down export: prepare on the caller thread before parallel
+   * pixel reads; finish only after the row has been serialized. */
+  void begin_export_row(int y) const;
+  void end_export_row(int y) const;
 
  private:
-  mutable uint64_t spill_read_bytes_ = 0, spill_write_bytes_ = 0;
   size_t volume_row_sample_limit_ = 0;
   size_t volume_pixel_bytes_ = 0;
   int volume_export_workers_ = 1;
@@ -117,8 +121,6 @@ class Capture {
   std::vector<KernelDeepEvent> events_;
   std::vector<KernelDeepDensity> density_;
   mutable std::mutex mutex_;
-  FILE *spill_ = nullptr;
-  FILE *spill_events_ = nullptr;
   /* Fixed identity index plus a sequential append stream of actual events. */
   struct SpillRecord {
     uint64_t event_offset;
@@ -135,23 +137,49 @@ class Capture {
     uint64_t last_used = 0;
     std::vector<unsigned char> data;
   };
-  mutable std::array<SpillPage, spill_page_count> spill_pages_;
-  mutable uint64_t spill_clock_ = 0;
   static constexpr size_t event_page_bytes = 64 * 1024;
   struct EventPage {
     size_t first = size_t(-1), bytes = 0;
     uint64_t last_used = 0;
     std::vector<unsigned char> data;
   };
-  mutable std::array<EventPage, spill_page_count> event_pages_;
-  size_t spill_event_bytes_ = 0;
-  mutable bool spill_events_reading_ = false;
-  void read_events(size_t offset, unsigned char *destination, size_t bytes) const;
-  SpillPage &spill_page(size_t index) const;
-  void flush_page(SpillPage &page) const;
-  size_t count_ = 0, completed_ = 0;
-    size_t stride_ = 0, capacity_ = 0;
-    size_t record_index(size_t pixel, uint32_t sample) const;
+  struct RowFile {
+    FILE *file = nullptr;
+    size_t bytes = 0;
+    ~RowFile() { if (file) std::fclose(file); }
+  };
+  struct Band {
+    int first_y = 0, rows = 0;
+    size_t pixels = 0, records = 0, event_bytes = 0;
+    FILE *index = nullptr, *events = nullptr;
+    mutable std::mutex mutex;
+    mutable std::array<SpillPage, spill_page_count> pages;
+    mutable EventPage event_page;
+    mutable uint64_t clock = 0, read_bytes = 0, write_bytes = 0;
+    mutable bool reading_events = false;
+    bool rebucketed = false;
+    std::vector<std::unique_ptr<RowFile>> row_files;
+    ~Band() { if (index) std::fclose(index); if (events) std::fclose(events); }
+  };
+  std::vector<std::unique_ptr<Band>> bands_;
+  int rows_per_band_ = 0;
+  size_t spill_memory_bytes_ = 0;
+  mutable std::vector<SpillRecord> staged_records_;
+  mutable std::vector<unsigned char> staged_events_;
+  mutable int staged_first_y_ = -1, staged_rows_ = 0, next_export_y_ = -1;
+  mutable bool exporting_ = false, export_row_open_ = false;
+  void decode_index(size_t index, size_t &pixel, uint32_t &sample) const;
+  Band &band_for_pixel(size_t pixel) const;
+  size_t band_record_index(const Band &band, size_t pixel, uint32_t sample) const;
+  void read_events(Band &band, size_t offset, unsigned char *destination, size_t bytes) const;
+  SpillPage &spill_page(Band &band, size_t index) const;
+  void flush_page(Band &band, SpillPage &page) const;
+  void load_stream(Band &band, FILE *file, size_t bytes, int first_y, int rows) const;
+  void rebucket(Band &band) const;
+  size_t count_ = 0;
+  std::atomic<size_t> completed_{0};
+  size_t stride_ = 0, capacity_ = 0;
+  size_t record_index(size_t pixel, uint32_t sample) const;
   void read_record(size_t index, KernelDeepResult &result, KernelDeepEvent *events,
                    KernelDeepDensity *density = nullptr) const;
   void store_record(size_t index, const KernelDeepResult &result, const KernelDeepEvent *events,

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Run fresh Blender VDB cases and Gaffer checks sequentially.
 
-gaffer env python SCRIPT BLENDER CASES.json OUTPUT [CPU|CUDA]
+gaffer env python SCRIPT BLENDER CASES.json OUTPUT [CPU|CUDA] [strict|ERROR]
 Use the CUDA toolchain wrapper for CUDA. Inputs are never saved by rendering.
 """
 import hashlib

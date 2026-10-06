@@ -576,7 +576,7 @@ Build/source provenance: `builds/validation/beauty-builds.json`.
 | Scratch reuse | Strict payload + deterministic headers | 81/81 PASS | 81/81 PASS | `b602877dc` |
 | Scratch reuse | Regression set | 9 CTests; CPU14/CUDA4; each boundary33+17; both landscapes PASS | All PASS; CPU beauty exact; CUDA K=5 PASS | `b602877dc` |
 
-### Phase 2 - acceptance checks passed
+### Phase 2 - accepted
 
 CUDA boundary pairing uses native BVH candidates, refined by the unchanged
 double-precision triangle test and tie rules. Small bounds and other backends
@@ -659,3 +659,64 @@ Both landscapes have zero unexplained denoised outliers.
 | CPU and CUDA boundaries, each | Regression | 33 renders + 17 rejections PASS | 33 renders + 17 rejections PASS | `f6f9316d8` |
 | Both landscapes | Strict payload + deterministic headers | 81/81 PASS | 81/81 PASS; profiled render also identical | `f6f9316d8` |
 | 587x250 / 4, pixel (489,34) | CUDA reproduced state | Qualified reference pool retained | All checked passes exactly match Phase 0 K=5 performance off-3; 4 samples | `f6f9316d8` |
+
+### Phase 3a - acceptance checks passed; stop for review
+
+Host path only. `--deep-error`/Blender `deep_error` default to `1e-3`; zero in
+Blender or `strict` on the CLI preserves legacy arithmetic and headers.
+Non-strict headers record the effective FLOAT value. Validators read the EXR
+bound. The budget comment in `src/deep/volume.h` reserves the fixed `1e-6`
+publication floor and divides the remainder between per-ray fitting and host
+mixture/reduction/coalescing. Surface reduction uses the same setting.
+No device compression, early termination or object-index change is included.
+
+Baseline (`195082afa`): `optimization-phase3a/baseline/results.json`.
+Final source (`91507b29f` + timing correction `3660cc334`):
+`optimization-phase3a/after/phase-results.json`. Paths are relative to
+`builds/validation/landscape-cloud/`. Fitting, read and writer counters include
+accepted-camera diagnostics; CSV writing and other overhead also contribute to
+export wall time. Worker seconds overlap across threads and must not be added
+as frame time. The final diagnostic decoder scope was corrected; its baseline
+counter is not comparable. Other baseline stage counters remain valid.
+
+After values below are **strict; 1e-4; 1e-3**, in that order. GPU readback and
+spill traffic are unchanged: this stop changes host fitting only. Strict has
+no new deterministic attributes. CPU beauty remains exact; CUDA uses the
+unchanged K=5/reference-pool gate. All three tolerances pass both matrices,
+both fixed cases, and their header-driven accepted-camera/depth-cut checks.
+
+| Case | Metric | Before (strict) | After (strict; 1e-4; 1e-3) | Commit |
+| --- | --- | --- | --- | --- |
+| 47x20 / max16 | Capture / export s | 2.89726 / 8.00247 | 2.916723 / 8.07911; 2.901321 / 3.75926; 2.906456 / 3.72078 | `3660cc334` |
+| 47x20 / max16 | Capture wait + readback s | 1.799462 | 1.811925; 1.812391; 1.804305 | `3660cc334` |
+| 47x20 / max16 | GPU readback bytes | 372191232 | 372191232 (all modes) | `3660cc334` |
+| 47x20 / max16 | CPU density / mixture fit worker-s | 2.56656 / 21.769 | 2.54351 / 21.6479; 0.286971 / 1.08179; 0.210884 / 0.440205 | `3660cc334` |
+| 47x20 / max16 | Record reads / spill staging worker-s | 0.0059921 / 0.003966 | 0.0058093 / 0.0043051; 0.0043145 / 0.0039092; 0.0042945 / 0.0038541 | `3660cc334` |
+| 47x20 / max16 | Quantize-coalesce / EXR serialization worker-s | 2.39928 / 0.0823963 | 2.40605 / 0.0806107; 0.117966 / 0.0129347; 0.0433572 / 0.0093205 | `3660cc334` |
+| 47x20 / max16 | Spill stored / read / written bytes | 13367184 / 13367184 / 13728144 | 13367184 / 13367184 / 13728144 (all modes) | `3660cc334` |
+| 47x20 / max16 | EXR bytes | 4445714 | 4445714; 592943; 341785 | `3660cc334` |
+| 47x20 / max16 | Ledger/decode worker-s | Outer baseline scope omitted diagnostic decode | 0.637327; 0.0502123; 0.0330517 | `3660cc334` |
+| 47x20 / max16 | Peak working-set bytes / device-wide GPU MiB | 5563379712 / 4752 | 5674639360 / 4733; 5587841024 / 4733; 5633286144 / 4730 | `3660cc334` |
+| 47x20 / max16 | Deep samples | 561793 | 561793; 86914; 51451 | `3660cc334` |
+| 47x20 / max16 | Max camera-oracle / depth-cut error | 2.201314e-07 / 6.951311e-07 | 2.201314e-07 / 6.951311e-07; 2.569492e-05 / 3.237709e-07; 0.0002488094 / 1.203699e-07 | `3660cc334` |
+| 47x20 / max16 | Beauty / alpha / depth | PASS / PASS / PASS | PASS / PASS / PASS (all modes) | `3660cc334` |
+| 587x250 / 4 | Capture / export s | 33.26628 / 33.4208 | 33.45382 / 33.1163; 33.26009 / 3.57575; 33.50932 / 2.30676 | `3660cc334` |
+| 587x250 / 4 | Capture wait + readback s | 30.29766 | 30.4741; 30.28743; 30.5585 | `3660cc334` |
+| 587x250 / 4 | GPU readback bytes | 7177170944 | 7177170944; 7177170944; 7176744960 | `3660cc334` |
+| 587x250 / 4 | CPU density / mixture fit worker-s | 78.7117 / 243.776 | 78.1137 / 240.967; 4.68609 / 13.7718; 2.36626 / 7.35157 | `3660cc334` |
+| 587x250 / 4 | Record reads / spill staging worker-s | 0.189819 / 0.215888 | 0.195007 / 0.216738; 0.145597 / 0.21593; 0.145244 / 0.216106 | `3660cc334` |
+| 587x250 / 4 | Quantize-coalesce / EXR serialization worker-s | 144.306 / 7.1261 | 142.496 / 7.11506; 7.00059 / 0.984645; 2.39941 / 0.434441 | `3660cc334` |
+| 587x250 / 4 | Spill stored / read / written bytes | 522463136 / 600218816 / 576484544 | 522463136 / 600218816 / 576484544 (all modes) | `3660cc334` |
+| 587x250 / 4 | EXR bytes | 394273944 | 394273944; 56378732; 21488669 | `3660cc334` |
+| 587x250 / 4 | Ledger/decode worker-s | Outer baseline scope omitted diagnostic decode | 1.16247; 0.422173; 0.390535 | `3660cc334` |
+| 587x250 / 4 | Peak working-set bytes / device-wide GPU MiB | 5565448192 / 4826 | 5538795520 / 4807; 5571813376 / 4806; 5696569344 / 4807 | `3660cc334` |
+| 587x250 / 4 | Deep samples | 52189081 | 52189081; 6487505; 2994249 | `3660cc334` |
+| 587x250 / 4 | Max camera-oracle / depth-cut error | 2.207991e-07 / 8.228034e-07 | 2.207991e-07 / 8.228034e-07; 4.533494e-05 / 1.562399e-07; 0.0004034792 / 2.446518e-08 | `3660cc334` |
+| 587x250 / 4 | Beauty / alpha / depth | PASS / PASS / PASS | PASS / PASS / PASS (all modes) | `3660cc334` |
+| Strict identity | Payload + deterministic headers | 81/81 PASS | 81/81 PASS (strict) | `3660cc334` |
+| Nine CTests | Regression | 9/9 PASS | 9/9 PASS | `3660cc334` |
+| CPU14 / CUDA4 matrices | Regression | All PASS | All PASS (all modes) | `3660cc334` |
+| Each CPU/CUDA boundary suite | Regression | 33 renders + 17 rejections PASS | 33 renders + 17 rejections PASS (strict) | `3660cc334` |
+| Weak surface steps | Samples / max absolute error | 96 / 0.0009872007 | 96 / 0.0009872007; 768 / 8.751264e-05; 96 / 0.0009872007 | `3660cc334` |
+
+No pixel required a reproduced-state pool resolution.

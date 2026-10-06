@@ -720,3 +720,57 @@ both fixed cases, and their header-driven accepted-camera/depth-cut checks.
 | Weak surface steps | Samples / max absolute error | 96 / 0.0009872007 | 96 / 0.0009872007; 768 / 8.751264e-05; 96 / 0.0009872007 | `3660cc334` |
 
 No pixel required a reproduced-state pool resolution.
+
+### Phase 3b - halted; not accepted
+
+Bound: `aab762cdb`. Implementation/tests: `8bf195e99`, `20c6e6658`.
+Vacuum-prefix fix: `6c4c7d6c5`. CPU/CUDA exact-cubic tests and nine CTests pass.
+Small strict payload/headers match (1/81 checked). Deep-alpha oracles and
+Gaffer cuts pass in all modes. The `1e-4` denoised-beauty gate fails:
+75 unexplained pixels; maximum difference 0.00544679. All raw K=5 input
+passes meet their existing limits. No gates or capacities were changed.
+Capture/storage regress substantially. Stop before the 587x250x4 case,
+compatibility matrices, boundary suites and Phase 3c.
+Evidence: `builds/validation/landscape-cloud/optimization-phase3b/halt-results.json`.
+Before is accepted 3a. After is the corrected build; compiler warm-up is
+outside capture time. Host timings are aggregate worker elapsed seconds.
+Keep double boundaries/two-FLOAT tau in the existing sidecar for safety;
+this retains 52 bytes/event. Curvature allocation divides by the 64-object
+limit, which is safe but conservative. These choices need performance rework.
+
+| Case / mode | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| 47x20 / max16 / strict | Capture s | 2.916723 | 2.943294 | `6c4c7d6c5` |
+| 47x20 / max16 / strict | Export s | 8.07911 | 7.90336 | `6c4c7d6c5` |
+| 47x20 / max16 / strict | GPU readback bytes | 372,191,232 | 372,191,232 | `6c4c7d6c5` |
+| 47x20 / max16 / strict | Spill stored bytes | 13,367,184 | 13,367,184 | `6c4c7d6c5` |
+| 47x20 / max16 / strict | Spill read / written bytes | 13,367,184 / 13,728,144 | 13,367,184 / 13,728,144 | `6c4c7d6c5` |
+| 47x20 / max16 / strict | Host read / stage s | 0.0058093 / 0.0043051 | 0.0060739 / 0.0037813 | `6c4c7d6c5` |
+| 47x20 / max16 / strict | Density / mixture fitting s | 2.54351 / 21.6479 | 2.59842 / 21.993 | `6c4c7d6c5` |
+| 47x20 / max16 / strict | Decode / quantize / EXR s | 0.637327 / 2.40605 / 0.0806107 | 0.679521 / 2.37872 / 0.0774153 | `6c4c7d6c5` |
+| 47x20 / max16 / strict | Deep samples | 561,793 | 561,793 | `6c4c7d6c5` |
+| 47x20 / max16 / strict | EXR bytes | 4,445,714 | 4,445,714 | `6c4c7d6c5` |
+| 47x20 / max16 / strict | Max camera oracle error | 2.2013138e-07 | 2.2013138e-07 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | Capture s | 2.901321 | 36.46838 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | Export s | 3.75926 | 2.44006 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | GPU readback bytes | 372,191,232 | 2,674,938,752 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | Spill stored bytes | 13,367,184 | 278,907,400 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | Spill read / written bytes | 13,367,184 / 13,728,144 | 278,907,400 / 279,268,360 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | Host read / stage s | 0.0043145 / 0.0039092 | 0.0541398 / 0.10687 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | Density / mixture fitting s | 0.286971 / 1.08179 | 0 / 2.74463 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | Decode / quantize / EXR s | 0.0502123 / 0.117966 / 0.0129347 | 0.103717 / 0.12233 / 0.0143726 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | Deep samples | 86,914 | 88,800 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | EXR bytes | 592,943 | 611,714 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-4 | Max camera oracle error | 2.5694916e-05 | 2.3307985e-05 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | Capture s | 2.906456 | 13.254625 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | Export s | 3.72078 | 0.733202 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | GPU readback bytes | 372,191,232 | 1,476,959,744 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | Spill stored bytes | 13,367,184 | 88,165,680 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | Spill read / written bytes | 13,367,184 / 13,728,144 | 88,165,680 / 88,526,640 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | Host read / stage s | 0.0042945 / 0.0038541 | 0.0169969 / 0.0328078 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | Density / mixture fitting s | 0.210884 / 0.440205 | 0 / 0.936095 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | Decode / quantize / EXR s | 0.0330517 / 0.0433572 / 0.0093205 | 0.0422961 / 0.0448482 / 0.0094765 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | Deep samples | 51,451 | 53,192 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | EXR bytes | 341,785 | 359,557 | `6c4c7d6c5` |
+| 47x20 / max16 / 1e-3 | Max camera oracle error | 0.00024880938 | 0.00022572748 | `6c4c7d6c5` |
+| 587x250 / max4 / all modes | Qualification | Accepted 3a baseline | Not run: stopped at small-case gate | `6c4c7d6c5` |

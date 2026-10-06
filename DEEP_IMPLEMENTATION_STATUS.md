@@ -4,15 +4,14 @@ The [optimization plan](DEEP_OPTIMIZATION_PLAN.md) is the plan of record;
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
 Branch: `codex/landscape-cloud-compatibility`.
 
-Phases 0–2 are accepted. Phase 3a acceptance checks pass: shared host error
-setting/budgets, headers, validators and surface reduction/coalescing.
-Strict retains all 81 payload/header identities. Nine CTests, all three-mode
-CPU14/CUDA4 matrices, both boundary suites and both fixed cases pass.
-CPU fitting breakdowns, storage and accuracy are in plan Section 6.
-Gaffer review: `builds/validation/landscape-cloud/optimization-phase3a/after/performance/1e-4/native_vdb_review.gfr`.
+Phases 0-3a are accepted. Phase 3b is implemented but not accepted.
+Its bound, tests and measured results are in plan Section 6.
+Independent exact-cubic CPU/CUDA tests and nine CTests pass.
+Small strict identity passes (1/81 checked); alpha/depth-cut checks pass.
+Small 1e-4 fails the existing denoised-beauty gate (75 unexplained pixels).
+Capture time and readback/spill bytes regress. Qualification stopped.
+The larger fixed case, compatibility matrices and boundaries remain unrun.
+No Phase 3c or full production run; no gates or tolerances were relaxed.
 
-Stop for 3a review. Next, 3b must document and explain the device compression
-bound before implementation, with independent exact-cubic CPU/CUDA tests.
-3c carries object indices without changing output and has its own review stop.
-Deep RGB is deferred. No Phase 9 production run before Phases 0–8 pass
-and the user confirms.
+Evidence: `builds/validation/landscape-cloud/optimization-phase3b/halt-results.json`.
+Candidate Gaffer review: `builds/validation/landscape-cloud/optimization-phase3b/after/small/1e-3/native_vdb_review.gfr`.

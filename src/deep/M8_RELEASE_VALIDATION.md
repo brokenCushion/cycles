@@ -1,4 +1,9 @@
-# M8 final deep-alpha qualification
+# Historical M8 deep-alpha qualification
+
+This records the 2026-09-29 release and its executable, not qualification of the
+current landscape development build. The expanded original-settings landscape
+production test remains open; see [current release status](../../DEEP_IMPLEMENTATION_STATUS.md)
+and [landscape evidence](LANDSCAPE_COMPATIBILITY.md).
 
 All technical release gates pass, including production-scale repeats, the full
 Blender asset regression and the default-colour native matrix. The user approved
@@ -11,6 +16,11 @@ additional device backends belong to M9.
 
 The installed custom Blender executable has SHA256
 `b281e5a8a8da4a7a1e1b146eee0e6a521ed9511199259666602d748b693031af`.
+This identifies the historical qualified executable. On 2026-10-03 the local
+`builds/blender/install` directory was refreshed by the development build's
+configured INSTALL target and no longer contains that executable. Current
+landscape tests use `builds/blender/install-m9`; these historical reports remain
+unchanged and do not qualify the replacement binary.
 Both CPU and CUDA pass 11 accepted cases and nine expected rejection cases at
 96x96/four camera samples. Inputs and executable identity are recorded in the
 reports under

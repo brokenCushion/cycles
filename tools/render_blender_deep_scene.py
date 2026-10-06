@@ -11,6 +11,7 @@ import bpy
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import sys
 import time
@@ -19,18 +20,37 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--samples', type=int, default=4)
 parser.add_argument('--percentage', type=int, default=25)
+parser.add_argument('--threads', type=int, default=8)
 parser.add_argument('--deep', action='store_true')
 parser.add_argument('--deep-volume', action='store_true')
 parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
 parser.add_argument('--deep-max-events', type=int, default=16)
 parser.add_argument('--deep-memory-mb', type=int, default=512)
+parser.add_argument('--save-render-passes', action='store_true',
+                    help='Save native noisy/denoising passes for beauty isolation checks')
+parser.add_argument('--diagnostic-sample-count', action='store_true',
+                    help='Save accepted sample counts to diagnose adaptive beauty differences')
+parser.add_argument('--capture-only', action='store_true',
+                    help='Diagnostic capture/beauty test; skips curve fitting and deep EXR publication')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
+if args.diagnostic_sample_count and not args.save_render_passes:
+    raise ValueError('Sample-count diagnostics require saved native render passes')
+if args.capture_only:
+    if not (args.deep and args.deep_volume and args.save_render_passes):
+        raise ValueError('Capture-only requires deep volume and saved native render passes')
+    os.environ['CYCLES_DEEP_VALIDATE_CAPTURE_ONLY'] = '1'
+elif os.environ.get('CYCLES_DEEP_VALIDATE_CAPTURE_ONLY') == '1':
+    raise ValueError('Capture-only environment requires explicit --capture-only')
 if not 1 <= args.samples <= 4096 or not 1 <= args.percentage <= 100:
     raise ValueError('Invalid sample count or resolution percentage')
-if not 1 <= args.deep_max_events <= 64 or not 1 <= args.deep_memory_mb <= 1024:
+if not 1 <= args.threads <= 1024:
+    raise ValueError('Invalid CPU thread count')
+if not 1 <= args.deep_max_events <= (8192 if args.deep_volume else 64) or not 1 <= args.deep_memory_mb <= 2147483647:
     raise ValueError('Invalid deep event capacity or working memory')
 directory = args.output.resolve()
 directory.mkdir(parents=True, exist_ok=True)
+if args.capture_only and (directory / 'scene.deep.exr').exists():
+    raise ValueError('Capture-only requires a directory without previous deep output')
 scene = bpy.context.scene
 source_hash = hashlib.sha256(Path(bpy.data.filepath).read_bytes()).hexdigest()
 scene.render.engine = 'CYCLES'
@@ -48,7 +68,7 @@ if args.device == 'CUDA':
     scene.cycles.device = 'GPU'
 scene.cycles.samples = args.samples
 scene.render.threads_mode = 'FIXED'
-scene.render.threads = 8
+scene.render.threads = args.threads
 scene.render.resolution_percentage = args.percentage
 scene.render.use_compositing = False
 scene.render.use_sequencer = False
@@ -56,6 +76,12 @@ scene.render.image_settings.file_format = 'OPEN_EXR'
 scene.render.image_settings.color_mode = 'RGBA'
 scene.render.image_settings.color_depth = '32'
 scene.render.filepath = str(directory / 'beauty.exr')
+if args.save_render_passes:
+    for layer in scene.view_layers:
+        layer.cycles.denoising_store_passes = True
+if args.capture_only or args.diagnostic_sample_count:
+    for layer in scene.view_layers:
+        layer.cycles.pass_debug_sample_count = True
 if args.deep:
     if not hasattr(scene.cycles, 'use_deep_output'):
         raise RuntimeError('This Blender does not include the custom deep adapter')
@@ -75,11 +101,23 @@ report = {
     'ortho_scale': scene.camera.data.ortho_scale,
     'frame': scene.frame_current,
     'samples': args.samples,
+    'threads': args.threads,
     'resolution': [scene.render.resolution_x, scene.render.resolution_y],
     'percentage': args.percentage,
     'dof': scene.camera.data.dof.use_dof,
     'adaptive': scene.cycles.use_adaptive_sampling,
+    'adaptive_threshold': scene.cycles.adaptive_threshold,
+    'adaptive_min_samples': scene.cycles.adaptive_min_samples,
+    'seed': scene.cycles.seed,
+    'use_animated_seed': scene.cycles.use_animated_seed,
     'denoising': scene.cycles.use_denoising,
+    'denoiser': scene.cycles.denoiser,
+    'denoising_use_gpu': scene.cycles.denoising_use_gpu,
+    'save_render_passes': args.save_render_passes,
+    'capture_only': args.capture_only,
+    'diagnostic_sample_count_pass': any(layer.cycles.pass_debug_sample_count
+                                       for layer in scene.view_layers),
+    'kernel_source_override': os.environ.get('CYCLES_KERNEL_PATH'),
     'materials': len(bpy.data.materials),
     'objects': len(scene.objects),
     'compositing': False,
@@ -101,12 +139,24 @@ report = {
 (directory/'settings.json').write_text(json.dumps(report, indent=2))
 start = time.monotonic()
 start_ns = time.time_ns()
-bpy.ops.render.render(write_still=True)
+if bpy.ops.render.render(write_still=True) != {'FINISHED'}:
+    raise RuntimeError('Render did not finish')
+if args.save_render_passes:
+    scene.render.image_settings.media_type = 'MULTI_LAYER_IMAGE'
+    scene.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
+    bpy.data.images['Render Result'].save_render(str(directory / 'render-passes.exr'), scene=scene)
+    scene.render.image_settings.media_type = 'IMAGE'
+    scene.render.image_settings.file_format = 'OPEN_EXR'
 report['seconds'] = time.monotonic()-start
 report['beauty_exists'] = (directory/'beauty.exr').is_file()
 if not report['beauty_exists']:
     raise RuntimeError('Blender did not write beauty.exr')
-if args.deep:
+if args.capture_only:
+    if (directory / 'scene.deep.exr').exists():
+        raise RuntimeError('Renderer did not honor capture-only mode')
+    report['deep_published'] = False
+    report['scope'] = 'Capture and beauty diagnostic; no deep alpha/publication qualification'
+elif args.deep:
     deep = directory/'scene.deep.exr'
     if not deep.is_file() or deep.stat().st_mtime_ns < start_ns:
         raise RuntimeError('Blender did not publish a fresh deep EXR')

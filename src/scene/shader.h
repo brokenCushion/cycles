@@ -123,6 +123,8 @@ class Shader : public Node {
   /* Set by deep preflight for a qualified density-grid absorption graph.
    * Negative means the native grid capture path is not enabled. */
   float deep_density_scale = -1.0f;
+  /* Validated constant total extinction for a homogeneous volume closure graph. */
+  float deep_homogeneous_extinction = -1.0f;
   bool has_light_path_node;
   bool has_aov_output_node;
   bool has_time_dependency;

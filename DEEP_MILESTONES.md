@@ -4,8 +4,10 @@
 
 M0-M9 are ten numbered milestones. M0-M7 describe the foundations already
 developed. **M8 is the release gate for production-ready deep alpha.** M9 holds
-future development outside that release scope. **M8 is complete:** all technical
-gates pass and the user approved the final Gaffer scene on 2026-09-29.
+future development outside that release scope. The historical M8 matrix passed
+and the user approved its Gaffer scene on 2026-09-29. **The expanded M8 landscape
+production qualification remains open**, as recorded in
+[implementation status](DEEP_IMPLEMENTATION_STATUS.md).
 
 Deep alpha means camera visibility represented by **Z, ZBack and A**. Beauty
 remains a separate native render. Deep RGB is not required to complete M8.

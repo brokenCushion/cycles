@@ -6,6 +6,7 @@
 #include <cstring>
 #include <limits>
 #include <stdexcept>
+#include <string>
 
 namespace ccl::deep {
 Capture::Capture(const int width,
@@ -16,10 +17,13 @@ Capture::Capture(const int width,
                  const bool spill,
                  const bool adaptive,
                  const bool volume,
-                 const bool volume_grid)
+                 const bool volume_grid,
+                 const int export_workers)
     : width_(width), height_(height), samples_(samples), max_events_(max_events), volume_(volume),
       volume_grid_(volume_grid)
 {
+  if (export_workers <= 0)
+    throw std::invalid_argument("Deep export requires positive worker count");
   if (max_events < 0 || max_events > int(volume_grid ? DEEP_MAX_VOLUME_EVENTS : DEEP_MAX_EVENTS) ||
       (volume && !max_events) || (volume_grid && !volume))
     throw std::invalid_argument("Invalid deep traversal capacity or volume mode");
@@ -51,22 +55,47 @@ Capture::Capture(const int width,
      * 80 bytes/sample covers these copies and compression overhead. Double
      * source/quantization/curve scratch is bounded per pixel, not per row. */
     const uint64_t row_sample_bytes = volume ? 80 : 128;
-    const uint64_t fixed = 2 * 1024 * 1024 +
+    const uint64_t shared = 2 * 1024 * 1024 +
                               (spill_page_bytes + event_page_bytes) * spill_page_count +
                               uint64_t(width) * 256 +
-                              uint64_t(height) * 32 +
-                              events * 512 +
+                              uint64_t(height) * 32;
+    const uint64_t worker =
+                              (volume ? uint64_t(capacity_) * 512 : events * 512) +
                               (volume ? output_events * 240 : 0) +
-                              (volume_grid ? uint64_t(samples + 2) * reconstruction_limit() * 96 : 0);
+                              (volume ? uint64_t(samples) * 256 : 0) +
+                              (volume_grid ? uint64_t(2) * reconstruction_limit() * 96 : 0);
     const uint64_t available = max_bytes - population_bytes;
+    uint64_t fixed = shared + worker;
     if (fixed > available)
       throw std::invalid_argument("Deep scanline working set exceeds --deep-memory-mb budget");
     if (volume) {
+      /* Preserve the serial row allowance. Parallel workers share the remaining
+       * reconstruction reservation, rather than reducing accepted row capacity. */
+      const uint64_t remaining = available - fixed;
+      const uint64_t row_bytes = remaining - remaining / 2;
+      uint64_t retained_curves = samples;
+      if (volume_grid && samples > 8) {
+        retained_curves = 0;
+        for (uint64_t n = samples; n > 1; n = (n + 1) / 2)
+          ++retained_curves;
+      }
+      /* The streaming tree can retain one maximum-sized curve per level.
+       * Do not select workers using only a two-curve reconstruction allowance. */
+      const uint64_t minimum_pixel = output_events * 128 *
+                                     std::max(uint64_t(2), retained_curves);
+      const uint64_t workers = (available - shared - row_bytes) / (worker + minimum_pixel);
+      volume_export_workers_ = int(std::max(uint64_t(1),
+          std::min({uint64_t(export_workers), uint64_t(width), workers})));
+      fixed = shared + worker * volume_export_workers_;
+      /* Reserve reconstruction separately from the EXR row. Charge actual
+       * retained vector capacities before building the mixture's boundaries
+       * and optical-depth indices; adaptive maximums need not all be dense. */
+      volume_pixel_bytes_ = size_t((available - fixed - row_bytes) / volume_export_workers_);
       /* Reserve a fixed row capacity from the remaining budget, then enforce
-       * actual counts before FLOAT staging. Sparse wide rows need not reserve
+       * retained FLOAT capacities. Sparse wide rows need not reserve
        * the per-pixel maximum at every pixel. Dense rows still fail closed. */
       volume_row_sample_limit_ = size_t(std::min(uint64_t(width) * output_events,
-                                               (available - fixed) / row_sample_bytes));
+                                               row_bytes / row_sample_bytes));
       if (volume_row_sample_limit_ < output_events)
         throw std::invalid_argument("Deep volume row cannot fit one maximum-capacity pixel");
     }
@@ -129,6 +158,14 @@ Capture::SpillStatistics Capture::spill_statistics() const
   const std::lock_guard<std::mutex> lock(mutex_);
   return {spill_read_bytes_, spill_write_bytes_,
           spill_ ? uint64_t(count_) * stride_ + spill_event_bytes_ : 0};
+}
+size_t Capture::record_index(const size_t pixel, const uint32_t sample) const
+{
+  /* Group nearby pixels within native-sized sampling batches. Pixel-major
+   * maximum-sample reservations amplify 24-byte writes into distant page reads. */
+  const size_t first = size_t(sample / 16) * 16;
+  const size_t span = std::min(size_t(16), size_t(samples_) - first);
+  return first * size_t(width_) * height_ + pixel * span + sample - first;
 }
 namespace {
 void seek_record(FILE *file, const size_t offset)
@@ -422,7 +459,7 @@ void Capture::record_sample(const int x,
       return;
     }
   }
-  const size_t index = (size_t(y) * width_ + x) * samples_ + sample;
+  const size_t index = record_index(size_t(y) * width_ + x, sample);
   std::lock_guard<std::mutex> lock(mutex_);
   store_record(index, result, events, density);
 }
@@ -447,7 +484,8 @@ int Capture::population(const int x, const int y) const
     throw std::out_of_range("Deep population outside bounds");
   return adaptive() ? int(populations_[size_t(y) * width_ + x]) : samples_;
 }
-VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sample) const
+VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sample,
+                                         const double density_tolerance) const
 {
   if (sample < 0 || sample >= population(x, y))
     throw std::out_of_range("Deep camera sample outside population");
@@ -458,14 +496,24 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
   std::vector<KernelDeepDensity> density(volume_grid_ ? capacity_ : 0);
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    read_record((size_t(y) * width_ + x) * samples_ + sample, result, record, density.data());
+    read_record(record_index(size_t(y) * width_ + x, sample), result, record, density.data());
   }
   if (error_.load() != NONE || result.status != DEEP_COMPLETE)
     throw std::runtime_error("Cannot read incomplete deep capture");
   VolumeCameraSample output{{uint64_t(sample), 1, true, {}}, {}};
+  double opaque_depth = std::numeric_limits<double>::infinity();
+  for (unsigned i = 0; i < result.count; ++i)
+    if (record[i].kind == DEEP_SURFACE && record[i].surface_alpha == 1)
+      opaque_depth = std::min(opaque_depth, double(record[i].front));
   std::vector<CubicDensityInterval> cubic;
   for (unsigned i = 0; i < result.count; ++i) {
     const auto &event = record[i];
+    /* A fully opaque surface makes all deeper extinction invisible to every
+     * depth query. This is exact occlusion, with no opacity threshold. */
+    const double front = event.kind == DEEP_VOLUME_CUBIC ? density[i].front : event.front;
+    if (front > opaque_depth ||
+        (event.kind != DEEP_SURFACE && front == opaque_depth))
+      continue;
     if (event.kind == DEEP_SURFACE)
       output.camera.events.push_back({event.front, event.surface_alpha});
     else if (event.kind == DEEP_VOLUME_CUBIC) {
@@ -476,12 +524,20 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
       output.intervals.push_back({event.front, event.back, event.optical_depth});
   }
   if (!cubic.empty()) {
-    const auto fitted = integrate_cubic_density(cubic, volume_density_error, reconstruction_limit());
+    const auto fitted = integrate_cubic_density(cubic, density_tolerance, reconstruction_limit());
     if (output.intervals.size() > reconstruction_limit() ||
         fitted.size() > reconstruction_limit() - output.intervals.size())
       throw std::runtime_error("Volume integration interval budget exceeded");
     output.intervals.insert(output.intervals.end(), fitted.begin(), fitted.end());
   }
+  for (auto &interval : output.intervals)
+    if (interval.back > opaque_depth) {
+      interval.optical_depth *= (opaque_depth - interval.front) / (interval.back - interval.front);
+      interval.back = opaque_depth;
+    }
+  output.intervals.erase(std::remove_if(output.intervals.begin(), output.intervals.end(),
+      [](const VolumeInterval &interval) { return interval.back <= interval.front; }),
+      output.intervals.end());
   return output;
 }
 std::vector<SurfaceEvent> Capture::events(const int x, const int y, const int sample) const
@@ -505,7 +561,7 @@ bool Capture::finalize() const
         expected += n;
         for (uint32_t sample = 0; sample < n; ++sample) {
           KernelDeepResult result{};
-          read_record(pixel * samples_ + sample, result, nullptr);
+          read_record(record_index(pixel, sample), result, nullptr);
           if (result.status != DEEP_COMPLETE)
             return false;
         }
@@ -547,6 +603,14 @@ const char *Capture::error_message() const
       switch (failure_.load()) {
         case DEEP_ERROR_CAPACITY:
           return "deep traversal limit exceeded";
+        case DEEP_ERROR_EVENT_CAPACITY:
+          return "deep camera sample event capacity exceeded";
+        case DEEP_ERROR_GRID_STEPS:
+          return "deep grid traversal step limit exceeded";
+        case DEEP_ERROR_BOUNDARY_CAPACITY:
+          return "deep coincident or initial boundary capacity exceeded";
+        case DEEP_ERROR_MEDIA_CAPACITY:
+          return "deep camera sample medium capacity exceeded";
         case DEEP_ERROR_CACHE_MISS:
           return "deep capture texture cache miss";
         case DEEP_ERROR_PRIMITIVE:
@@ -573,7 +637,7 @@ float Capture::value(const int x, const int y, const int sample) const
   KernelDeepResult result{};
   std::array<KernelDeepEvent, DEEP_MAX_EVENTS> record{};
   std::lock_guard<std::mutex> lock(mutex_);
-  read_record((size_t(y) * width_ + x) * samples_ + sample, result,
+  read_record(record_index(size_t(y) * width_ + x, sample), result,
               max_events_ ? nullptr : record.data());
   if (result.status != DEEP_COMPLETE)
     return -1;
@@ -593,13 +657,96 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   if (!volume_ || error_.load() != NONE)
     throw std::runtime_error("Invalid volume capture reconstruction");
   std::vector<VolumeCameraSample> ledger;
-  for (int i = 0; i < population(x, y); ++i)
-    ledger.push_back(volume_sample(x, y, i));
+  const int cameras = population(x, y);
+  const bool compact_ray = volume_grid_ && samples_ > 8;
+  size_t levels = 1;
+  for (size_t n = cameras; n > 2; n = (n + 1) / 2)
+    ++levels;
+  ledger.reserve(compact_ray ? levels : cameras);
+  std::vector<size_t> populations;
+  populations.reserve(levels);
+  auto from_curve = [](const std::vector<IntervalSample> &curve, uint64_t id, double weight) {
+    VolumeCameraSample sample{{id, weight, true, {}}, {}};
+    const size_t surfaces = std::count_if(curve.begin(), curve.end(),
+        [](const IntervalSample &span) { return span.front == span.back; });
+    sample.camera.events.reserve(surfaces);
+    sample.intervals.reserve(curve.size() - surfaces);
+    for (const auto &span : curve)
+      if (span.front == span.back)
+        sample.camera.events.push_back({span.front, span.alpha});
+      else
+        sample.intervals.push_back({span.front, span.back, -std::log1p(-span.alpha)});
+    return sample;
+  };
+  auto bytes = [](const VolumeCameraSample &sample) {
+    return (sample.intervals.capacity() + sample.camera.events.capacity()) * 128;
+  };
+  auto combine = [&](VolumeCameraSample left, VolumeCameraSample right) {
+    const uint64_t id = left.camera.id;
+    const double weight = left.camera.weight + right.camera.weight;
+    std::vector<VolumeCameraSample> pair;
+    pair.push_back(std::move(left));
+    pair.push_back(std::move(right));
+    const auto curve = reconstruct_volume(std::move(pair),
+                                          volume_reconstruction_error / (2 * levels),
+                                          reconstruction_limit(),
+                                          volume_reconstruction_error / (2 * levels));
+    return from_curve(curve, id, weight);
+  };
+  size_t retained_bytes = 0;
+  for (int i = 0; i < cameras; ++i) {
+    auto sample = volume_sample(
+        x, y, i, compact_ray ? volume_density_error / 2 : volume_density_error);
+    if (compact_ray) {
+      /* Split the existing density allowance between integration and one-ray
+       * reduction. Convex averaging preserves this per-ray absolute T bound. */
+      const auto compact = reconstruct_volume(
+          {sample}, volume_reconstruction_error, reconstruction_limit(), volume_density_error / 2);
+      sample = from_curve(compact, sample.camera.id, sample.camera.weight);
+    }
+    size_t population = 1;
+    /* Equal-sized adjacent groups form a balanced tree while the camera ledger
+     * is read. Keep only logarithmically many curves, not every camera ray. */
+    while (compact_ray && !populations.empty() && populations.back() == population) {
+      retained_bytes -= bytes(ledger.back());
+      sample = combine(std::move(ledger.back()), std::move(sample));
+      ledger.pop_back();
+      populations.pop_back();
+      population *= 2;
+    }
+    /* 128 bytes per retained slot covers the source, growing boundary vector,
+     * optical-depth prefixes and even one run per interval. Single-ray fitting
+     * scratch and ledger objects are reserved independently in the preflight. */
+    const size_t sample_bytes = bytes(sample);
+    if (volume_pixel_bytes_ && sample_bytes > volume_pixel_bytes_ - retained_bytes)
+      throw std::runtime_error(
+          "Deep volume pixel reconstruction exceeds --deep-memory-mb budget: retained " +
+          std::to_string(retained_bytes + sample_bytes) + ", budget " +
+          std::to_string(volume_pixel_bytes_) + ", pixel " + std::to_string(x) + "," +
+          std::to_string(y));
+    retained_bytes += sample_bytes;
+    ledger.push_back(std::move(sample));
+    if (compact_ray)
+      populations.push_back(population);
+  }
+  if (compact_ray && !ledger.empty()) {
+    auto sample = std::move(ledger.back());
+    ledger.pop_back();
+    /* Fold the remaining smaller groups from the right. No camera traverses
+     * more than ceil(log2(population)) fitting levels. */
+    while (!ledger.empty()) {
+      sample = combine(std::move(ledger.back()), std::move(sample));
+      ledger.pop_back();
+    }
+    ledger.push_back(std::move(sample));
+  }
   /* Share the existing reconstruction allowance between mixture fitting and
    * streaming reduction; the total published error budget is unchanged. */
-  return reconstruct_volume(ledger,
+  return reconstruct_volume(std::move(ledger),
                             volume_reconstruction_error / 2,
                             reconstruction_limit(),
-                            volume_reconstruction_error / 2);
+                            compact_ray ? 0 : volume_reconstruction_error / 2,
+                            volume_pixel_bytes_ ? volume_pixel_bytes_ :
+                                                  std::numeric_limits<size_t>::max());
 }
 }  // namespace ccl::deep

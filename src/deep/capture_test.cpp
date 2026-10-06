@@ -41,8 +41,101 @@ int main()
       Capture limited(664, 1, 4, size_t(512) * 1024 * 1024,
                       4096, true, false, true, true);
       check(limited.volume_row_sample_limit() < production.volume_row_sample_limit());
+      Capture parallel(1920, 1, 1024, size_t(1024 - 32) * 1024 * 1024,
+                       8192, true, true, true, true, 8);
+      check(parallel.volume_export_workers() == 4);
+      Capture serial_rows(1920, 1, 1024, size_t(1024 - 32) * 1024 * 1024,
+                          8192, true, true, true, true);
+      check(parallel.volume_row_sample_limit() == serial_rows.volume_row_sample_limit());
+      Capture landscape(1175, 1, 1024, size_t(1024 - 32) * 1024 * 1024,
+                        8192, true, true, true, true, 24);
+      check(landscape.volume_export_workers() == 4);
+      Capture hardware_budget(1175, 500, 1024, size_t(8192 - 32) * 1024 * 1024,
+                              8192, true, true, true, true, 24);
+      check(hardware_budget.volume_export_workers() == 24);
+      Capture fallback(12, 1, 1024, size_t(64) * 1024 * 1024,
+                       4, true, true, true, true, 24);
+      check(fallback.volume_export_workers() == 1);
+      rejects([] { Capture c(1, 1, 1, 1024, 0, false, false, false, false, 0); });
       rejects([] { Capture too_small(664, 625, 4, size_t(8) * 1024 * 1024,
                                      4096, true, false, true, true); });
+      Capture expanded(1, 1, 1, size_t(64) * 1024 * 1024,
+                       8192, true, false, true, true);
+      std::vector<KernelDeepEvent> events(8192);
+      for (size_t i = 0; i < events.size(); ++i)
+        events[i] = {DEEP_VOLUME, float(i + 1), float(i + 2), 0, .0001f};
+      expanded.record_events(0, 0, 0, events.data(), int(events.size()));
+      check(expanded.finalize());
+      const auto curve = expanded.reconstruct_volume_pixel(0, 0);
+      check(std::abs(interval_transmittance(curve, 8193) -
+                     std::exp(-8192 * double(.0001f))) < 1e-12);
+      /* Streaming balanced averages fit dense accepted populations without
+       * retaining every ray at once, even with a high adaptive maximum. */
+      Capture sparse(2, 1, 1024, 64 * 1024 * 1024, 8192, true, true, true, true);
+      for (int i = 0; i < 16; ++i)
+        sparse.record_events(0, 0, i, events.data(), 1);
+      sparse.set_population(0, 0, 16);
+      check(!sparse.reconstruct_volume_pixel(0, 0).empty());
+      for (auto &event : events)
+        event.back = event.front + .5f;  // Empty gaps must survive ray reduction.
+      for (int i = 0; i < 16; ++i)
+        sparse.record_events(1, 0, i, events.data(), int(events.size()));
+      sparse.set_population(1, 0, 16);
+      check(sparse.finalize());
+      const auto streamed = sparse.reconstruct_volume_pixel(1, 0);
+      check(std::abs(interval_transmittance(streamed, 8193) -
+                     std::exp(-8192 * double(.0001f))) < 1e-7);
+      Capture mixed(3, 1, 1024, 64 * 1024 * 1024, 4, true, true, true, true);
+      const int counts[] = {9, 65, 1024};
+      for (int x = 0; x < 3; ++x) {
+        for (int i = 0; i < counts[x]; ++i) {
+          const KernelDeepEvent ray[] = {
+              {DEEP_VOLUME, 2, 8, 0, .05f + (i % 11) * .01f},
+              {DEEP_SURFACE, 4 + (i % 4) * .01f, 4 + (i % 4) * .01f, .3f, 0}};
+          mixed.record_events(x, 0, i, ray, i % 5 ? (i % 2 ? 2 : 1) : 0);
+        }
+        mixed.set_population(x, 0, counts[x]);
+        const auto result = mixed.reconstruct_volume_pixel(x, 0);
+        for (int probe = 0; probe <= 2000; ++probe) {
+          const double z = 1 + 9.0 * probe / 2000;
+          double expected = 0;
+          for (int i = 0; i < counts[x]; ++i) {
+            double t = 1;
+            if (i % 5) {
+              const double fraction = std::max(0.0, std::min(1.0, (z - 2) / 6));
+              t = std::exp(-double(.05f + (i % 11) * .01f) * fraction);
+              if (i % 2 && z >= double(4 + (i % 4) * .01f))
+                t *= 1 - double(.3f);
+            }
+            expected += t;
+          }
+          check(std::abs(interval_transmittance(result, z) - expected / counts[x]) < 1.51e-7);
+        }
+      }
+      check(mixed.finalize());
+      Capture batched(1920, 1, 1024, 512 * 1024 * 1024, 0, true, true);
+      for (int x = 0; x < 1920; ++x) {
+        batched.record(x, 0, 0, float(x + 1));
+        batched.set_population(x, 0, 1);
+      }
+      check(batched.finalize());
+      const auto io = batched.spill_statistics();
+      check(io.read_bytes < 2 * 1024 * 1024);
+      for (int x = 0; x < 1920; ++x)
+        check(batched.value(x, 0, 0) == float(x + 1));
+      Capture occluded(1, 1, 1, 32 * 1024 * 1024, 4, true, false, true, true);
+      const KernelDeepEvent hidden[] = {
+          {DEEP_SURFACE, 3, 3, 1, 0}, {DEEP_VOLUME, 1, 5, 0, 2},
+          {DEEP_VOLUME, 6, 7, 0, 1}, {DEEP_SURFACE, 8, 8, .5f, 0}};
+      occluded.record_events(0, 0, 0, hidden, 4);
+      const auto visible = occluded.volume_sample(0, 0, 0);
+      check(visible.camera.events.size() == 1 && visible.intervals.size() == 1);
+      check(visible.intervals[0].back == 3 && visible.intervals[0].optical_depth == 1);
+      const ccl::deep::VolumeCameraSample reference{{0, 1, true, {{3, 1}, {8, .5}}},
+                                                   {{1, 5, 2}, {6, 7, 1}}};
+      const auto full = ccl::deep::reconstruct_volume({reference});
+      const auto clipped = occluded.reconstruct_volume_pixel(0, 0);
+      check(interval_curve_error(full, clipped) < 1e-12);
     }
     {
       using namespace ccl::deep;
@@ -56,7 +149,11 @@ int main()
                         std::exp(-.0001 * (depth - 1))) < 1e-12);
       ray.intervals = {{1, 2, 80}};
       const auto dense = reconstruct_volume({ray});
-      check(dense.size() == 5);
+      std::vector<IntervalSample> rounded;
+      for (const auto &interval : dense)
+        rounded.push_back({double(float(interval.front)), double(float(interval.back)),
+                           double(float(interval.alpha))});
+      check(interval_curve_error(dense, rounded) < 8.1e-7);
       check(std::abs(interval_transmittance(dense, 1.25) - std::exp(-20.0)) < 1e-15);
     }
     {
@@ -314,6 +411,28 @@ int main()
       check(disk.finalize());
       disk.record_events(0, 0, 0, nullptr, 0);
       check(!disk.finalize());
+    }
+    for (const bool spill : {false, true}) {
+      /* Adaptive volume mixtures normalize by each pixel's accepted population,
+       * including misses, rather than the configured maximum sample count. */
+      Capture adaptive_volume(2, 1, 4, 128 * 1024 * 1024, 4, spill, true, true);
+      const KernelDeepEvent medium[] = {{DEEP_VOLUME, 1, 2, 0, 1}};
+      for (int x = 0; x < 2; ++x) {
+        const int population = x ? 3 : 1;
+        adaptive_volume.record_events(x, 0, 0, medium, 1);
+        for (int sample = 1; sample < population; ++sample)
+          adaptive_volume.record_events(x, 0, sample, nullptr, 0);
+        adaptive_volume.set_population(x, 0, population);
+      }
+      check(adaptive_volume.finalize());
+      for (int x = 0; x < 2; ++x) {
+        const auto intervals = adaptive_volume.reconstruct_volume_pixel(x, 0);
+        double transmittance = 1;
+        for (const auto &interval : intervals)
+          transmittance *= 1 - interval.alpha;
+        const double expected = 1 - (1 - std::exp(-1.0)) / (x ? 3 : 1);
+        check(std::abs(transmittance - expected) < 1e-7);
+      }
     }
     std::cout
         << "Capture coverage, lifecycle, concurrent writes, bounds and budget checks passed\n";

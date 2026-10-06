@@ -81,7 +81,7 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
     const int traversal_limit)
 {
   if (!events || !density || stride <= 0 || capacity <= 0 || first < 0 || first > capacity ||
-      !(depth_per_t > 0))
+      !(depth_per_t > 0 && physical_length_per_t > 0 && extinction_scale >= 0))
     return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
   DeepGridCursor<double> cursor{};
   if (!deep_grid_begin(&cursor, origin, direction, start, end, traversal_limit))
@@ -89,7 +89,39 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
   int count = first;
   DeepGridSegment<double> segment{};
   DeepGridStep step;
-  while ((step = deep_grid_next(&cursor, &segment)) == DEEP_GRID_SEGMENT) {
+  while (true) {
+    if (cursor.current < cursor.end && cursor.remaining > 0) {
+      int dimension;
+      const int3 cell = make_int3(cursor.cell[0], cursor.cell[1], cursor.cell[2]);
+      if (accessor.getValue(cell, &dimension) == 0 && dimension > 1) {
+        /* A constant zero tile proves empty interpolation only while all eight
+         * corners remain inside it. Keep the one-cell halo at each tile edge. */
+        double exit = cursor.end;
+        bool interior = true;
+        for (int axis = 0; axis < 3; ++axis) {
+          const int lower = cursor.cell[axis] & ~(dimension - 1);
+          interior &= cursor.cell[axis] + 1 < lower + dimension;
+          if (cursor.step[axis]) {
+            const int plane = cursor.step[axis] > 0 ? lower + dimension - 1 : lower;
+            const double crossing = (double(plane) - origin[axis]) / direction[axis];
+            exit = exit < crossing ? exit : crossing;
+          }
+        }
+        if (interior && exit > cursor.current) {
+          if (exit == cursor.end)
+            return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
+          const int remaining = cursor.remaining - 1;
+          if (!remaining)
+            return {DEEP_FAILED, 0, DEEP_ERROR_GRID_STEPS};
+          if (!deep_grid_begin(&cursor, origin, direction, exit, end, remaining))
+            return {DEEP_FAILED, 0, DEEP_ERROR_PROGRESS};
+          continue;
+        }
+      }
+    }
+    step = deep_grid_next(&cursor, &segment);
+    if (step != DEEP_GRID_SEGMENT)
+      break;
     KernelDeepDensity coefficients{};
     const KernelDeepError error = deep_volume_grid_cell(
         accessor, origin, direction, segment, extinction_scale, physical_length_per_t, &coefficients);
@@ -101,7 +133,7 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
     if (!occupied)
       continue;
     if (count == capacity)
-      return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
+      return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
     const double a = depth_origin + segment.front * depth_per_t;
     const double b = depth_origin + segment.back * depth_per_t;
     if (!(a > 0 && b <= 3.4028234663852886e38 && b > a))
@@ -113,7 +145,7 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
     ++count;
   }
   if (step != DEEP_GRID_DONE)
-    return {DEEP_FAILED, 0, step == DEEP_GRID_LIMIT ? DEEP_ERROR_CAPACITY : DEEP_ERROR_PROGRESS};
+    return {DEEP_FAILED, 0, step == DEEP_GRID_LIMIT ? DEEP_ERROR_GRID_STEPS : DEEP_ERROR_PROGRESS};
   return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
 }
 #endif

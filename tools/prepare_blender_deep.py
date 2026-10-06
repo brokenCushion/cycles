@@ -85,12 +85,13 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
     deep_output_path: StringProperty(
         name="Deep EXR", subtype='FILE_PATH', default="",
     )
-    deep_max_events: IntProperty(name="Deep Events Per Sample", default=16, min=1, max=64)
+    deep_max_events: IntProperty(name="Deep Events Per Sample", default=16, min=1, max=8192,
+        description="Surface/homogeneous limit: 64; native grids use at least 4096, up to 8192")
     use_deep_volume: BoolProperty(
         name="Deep Volume Visibility", default=False,
         description="Capture scalar absorption through supported volume density grids",
     )
-    deep_memory_mb: IntProperty(name="Deep Working Memory MiB", default=512, min=1, max=1024)
+    deep_memory_mb: IntProperty(name="Deep Working Memory MiB", default=512, min=1, max=2147483647)
 ''')
 edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_denoise_params', '''#ifdef WITH_CYCLES_DEEP_OPAQUE
   params.deep.enabled = background && !(b_engine.flag & blender::RE_ENGINE_PREVIEW) &&
@@ -146,6 +147,7 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.view = tile.view.empty() ? "default" : tile.view;
   image.compression = deep::DeepCompression::Zips;
   image.volume_row_sample_limit = tile.volume_row_sample_limit();
+  image.volume_export_workers = tile.volume_export_workers();
   const auto check_cancel = [&] {
     if (tile.cancelled())
       throw std::runtime_error("Blender deep export cancelled; final file preserved");

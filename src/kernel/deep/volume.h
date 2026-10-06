@@ -32,26 +32,30 @@ ccl_device KernelDeepResult deep_volume_interval(
     count = int(captured.count);
   }
   else {
-    sd->num_closure = 0;
-    sd->num_closure_left = 0;
-    sd->runtime_flag = SR_IS_VOLUME_SHADER_EVAL;
-    volume_shader_eval_entry<false, KERNEL_FEATURE_NODE_MASK_VOLUME>(
-        kg,
-        state,
-        sd,
-        entry,
-        PATH_RAY_VISIBILITY_CAMERA,
-        INTEGRATOR_STATE(state, path, flag) | PATH_RAY_EXTINCTION);
-    if (sd->runtime_flag & SR_CACHE_MISS)
-      return {DEEP_FAILED, 0, DEEP_ERROR_CACHE_MISS};
-    const float3 sigma = spectrum_to_rgb((sd->runtime_flag & SR_EXTINCTION) ?
-                                             sd->closure_transparent_extinction :
-                                             zero_spectrum());
+    const float constant_sigma =
+        kernel_data_fetch(shaders, entry.shader & SHADER_MASK).deep_homogeneous_extinction;
+    float3 sigma = make_float3(constant_sigma);
+    if (constant_sigma < 0) {
+      sd->num_closure = 0;
+      sd->num_closure_left = 0;
+      sd->runtime_flag = SR_IS_VOLUME_SHADER_EVAL;
+      volume_shader_eval_entry<false, KERNEL_FEATURE_NODE_MASK_VOLUME>(
+          kg,
+          state,
+          sd,
+          entry,
+          PATH_RAY_VISIBILITY_CAMERA,
+          INTEGRATOR_STATE(state, path, flag) | PATH_RAY_EXTINCTION);
+      if (sd->runtime_flag & SR_CACHE_MISS)
+        return {DEEP_FAILED, 0, DEEP_ERROR_CACHE_MISS};
+      sigma = spectrum_to_rgb((sd->runtime_flag & SR_EXTINCTION) ?
+                                 sd->closure_transparent_extinction : zero_spectrum());
+    }
     if (!isfinite(sigma.x) || sigma.x < 0 || sigma.x != sigma.y || sigma.x != sigma.z)
       return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
     if (sigma.x > 0) {
       if (count == capacity)
-        return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
+        return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
       const float4 camera_z = kernel_data.cam.worldtocamera.z;
       const double depth_origin = double(camera_z.x) * ray.P.x + double(camera_z.y) * ray.P.y +
                                   double(camera_z.z) * ray.P.z + camera_z.w;
@@ -77,7 +81,7 @@ ccl_device KernelDeepResult deep_volume_object(
     KernelGlobals kg, IntegratorState state, ShaderData *sd, const Ray &ray,
     const int object, const double clip_start, const double clip_end,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
-    const int stride, const int capacity, int count)
+    const int stride, const int capacity, int count, const bool initially_inside = false)
 {
   double origin[3] = {ray.P.x, ray.P.y, ray.P.z};
   double direction[3] = {ray.D.x, ray.D.y, ray.D.z};
@@ -98,7 +102,7 @@ ccl_device KernelDeepResult deep_volume_object(
   const int first = kernel_data_fetch(object_prim_offset, object);
   const int size = kernel_data_fetch(objects, object).numprims;
   const int shader = sd->shader;
-  double cursor = clip_start, start = -1;
+  double cursor = clip_start, start = initially_inside ? clip_start : -1;
   int cursor_prim = -1;
   Intersection previous;
   bool previous_back = false, has_previous = false;
@@ -121,9 +125,14 @@ ccl_device KernelDeepResult deep_volume_object(
         continue;
       nearest = t; near_u = u; near_v = v; near_prim = prim; back = candidate_back;
     }
-    if (near_prim < 0)
-      return {start < 0 ? DEEP_COMPLETE : DEEP_FAILED, unsigned(count),
-              start < 0 ? DEEP_ERROR_NONE : DEEP_ERROR_MEDIUM};
+    if (near_prim < 0 || nearest >= clip_end) {
+      if (start >= 0 && clip_end > start) {
+        sd->shader = shader;
+        return deep_volume_interval(kg, state, sd, ray, object, start, clip_end,
+                                    events, density, stride, capacity, count);
+      }
+      return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
+    }
     cursor = nearest;
     cursor_prim = near_prim;
     Intersection hit;
@@ -131,17 +140,15 @@ ccl_device KernelDeepResult deep_volume_object(
     hit.t = float(nearest); hit.u = float(near_u); hit.v = float(near_v);
     if (has_previous && deep_same_surface_boundary(kg, previous, hit, previous_back, back))
       continue;
-    if (!has_previous && back)
-      start = clip_start;
     previous = hit; previous_back = back; has_previous = true;
     if (!back) {
-      if (start >= 0)
-        return {DEEP_FAILED, 0, DEEP_ERROR_MEDIUM};
-      start = nearest;
+      /* Native stack entry ignores another front face of an active object. */
+      if (start < 0)
+        start = nearest;
     }
     else {
       if (start < 0)
-        return {DEEP_FAILED, 0, DEEP_ERROR_MEDIUM};
+        continue;
       const double end = nearest < clip_end ? nearest : clip_end;
       if (end > start) {
         sd->shader = shader;
@@ -162,7 +169,8 @@ ccl_device KernelDeepResult deep_volume_object(
 /* Independent visibility chain for the restricted homogeneous CPU/CUDA contract.
  * Trace past the far clip to find exits of media containing the near clip.
  * Only in-clip intervals/surfaces are recorded. No beauty state or RNG mutation.
- * Closed convex volume meshes are validated before rendering. */
+ * Initial media use native world-Z-up classification, including open boundaries.
+ * An entered open medium persists until an exit or the camera far clip. */
 ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
                                         IntegratorState state,
                                         ccl_global KernelDeepEvent *events,
@@ -188,6 +196,50 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
   constexpr int boundary_capacity = 2 * DEEP_MAX_MEDIA;
   Intersection boundaries[boundary_capacity + 1];
   bool boundary_back[boundary_capacity];
+  /* Match native camera volume-stack initialization without touching the live
+   * beauty stack. This also discovers media with no crossing in the camera
+   * direction, which matters for open water boundaries and clipped cameras. */
+  Ray initial_ray = ray;
+  initial_ray.D = make_float3(0, 0, 1);
+  initial_ray.tmin = 0;
+  const uint initial_count = scene_intersect_volume(
+      kg, &initial_ray, boundaries, boundary_capacity, PATH_RAY_VISIBILITY_CAMERA);
+  if (initial_count >= boundary_capacity)
+    return {DEEP_FAILED, 0, DEEP_ERROR_BOUNDARY_CAPACITY};
+  for (uint i = 1; i < initial_count; ++i) {
+    const Intersection value = boundaries[i];
+    uint j = i;
+    while (j && boundaries[j - 1].t > value.t) {
+      boundaries[j] = boundaries[j - 1];
+      --j;
+    }
+    boundaries[j] = value;
+  }
+  int initial_objects[DEEP_MAX_MEDIA], initial_objects_count = 0;
+  for (uint i = 0; i < initial_count; ++i) {
+    const Intersection hit = boundaries[i];
+    int seen = 0;
+    while (seen < initial_objects_count && initial_objects[seen] != hit.object)
+      ++seen;
+    if (seen < initial_objects_count)
+      continue;
+    if (initial_objects_count == DEEP_MAX_MEDIA)
+      return {DEEP_FAILED, 0, DEEP_ERROR_MEDIA_CAPACITY};
+    initial_objects[initial_objects_count++] = hit.object;
+    ShaderDataTinyStorage storage;
+    ShaderData &sd = *AS_SHADER_DATA(&storage);
+    shader_setup_from_ray(kg, &sd, &initial_ray, &hit);
+    if (!(sd.runtime_flag & SR_BACKFACING))
+      continue;
+    media[object_count * stride] = {hit.object, -1.0f};
+    ++object_count;
+    const KernelDeepResult result = deep_volume_object(
+        kg, state, &sd, ray, hit.object, clip_start, clip_end,
+        events, density, stride, capacity, count, true);
+    if (result.status != DEEP_COMPLETE)
+      return result;
+    count = int(result.count);
+  }
   int steps = 0;
   while (steps < (density ? 16384 : 128)) {
     uint boundary_count = scene_intersect_volume(
@@ -214,7 +266,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
       while (boundary_count && boundaries[boundary_count - 1].t == last)
         --boundary_count;
       if (!boundary_count)
-        return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
+        return {DEEP_FAILED, 0, DEEP_ERROR_BOUNDARY_CAPACITY};
     }
     for (uint boundary = 0; boundary < boundary_count; ++boundary) {
       if (++steps > (density ? 16384 : 128))
@@ -222,7 +274,8 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
       const Intersection hit = boundaries[boundary];
       if (hit.type != PRIMITIVE_TRIANGLE)
         return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
-      ShaderData sd;
+      ShaderDataTinyStorage storage;
+      ShaderData &sd = *AS_SHADER_DATA(&storage);
       shader_setup_from_ray(kg, &sd, &ray, &hit);
       const bool back = (sd.runtime_flag & SR_BACKFACING) != 0;
       boundary_back[boundary] = back;
@@ -238,13 +291,14 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
         previous = hit;
         previous_back = back;
         has_previous = true;
+        const bool has_surface = (sd.shader_flag & SD_HAS_ONLY_VOLUME) == 0;
         if (sd.shader_flag & SD_HAS_VOLUME) {
           int index = 0;
           while (index < object_count && media[index * stride].object != hit.object)
             ++index;
           if (index == object_count) {
             if (object_count == DEEP_MAX_MEDIA)
-              return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
+              return {DEEP_FAILED, 0, DEEP_ERROR_MEDIA_CAPACITY};
             media[index * stride] = {hit.object, -1.0f};
             ++object_count;
             const KernelDeepResult result = deep_volume_object(
@@ -255,10 +309,13 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
             count = int(result.count);
           }
         }
-        else if (hit.t <= clip_end) {
+        if (has_surface && hit.t <= clip_end) {
+          /* Volume integration reuses sd. Restore this boundary's native
+           * surface state before capturing a material with both outputs. */
+          shader_setup_from_ray(kg, &sd, &ray, &hit);
           /* Allowlisted shaders use ShaderData and accepted path identity.
            * Keep live beauty ray/intersection/volume-stack state untouched. */
-          surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE & ~KERNEL_FEATURE_NODE_RAYTRACE>(
+          surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE & ~KERNEL_FEATURE_NODE_RAYTRACE, false>(
               kg,
               state,
               &sd,
@@ -272,11 +329,15 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
             return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
           if (t.x < 1) {
             if (count == capacity)
-              return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
+              return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
             const float z = deep_camera_depth(
                 kernel_data.cam, kernel_data_array(camera_motion), ray.time, ray.P + hit.t * ray.D);
             events[count * stride] = {DEEP_SURFACE, z, z, 1 - t.x, 0};
             ++count;
+            /* Exact opacity makes every later depth query zero. Stop visibility
+             * traversal without an opacity threshold or changes to beauty. */
+            if (t.x == 0)
+              return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
           }
         }
       }

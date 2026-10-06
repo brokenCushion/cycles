@@ -1245,7 +1245,7 @@ ccl_device Spectrum surface_shader_apply_holdout(ccl_private ShaderData *sd)
 
 /* Surface Evaluation */
 
-template<uint node_feature_mask, typename ConstIntegratorGenericState>
+template<uint node_feature_mask, bool store_closures = true, typename ConstIntegratorGenericState>
 ccl_device void surface_shader_eval(KernelGlobals kg,
                                     ConstIntegratorGenericState state,
                                     ccl_private ShaderData *ccl_restrict sd,
@@ -1261,7 +1261,7 @@ ccl_device void surface_shader_eval(KernelGlobals kg,
    * emission, then we don't need to store closures. The emission and shadow
    * shader data also do not have a closure array to save GPU memory. */
   int max_closures;
-  if ((path_visibility & PATH_RAY_VISIBILITY_SHADOW) ||
+  if (!store_closures || (path_visibility & PATH_RAY_VISIBILITY_SHADOW) ||
       (path_flag & (PATH_RAY_TERMINATE | PATH_RAY_EMISSION)))
   {
     max_closures = 0;

@@ -1,8 +1,10 @@
 # M8 deep-alpha support matrix
 
-M8 is complete, with technical qualification and user Gaffer approval recorded
-on 2026-09-29. Production readiness is limited to this support matrix. See
-[release status](../../DEEP_IMPLEMENTATION_STATUS.md).
+This is the historical M8 support matrix, with technical qualification and user
+Gaffer approval recorded on 2026-09-29. It does not qualify the current landscape
+development executable or the expanded original-settings production test, which
+remains open. See [current release status](../../DEEP_IMPLEMENTATION_STATUS.md)
+and [landscape evidence](LANDSCAPE_COMPATIBILITY.md).
 
 ## Scene and device contract
 

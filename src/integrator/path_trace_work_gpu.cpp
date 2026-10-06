@@ -996,24 +996,32 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
     capture->fail(DEEP_ERROR_CAPACITY);
     return;
   }
-  const int batch_size = capture->volume_grid() ? deep_grid_batch_size : 512;
+  /* Keep event planes within the same allocation budget when a production
+   * scene requests more records per camera sample. Allocation remains on the
+   * host; the device writes only into its assigned lane. */
+  const int initial_capacity = capture->volume_grid() ? min(64, event_capacity) : event_capacity;
+  const int event_slots = capture->volume_grid() ?
+                              deep_grid_batch_size * int(DEEP_DEFAULT_VOLUME_EVENTS) :
+                              512 * event_capacity;
+  const int initial_batch = capture->volume_grid() ?
+                                min(event_slots / 64, event_slots / initial_capacity) :
+                                512;
   /* Native grid staging is reserved separately in PathTrace::reset_deep.
    * Reallocate when reset changes capacity; every previous batch has already
    * been consumed. No kernel-thread allocation or extra synchronization. */
-  deep_records_.alloc(batch_size);
-  deep_events_.alloc(size_t(batch_size) * event_capacity);
+  deep_records_.alloc(initial_batch);
+  deep_events_.alloc(event_slots);
   if (capture->volume_grid())
-    deep_density_.alloc(size_t(batch_size) * event_capacity);
+    deep_density_.alloc(event_slots);
   else
     deep_density_.free();
   if (capture->volume())
-    deep_media_.alloc(size_t(batch_size) * DEEP_MAX_MEDIA);
+    deep_media_.alloc(size_t(initial_batch) * DEEP_MAX_MEDIA);
   else
     deep_media_.free();
   const device_ptr tiles = work_tiles_.device_pointer;
-  /* Allocation/initialization and subsequent kernels share the same queue. No host
-   * wait is
-   * needed here. Reused buffers are overwritten by their owning lanes. */
+  /* Initialization and subsequent kernels share the queue. Reused buffers are
+   * overwritten by their owning lanes without another host wait. */
   if (!deep_records_.device_pointer)
     queue_->zero_to_device(deep_records_);
   if (!deep_events_.device_pointer)
@@ -1034,80 +1042,143 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
   vector<KernelDeepDensity> sample_density(capture->volume_grid() ? event_capacity : 0);
   const device_ptr render_buffer = buffers_->buffer.device_pointer;
   for (int tile = 0; tile < num_tiles; ++tile) {
-    for (int offset = 0; offset < work_tiles_[tile].work_size; offset += batch_size) {
-      if (is_cancel_requested() || device_->have_error()) {
-        capture->fail();
-        return;
-      }
-      const int count = min(batch_size, work_tiles_[tile].work_size - offset);
-      const DeviceKernelArguments args(&tiles,
-                                       &tile,
-                                       &offset,
-                                       &count,
-                                       &max_events,
-                                       &batch_size,
-                                       &render_buffer,
-                                       &records,
-                                       &events,
-                                       &media,
-                                       &density);
-      const double readback_start = time_dt();
-      if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, args)) {
-        capture->fail();
-        return;
-      }
-      /* Copies execute after the kernel on this queue. Wait once, immediately
-       * before host
-       * consumption, including any queued initialization/beauty work. */
-      queue_->copy_from_device(deep_records_);
-      queue_->copy_from_device(deep_events_);
-      if (capture->volume_grid())
-        queue_->copy_from_device(deep_density_);
-      ++deep_batch_count_;
-      deep_readback_bytes_ += deep_records_.memory_size() + deep_events_.memory_size() +
-                              deep_density_.memory_size();
-      if (!queue_->synchronize()) {
-        capture->fail();
-        return;
-      }
-      deep_readback_seconds_ += time_dt() - readback_start;
-      if (is_cancel_requested()) {
-        capture->fail();
-        return;
-      }
-      const double spill_start = time_dt();
-      for (int i = 0; i < count; ++i) {
-        const KernelDeepRecord &record = deep_records_[i];
-        if (capture->adaptive()) {
-          capture->set_population(record.x, record.y, record.population);
-          if (record.result.status == DEEP_SKIPPED && record.result.count == 0 &&
-              record.result.error == DEEP_ERROR_NONE)
-          {
-            ++deep_skipped_count_;
+    for (int first = 0; first < work_tiles_[tile].work_size; first += initial_batch) {
+      const int total = min(initial_batch, work_tiles_[tile].work_size - first);
+      vector<uint8_t> complete(total, 0);
+      /* Camera state stays unchanged until this call returns. Retry only
+       * unfinished ranges with wider event buffers, sharing the same pool. */
+      for (int capacity = initial_capacity;; capacity = min(event_capacity, capacity * 4)) {
+        const int batch_size = capture->volume_grid() ?
+                                   min(initial_batch, event_slots / capacity) :
+                                   initial_batch;
+        for (int begin = 0; begin < total; begin += batch_size) {
+          const int count = min(batch_size, total - begin);
+          if (std::all_of(complete.begin() + begin,
+                          complete.begin() + begin + count,
+                          [](uint8_t value) { return value != 0; }))
             continue;
+          const int offset = first + begin;
+          const int kernel_capacity = capture->volume_grid() ? capacity : max_events;
+          if (is_cancel_requested() || device_->have_error()) {
+            capture->fail();
+            return;
           }
+          const DeviceKernelArguments args(&tiles,
+                                           &tile,
+                                           &offset,
+                                           &count,
+                                           &kernel_capacity,
+                                           &batch_size,
+                                           &render_buffer,
+                                           &records,
+                                           &events,
+                                           &media,
+                                           &density);
+          const double readback_start = time_dt();
+          if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, args)) {
+            capture->fail();
+            return;
+          }
+          /* Copies follow the kernel. Synchronize before consuming records,
+           * including any queued initialization and beauty work. */
+          queue_->copy_from_device(deep_records_);
+          if (!capture->volume_grid())
+            queue_->copy_from_device(deep_events_);
+          ++deep_batch_count_;
+          deep_readback_bytes_ += deep_records_.memory_size();
+          if (!queue_->synchronize()) {
+            capture->fail();
+            return;
+          }
+          if (capture->volume_grid()) {
+            /* Read counts, then populated planes into the fixed allocations.
+             * Empty and adaptively skipped batches need no payload copy. */
+            unsigned planes = 0;
+            for (int i = 0; i < count; ++i) {
+              if (complete[begin + i])
+                continue;
+              const auto &result = deep_records_[i].result;
+              if (result.count > unsigned(capacity)) {
+                capture->fail(DEEP_ERROR_CAPACITY);
+                device_->set_error(capture->error_message());
+                return;
+              }
+              if (result.status == DEEP_COMPLETE)
+                planes = max(planes, result.count);
+            }
+            if (planes) {
+              deep_events_.copy_from_device(0, size_t(planes) * batch_size, 1);
+              deep_density_.copy_from_device(0, size_t(planes) * batch_size, 1);
+            }
+            deep_readback_bytes_ += size_t(planes) * batch_size *
+                                    (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity));
+            if (device_->have_error()) {
+              capture->fail();
+              return;
+            }
+          }
+          else
+            deep_readback_bytes_ += deep_events_.memory_size();
+          deep_readback_seconds_ += time_dt() - readback_start;
+          if (is_cancel_requested()) {
+            capture->fail();
+            return;
+          }
+          const double spill_start = time_dt();
+          for (int i = 0; i < count; ++i) {
+            if (complete[begin + i])
+              continue;
+            const KernelDeepRecord &record = deep_records_[i];
+            if (capture->volume_grid() && capacity < event_capacity &&
+                record.result.status == DEEP_FAILED &&
+                (record.result.error == DEEP_ERROR_EVENT_CAPACITY ||
+                 record.result.error == DEEP_ERROR_CAPACITY))
+              continue;
+            if (capture->adaptive()) {
+              capture->set_population(record.x, record.y, record.population);
+              if (record.result.status == DEEP_SKIPPED && record.result.count == 0 &&
+                  record.result.error == DEEP_ERROR_NONE)
+              {
+                ++deep_skipped_count_;
+                complete[begin + i] = 1;
+                continue;
+              }
+            }
+            if (record.result.status != DEEP_COMPLETE || record.result.error != DEEP_ERROR_NONE) {
+              capture->fail(record.result.error);
+              device_->set_error(capture->error_message());
+              return;
+            }
+            if (record.result.count > unsigned(event_capacity)) {
+              capture->fail(DEEP_ERROR_CAPACITY);
+              device_->set_error(capture->error_message());
+              return;
+            }
+            /* Host-only scratch adapts event planes to the contiguous spill contract. */
+            for (unsigned event = 0; event < record.result.count; ++event) {
+              sample_events[event] = deep_events_[size_t(event) * batch_size + i];
+              if (capture->volume_grid())
+                sample_density[event] = deep_density_[size_t(event) * batch_size + i];
+            }
+            capture->record_sample(record.x,
+                                   record.y,
+                                   record.sample,
+                                   record.result,
+                                   sample_events.data(),
+                                   sample_density.data());
+            ++deep_record_count_;
+            complete[begin + i] = 1;
+          }
+          deep_spill_seconds_ += time_dt() - spill_start;
         }
-        if (record.result.status != DEEP_COMPLETE || record.result.error != DEEP_ERROR_NONE) {
-          capture->fail(record.result.error);
-          device_->set_error(capture->error_message());
+        if (std::all_of(
+                complete.begin(), complete.end(), [](uint8_t value) { return value != 0; }))
+          break;
+        if (capacity == event_capacity) {
+          capture->fail(DEEP_ERROR_STATE);
           return;
         }
-        if (record.result.count > unsigned(event_capacity)) {
-          capture->fail(DEEP_ERROR_CAPACITY);
-          device_->set_error(capture->error_message());
-          return;
-        }
-        /* Host-only scratch adapts event planes to the contiguous spill contract. */
-        for (unsigned event = 0; event < record.result.count; ++event) {
-          sample_events[event] = deep_events_[size_t(event) * batch_size + i];
-          if (capture->volume_grid())
-            sample_density[event] = deep_density_[size_t(event) * batch_size + i];
-        }
-        capture->record_sample(record.x, record.y, record.sample, record.result,
-                               sample_events.data(), sample_density.data());
-        ++deep_record_count_;
       }
-      deep_spill_seconds_ += time_dt() - spill_start;
     }
   }
 }

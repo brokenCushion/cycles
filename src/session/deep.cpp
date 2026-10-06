@@ -19,6 +19,7 @@
 #include <map>
 #include <set>
 #include <stdexcept>
+#include <vector>
 
 CCL_NAMESPACE_BEGIN
 static void require_deep(const bool condition, const char *message)
@@ -37,8 +38,9 @@ static bool default_normal_link(const ShaderInput *input)
          input->link->name() == ustring("Normal");
 }
 
-/* Only a scalar multiple of the native density attribute is qualified. Keep
- * the graph proof separate from stochastic beauty shader evaluation. */
+/* Prove a scalar multiple of density along the unscattered camera ray, without
+ * changing the shader used by beauty. Ray Depth excludes transparent bounces,
+ * so it stays zero along this straight camera-alpha path. */
 struct DeepDensityExpression {
   double scale;
   bool grid;
@@ -55,6 +57,11 @@ static DeepDensityExpression density_expression(ShaderInput *input,
   }
   ShaderNode *node = input->link->parent;
   visited.insert(node);
+  if (node->type->name == ustring("light_path")) {
+    require_deep(input->link->name() == ustring("Ray Depth"),
+                 "deep camera density only supports Light Path Ray Depth");
+    return {0, false};
+  }
   if (node->type->name == ustring("attribute")) {
     require_deep(static_cast<AttributeNode *>(node)->get_attribute() == ustring("density") &&
                      input->link->name() == ustring("Fac"),
@@ -63,11 +70,21 @@ static DeepDensityExpression density_expression(ShaderInput *input,
   }
   require_deep(node->type->name == ustring("math"), "unsupported native density expression");
   auto *math = static_cast<MathNode *>(node);
-  require_deep(math->get_math_type() == NODE_MATH_MULTIPLY && !math->get_use_clamp() &&
+  require_deep(!math->get_use_clamp() &&
                    input->link->name() == ustring("Value"),
-               "native deep density supports unclamped multiplication only");
+               "native deep density requires unclamped scalar math");
   const auto a = density_expression(math->input("Value1"), math->get_value1(), visited, depth + 1);
   const auto b = density_expression(math->input("Value2"), math->get_value2(), visited, depth + 1);
+  if (math->get_math_type() == NODE_MATH_ADD || math->get_math_type() == NODE_MATH_POWER) {
+    require_deep(!a.grid && !b.grid, "deep density addition and power require camera constants");
+    const float value = math->get_math_type() == NODE_MATH_ADD ?
+                            float(a.scale) + float(b.scale) :
+                            std::pow(float(a.scale), float(b.scale));
+    require_deep(std::isfinite(value) && value >= 0, "invalid camera density constant");
+    return {value, false};
+  }
+  require_deep(math->get_math_type() == NODE_MATH_MULTIPLY,
+               "unsupported native density math operation");
   require_deep(!(a.grid && b.grid), "nonlinear products of density are unsupported");
   const double scale = a.scale * b.scale;
   require_deep(std::isfinite(scale) && scale <= std::numeric_limits<float>::max(),
@@ -104,13 +121,22 @@ static void validate_grid_shader(Scene *scene, Shader *shader)
                "native deep grids require a pure volume material");
   ShaderNode *node = output->input("Volume")->link->parent;
   auto *volume = scalar_volume_node(node);
+  std::set<ShaderNode *> visited{output, node};
   for (ShaderInput *input : node->inputs)
-    require_deep(input->name() == ustring("Density") || !input->link,
-                 "native volume supports only a linked Density input");
+    if (input->name() == ustring("Anisotropy") && input->link &&
+        node->type->name == ustring("scatter_volume"))
+    {
+      const auto phase = density_expression(input, 0, visited);
+      require_deep(!phase.grid && phase.scale <= 1,
+                   "deep anisotropy must be a bounded camera constant");
+    }
+    else {
+      require_deep(input->name() == ustring("Density") || !input->link,
+                   "native volume supports only linked Density and camera-constant Anisotropy");
+    }
   const float3 color = volume->get_color();
   require_deep(shader->get_volume_interpolation_method() == VOLUME_INTERPOLATION_LINEAR,
                "native deep grids require linear interpolation");
-  std::set<ShaderNode *> visited{output, node};
   const auto expression = density_expression(volume->input("Density"),
                                               volume->get_density(), visited);
   /* Native graph simplification folds density * 0 to a constant. It remains
@@ -131,7 +157,94 @@ static void validate_grid_shader(Scene *scene, Shader *shader)
   }
 }
 
-static void validate_shader(Shader *shader,
+static float3 homogeneous_extinction(ShaderNode *node,
+                                    ShaderNodeSet &visited,
+                                    const int depth = 0)
+{
+  require_deep(depth < 64, "deep volume closure graph is too deep");
+  visited.insert(node);
+  if (node->type->name == ustring("add_closure")) {
+    float3 result = zero_float3();
+    for (const char *name : {"Closure1", "Closure2"}) {
+      if (node->input(name)->link)
+        result += homogeneous_extinction(node->input(name)->link->parent, visited, depth + 1);
+    }
+    const auto *a = node->input("Closure1")->link;
+    const auto *b = node->input("Closure2")->link;
+    if (a && b &&
+        ((a->parent->type->name == ustring("absorption_volume") &&
+          b->parent->type->name == ustring("scatter_volume")) ||
+         (b->parent->type->name == ustring("absorption_volume") &&
+          a->parent->type->name == ustring("scatter_volume"))))
+    {
+      const auto *first = static_cast<VolumeNode *>(a->parent);
+      const auto *second = static_cast<VolumeNode *>(b->parent);
+      /* Equal density and colour cancel exactly: d*(1-c) + d*c = d.
+       * Prove this structure instead of accepting genuinely coloured extinction
+       * via a relaxed RGB-equality tolerance. Both closures were validated above. */
+      if (first->get_density() == second->get_density() && first->get_color() == second->get_color())
+        return make_float3(first->get_density());
+    }
+    return result;
+  }
+  const bool scatter = node->type->name == ustring("scatter_volume");
+  require_deep(scatter || node->type->name == ustring("absorption_volume"),
+               "deep homogeneous volume requires additive absorption/scattering");
+  for (ShaderInput *input : node->inputs)
+    require_deep(!input->link, "deep homogeneous volume inputs must be constant");
+  const auto *volume = static_cast<VolumeNode *>(node);
+  const float3 color = volume->get_color();
+  require_deep(isfinite_safe(color) && min(color.x, min(color.y, color.z)) >= 0 &&
+                   max(color.x, max(color.y, color.z)) <= 1 &&
+                   std::isfinite(volume->get_density()) && volume->get_density() >= 0,
+               "invalid homogeneous volume extinction");
+  if (scatter) {
+    const auto *phase = static_cast<ScatterVolumeNode *>(node);
+    require_deep(phase->get_phase() == CLOSURE_VOLUME_HENYEY_GREENSTEIN_ID &&
+                     std::isfinite(phase->get_anisotropy()) && fabsf(phase->get_anisotropy()) <= 1,
+                 "unsupported homogeneous scattering phase");
+  }
+  return (scatter ? color : one_float3() - color) * volume->get_density();
+}
+
+static void deep_shader_dependencies(ShaderNodeSet &nodes, ShaderInput *input)
+{
+  std::vector<ShaderNode *> pending;
+  if (input && input->link)
+    pending.push_back(input->link->parent);
+  while (!pending.empty()) {
+    ShaderNode *node = pending.back();
+    pending.pop_back();
+    if (!nodes.insert(node).second)
+      continue;
+    for (ShaderInput *dependency : node->inputs)
+      if (dependency->link)
+        pending.push_back(dependency->link->parent);
+  }
+}
+
+/* Only transparent closures contribute to camera transmission. A mix of two
+ * opaque closures remains opaque, regardless of its (possibly ray-traced)
+ * factor. Finalized graphs express these factors as SurfaceMixWeight links. */
+static bool deep_closure_can_transmit(ShaderNode *node)
+{
+  if (node->type->name == ustring("transparent_bsdf"))
+    return true;
+  if (node->type->name == ustring("principled_bsdf"))
+    return node->input("Alpha")->link ||
+           static_cast<PrincipledBsdfNode *>(node)->get_alpha() < 1;
+  if (node->type->name == ustring("mix_closure") ||
+      node->type->name == ustring("add_closure")) {
+    for (const char *name : {"Closure1", "Closure2"}) {
+      ShaderInput *input = node->input(name);
+      if (input->link && deep_closure_can_transmit(input->link->parent))
+        return true;
+    }
+  }
+  return false;
+}
+
+static void validate_shader(Scene *scene, Shader *shader,
                             const bool background,
                             const bool transparent = false,
                             const bool volume = false)
@@ -139,26 +252,54 @@ static void validate_shader(Shader *shader,
   require_deep(shader && shader->graph, "missing shader graph");
   ShaderGraph *graph = shader->graph.get();
   auto *output = graph->output();
+  ShaderNodeSet volume_nodes;
   if (volume && !background && output->input("Volume")->link) {
-    require_deep(!output->input("Surface")->link && !output->input("Displacement")->link,
-                 "M8 volume boundaries require pure volume materials");
-    for (ShaderNode *node : graph->nodes) {
-      if (node == output)
-        continue;
-      const auto *volume_node = scalar_volume_node(node);
-      for (ShaderInput *input : node->inputs)
-        require_deep(!input->link, "M8 volume inputs must be constant");
-      require_deep(isfinite_safe(volume_node->get_density()) && volume_node->get_density() >= 0,
-                   "M8 requires finite nonnegative scalar extinction");
+    require_deep(!output->input("Displacement")->link, "deep volume displacement is unsupported");
+    const float3 sigma = homogeneous_extinction(output->input("Volume")->link->parent, volume_nodes);
+    require_deep(isfinite_safe(sigma) && sigma.x >= 0 && sigma.x == sigma.y && sigma.x == sigma.z,
+                 "deep volume requires scalar total extinction");
+    if (shader->deep_homogeneous_extinction != sigma.x) {
+      shader->deep_homogeneous_extinction = sigma.x;
+      shader->tag_update(scene);
     }
-    return;
+    if (!output->input("Surface")->link)
+      return;
   }
-  require_deep(!output->input("Volume")->link && !output->input("Displacement")->link,
+  require_deep((volume || !output->input("Volume")->link) && !output->input("Displacement")->link,
                "volume and displacement shaders are unsupported");
   require_deep(output->input("Surface")->link != nullptr, "surface shader must be connected");
+  if (background) {
+    /* Environment radiance does not attenuate camera alpha. Keep native beauty
+     * evaluation, including textures and colour adjustments, untouched. World
+     * volumes were rejected above; only a background closure is admitted. */
+    require_deep(output->input("Surface")->link->parent->type->name ==
+                     ustring("background_shader"),
+                 "deep world requires a background surface closure");
+    return;
+  }
+  ShaderNodeSet opacity_dependencies;
+  if (transparent) {
+    for (ShaderNode *candidate : graph->nodes) {
+      if (deep_closure_can_transmit(candidate)) {
+        if (ShaderInput *weight = candidate->input("SurfaceMixWeight"))
+          deep_shader_dependencies(opacity_dependencies, weight);
+      }
+      if (candidate->type->name == ustring("mix_closure") &&
+          deep_closure_can_transmit(candidate))
+        deep_shader_dependencies(opacity_dependencies, candidate->input("Fac"));
+      if (candidate->type->name == ustring("transparent_bsdf"))
+        deep_shader_dependencies(opacity_dependencies, candidate->input("Color"));
+      if (candidate->type->name == ustring("principled_bsdf"))
+        deep_shader_dependencies(opacity_dependencies, candidate->input("Alpha"));
+    }
+  }
   for (ShaderNode *node : graph->nodes) {
+    if (volume_nodes.contains(node))
+      continue;
     const string type = node->type->name.string();
     if ((graph->simplified || graph->finalized) && type == "geometry") {
+      if (transparent)
+        continue;
       for (ShaderOutput *socket : node->outputs) {
         for (ShaderInput *input : socket->links) {
           require_deep(default_normal_link(input), "unsupported compiled geometry input");
@@ -167,6 +308,24 @@ static void validate_shader(Shader *shader,
       continue;
     }
     if (transparent && !background) {
+      if (type == "ambient_occlusion") {
+        /* The deep shader runs without ray-traced shading. AO defaults to one
+         * there and is safe only when it cannot influence transparency. Native
+         * beauty retains its full AO evaluation and unchanged RNG state. */
+        require_deep(!opacity_dependencies.contains(node),
+                     "ray-traced ambient occlusion cannot drive deep opacity");
+        continue;
+      }
+      if (type == "light_path") {
+        for (ShaderOutput *socket : node->outputs) {
+          require_deep(socket->links.empty() || socket->name() == ustring("Is Camera Ray") ||
+                           socket->name() == ustring("Is Shadow Ray") ||
+                           socket->name() == ustring("Ray Length") ||
+                           socket->name() == ustring("Ray Depth"),
+                       "unsupported deep surface Light Path output");
+        }
+        continue;
+      }
       /* Socket adaptation inserts numeric conversions before simplification.
        * They only convert values supplied to the native shading graph. */
       if (node->special_type == SHADER_SPECIAL_TYPE_AUTOCONVERT) {
@@ -199,7 +358,13 @@ static void validate_shader(Shader *shader,
                        type == "mapping" || type == "noise_texture" ||
                        type == "gradient_texture" || type == "rgb_ramp" ||
                        type == "invert" || type == "mix_color" || type == "bump" ||
-                       type == "image_texture",
+                       type == "image_texture" || type == "math" || type == "clamp" || type == "color" ||
+                       type == "value" || type == "geometry" || type == "fresnel" ||
+                       type == "normal_map" || type == "brightness_contrast" ||
+                       type == "hsv" || type == "rgb_curves" || type == "separate_color" ||
+                       type == "combine_color" || type == "rgb_to_bw" ||
+                       type == "attribute" || type == "wave_texture" || type == "brick_texture" ||
+                       type == "add_closure",
                    ("unsupported deep surface node: " + type).c_str());
       continue;
     }
@@ -225,22 +390,23 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                    params.deep.max_events <= int(params.deep.volume_grid ? DEEP_MAX_VOLUME_EVENTS : DEEP_MAX_EVENTS),
                "invalid deep traversal limit");
   for (Shader *shader : scene->shaders) {
+    if (shader->deep_homogeneous_extinction >= 0) {
+      shader->deep_homogeneous_extinction = -1;
+      shader->tag_update(scene);
+    }
     if (shader->deep_density_scale >= 0) {
       shader->deep_density_scale = -1;
       shader->tag_update(scene);
     }
   }
-  require_deep(params.deep.memory_bytes > 0 &&
-                   params.deep.memory_bytes <= size_t(1024) * 1024 * 1024,
-               "working memory budget must be at most 1024 MiB");
+  require_deep(params.deep.memory_bytes > 0, "working memory budget must be positive");
   if (volume) {
     require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA) &&
                      scene->params.shadingsystem == SHADINGSYSTEM_SVM,
                  "M8 volumes require CPU or CUDA native SVM");
-    require_deep(!scene->integrator->get_use_adaptive_sampling() &&
-                     !scene->integrator->get_motion_blur() &&
+    require_deep(!scene->integrator->get_motion_blur() &&
                      scene->camera->get_aperturesize() == 0 && scene->camera->get_nearclip() > 0,
-                 "M8 requires fixed samples, static pinhole camera and positive near clip");
+                 "deep volumes require static pinhole camera and positive near clip");
   }
   require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA) &&
                    params.background,
@@ -261,8 +427,6 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                "guiding, pixel jitter overrides and AO bounces are unsupported");
   require_deep(!integrator->get_use_denoise() || integrator->get_denoiser_upscale_factor() == 1,
                "deep output requires native-resolution denoising without upscaling");
-  require_deep(!integrator->get_use_denoise() || params.device.type == DEVICE_CPU,
-               "deep denoising is currently qualified for CPU rendering only");
   /* These nonnegative filters are importance-sampled by camera_sample(). Deep
    * captures those exact accepted rays, so each still has unit population weight. */
   require_deep((scene->film->get_filter_type() == FILTER_BOX ||
@@ -288,6 +452,10 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                    "deep motion currently requires a uniform shutter curve");
   }
   const auto validate_motion = [&](const array<Transform> &motion, const Transform &current) {
+    /* Motion-vector/denoising passes store adjacent-frame transforms even
+     * without motion blur. They do not move the accepted camera rays. */
+    if (!integrator->get_motion_blur())
+      return;
     /* Blender initializes camera motion slots even for a static render.
      * Camera::update likewise treats copies of the current transform as static. */
     bool have_motion = false;
@@ -328,7 +496,7 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
   require_deep(!scene->bake_manager->get_baking() && scene->procedurals.empty(),
                "baking and procedural geometry are unsupported");
   require_deep(!scene->background->get_transparent_glass(), "transparent glass is unsupported");
-  validate_shader(scene->background->get_shader() ? scene->background->get_shader() :
+  validate_shader(scene, scene->background->get_shader() ? scene->background->get_shader() :
                                                     scene->default_background,
                   true);
   for (Geometry *geometry : scene->geometry) {
@@ -347,9 +515,9 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
     require_deep(static_cast<Mesh *>(geometry)->get_subdivision_type() == Mesh::SUBDIVISION_NONE,
                  "subdivision is unsupported");
     if (geometry->get_used_shaders().empty())
-      validate_shader(scene->default_surface, false, transparent);
+      validate_shader(scene, scene->default_surface, false, transparent);
     for (Node *shader : geometry->get_used_shaders())
-      validate_shader(static_cast<Shader *>(shader), false, transparent || volume, volume);
+      validate_shader(scene, static_cast<Shader *>(shader), false, transparent || volume, volume);
     if (volume) {
       bool has_volume = false;
       for (Node *shader : geometry->get_used_shaders())
@@ -357,8 +525,8 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                       nullptr;
       if (has_volume) {
         const Mesh *mesh = static_cast<Mesh *>(geometry);
-        require_deep(geometry->get_used_shaders().size() == 1 && mesh->num_triangles() >= 4,
-                     "M8 volume mesh must have one material and a closed boundary");
+        require_deep(geometry->get_used_shaders().size() == 1 && mesh->num_triangles() >= 1,
+                     "deep volume mesh must have one material and a triangle boundary");
         const auto *vertices = mesh->get_position();
         std::map<std::pair<int, int>, int> directed_edges;
         double signed_volume = 0;
@@ -375,29 +543,29 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
           signed_volume += double(dot(a, cross(b, c)));
           require_deep(isfinite_safe(a) && isfinite_safe(b) && isfinite_safe(c) && len(n) > 0,
                        "invalid volume triangle");
-          for (size_t v = 0; v < mesh->num_verts(); ++v) {
-            const float3 delta = float3(vertices[v]) - a;
-            require_deep(dot(n, delta) <= 1e-5f * len(n) * fmaxf(1, len(delta)),
-                         "M8 volume meshes must be convex with outward normals");
-          }
         }
+        bool closed = true;
         for (const auto &edge : directed_edges)
-          require_deep(directed_edges.count({edge.first.second, edge.first.first}) == 1,
-                       "M8 volume mesh has an open boundary");
-        require_deep(std::isfinite(signed_volume) && signed_volume > 0,
-                     "M8 volume mesh must enclose positive volume");
+          closed &= directed_edges.count({edge.first.second, edge.first.first}) == 1;
+        require_deep(std::isfinite(signed_volume) && (!closed || signed_volume > 0),
+                     "closed deep volume mesh must enclose positive volume");
       }
     }
   }
   for (Object *object : scene->objects) {
     if (volume) {
-      require_deep(object->get_motion().empty(), "M8 object motion is unsupported");
       const auto &tfm = object->get_tfm();
+      const float determinant = dot(make_float3(tfm.x.x, tfm.x.y, tfm.x.z),
+                                    cross(make_float3(tfm.y.x, tfm.y.y, tfm.y.z),
+                                          make_float3(tfm.z.x, tfm.z.y, tfm.z.z)));
+      bool has_volume = false;
+      if (object->get_geometry())
+        for (Node *node : object->get_geometry()->get_used_shaders())
+          has_volume |= static_cast<Shader *>(node)->graph->output()->input("Volume")->link != nullptr;
       require_deep(isfinite_safe(tfm.x) && isfinite_safe(tfm.y) && isfinite_safe(tfm.z) &&
-                       dot(make_float3(tfm.x.x, tfm.x.y, tfm.x.z),
-                           cross(make_float3(tfm.y.x, tfm.y.y, tfm.y.z),
-                                 make_float3(tfm.z.x, tfm.z.y, tfm.z.z))) > 0,
-                   "M8 requires finite nonsingular object transforms without reflection");
+                       std::isfinite(determinant) && determinant != 0 &&
+                       (!has_volume || determinant > 0),
+                   "deep requires finite nonsingular transforms and unreflected volumes");
     }
     validate_motion(object->get_motion(), object->get_tfm());
     /* Blender stores shadow-catcher flags on analytic lights as well. These

@@ -32,10 +32,10 @@ class PathTraceWorkGPU : public PathTraceWork {
    * Keep the reservation shared with PathTrace's allocation preflight. */
   static constexpr int deep_grid_batch_size = 64;
   static constexpr size_t deep_grid_staging_bytes = 32 * 1024 * 1024;
-  static_assert(2 * size_t(deep_grid_batch_size) *
-                        (sizeof(KernelDeepRecord) +
-                         DEEP_MAX_VOLUME_EVENTS * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) +
-                         DEEP_MAX_MEDIA * sizeof(KernelDeepMedium)) +
+  static_assert(2 * size_t(deep_grid_batch_size) * DEEP_DEFAULT_VOLUME_EVENTS *
+                        (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) +
+                    2 * size_t(deep_grid_batch_size) * DEEP_DEFAULT_VOLUME_EVENTS / 64 *
+                        (sizeof(KernelDeepRecord) + DEEP_MAX_MEDIA * sizeof(KernelDeepMedium)) +
                     DEEP_MAX_VOLUME_EVENTS * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) <=
                 deep_grid_staging_bytes,
                 "Native deep GPU staging exceeds its preflight reservation");

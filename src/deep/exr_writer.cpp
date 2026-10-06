@@ -14,11 +14,15 @@
 #include <OpenEXR/ImfStringAttribute.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <fstream>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
+#include <tbb/parallel_for.h>
+#include <tbb/task_arena.h>
+#include <tbb/task_group.h>
 
 namespace ccl::deep {
 namespace {
@@ -275,9 +279,6 @@ static std::vector<FloatPixel> prepare_volume(
      * rounding would pass this pixel's error allowance. Otherwise two nearby
      * device curves can drift in opposite directions during serialization. */
     auto quantized = project_volume_depths(source[p]);
-    pixels[p].z.reserve(source[p].size());
-    pixels[p].back.reserve(source[p].size());
-    pixels[p].a.reserve(source[p].size());
     /* Reserve 1e-7 for cubic fitting, 5e-8 for sample reconstruction and
      * 4e-8 for FLOAT nonnegative density controls. For normal coefficients,
      * rounding changes tau by at most 2^-24 relatively; the corresponding
@@ -322,6 +323,9 @@ static std::vector<FloatPixel> prepare_volume(
               << ": " << error << " > " << allowance;
       throw std::invalid_argument(message.str());
     }
+    pixels[p].z.reserve(quantized.size());
+    pixels[p].back.reserve(quantized.size());
+    pixels[p].a.reserve(quantized.size());
     for (const auto &s : quantized) {
       pixels[p].z.push_back(float(s.front));
       pixels[p].back.push_back(float(s.back));
@@ -355,31 +359,50 @@ void write_volume_exr_pixels(Imf::OStream &stream,
                             const SurfaceImage &image,
                             const VolumePixelProvider &pixel)
 {
+  if (image.volume_export_workers <= 0)
+    throw std::invalid_argument("Deep export requires positive worker count");
   auto header = make_header(image);
   header.insert("cycles:deepScope", Imf::StringAttribute("native_scalar_extinction"));
   const auto dw = header.dataWindow();
   const size_t width = size_t(int64_t(dw.max.x) - dw.min.x + 1);
+  tbb::task_arena arena(image.volume_export_workers);
+  tbb::task_group_context context;
+  context.capture_fp_settings();
   {
     /* Rows are submitted synchronously. Zero workers keeps one OpenEXR line
      * buffer instead of the two allocated for one worker (capture budget). */
     Imf::DeepScanLineOutputFile file(stream, header, 0);
     for (int64_t y = dw.min.y; y <= dw.max.y; ++y) {
-      SurfaceImage metadata = image;
       std::vector<FloatPixel> pixels(width);
-      size_t row_samples = 0;
-      for (size_t x = 0; x < width; ++x) {
+      std::atomic<size_t> row_samples{0};
+      const auto prepare_pixel = [&](const size_t x) {
+        SurfaceImage metadata = image;
         const int file_x = int(int64_t(dw.min.x) + x);
         metadata.data_window = {file_x, int(y), file_x, int(y)};
         std::vector<std::vector<IntervalSample>> source(1);
         source[0] = pixel(file_x, int(y));
-        if (image.volume_row_sample_limit &&
-            source[0].size() > image.volume_row_sample_limit - row_samples)
-          throw std::runtime_error("Deep volume scanline exceeds memory budget at row " +
-                                   std::to_string(y) + "; increase deep-memory-mb");
-        row_samples += source[0].size();
         auto converted = prepare_volume(metadata, source);
+        /* Capture reserves DOUBLE fitting scratch separately. The scanline
+         * retains only the final FLOAT arrays, including their capacities. */
+        const size_t retained = std::max({converted[0].z.capacity(),
+                                         converted[0].back.capacity(),
+                                         converted[0].a.capacity()});
+        size_t previous = row_samples.load(std::memory_order_relaxed);
+        do {
+          const size_t limit = image.volume_row_sample_limit ?
+                                   image.volume_row_sample_limit : SIZE_MAX;
+          if (retained > limit - previous)
+            throw std::runtime_error("Deep volume scanline exceeds memory budget at row " +
+                                     std::to_string(y) + "; increase deep-memory-mb");
+        } while (!row_samples.compare_exchange_weak(previous, previous + retained,
+                                                    std::memory_order_relaxed));
         pixels[x] = std::move(converted[0]);
-      }
+      };
+      if (image.volume_export_workers == 1)
+        for (size_t x = 0; x < width; ++x)
+          prepare_pixel(x);
+      else
+        arena.execute([&] { tbb::parallel_for(size_t(0), width, prepare_pixel, context); });
       std::vector<unsigned int> counts(width);
       std::vector<float *> z(width), back(width), a(width);
       for (size_t x = 0; x < width; ++x) {

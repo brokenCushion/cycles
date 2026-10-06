@@ -377,50 +377,62 @@ template<typename BuildT> class CachedReadAccessor {
   }
 
   ccl_device_inline_method ValueType getValueAndCache(const ccl_global RootT &node,
-                                                      const Coord ijk) const
+                                                      const Coord ijk,
+                                                      ccl_private int *dimension = nullptr) const
   {
     if (const ccl_global auto *tile = node.probeTile(ijk)) {
       if (tile->child != 0) {
         const ccl_global auto *child = node.getChild(tile);
         insert(ijk, child);
-        return getValueAndCache(*child, ijk);
+        return getValueAndCache(*child, ijk, dimension);
       }
+      if (dimension)
+        *dimension = UpperT::DIM;
       return tile->value;
     }
+    if (dimension)
+      *dimension = UpperT::DIM;
     return node.mBackground;
   }
 
   ccl_device_inline_method ValueType getValueAndCache(const ccl_global LeafT &node,
-                                                      const Coord ijk) const
+                                                      const Coord ijk,
+                                                      ccl_private int *dimension = nullptr) const
   {
+    if (dimension)
+      *dimension = 1;
     return node.getValue(ijk);
   }
 
   template<typename NodeT>
   ccl_device_inline_method ValueType getValueAndCache(const ccl_global NodeT &node,
-                                                      const Coord ijk) const
+                                                      const Coord ijk,
+                                                      ccl_private int *dimension = nullptr) const
   {
     const uint32_t n = node.CoordToOffset(ijk);
     if (node.mChildMask.isOff(n)) {
+      if (dimension)
+        *dimension = 1 << (NodeT::TOTAL - NodeT::LOG2DIM);
       return node.mTable[n].value;
     }
     const ccl_global auto *child = node.getChild(n);
     insert(ijk, child);
-    return getValueAndCache(*child, ijk);
+    return getValueAndCache(*child, ijk, dimension);
   }
 
-  ccl_device_inline_method ValueType getValue(const Coord ijk) const
+  ccl_device_inline_method ValueType getValue(const Coord ijk,
+                                             ccl_private int *dimension = nullptr) const
   {
     if (isCached<LeafT>(ijk)) {
-      return getValueAndCache(*((const ccl_global LeafT *)mNode[0]), ijk);
+      return getValueAndCache(*((const ccl_global LeafT *)mNode[0]), ijk, dimension);
     }
     if (isCached<LowerT>(ijk)) {
-      return getValueAndCache(*((const ccl_global LowerT *)mNode[1]), ijk);
+      return getValueAndCache(*((const ccl_global LowerT *)mNode[1]), ijk, dimension);
     }
     if (isCached<UpperT>(ijk)) {
-      return getValueAndCache(*((const ccl_global UpperT *)mNode[2]), ijk);
+      return getValueAndCache(*((const ccl_global UpperT *)mNode[2]), ijk, dimension);
     }
-    return getValueAndCache(*mRoot, ijk);
+    return getValueAndCache(*mRoot, ijk, dimension);
   }
 
   template<typename NodeT>

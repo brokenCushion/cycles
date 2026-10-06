@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <iostream>
 #include <random>
+#include <sstream>
 #include <stdexcept>
 
 using namespace ccl::deep;
@@ -50,15 +51,96 @@ struct Fixture {
 };
 }  // namespace
 
+/* Replay one real diagnostic pixel to measure export changes without another
+ * render. The CSV contains accepted camera extinction, never mesh samples. */
+static int replay_camera_pixel(const char *source, const char *destination)
+{
+  std::ifstream input(source);
+  std::string line;
+  std::getline(input, line);
+  check(line == "file_x,file_y,sample,front,back,value,kind,event", "Invalid camera CSV header");
+  std::vector<VolumeCameraSample> rays;
+  int first_x = -1, first_y = -1;
+  while (std::getline(input, line)) {
+    std::replace(line.begin(), line.end(), ',', ' ');
+    std::istringstream row(line);
+    int x, y, sample, event;
+    double front, back, value;
+    std::string kind;
+    check(bool(row >> x >> y >> sample >> front >> back >> value >> kind >> event), "Invalid camera CSV row");
+    if (first_x == -1) { first_x = x; first_y = y; }
+    if (x != first_x || y != first_y)
+      break;
+    check(sample >= 0 && sample <= int(rays.size()), "Invalid replay camera identity");
+    if (sample == int(rays.size()))
+      rays.push_back({{uint64_t(sample), 1, true, {}}, {}});
+    if (kind == "volume")
+      rays.back().intervals.push_back({front, back, value});
+    else if (kind == "surface")
+      rays.back().camera.events.push_back({front, value});
+    else
+      check(kind == "miss" && event == -1 && front == 0 && back == 0 && value == 0, "Invalid replay miss");
+  }
+  check(!rays.empty(), "Missing replay camera data");
+  size_t raw_count = 0, compact_count = 0;
+  const auto start = std::chrono::steady_clock::now();
+  for (auto &ray : rays) {
+    raw_count += ray.intervals.size();
+    const auto compact = reconstruct_volume({ray}, volume_reconstruction_error, 65536, volume_density_error / 2);
+    ray.camera.events.clear();
+    std::vector<VolumeInterval> intervals;
+    for (const auto &span : compact)
+      if (span.front == span.back)
+        ray.camera.events.push_back({span.front, span.alpha});
+      else
+        intervals.push_back({span.front, span.back, -std::log1p(-span.alpha)});
+    ray.intervals = std::move(intervals);
+    compact_count += ray.intervals.size();
+  }
+  std::cout << "Pixel " << first_x << ',' << first_y << ": " << rays.size() << " cameras, "
+            << raw_count << " raw / " << compact_count << " compact intervals\n" << std::flush;
+  const auto curve = reconstruct_volume(rays, volume_reconstruction_error / 2, 65536,
+                                        volume_reconstruction_error / 2, 512 * 1024 * 1024);
+  std::ofstream output(destination);
+  output.exceptions(std::ios::badbit | std::ios::failbit);
+  output << "front,back,alpha\n" << std::setprecision(17);
+  for (const auto &span : curve)
+    output << span.front << ',' << span.back << ',' << span.alpha << '\n';
+  std::cout << "Reconstructed " << curve.size() << " intervals in "
+            << std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count() << " seconds\n";
+  return 0;
+}
+
 int main(int argc, char **argv)
 {
   try {
+    if (argc == 4 && std::string(argv[1]) == "--camera-csv")
+      return replay_camera_pixel(argv[2], argv[3]);
     check(argc == 2 || argc == 3, "Expected output directory and optional captured-curve CSV");
     const std::filesystem::path directory(argv[1]);
     std::filesystem::create_directories(directory);
+    for (const int population : {9, 65, 1024}) {
+      std::vector<VolumeCameraSample> rays;
+      for (int i = 0; i < population; ++i) {
+        VolumeCameraSample ray{{uint64_t(i), double(i % 7), true, {}}, {}};
+        if (i % 5) {
+          ray.intervals.push_back({2 + (i % 3) * .02, 8, .2 + (i % 11) * .1});
+          ray.camera.events.push_back({4 + (i % 4) * .01, i % 2 ? .3 : 1});
+        }
+        rays.push_back(std::move(ray));
+      }
+      const auto curve = reconstruct_volume(rays, 2.5e-8, 16384, 2.5e-8);
+      rejects([&] { reconstruct_volume(rays, 2.5e-8, 16384, 2.5e-8, 1); });
+      for (int i = 0; i <= 2000; ++i) {
+        const double z = 1 + i * .005;
+        check(std::abs(interval_transmittance(curve, z) - oracle(rays, z)) < 5.01e-8,
+              "Balanced camera mixture exceeded the shared error budget");
+      }
+    }
     std::vector<Fixture> fixtures = {
         {"homogeneous", {{{0, 1, true, {}}, {{2, 8, 1.8}}}}},
         {"off_axis", {{{0, 1, true, {}}, {{2, 8, 1.8 * std::sqrt(2.0)}}}}},
+        {"long_open_interval", {{{0, 1, true, {}}, {{2, 20, 6.74601793}}}}},
         {"camera_inside", {{{0, 1, true, {}}, {{0.125, 4, 1.1625}}}}},
         {"overlapping_media", {{{0, 1, true, {}}, {{2, 7, 1.5}, {4, 9, 2}}}}},
         {"partial_coverage", {{{0, 1, true, {}}, {{2, 8, 1.8}}}, {{1, 1, true, {}}, {}}}},
@@ -94,7 +176,33 @@ int main(int argc, char **argv)
       std::cout << f.name << ": " << reconstructed.size() << " intervals\n";
     }
     check(reconstruct_volume(fixtures[0].samples).size() == 1, "Homogeneous interval over-split");
-    const double correct = oracle(fixtures[4].samples, 5);
+    /* After the foreground ray becomes opaque, only the other exponential
+     * contributes. A zero-transmission ray must not force variance fitting. */
+    const std::vector<VolumeCameraSample> extinguished{
+        {{0, 1, true, {{2, 1}}}, {}},
+        {{1, 1, true, {{10001, 1}}}, {{1, 10001, 100}}}};
+    const auto surviving = reconstruct_volume(extinguished, 5e-8, 16384);
+    check(surviving.size() < 100, "Extinguished ray caused excessive subdivision");
+    for (int i = 0; i <= 1000; ++i) {
+      const double z = i * 10.01;
+      check(std::abs(oracle(extinguished, z) - interval_transmittance(surviving, z)) < 5.01e-8,
+            "Extinguished-ray optimization changed physical transmission");
+    }
+    /* Partial volume coverage retains a clear ray beside an opaque medium.
+     * The rate range alone grossly overestimates curvature in its faint tail. */
+    std::vector<VolumeCameraSample> tail{{{0, 1, true, {}}, {}},
+                                        {{1, 1, true, {}}, {}}};
+    for (int i = 0; i < 64; ++i)
+      tail[1].intervals.push_back({1.0 + i, 2.0 + i, 16});
+    const auto fitted_tail = reconstruct_volume(tail, 2.5e-9, 65536, 2.5e-9);
+    check(fitted_tail.size() < 13500, "Faint volume tail caused excessive fitting");
+    for (int i = 0; i <= 2000; ++i) {
+      const double z = 65.0 * i / 2000;
+      const double expected = .5 * (1 + std::exp(-16 * std::clamp(z - 1, 0.0, 64.0)));
+      check(std::abs(expected - interval_transmittance(fitted_tail, z)) < 2.51e-9,
+            "Weighted curvature bound changed partial-volume transmission");
+    }
+    const double correct = oracle(fixtures[5].samples, 5);
     check(std::abs(correct - std::exp(-.45)) > .05, "Partial coverage fixture is ineffective");
     const std::vector<IntervalSample> whole{{2, 8, -std::expm1(-1.8)}};
     const std::vector<IntervalSample> split{{2, 5, -std::expm1(-.9)}, {5, 8, -std::expm1(-.9)}};
@@ -113,7 +221,7 @@ int main(int argc, char **argv)
     invalid = fixtures[0].samples;
     invalid[0].intervals[0].optical_depth = -1;
     rejects([&] { reconstruct_volume(invalid); });
-    rejects([&] { reconstruct_volume(fixtures[4].samples, 2e-7, 1); });
+    rejects([&] { reconstruct_volume(fixtures[5].samples, 2e-7, 1); });
     rejects([&] { reconstruct_volume(fixtures[0].samples, 0); });
     rejects([&] { reconstruct_volume(fixtures[0].samples, 1e-7, 10, -1); });
     rejects([&] { interval_curve_error({{2, 8, 1}}, {}); });
@@ -168,6 +276,13 @@ int main(int argc, char **argv)
     check(uniform_reduced.size() == 1, "Constant-density subdivision was not reduced");
     check(interval_curve_error(uniform_reduced, {{1, 3, -std::expm1(-.2)}}) < 1e-11,
           "Long merge chain changed extinction");
+    auto sparse_weights = uniform_rays;
+    for (uint64_t id = 2; id < 9; ++id)
+      sparse_weights.push_back({{id, 0, true, {}}, {}});
+    check(interval_curve_error(uniform_reduced,
+          reconstruct_volume(std::move(sparse_weights), 2e-8, 10, 2e-8,
+                             uniform_rays[0].intervals.capacity() * 128)) < 1e-11,
+          "Zero-weight camera filtering changed the bounded curve");
     uniform_rays.pop_back();
     check(reconstruct_volume(uniform_rays, 2e-8, 10, 2e-8).size() == 1,
           "Single-ray reduction exhausted capacity before merging");

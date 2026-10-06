@@ -38,6 +38,7 @@ class PathTraceDeepTile final : public OutputDriver::DeepTile {
   {
     return capture_.volume_row_sample_limit();
   }
+  int volume_export_workers() const override { return capture_.volume_export_workers(); }
   deep::VolumeCameraSample get_camera_sample(int x, int y, int sample) const override
   {
     if (volume) {

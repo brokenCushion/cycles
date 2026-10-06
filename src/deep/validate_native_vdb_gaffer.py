@@ -13,6 +13,7 @@ import bisect
 import csv
 from pathlib import Path
 import sys
+import subprocess
 
 import CyclesDeep
 import Gaffer
@@ -21,7 +22,7 @@ import GafferScene
 import imath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from validate_gaffer import check, deep_pixel, tile_index
+from validate_gaffer import check, deep_pixel, tile_index, population_reference_error
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('directory', type=Path)
@@ -32,16 +33,21 @@ parser.add_argument('--expect-empty', action='store_true',
 parser.add_argument('--overlap-reference', nargs=2, type=Path,
                     help='Single-grid renders with matching cameras; check combined extinction')
 parser.add_argument('--beauty-repeat', type=Path,
-                    help='Independent CUDA beauty repeat; fixed absolute regression gate of samples * 2^-23')
+                    help='Independent CUDA repeat; fixed raw gate, native repeat envelope for denoised beauty')
+parser.add_argument('--oracle-python', type=Path,
+                    help='Existing NumPy Python environment for bounded, large camera-CSV checks')
 args = parser.parse_args()
 directory, baseline = args.directory.resolve(), args.baseline.resolve()
 settings = json.loads((directory / 'render.json').read_text())
+check(not settings.get('capture_only'), 'Capture-only diagnostics cannot qualify deep output')
 reference = json.loads((baseline / 'render.json').read_text())
 check(settings['deep_volume'] and settings['samples'] >= 1, 'Expected native volume fixture')
 check(not reference['deep'], 'Beauty baseline must disable deep capture')
 for key in ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
             'camera_world_matrix', 'camera_frame', 'frame', 'adaptive', 'denoising'):
     check(settings[key] == reference[key], 'Beauty baseline differs: ' + key)
+for key in ('denoiser', 'denoising_use_gpu', 'save_render_passes'):
+    check(settings.get(key) == reference.get(key), 'Beauty baseline differs: ' + key)
 script = Gaffer.ScriptNode()
 
 
@@ -76,6 +82,8 @@ if args.beauty_repeat:
     for key in ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
                 'camera_world_matrix', 'camera_frame', 'frame', 'adaptive', 'denoising', 'deep'):
         check(repeated_settings[key] == reference[key], 'Beauty repeat differs: ' + key)
+    for key in ('denoiser', 'denoising_use_gpu', 'save_render_passes'):
+        check(repeated_settings.get(key) == reference.get(key), 'Beauty repeat differs: ' + key)
     repeat = GafferImage.ImageReader()
     repeat['fileName'].setValue((repeat_directory / 'beauty.exr').as_posix())
     check(repeat['out']['format'].getValue() == fmt, 'Beauty repeat format mismatch')
@@ -114,12 +122,91 @@ for y in range(0, height, tile):
                         check(math.isfinite(cv), 'Nonfinite beauty repeat')
                         beauty_peak = max(beauty_peak, abs(cv))
                         repeat_error = max(repeat_error, abs(bv-cv))
+raw_error = raw_repeat_error = 0.0
+matched_raw_error = matched_repeat_error = 0.0
+unmatched_population_pixels = native_population_changes = 0
+population_matched = False
+raw_tolerance = beauty_tolerance
+denoised_repeat_gate = settings['denoising'] and repeat is not None
+if denoised_repeat_gate:
+    check(settings.get('save_render_passes') and reference.get('save_render_passes') and
+          repeated_settings.get('save_render_passes'), 'Denoised CUDA pairs require native noisy passes')
+    raw_readers = []
+    for source in (directory, baseline, repeat_directory):
+        node = GafferImage.ImageReader()
+        node['fileName'].setValue((source / 'render-passes.exr').as_posix())
+        check(node['out']['format'].getValue() == fmt, 'Noisy pass format mismatch')
+        raw_readers.append(node)
+    channels = [c for c in raw_readers[0]['out']['channelNames'].getValue() if '.Noisy Image.' in c]
+    check(bool(channels), 'Native noisy beauty pass is missing')
+    population_matched = all(s.get('diagnostic_sample_count_pass', False)
+                             for s in (settings, reference, repeated_settings))
+    count_channel = None
+    if population_matched:
+        count_names = [[c for c in node['out']['channelNames'].getValue()
+                        if 'Debug Sample Count' in c] for node in raw_readers]
+        check(all(len(names) == 1 and names == count_names[0] for names in count_names),
+              'Native sample-count pass missing or inconsistent')
+        count_channel = count_names[0][0]
+    for y in range(0, height, tile):
+        for x in range(0, width, tile):
+            populations = None
+            if population_matched:
+                count_data = [node['out'].channelData(count_channel, imath.V2i(x, y))
+                              for node in raw_readers]
+                populations = []
+                for j in range(min(tile, height-y)):
+                    for i in range(min(tile, width-x)):
+                        values = [float(d[j*tile+i]) * settings['samples'] for d in count_data]
+                        check(all(math.isfinite(v) and 1 <= round(v) <= settings['samples'] and
+                                  abs(v-round(v)) <= 1e-4 for v in values), 'Invalid native sample count')
+                        counts = [round(v) for v in values]
+                        populations.append(counts)
+                        unmatched_population_pixels += int(counts[0] not in counts[1:])
+                        native_population_changes += int(counts[1] != counts[2])
+            for channel in channels:
+                data = [node['out'].channelData(channel, imath.V2i(x, y)) for node in raw_readers]
+                pixel = 0
+                for j in range(min(tile, height-y)):
+                    for i in range(min(tile, width-x)):
+                        a, b, c = (float(d[j*tile+i]) for d in data)
+                        check(all(math.isfinite(v) for v in (a, b, c)), 'Nonfinite noisy beauty')
+                        raw_error = max(raw_error, abs(a-b))
+                        raw_repeat_error = max(raw_repeat_error, abs(b-c))
+                        if populations is not None:
+                            counts = populations[pixel]
+                            if counts[0] in counts[1:]:
+                                matched_raw_error = max(matched_raw_error,
+                                    population_reference_error(a, counts[0], [(b, counts[1]), (c, counts[2])]))
+                            if counts[1] == counts[2]:
+                                matched_repeat_error = max(matched_repeat_error, abs(b-c))
+                        pixel += 1
+    # Record all independent gates before returning failure, so a beauty
+    # regression does not hide the accepted-camera and compositor results.
+    # Denoisers can amplify native floating-point variation. Keep the raw gate
+    # fixed and compare final beauty against the independently measured ordinary
+    # repeat envelope, plus that same fixed allowance.
+    beauty_tolerance = repeat_error + raw_tolerance
 beauty_report = {'max_deep_on_off': beauty_error, 'max_ordinary_repeat': repeat_error,
                  'peak_absolute_value': beauty_peak, 'comparison': 'fixed absolute error',
                  'tolerance': beauty_tolerance}
+if denoised_repeat_gate:
+    beauty_report.update(comparison='native denoised repeat envelope plus fixed raw allowance',
+                         max_raw_deep_on_off=raw_error, max_raw_ordinary_repeat=raw_repeat_error,
+                         raw_tolerance=raw_tolerance)
+    if population_matched:
+        beauty_report.update(raw_comparison='Every pixel against all native references with its accepted sample count',
+                             max_population_matched_raw_error=matched_raw_error,
+                             max_same_population_native_repeat_error=matched_repeat_error,
+                             unmatched_population_pixels=unmatched_population_pixels,
+                             native_population_changes=native_population_changes)
 (directory / 'beauty_validation.json').write_text(json.dumps(beauty_report, indent=2)+'\n')
-check(beauty_error <= beauty_tolerance and repeat_error <= beauty_tolerance,
-      'Beauty isolation failed: ' + str(beauty_report))
+raw_passed = (unmatched_population_pixels == 0 and
+              max(matched_raw_error, matched_repeat_error) <= raw_tolerance) if population_matched else (
+              max(raw_error, raw_repeat_error) <= raw_tolerance)
+beauty_passed = (beauty_error <= beauty_tolerance and repeat_error <= beauty_tolerance and
+                 (not denoised_repeat_gate or raw_passed))
+print('Beauty isolation:', json.dumps(dict(passed=beauty_passed, **beauty_report)), flush=True)
 
 pixels = {}
 low, high = math.inf, 0
@@ -228,8 +315,11 @@ def read_cameras(path):
                 check(row['kind'] == 'miss' and identity[-1] == -1 and a == b == v == 0,
                       'Invalid diagnostic miss')
     expected_pixels = {(i*(width-1)//8, j*(height-1)//8) for i in range(9) for j in range(9)}
-    check(set(cameras) == {(x, y, s) for x, y in expected_pixels
-                          for s in range(settings['samples'])}, 'Missing diagnostic cameras')
+    check({(x, y) for x, y, s in cameras} == expected_pixels, 'Missing diagnostic pixels')
+    for x, y in expected_pixels:
+        accepted = {s for px, py, s in cameras if (px, py) == (x, y)}
+        count = len(accepted) if settings['adaptive'] else settings['samples']
+        check(count > 0 and accepted == set(range(count)), 'Missing diagnostic cameras')
     return cameras
 
 
@@ -238,7 +328,26 @@ check(diagnostic.exists() or settings['samples'] == 1 or args.reader_only,
       'Multi-sample qualification requires accepted-camera diagnostics')
 check(not args.overlap_reference or diagnostic.exists(), 'Overlap check requires diagnostics')
 raw_error, raw_probes, raw_pixels = 0.0, 0, 0
-if diagnostic.exists():
+accepted_populations = []
+if diagnostic.exists() and args.oracle_python:
+    check(not args.overlap_reference and not args.expect_empty,
+          'Large-scene oracle mode is separate from named overlap/empty fixtures')
+    stored_path = directory / 'stored_diagnostic_curves.json'
+    stored_path.write_text(json.dumps(dict(samples=settings['samples'], adaptive=settings['adaptive'],
+        pixels=[dict(x=x, y=y, samples=deep_pixel(reader['out'], imath.V2i(x, height-1-y)))
+                for x, y in sorted({(i*(width-1)//8, j*(height-1)//8)
+                                   for i in range(9) for j in range(9)})])))
+    oracle_report = directory / 'accepted_camera_oracle.json'
+    subprocess.run([str(args.oracle_python.resolve()), '-I',
+                    str(Path(__file__).with_name('validate_volume_camera_curves.py')),
+                    str(diagnostic), str(stored_path), str(oracle_report)], check=True)
+    evidence = json.loads(oracle_report.read_text())
+    check(evidence['passed'], 'Independent accepted-camera oracle failed')
+    raw_error = evidence['max_accepted_camera_error']
+    raw_probes = evidence['accepted_camera_probes']
+    raw_pixels = evidence['accepted_camera_pixels']
+    accepted_populations = evidence['accepted_populations']
+elif diagnostic.exists():
     cameras = read_cameras(diagnostic)
     if args.expect_empty:
         check(all(not v and not s for v, s in cameras.values()),
@@ -283,7 +392,8 @@ if diagnostic.exists():
         check(overlap_report['passed'], 'Combined extinction differs from single-grid product: ' + str(overlap_report))
     expected_pixels = {(i*(width-1)//8, j*(height-1)//8) for i in range(9) for j in range(9)}
     for x, file_y in sorted(expected_pixels):
-        accepted = [cameras[x, file_y, s] for s in range(settings['samples'])]
+        accepted = [cameras[key] for key in sorted(cameras) if key[:2] == (x, file_y)]
+        accepted_populations.append(len(accepted))
         functions = [curve(v, s) for v, s in accepted]
         output = deep_pixel(reader['out'], imath.V2i(x, height-1-file_y))
         actual = curve([(a, b, -math.log1p(-v)) for a, b, v in output if a < b],
@@ -344,9 +454,11 @@ bottom, top = min(v[1]/-v[2] for v in frame), max(v[1]/-v[2] for v in frame)
 camera['focalLength'].setValue(1)
 camera['aperture'].setValue(imath.V2f(right-left, top-bottom))
 camera['apertureOffset'].setValue(imath.V2f((right+left)/2, (top+bottom)/2))
-for name, key in (('translate', 'camera_translation'), ('rotate', 'camera_rotation_degrees'),
-                  ('scale', 'camera_scale')):
+for name, key in (('translate', 'camera_translation'), ('rotate', 'camera_rotation_degrees')):
     camera['transform'][name].setValue(imath.V3f(*settings[key]))
+# Blender's blender_camera_matrix() strips object scale before Cycles renders.
+# Applying the source object's scale here would stretch the world-space cloud.
+camera['transform']['scale'].setValue(imath.V3f(1))
 cloud = add('VDBDeepPoints', CyclesDeep.DeepToPointCloud(), 40, 0)
 cloud['in'].setInput(cloud_cut['out'])
 cloud['camera'].setInput(camera['out'])
@@ -359,8 +471,8 @@ points = cloud['out'].object('/deepPoints')
 check((points.numPoints == 0 if args.expect_empty else points.numPoints > 0) and
       points.arePrimitiveVariablesValid(), 'Invalid VDB cloud')
 note = add('ReviewInstructions', Gaffer.Backdrop(), -15, 70)
-note['title'].setValue('Native VDB deep visibility')
-note['description'].setValue('Actual firePlume density grid rendered by custom Cycles.\n'
+note['title'].setValue('Native scene deep alpha')
+note['description'].setValue(f'Source: {Path(settings["source_file"]).name}\n'
     'Select VDBDeepPoints to view points read from the deep EXR.\n'
     'Enable VolumeDepthCut farClip to slice the stored volume.\n'
     'Scalar extinction Z/ZBack/A; emission and scattered colour are not stored.\n'
@@ -376,10 +488,14 @@ loaded = Gaffer.ScriptNode()
 loaded['fileName'].setValue(review.as_posix())
 loaded.load()
 check(loaded.getFocus().isSame(loaded['VDBDeepPoints']), 'Review focus did not reload')
-report = {'passed': slice_error <= 1e-6, 'scope': 'Gaffer EXR interoperability and beauty isolation',
+report = {'passed': beauty_passed and slice_error <= 1e-6,
+          'beauty_passed': beauty_passed, 'depth_cuts_passed': slice_error <= 1e-6,
+          'scope': 'Gaffer EXR interoperability and beauty isolation',
           'expected_empty': args.expect_empty,
           'total_deep_samples': total_deep_samples, 'max_pixel_samples': max_pixel_samples,
           'camera_samples': settings['samples'], 'device': settings['device'],
+          'min_accepted_population': min(accepted_populations, default=0),
+          'max_accepted_population': max(accepted_populations, default=0),
           'accepted_camera_pixels': raw_pixels, 'accepted_camera_probes': raw_probes,
           'max_accepted_camera_error': raw_error if diagnostic.exists() else None,
           'preview_pixel_stride': preview_stride,
@@ -391,4 +507,4 @@ report = {'passed': slice_error <= 1e-6, 'scope': 'Gaffer EXR interoperability a
           'physical_grid_oracle': 'Separate CPU/CUDA grid qualification; not this reader check'}
 (directory / 'gaffer_validation.json').write_text(json.dumps(report, indent=2))
 print(json.dumps(report, indent=2))
-check(report['passed'], 'Gaffer depth cuts differ: ' + str(worst_slice))
+check(report['passed'], 'Beauty or Gaffer depth-cut gate failed: ' + str(report))

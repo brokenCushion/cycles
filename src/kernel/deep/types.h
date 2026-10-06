@@ -19,10 +19,15 @@ enum KernelDeepError : unsigned int {
   DEEP_ERROR_EXTINCTION,
   DEEP_ERROR_PROGRESS,
   DEEP_ERROR_MEDIUM,
+  DEEP_ERROR_EVENT_CAPACITY,
+  DEEP_ERROR_GRID_STEPS,
+  DEEP_ERROR_BOUNDARY_CAPACITY,
+  DEEP_ERROR_MEDIA_CAPACITY,
 };
 enum KernelDeepEventKind : unsigned int { DEEP_SURFACE = 0, DEEP_VOLUME, DEEP_VOLUME_CUBIC };
 constexpr unsigned int DEEP_MAX_EVENTS = 64;
-constexpr unsigned int DEEP_MAX_VOLUME_EVENTS = 4096;
+constexpr unsigned int DEEP_DEFAULT_VOLUME_EVENTS = 4096;
+constexpr unsigned int DEEP_MAX_VOLUME_EVENTS = 8192;
 constexpr unsigned int DEEP_MAX_MEDIA = 64;
 
 /* A visited convex medium has one entry/exit pair. Negative start means exited.

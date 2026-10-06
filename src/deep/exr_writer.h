@@ -29,6 +29,7 @@ struct SurfaceImage {
   /* Streaming volume row capacity supplied by capture memory preflight.
    * Zero leaves synthetic/non-renderer callers responsible for their memory. */
   size_t volume_row_sample_limit = 0;
+  int volume_export_workers = 1;
   /* Increasing image y, then x, starting at data_window.min. No implicit flip.
    * Each pixel contains strictly depth-sorted reconstructed point samples. */
   std::vector<std::vector<SurfaceSample>> pixels;
@@ -49,7 +50,8 @@ void write_volume_exr(const std::filesystem::path &path,
                       const SurfaceImage &image,
                       const std::vector<std::vector<IntervalSample>> &pixels);
 /* Quantize one pixel at a time; retain only FLOAT samples for the scanline.
- * Callback coordinates are file x/y. */
+ * Callback coordinates are file x/y. With multiple export workers the provider
+ * must support concurrent calls; callbacks join before writing the row. */
 using VolumePixelProvider = std::function<std::vector<IntervalSample>(int, int)>;
 void write_volume_exr_pixels(const std::filesystem::path &path,
                            const SurfaceImage &image,

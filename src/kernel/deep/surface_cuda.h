@@ -42,7 +42,8 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
       events[0] = {DEEP_SURFACE, depth, depth, 1, 0};
       return {DEEP_COMPLETE, 1, DEEP_ERROR_NONE};
     }
-    ShaderData sd;
+    ShaderDataTinyStorage storage;
+    ShaderData &sd = *AS_SHADER_DATA(&storage);
     shader_setup_from_ray(kg, &sd, &ray, &isect);
     const bool backfacing = (sd.runtime_flag & SR_BACKFACING) != 0;
     if (count && deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing))
@@ -56,7 +57,9 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_CAPACITY};
     previous = isect;
     previous_backfacing = backfacing;
-    surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE & ~KERNEL_FEATURE_NODE_RAYTRACE>(
+    /* Transparency is accumulated independently of closures. Keep camera
+     * visibility and flags unchanged while omitting unused BSDF storage. */
+    surface_shader_eval<KERNEL_FEATURE_NODE_MASK_SURFACE & ~KERNEL_FEATURE_NODE_RAYTRACE, false>(
         kg,
         state,
         &sd,

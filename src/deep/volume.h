@@ -3,6 +3,7 @@
 
 #include "deep/reconstruction.h"
 #include <cstddef>
+#include <limits>
 
 namespace ccl::deep {
 
@@ -69,11 +70,15 @@ struct IntervalSample {
  * error, preserves merged-segment endpoint transmittance and never merges
  * surface steps or gaps.
  * Limits fail explicitly. Renderer capture splits its shared error allocation
- * between fitting and reduction; callers must budget their sum. */
-std::vector<IntervalSample> reconstruct_volume(const std::vector<VolumeCameraSample> &samples,
+ * between fitting and reduction; callers must budget their sum. Large camera
+ * populations share this allowance across balanced averaging levels. The
+ * optional byte budget bounds retained source/index storage, with single-pair
+ * and output scratch reserved independently by the renderer. */
+std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> samples,
                                               double tolerance = volume_reconstruction_error,
                                               size_t max_intervals = 65536,
-                                              double reduction_tolerance = 0);
+                                              double reduction_tolerance = 0,
+                                              size_t max_working_bytes = std::numeric_limits<size_t>::max());
 
 /* Exact maximum difference between two ordered, nonoverlapping exponential
  * curves, including surface discontinuities and interior stationary points. */

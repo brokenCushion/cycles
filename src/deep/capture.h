@@ -29,7 +29,8 @@ class Capture {
           bool spill = false,
           bool adaptive = false,
           bool volume = false,
-          bool volume_grid = false);
+          bool volume_grid = false,
+          int export_workers = 1);
   ~Capture();
   void record(int x, int y, uint32_t sample, float depth);
   /* Only complete records count as accepted camera samples. */
@@ -42,7 +43,8 @@ class Capture {
   void record_events(int x, int y, uint32_t sample, const KernelDeepEvent *events, int count);
   std::vector<SurfaceEvent> events(int x, int y, int sample) const;
   /* Event kind selects local surface alpha or integrated volume optical depth. */
-  VolumeCameraSample volume_sample(int x, int y, int sample) const;
+  VolumeCameraSample volume_sample(int x, int y, int sample,
+                                   double density_tolerance = volume_density_error) const;
   std::vector<IntervalSample> reconstruct_volume_pixel(int x, int y) const;
   bool volume() const
   {
@@ -58,12 +60,13 @@ class Capture {
   {
     return volume_row_sample_limit_;
   }
+  int volume_export_workers() const { return volume_export_workers_; }
   /* Four times tighter curvature tolerance can require twice as many pieces.
    * This limit also drives scanline working-memory preflight. */
   static constexpr size_t volume_interval_limit = 4096;
   size_t reconstruction_limit() const
   {
-    return volume_grid_ ? 16384 : volume_interval_limit;
+    return volume_grid_ ? (samples_ > 8 ? 65536 : 16384) : volume_interval_limit;
   }
   /* Independent film counter, updated after each pixel batch. Read after workers join. */
   void set_population(int x, int y, uint32_t count);
@@ -103,6 +106,8 @@ class Capture {
  private:
   mutable uint64_t spill_read_bytes_ = 0, spill_write_bytes_ = 0;
   size_t volume_row_sample_limit_ = 0;
+  size_t volume_pixel_bytes_ = 0;
+  int volume_export_workers_ = 1;
   int width_, height_, samples_;
   std::vector<KernelDeepResult> results_;
   std::vector<uint32_t> populations_;
@@ -145,7 +150,8 @@ class Capture {
   SpillPage &spill_page(size_t index) const;
   void flush_page(SpillPage &page) const;
   size_t count_ = 0, completed_ = 0;
-  size_t stride_ = 0, capacity_ = 0;
+    size_t stride_ = 0, capacity_ = 0;
+    size_t record_index(size_t pixel, uint32_t sample) const;
   void read_record(size_t index, KernelDeepResult &result, KernelDeepEvent *events,
                    KernelDeepDensity *density = nullptr) const;
   void store_record(size_t index, const KernelDeepResult &result, const KernelDeepEvent *events,

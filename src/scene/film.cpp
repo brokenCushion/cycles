@@ -369,6 +369,9 @@ void Film::device_update(Device *device, DeviceScene *dscene, Scene *scene)
       case PASS_VOLUME_MAJORANT_SAMPLE_COUNT:
         kfilm->pass_volume_majorant_sample_count = kfilm->pass_stride;
         break;
+      case PASS_VOLUME_MAJORANT_SNAPSHOT:
+        kfilm->pass_volume_majorant_snapshot = kfilm->pass_stride;
+        break;
 
       case PASS_BAKE_PRIMITIVE:
         kfilm->pass_bake_primitive = kfilm->pass_stride;
@@ -667,6 +670,7 @@ void Film::update_passes(Scene *scene)
       add_auto_pass(scene, PASS_VOLUME_MAJORANT, "Volume Majorant");
     }
     add_auto_pass(scene, PASS_VOLUME_MAJORANT_SAMPLE_COUNT);
+    add_auto_pass(scene, PASS_VOLUME_MAJORANT_SNAPSHOT);
   }
 
   /* Remove duplicates and initialize internal pass info. */

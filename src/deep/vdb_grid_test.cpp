@@ -17,12 +17,92 @@
 #include <stdexcept>
 #include <vector>
 
+template<typename BuildT> static void test_empty_tiles(const int precision)
+{
+  auto source = openvdb::FloatGrid::create(0);
+  auto writer = source->getAccessor();
+  writer.setValue(openvdb::Coord(-8, 0, 0), 2);
+  writer.setValue(openvdb::Coord(8, 0, 0), 1);
+  /* Inactive nonzero tiles still affect native interpolation. */
+  source->fill(openvdb::CoordBBox({128, 0, 0}, {255, 127, 127}), .5f, false);
+  auto handle = ccl::openvdb_to_nanovdb(source, precision, 0.0f);
+  const auto *native = reinterpret_cast<const ccl::nanovdb::NanoGrid<BuildT> *>(handle.data());
+  const ccl::nanovdb::CachedReadAccessor<BuildT> accessor(native->tree().root());
+  std::vector<KernelDeepEvent> events(512);
+  std::vector<KernelDeepDensity> density(512);
+  for (const int sign : {-1, 1}) {
+    const double origin[3] = {-500.0 * sign, .25, .25};
+    const double direction[3] = {1000.0 * sign, 0, 0};
+    const auto result = ccl::deep_volume_grid_capture(accessor, origin, direction, 0.0, 1.0,
+        .02, 1000, 1, 1000, events.data(), density.data(), 1, 512, 0, 512);
+    if (result.status != DEEP_COMPLETE || !result.count)
+      throw std::runtime_error("Empty-tile skip failed in bounded traversal");
+    double tau = 0;
+    for (unsigned i = 0; i < result.count; ++i)
+      for (const float value : density[i].optical_depth)
+        tau += double(value) / 4;
+    const double expected = .02 * (128 * .5 + 3 * .75 * .75);
+    if (std::abs(std::exp(-tau) - std::exp(-expected)) > 1e-7)
+      throw std::runtime_error("Empty-tile skip lost interpolation halo or nonzero tile");
+  }
+}
+
+static void test_half_precision()
+{
+  auto source = openvdb::FloatGrid::create(0);
+  auto writer = source->getAccessor();
+  for (int z = 0; z < 9; ++z)
+    for (int y = 0; y < 9; ++y)
+      for (int x = 0; x < 9; ++x)
+        writer.setValue(openvdb::Coord(x, y, z), .01f + float(x + 3*y + 7*z) / 113);
+  auto handle = ccl::openvdb_to_nanovdb(source, 16, 0.0f);
+  const auto *reference = handle.grid<::nanovdb::Fp16>();
+  if (!reference)
+    throw std::runtime_error("Missing Fp16 test grid");
+  const auto *native = reinterpret_cast<const ccl::nanovdb::NanoGrid<ccl::nanovdb::Fp16> *>(handle.data());
+  const ccl::nanovdb::CachedReadAccessor<ccl::nanovdb::Fp16> accessor(native->tree().root());
+  double max_error = 0;
+  for (int cell = 0; cell < 64; ++cell) {
+    const int x = cell % 8, y = (cell / 8) % 8, z = (cell * 3) % 8;
+    const double origin[3] = {x + .1, y + .2, z + .3};
+    const double direction[3] = {.7, .6, .5};
+    const double length = std::sqrt(1.1);
+    const ccl::DeepGridSegment<double> segment{{x, y, z}, 0, 1};
+    KernelDeepDensity result{};
+    if (ccl::deep_volume_grid_cell(accessor, origin, direction, segment, .02,
+                                  length, &result) != DEEP_ERROR_NONE)
+      throw std::runtime_error("Fp16 cell integration failed");
+    double expected = 0, actual = 0;
+    /* Independent NanoVDB SDK decoding and two-point Gaussian quadrature of
+     * the quantized grid's trilinear density, not the original FLOAT grid. */
+    for (const double sign : {-1.0, 1.0}) {
+      const double t = .5 + sign / (2 * std::sqrt(3.0));
+      const double p[3] = {.1 + t*.7, .2 + t*.6, .3 + t*.5};
+      for (int corner = 0; corner < 8; ++corner) {
+        const int a = corner & 1, b = (corner >> 1) & 1, c = (corner >> 2) & 1;
+        const float value = reference->tree().getValue(::nanovdb::Coord(x+a, y+b, z+c));
+        expected += value * (a ? p[0] : 1-p[0]) * (b ? p[1] : 1-p[1]) *
+                    (c ? p[2] : 1-p[2]) * .5 * .02 * length;
+      }
+    }
+    for (const float value : result.optical_depth)
+      actual += double(value) / 4;
+    max_error = std::max(max_error, std::abs(std::exp(-actual) - std::exp(-expected)));
+  }
+  if (max_error > 1e-7)
+    throw std::runtime_error("Fp16 integration differs from independent decoded-grid oracle");
+  std::cout << "PASS: Fp16, 64 cells; maximum transmittance error " << max_error << '\n';
+}
+
 int main(int argc, char **argv)
 {
   try {
     if (argc != 3)
       throw std::runtime_error("Usage: cycles_deep_vdb_grid_test INPUT.vdb OUTPUT_DIR");
     openvdb::initialize();
+      test_half_precision();
+      test_empty_tiles<float>(32);
+      test_empty_tiles<ccl::nanovdb::Fp16>(16);
     openvdb::io::File file(argv[1]);
     file.open();
     auto grid = openvdb::gridPtrCast<openvdb::FloatGrid>(file.readGrid("density"));

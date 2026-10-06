@@ -424,6 +424,8 @@ enum PassType {
    * When reading this pass, it is converted to majorant transmittance */
   PASS_VOLUME_MAJORANT,
   PASS_VOLUME_MAJORANT_SAMPLE_COUNT,
+  /* Internal sum/count frozen at volume guiding updates. */
+  PASS_VOLUME_MAJORANT_SNAPSHOT,
   PASS_CATEGORY_DATA_END = 63,
 
   /* Denoising passes */
@@ -1666,7 +1668,7 @@ struct KernelShader {
   int flags;
   int pass_id;
   float deep_density_scale;
-  int pad3;
+  float deep_homogeneous_extinction;
 };
 static_assert_align(KernelShader, 16);
 

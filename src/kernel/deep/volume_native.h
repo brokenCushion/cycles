@@ -35,7 +35,8 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
     return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
   if (info.data_type == IMAGE_DATA_TYPE_NANOVDB_EMPTY)
     return {DEEP_COMPLETE, unsigned(first), DEEP_ERROR_NONE};
-  if (info.data_type != IMAGE_DATA_TYPE_NANOVDB_FLOAT || !info.data)
+  if ((info.data_type != IMAGE_DATA_TYPE_NANOVDB_FLOAT &&
+       info.data_type != IMAGE_DATA_TYPE_NANOVDB_FP16) || !info.data)
     return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
 
   double origin[3] = {ray->P.x, ray->P.y, ray->P.z};
@@ -65,6 +66,13 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
                               double(camera_z.z) * ray->P.z + camera_z.w;
   const double depth_per_t = double(camera_z.x) * ray->D.x + double(camera_z.y) * ray->D.y +
                              double(camera_z.z) * ray->D.z;
+  if (info.data_type == IMAGE_DATA_TYPE_NANOVDB_FP16) {
+    const auto *grid = (ccl_global nanovdb::NanoGrid<nanovdb::Fp16> *)info.data;
+    const nanovdb::CachedReadAccessor<nanovdb::Fp16> accessor(grid->tree().root());
+    return deep_volume_grid_capture(accessor, origin, direction, start, end, scale,
+                                    physical_length, depth_origin, depth_per_t,
+                                    events, density, stride, capacity, first, 16384);
+  }
   const auto *grid = (ccl_global nanovdb::NanoGrid<float> *)info.data;
   const nanovdb::CachedReadAccessor<float> accessor(grid->tree().root());
   return deep_volume_grid_capture(accessor, origin, direction, start, end, scale,

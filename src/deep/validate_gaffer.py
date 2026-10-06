@@ -21,6 +21,12 @@ def check(condition, message):
         raise RuntimeError(message)
 
 
+def population_reference_error(value, population, references):
+    """Compare every native reference with the same count; missing counts fail."""
+    return max((abs(value - native) for native, count in references
+                if count == population), default=math.inf)
+
+
 def tile_index(point):
     size = GafferImage.ImagePlug.tileSize()
     origin = imath.V2i((point.x // size) * size, (point.y // size) * size)

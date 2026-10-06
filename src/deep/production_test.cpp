@@ -2,6 +2,8 @@
 #include "deep/capture.h"
 #include "deep/exr_writer.h"
 #include "deep/publication.h"
+#include <atomic>
+#include <chrono>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -162,6 +164,19 @@ int main(int argc, char **argv)
       return x == 0 ? std::vector<IntervalSample>{} :
                       std::vector<IntervalSample>{{2, 8, .5}};
     });
+    /* Reduction must release source-sized reservations before row budgeting.
+     * This constant-density source publishes one interval within the same
+     * whole-curve allowance, so a one-sample row budget is sufficient. */
+    SurfaceImage reduced_row{{0, 0, 0, 0}, {0, 0, 0, 0}};
+    reduced_row.volume_row_sample_limit = 1;
+    write_volume_exr_pixels(directory / "volume-reduced-row-budget.exr", reduced_row,
+                           [](int, int) {
+      std::vector<IntervalSample> intervals;
+      for (int i = 0; i < 128; ++i)
+        intervals.push_back({2 + i / 128.0, 2 + (i + 1) / 128.0,
+                             -std::expm1(-1 / 1024.0)});
+      return intervals;
+    });
 #ifdef _WIN32
     /* A real OS replacement failure after serialization, without filling a
      * drive or altering permissions. Deny deletion of our completed fixture. */
@@ -187,6 +202,71 @@ int main(int argc, char **argv)
     CloseHandle(locked);
     check(replacement_failed && locked_pixels == 9 && read_file() == original);
 #endif
+    {
+      /* Real shared spill reads and adaptive partial batches must produce the
+       * same file with bounded parallel reconstruction, including offset windows. */
+      Capture capture(24, 2, 17, size_t(512) * 1024 * 1024,
+                      4, true, true, true, true, 4);
+      check(capture.volume_export_workers() == 3);
+      for (int y = 0; y < 2; ++y)
+        for (int x = 0; x < 24; ++x) {
+          const int count = x % 3 == 0 ? 9 : (x % 3 == 1 ? 16 : 17);
+          for (int sample = 0; sample < count; ++sample) {
+            const KernelDeepEvent events[] = {
+                {DEEP_VOLUME, 2, 8, 0, .1f + .01f * (sample % 5)},
+                {DEEP_SURFACE, 9 + .01f * sample, 9 + .01f * sample, .3f, 0}};
+            capture.record_events(x, y, sample, events, sample % 7 ? 2 : 0);
+          }
+          capture.set_population(x, y, count);
+        }
+      check(capture.finalize());
+      SurfaceImage threaded{{-5, 9, 18, 10}, {-5, 9, 18, 10}};
+      threaded.compression = DeepCompression::Zips;
+      threaded.volume_row_sample_limit = capture.volume_row_sample_limit();
+      const auto reference_path = directory / "parallel-reference.exr";
+      const auto parallel_path = directory / "parallel.exr";
+      const auto provider = [&](int x, int y) {
+        return capture.reconstruct_volume_pixel(x + 5, y - 9);
+      };
+      write_volume_exr_pixels(reference_path, threaded, provider);
+      threaded.volume_export_workers = capture.volume_export_workers();
+      std::atomic<int> active{0}, peak{0};
+      write_volume_exr_pixels(parallel_path, threaded, [&](int x, int y) {
+        const int current = active.fetch_add(1) + 1;
+        int previous = peak.load();
+        while (previous < current && !peak.compare_exchange_weak(previous, current)) {}
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        auto result = provider(x, y);
+        active.fetch_sub(1);
+        return result;
+      });
+      check(active == 0 && peak <= 4);
+      if (std::thread::hardware_concurrency() > 1)
+        check(peak > 1);
+      const auto contents = [](const std::filesystem::path &file) {
+        std::ifstream f(file, std::ios::binary);
+        return std::string(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+      };
+      const auto expected = contents(reference_path);
+      check(contents(parallel_path) == expected);
+      for (int failure = 0; failure < 3; ++failure) {
+        threaded.volume_row_sample_limit = failure == 2 ? 1 : capture.volume_row_sample_limit();
+        rejects([&] {
+          write_volume_exr_pixels(parallel_path, threaded, [&](int x, int) {
+            active.fetch_add(1);
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            active.fetch_sub(1);
+            if (failure == 0 && x == 0)
+              throw std::runtime_error("injected parallel worker failure");
+            return std::vector<IntervalSample>{{2, 8, .5}};
+          }, [&] {
+            if (failure == 1)
+              throw std::runtime_error("cancelled before parallel publication");
+          });
+        });
+        check(active == 0 && contents(parallel_path) == expected);
+      }
+    }
     for (const auto &entry : std::filesystem::directory_iterator(directory))
       check(entry.path().filename().string().find(".partial-") == std::string::npos);
     std::cout << "PASS spill identity/completeness/concurrency, preflight memory limit, atomic "

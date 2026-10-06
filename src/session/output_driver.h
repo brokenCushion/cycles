@@ -56,7 +56,8 @@ class OutputDriver {
   /* Completed, full-frame deep data. Coordinates follow render buffers (Y up).
    * Depths are positive camera-axis distances; equal front/back denotes a surface.
    * Pull one pixel at a time to bound reconstruction memory. Returned vectors are
-   * owned by the caller. Serialize reads on the callback thread; the tile itself
+   * owned by the caller. Pixel reads may run concurrently after capture joins;
+   * the tile itself
    * is valid only during the callback. Do not reset the session from this callback.
    * Current contract has matching data/display windows with origin (0, 0).
    * No RGB channels are supplied: alpha describes averaged camera visibility. */
@@ -72,6 +73,7 @@ class OutputDriver {
     /* Bound for FLOAT scanline staging plus the supported EXR codec buffers.
      * Streaming file hosts must enforce it before allocating a converted pixel. */
     virtual size_t volume_row_sample_limit() const = 0;
+    virtual int volume_export_workers() const { return 1; }
     /* Actual accepted camera population, including misses. Diagnostic reads
      * expose local surface alpha and volume optical depth, before reconstruction. */
     virtual int population(int x, int y) const = 0;

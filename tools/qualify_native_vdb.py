@@ -27,15 +27,14 @@ report = {'device': device, 'blender_sha256': hashlib.sha256(blender.read_bytes(
           'cases': {}, 'passed': False}
 report_path = output / 'report.json'
 expected_errors = {
-    'reject_adaptive': 'fixed samples, static pinhole camera',
-    'reject_dof': 'fixed samples, static pinhole camera',
-    'reject_motion': 'fixed samples, static pinhole camera',
+    'reject_ao_opacity': 'ray-traced ambient occlusion cannot drive deep opacity',
+    'reject_dof': 'static pinhole camera',
+    'reject_motion': 'static pinhole camera',
     'reject_orthographic': 'requires mono perspective',
     'reject_cubic': 'require linear interpolation',
-    'reject_half': 'invalid or non-scalar deep extinction',
     'reject_color': 'requires scalar extinction',
     'reject_nonlinear': 'nonlinear products of density',
-    'reject_reflection': 'without reflection',
+    'reject_reflection': 'unreflected volumes',
 }
 
 
@@ -72,10 +71,13 @@ for name, case in manifest['cases'].items():
         command = [str(blender), '--factory-startup', '--background', '--disable-autoexec',
                    str(scene), '--python-exit-code', '1', '--python',
                    str(repo / 'tools/render_blender_deep_scene.py'), '--',
-                   '--output', str(destination), '--samples', '4', '--percentage', '100',
+                   '--output', str(destination), '--samples', str(case['samples']), '--percentage', '100',
                    '--device', device]
+        if name in ('denoised_volume', 'adaptive_denoised_volume'):
+            command += ['--save-render-passes']
         if kind == 'deep':
-            command += ['--deep', '--deep-volume', '--deep-memory-mb', '1024']
+            command += ['--deep', '--deep-volume', '--deep-memory-mb', '1024',
+                        '--deep-max-events', str(case.get('deep_max_events', 16))]
         log = directory / (kind + '.log')
         code = run(command, log)
         if rejected:
@@ -101,6 +103,9 @@ for name, case in manifest['cases'].items():
             report_path.write_text(json.dumps(report, indent=2))
             raise RuntimeError('Gaffer validation failed: ' + str(directory / 'gaffer.log'))
         stats['validation'] = json.loads((directory / 'deep/gaffer_validation.json').read_text())
+        if name == 'adaptive_volume' and not (
+                0 < stats['validation']['min_accepted_population'] < case['samples']):
+            raise RuntimeError('Adaptive fixture did not exercise early convergence')
     if hashlib.sha256(scene.read_bytes()).hexdigest() != source_hash:
         raise RuntimeError('Input fixture changed: ' + str(scene))
     stats.update(passed=True, seconds=time.monotonic()-start)
@@ -123,6 +128,12 @@ if all(n in manifest['cases'] for n in ('scattering', 'overlap_first_only')):
     if hashes[0] != hashes[1]:
         report_path.write_text(json.dumps(report, indent=2) + '\n')
         raise RuntimeError('Equivalent absorption/scattering deep alpha differs')
+if all(n in manifest['cases'] for n in ('camera_ray_depth', 'scattering')):
+    hashes = [hashlib.sha256((output / n / 'deep/scene.deep.exr').read_bytes()).hexdigest()
+              for n in ('camera_ray_depth', 'scattering')]
+    report['camera_ray_depth'] = {'identical': hashes[0] == hashes[1], 'sha256': hashes}
+    if hashes[0] != hashes[1]:
+        raise RuntimeError('Camera-constant Ray Depth expression changed deep alpha')
 report['passed'] = True
 report_path.write_text(json.dumps(report, indent=2) + '\n')
 print('PASS', report_path, flush=True)

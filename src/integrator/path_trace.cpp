@@ -20,6 +20,8 @@
 #  include "integrator/path_trace_deep_tile.h"
 #  include "integrator/path_trace_work_gpu.h"
 #  include "deep/capture.h"
+#  include <cstdlib>
+#  include <cstring>
 #  include <stdexcept>
 #endif
 #include "session/display_driver.h"
@@ -29,6 +31,7 @@
 #include "util/progress.h"
 #include "util/scoped_defer.h"
 #include "util/tbb.h"
+#include "util/task.h"
 #include "util/time.h"
 
 CCL_NAMESPACE_BEGIN
@@ -726,7 +729,9 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
     throw std::invalid_argument("Deep render requires a single-device full frame without crop");
   }
   size_t capture_bytes = settings.memory_bytes;
-  const int event_capacity = settings.volume_grid ? int(DEEP_MAX_VOLUME_EVENTS) : settings.max_events;
+  const int event_capacity = settings.volume_grid ?
+                                 max(int(DEEP_DEFAULT_VOLUME_EVENTS), settings.max_events) :
+                                 settings.max_events;
   if (settings.volume_grid && device_->info.type == DEVICE_CPU) {
     if (device_->info.cpu_threads <= 0 || event_capacity <= 0 ||
         event_capacity > int(DEEP_MAX_VOLUME_EVENTS))
@@ -745,7 +750,7 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
   deep_capture_ = make_unique<deep::Capture>(
       params.width, params.height, samples, capture_bytes,
       (settings.transparent || settings.volume) ? event_capacity : 0,
-      true, adaptive, settings.volume, settings.volume_grid);
+      true, adaptive, settings.volume, settings.volume_grid, TaskScheduler::max_concurrency());
   for (auto &work : path_trace_works_) {
     work->set_deep_capture(deep_capture_.get());
   }
@@ -763,9 +768,17 @@ void PathTrace::write_deep_output()
   if (!output_driver_ || !output_driver_->supports_deep_output()) {
     throw std::runtime_error("Deep output driver was removed before delivery");
   }
+  /* Explicit diagnostic mode: validate native capture/beauty before spending
+   * time on curve reconstruction. This does not publish or qualify deep output. */
+  const char *capture_only = std::getenv("CYCLES_DEEP_VALIDATE_CAPTURE_ONLY");
+  if (capture_only && std::strcmp(capture_only, "1") == 0) {
+    LOG_INFO_IMPORTANT << "Deep validation: capture finalized; capture-only mode, no deep EXR publication";
+    return;
+  }
   const PathTraceDeepTile tile(*deep_capture_, full_params_.layer, full_params_.view,
                                [this] { return is_cancel_requested(); });
   const double export_start = time_dt();
+  LOG_INFO_IMPORTANT << "Deep output: export_workers=" << tile.volume_export_workers();
   output_driver_->write_deep_render_tile(tile);
   deep_written_ = true;
   const deep::Capture::SpillStatistics spill = deep_capture_->spill_statistics();

@@ -72,12 +72,32 @@ __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
     }
     if (stored_tau != result.tau)
       result.error = DEEP_ERROR_EXTINCTION;
+    if (captured.count > 0) {
+      // Append a real grid after other media's reserved records, exercising
+      // the final lane addresses at the expanded capacity, not only its prefix.
+      const int first = DEEP_MAX_VOLUME_EVENTS - captured.count;
+      const auto appended = deep_volume_grid_capture(
+          accessor, ray.origin, ray.direction, 0.0, 1.0, .02, ray.length, 1.0, 100.0,
+          events + i, density + i, count, DEEP_MAX_VOLUME_EVENTS, first, 16384);
+      double appended_tau = 0;
+      for (int j = first; j < int(DEEP_MAX_VOLUME_EVENTS); ++j)
+        for (int k = 0; k < 4; ++k)
+          appended_tau += double(density[j * count + i].optical_depth[k]) / 4;
+      if (appended.status != DEEP_COMPLETE || appended.count != DEEP_MAX_VOLUME_EVENTS ||
+          appended_tau != result.tau)
+        result.error = DEEP_ERROR_STATE;
+      const auto exhausted = deep_volume_grid_capture(
+          accessor, ray.origin, ray.direction, 0.0, 1.0, .02, ray.length, 1.0, 100.0,
+          events + i, density + i, count, DEEP_MAX_VOLUME_EVENTS, first + 1, 16384);
+      if (exhausted.status != DEEP_FAILED || exhausted.error != DEEP_ERROR_EVENT_CAPACITY)
+        result.error = DEEP_ERROR_STATE;
+    }
     if (captured.count > 1) {
       const auto overflow = deep_volume_grid_capture(
           accessor, ray.origin, ray.direction, 0.0, 1.0, .02, ray.length, 1.0, 100.0,
           events + i, density + i, count, 1, 0, 16384);
       if (overflow.status != DEEP_FAILED || overflow.count != 0 ||
-          overflow.error != DEEP_ERROR_CAPACITY)
+          overflow.error != DEEP_ERROR_EVENT_CAPACITY)
         result.error = DEEP_ERROR_STATE;
     }
   }

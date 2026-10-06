@@ -1,0 +1,280 @@
+# Deep output optimization plan
+
+Status: approved direction (2026-10-06). The user is not a renderer developer and
+has accepted these recommendations as the plan of record. Implement phases in
+order. Each phase is one or more focused commits with before/after measurements.
+
+## 1. Why
+
+Capture is correct and well validated. The problem is data volume: every camera
+sample stores every VDB cell it crosses (up to 8192 records x 52 bytes) at
+near-lossless precision (~1e-7 total transmittance error), and all reduction
+happens on the host after rendering.
+
+Measured on the full landscape (`builds/validation/landscape-cloud/original-resolution-CUDA/CUDA/deep-ledger-bounded-AgX/process.log`):
+
+| Stage | Measurement |
+| --- | --- |
+| Beauty only | ~400 s |
+| Deep capture | ~13,100 s render; the 70 `Deep CUDA capture` log lines sum to ~11,800 s of `capture_readback_seconds` (kernel wait + copy) |
+| GPU readback | ~13.6 GB per render pass, ~3,450 synchronous batches per pass |
+| Export | 165,570 s (46 h), 4 workers |
+| Spill | `spill_file_bytes=254,184,856,420`, `spill_read_bytes=4,601,353,434,020` (18x read amplification, ~28 MB/s) |
+
+Root causes, in code:
+
+1. **Spill layout vs. read order.** `Capture::store_record` (`src/deep/capture.cpp`)
+   appends events to one tmpfile in render order (sample-major). Export reads
+   pixel-major (`Capture::reconstruct_volume_pixel` -> `volume_sample`), so each
+   pixel's ~1024 samples are scattered across 254 GB, read through 16 x 64 KiB
+   pages, and every read holds the single `mutex_` (`volume_sample`), serializing
+   all export workers on I/O.
+2. **GPU batch loop** (`PathTraceWorkGPU::capture_deep_tiles`,
+   `src/integrator/path_trace_work_gpu.cpp`): enqueue -> copy -> `synchronize()`
+   per batch, no overlap; readback size is `max(lane count) x batch_size`
+   (plane layout) so one dense lane inflates the copy; overflowing lanes are
+   retraced at 64 -> 256 -> 1024 -> 4096 -> 8192 slots; only ~10% of launched
+   lanes are active (records ~1M vs skipped ~8.4M per pass).
+3. **Brute-force boundary pairing.** `deep_volume_object` (`src/kernel/deep/volume.h`)
+   tests every triangle of the volume object, in double, for every crossing:
+   O(crossings x triangles) per ray per sample. Not yet measured.
+4. **Near-lossless tolerance everywhere.** `volume_density_error = 1e-7`,
+   `volume_reconstruction_error = 5e-8`, `volume_coefficient_error = 4e-8`
+   (`src/deep/volume.h`). With 1024 samples the balanced tree gives each pair
+   merge ~2.5e-9. Interval count scales ~1/sqrt(tolerance) under the existing
+   curvature bound, so this drives interval counts, the 65,536-interval
+   overflow, spill size and export time.
+5. **Deep uses every beauty sample.** Deep rays are analytic (noise-free); only
+   subpixel position, DOF and motion vary. 1024 accepted samples is far more than
+   alpha needs.
+
+## 2. Rules for this work
+
+- Do not change beauty kernels or beauty sampling. Deep must remain a
+  side-channel. (See Phase 0 for the existing violation.)
+- Keep the numerical contract explicit: every approximation has a stated
+  absolute transmittance bound, and the bounds sum to the user-visible setting.
+- Strict mode must reproduce today's behaviour so existing qualification suites
+  keep passing unchanged (`--deep-error strict`).
+- Measure before and after every phase on the same fixed cases (Section 4).
+  Report numbers; do not claim speedups without them.
+- If a phase cannot meet its acceptance criteria, stop and report. Do not
+  redefine gates or thresholds to pass.
+- Documentation: replace, don't append. Keep `DEEP_IMPLEMENTATION_STATUS.md` to a
+  short current-state summary; put measurements in one table per phase in this
+  file's companion results section (Section 6), not as narrative.
+- Never call GPU-thread heap allocation, STL, or files from kernels (existing
+  `PEER_DEEP_OUTPUT_REQUIREMENTS.md` still applies).
+
+## 3. Phases
+
+### Phase 0 - Checkpoint and scope cleanup
+
+1. Commit the current uncommitted work on `codex/landscape-cloud-compatibility`
+   as a WIP checkpoint (49 files, ~2,000 lines) so nothing else is lost.
+2. Move the beauty-sampling change out of the deep branch:
+   - Files: `src/kernel/integrator/shade_volume.h`
+     (`volume_majorant_optical_depth` reading `pass_volume_majorant_snapshot`),
+     `src/kernel/film/volume_guiding_denoise.h` (snapshot write),
+     `PASS_VOLUME_MAJORANT_SNAPSHOT` in `src/kernel/types.h`, and its plumbing in
+     `src/scene/film.cpp`, `src/scene/pass.cpp`, `src/kernel/data_template.h`.
+   - Save it as its own branch/patch (e.g. `codex/volume-majorant-determinism`)
+     as a possible upstream Cycles determinism fix. Revert it on the deep branch.
+3. Change the beauty gate for deep runs: "deep must not change beauty" means
+   deep-on vs deep-off differences lie within the ordinary-repeat envelope
+   measured with the same executable (CPU: exact equality still required).
+   The one-pixel 448 vs 464 adaptive-sample difference was reproduced with deep
+   disabled; it is Cycles GPU nondeterminism, not a deep defect.
+
+Acceptance: build passes, nine CTests pass, small landscape (47x20/max16) deep
+and beauty checks pass with the new gate.
+
+### Phase 1 - Banded spill layout (no numerical change)
+
+Goal: export reads each spilled byte about once, sequentially, without a global
+lock.
+
+Design:
+- Split spill storage into row bands. Default `rows_per_band = ceil(height / 64)`
+  (one append file + one fixed-offset index per band). Each band owns its file
+  handles, page caches and mutex. Keep the existing `SpillRecord`/completion
+  semantics per band (EMPTY vs COMPLETE, duplicate detection, finalize checks).
+- `store_record` routes to the band of `y`. Capture writes stay append-only.
+- Export processes rows in order. When it enters a band, it reads that band's
+  event file sequentially once and builds an in-memory per-pixel index
+  (pixel -> list of (sample, offset)) or directly per-pixel record vectors.
+  Charge this to `--deep-memory-mb`.
+- If a band does not fit in the budget, re-bucket it sequentially into per-row
+  files (second level), then process row by row. Never fall back to random
+  per-sample reads.
+- Export workers read from memory; remove `mutex_` from the export read path.
+- Release/delete each band's files when its rows are written (frees disk early).
+- Windows: check the stdio open-file limit (`_setmaxstdio`) or use native
+  handles; 64 bands x 2 files is fine with the default 512.
+- Keep in-memory (non-spill) mode for reference tests.
+
+Tests:
+- Extend `capture_test.cpp`: random batch order across bands, adaptive
+  populations, misses, partial final blocks, duplicate detection across bands,
+  I/O failure preserving previous EXR (existing publication tests).
+- Assert `spill_read_bytes <= 1.25 x spill_file_bytes` for a multi-band case
+  (log both numbers, as today).
+
+Acceptance: byte-identical deep EXR vs. pre-change build on the small landscape
+and the CPU/CUDA compatibility matrices; read amplification <= 1.25x;
+report export time on the 587x250x4 landscape case before/after.
+
+### Phase 2 - Profile, then fix boundary pairing
+
+1. Profile the deep kernel on the 587x250x4 landscape case (Nsight Systems for
+   timeline, Nsight Compute for `deep_surface`). Report: kernel time vs. sync
+   wait vs. copy vs. host spill; time in `deep_volume_object` triangle loop vs.
+   grid traversal; triangle counts of each volume bound mesh
+   (`tools/inspect_blender_deep_scene.py` can be extended).
+2. If the triangle loop is significant, replace the per-crossing full scan with
+   a BVH-accelerated per-object query (Cycles `scene_intersect_local` style, or
+   the existing volume all-hit traversal filtered to the object) to get
+   candidates for `[cursor, clip_end]`, then refine candidates with the existing
+   double-precision `deep_volume_triangle` and keep the existing tie/ordering
+   rules. If the query is capacity-limited, shrink `tmax` and repeat; never drop
+   a crossing.
+
+Acceptance: CPU/CUDA boundary suites (`boundary-final-*`, 33 render cases +
+17 rejections) pass unchanged; deep EXR byte-identical; measured capture
+speedup reported.
+
+### Phase 3 - Error tolerance setting + per-ray compression on device
+
+This is the RenderMan `deepshadowerror` idea: a user tolerance on absolute
+transmittance error, enforced by single-pass Lokovic-Veach style compression.
+Keep the existing exponential-interval representation (it matches the
+OpenEXR deep volumetric convention); do not switch to piecewise-linear T.
+
+3a. Setting
+- Add `float error` to `DeepSettings` (`src/session/deep.h`). Default `1e-3`.
+  Range `[strict, 1e-2]`. `strict` = today's constants exactly.
+- Plumb through standalone (`--deep-error <float|strict>` in
+  `src/app/cycles_standalone.cpp`) and Blender (`deep_error` property via
+  `tools/prepare_blender_deep.py` patches; document in
+  `BLENDER_DEEP_INTEGRATION.md`).
+- Write the effective value to the EXR header (`cycles:deepError`) so validators
+  read it instead of assuming 1e-6.
+- Budget split (document in `src/deep/volume.h`): the FLOAT export/coefficient
+  allowance is a precision floor and stays fixed. Split the remainder
+  `E - export_floor` between device per-ray compression (50%) and host
+  mixture fitting + reduction (50%), replacing the hard-coded constants. Relax
+  the `tolerance > 1e-3` guards in `volume.cpp` to the new maximum.
+- Update Gaffer validators (`src/deep/validate_*_gaffer.py`) to compare against
+  the header tolerance.
+
+3b. Device per-ray compression
+- In the kernel, compress each object's ordered cell stream as it is produced
+  (`deep_volume_grid_capture` in `src/kernel/deep/volume_grid.h`, and the
+  homogeneous path in `volume.h`). Emit constant-extinction `DEEP_VOLUME` events
+  (front, back, optical_depth) instead of one `DEEP_VOLUME_CUBIC` + density
+  record per cell.
+- Algorithm (O(1) state per stream): keep an anchor `(z_a, tau_a)` and a feasible
+  slope cone. Each cell boundary vertex `(z_i, tau_i)` with allowed deviation
+  `delta_i = eps_ray / T(z_a) - chord_error_i` (use the existing
+  `deep_density_chord_error` for within-cell deviation; `T(z_a)` is the
+  already-absorbed prefix, so the bound is absolute transmittance error) narrows
+  the cone. Extend while the chord from the anchor to the newest vertex lies
+  inside the cone; otherwise emit the segment ending at the last feasible
+  vertex with its exact tau (preserves total optical depth at segment ends) and
+  re-anchor there. This is the same bound the host fitter already uses; reuse
+  its proof and document it.
+- Per-ray absolute T bound survives camera averaging (convex combination), so
+  the host fitting budget is unaffected.
+- Optional, same phase: once a single object's own `T_obj(z) <= eps_ray`, total
+  T is also <= eps_ray (extinction adds). Emit an opaque surface event at that
+  depth and stop. Error <= eps_ray. Only enabled when `error` is not strict.
+- Strict mode keeps today's cubic records and host path untouched.
+
+Acceptance:
+- Strict: everything byte-identical to Phase 2.
+- `1e-3` and `1e-4`: accepted-camera oracle and Gaffer depth cuts pass at the
+  header tolerance on the CPU/CUDA compatibility matrices and the small
+  landscape; independent tests in `vdb_grid_test.cpp`/`vdb_grid_cuda_test.cu`
+  compare compressed curves to the exact cubic integration within `eps_ray`.
+- Report on 587x250x4 landscape: readback bytes, spill bytes, deep samples in
+  EXR, EXR size, capture and export time, for strict / 1e-4 / 1e-3.
+
+### Phase 4 - GPU batch loop
+
+With per-ray output now small and bounded, rework `capture_deep_tiles`:
+- Remove the 64->8192 retry ladder for compressed mode (keep it for strict).
+- Replace plane layout with a flat output buffer: each lane writes to its own
+  bounded slot range, plus a per-batch counter or prefix sum so only written
+  bytes are copied back.
+- Double-buffer records/events and use async copies so the next batch's kernel
+  overlaps the previous batch's copy and host spill. Synchronize only before
+  consuming a buffer. Preserve cancellation/failure semantics.
+- Larger launches: process all active work of the tile set per launch where the
+  staging budget allows, rather than ~2,700-lane batches with ~10% active.
+
+Acceptance: deep EXR byte-identical to Phase 3 for the same settings; CUDA
+cancellation/error-injection suites pass; capture time and GPU peak memory
+reported (stay within the existing 8192 MiB device gate).
+
+### Phase 5 - Deep sample count setting
+
+- Add `int samples` to `DeepSettings`: `0` = all accepted beauty samples
+  (default, current behaviour). Positive N = capture deep only for the first N
+  accepted samples of each pixel (the sampler prefix is stratified).
+- Kernel/host: skip capture for `sample >= N`; per-pixel population becomes
+  `min(accepted, N)`. Size `Capture` by `min(samples, N)` (large memory saving).
+- Plumb `--deep-samples` and Blender `deep_samples`; write `cycles:deepSamples`
+  to the EXR header. Validators use the same subset for the accepted-camera
+  oracle.
+- Recommended for heavy volume scenes such as the landscape: `64`.
+
+Acceptance: `0` byte-identical to Phase 4; N=64 passes alpha oracle, depth
+cuts and beauty gate; report edge-alpha difference vs. N=all on the small
+landscape as information (not a gate).
+
+### Phase 6 - Landscape production run
+
+Run the full landscape (1175x500, max 1024 adaptive, GPU OIDN) with
+`--deep-error 1e-3 --deep-samples 64`, then the same with `1e-4`. Report
+capture time, export time, peak host/GPU memory, EXR size, alpha oracle,
+Gaffer cuts, beauty gate. Create the connected Gaffer review only after gates
+pass. Optionally run strict for comparison only if the earlier phases make it
+practical (< 12 h).
+
+### Later (not in this plan's acceptance)
+
+- General volume shader fallback: instead of graph pattern matching in
+  `src/session/deep.cpp` (Ray Depth / multiply / add / power), evaluate the real
+  volume shader with `PATH_RAY_EXTINCTION` along the ray at voxel-scale steps,
+  with a stated (not proven) error. Keep the analytic VDB path as the fast path.
+- Resumable capture (persist band files + manifest) only if long runs remain
+  after Phases 1-5.
+
+## 4. Fixed measurement cases
+
+Use the same cases before/after every phase:
+
+| Case | Purpose |
+| --- | --- |
+| Small landscape 47x20, max 16 adaptive, CUDA | correctness smoke, all gates |
+| Landscape 587x250, 4 samples, CUDA (`review-profile` settings) | performance |
+| CPU/CUDA compatibility matrices (14 CPU / 4 CUDA) | regression |
+| Boundary suites `boundary-final-CPU/CUDA` | regression |
+| Nine CTests | regression |
+
+Log for each: capture time, `capture_readback_seconds`, `readback_bytes`,
+spill file/read/write bytes, export time, EXR bytes, total deep samples, peak
+host working set, device-wide GPU peak.
+
+## 5. Expected outcome (to be verified, not promised)
+
+- Phase 1: export becomes sequential I/O + CPU fitting; read amplification
+  from 18x to ~1x.
+- Phase 3 at 1e-3: large reductions in readback, spill and EXR size (curve
+  pieces scale ~1/sqrt(tolerance); 1e-7 -> 1e-3 is ~100x looser in sqrt terms).
+- Phase 5 at 64 samples: ~16x less capture work and storage for 1024-sample
+  renders.
+
+## 6. Results
+
+Add one table per phase here (case, metric, before, after, commit).

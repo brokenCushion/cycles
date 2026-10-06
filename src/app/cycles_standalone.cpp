@@ -183,8 +183,8 @@ static void session_init()
   if (!options.deep_output_filepath.empty()) {
     if (options.deep_volume && options.deep_reduce)
       throw std::invalid_argument("Deep: surface reduction is unsupported for volumes");
-    if (options.deep_memory_mb <= 0 || options.deep_memory_mb > 1024)
-      throw std::invalid_argument("Deep working memory budget must be 1..1024 MiB");
+    if (options.deep_memory_mb <= 0)
+      throw std::invalid_argument("Deep working memory budget must be positive");
     DeepSettings &deep = options.session_params.deep;
     deep.enabled = true;
     deep.transparent = options.deep_transparent;

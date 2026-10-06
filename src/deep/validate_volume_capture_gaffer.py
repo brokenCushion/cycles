@@ -8,6 +8,7 @@ import math
 from pathlib import Path
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 
 import CyclesDeep
 import Gaffer
@@ -64,6 +65,32 @@ def scene(media, surface=False, near=.125, far=20, scattering=None):
 <connect from="m closure" to="output surface"/></shader>
 <state shader="wall"><mesh P="-10 -10 5 10 -10 5 10 10 5 -10 10 5" nverts="4" verts="0 1 2 3"/></state>'''
     return text + '</cycles>'
+
+
+def union_boundary(bounds):
+    """Weld boxes and remove shared faces to produce one concave boundary."""
+    vertices, indices, faces = [], {}, {}
+    for region in bounds:
+        mesh = ET.fromstring(box('fog0', region))[0]
+        values = list(map(float, mesh.attrib['P'].split()))
+        local = []
+        for i in range(0, len(values), 3):
+            point = tuple(values[i:i+3])
+            if point not in indices:
+                indices[point] = len(vertices)
+                vertices.append(point)
+            local.append(indices[point])
+        corners = list(map(int, mesh.attrib['verts'].split()))
+        for i in range(0, len(corners), 4):
+            face = tuple(local[j] for j in corners[i:i+4])
+            key = tuple(sorted(face))
+            if key in faces:
+                del faces[key]
+            else:
+                faces[key] = face
+    return ('<state shader="fog0"><mesh P="' + ' '.join(str(v) for p in vertices for v in p) +
+            '" nverts="' + ' '.join('4' for _ in faces) + '" verts="' +
+            ' '.join(str(v) for face in faces.values() for v in face) + '"/></state>')
 
 
 def render(name, xml, w, h, samples, deep=True, extra=(), failure=False):
@@ -127,8 +154,8 @@ def analytic(media, x, y, w, h, z, surface, near, far):
     return math.exp(-tau) * (1-float(surface) if 5 < z and near < 5 <= far else 1)
 
 
-def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=12, extra=(), scattering=None):
-    xml = scene(media, surface, near, far, scattering)
+def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=12, extra=(), scattering=None, xml_override=None):
+    xml = xml_override if xml_override is not None else scene(media, surface, near, far, scattering)
     paths = render(name, xml, w, h, samples, extra=extra)
     off = reader(render(name+'_off', xml, w, h, samples, False)[0])
     repeated_off = reader(render(name+'_off_repeat', xml, w, h, samples, False)[0]) if device == 'CUDA' and samples > 1 else None
@@ -204,6 +231,25 @@ def validate(name, media, surface=False, near=.125, far=20, samples=1, w=16, h=1
 
 
 slab = [((-10,-10,2,10,10,8),.3)]
+# Open boundaries follow the native stack: entry persists to far clip; an
+# upward-facing back face initializes the camera inside until its exit.
+open_base = scene(slab)
+open_entry = open_base.replace('nverts="4 4 4 4 4 4"', 'nverts="4"').replace(
+    'verts="0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5"', 'verts="0 3 2 1"')
+open_exit = open_base.replace('nverts="4 4 4 4 4 4"', 'nverts="4"').replace(
+    'verts="0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5"', 'verts="4 5 6 7"')
+validate('open_entry', [((-100,-100,2,100,100,20),.3)], xml_override=open_entry)
+validate('open_initial_inside', [((-100,-100,-2,100,100,8),.3)], xml_override=open_exit)
+validate('open_side', slab, xml_override=open_base.replace(
+    'nverts="4 4 4 4 4 4"', 'nverts="4 4 4 4 4"').replace(' 1 2 6 5"', '"'))
+sideways = open_exit.replace('<camera ', '<transform rotate="90 0 1 0"><camera ', 1).replace(
+    'farclip="20"/>', 'farclip="1"/></transform>', 1)
+validate('open_sideways_initial_inside', [((-100,-100,-2,100,100,20),.3)],
+         far=1, xml_override=sideways)
+concave = [((-2,-2,2,0,2,5),.3), ((0,-2,2,2,2,5),.3), ((-2,-2,5,0,2,8),.3)]
+concave_xml = scene([]).replace('</cycles>', material('fog0', .3) +
+    union_boundary([bounds for bounds, density in concave]) + '</cycles>')
+validate('concave_boundary', concave, xml_override=concave_xml)
 validate('homogeneous', slab)
 validate('scattering_isotropic', slab, scattering=0)
 validate('scattering_forward', slab, scattering=.8)
@@ -245,10 +291,8 @@ for name, xml, extra in (
     ('reject_negative', valid.replace('density="0.3"','density="-1"'), ()),
     ('reject_nan', valid.replace('density="0.3"','density="nan"'), ()),
     ('reject_dof', valid.replace('camera_type="perspective"','camera_type="perspective" aperturesize="0.1"'), ()),
-    ('reject_adaptive', valid.replace('use_adaptive_sampling="false"','use_adaptive_sampling="true"'), ()),
     ('reject_motion', valid.replace('seed="123"','seed="123" motion_blur="true"'), ()),
     ('reject_heterogeneous', valid.replace('<absorption_volume name="v"', '<checker_texture name="c"/><absorption_volume name="v"').replace('<connect from="v volume"', '<connect from="c fac" to="v density"/><connect from="v volume"'), ()),
-    ('reject_open', valid.replace('nverts="4 4 4 4 4 4"','nverts="4 4 4 4 4"').replace(' 1 2 6 5"','"'), ()),
     ('reject_osl', valid, ('--shadingsys','osl')),
     ('reject_reduction', valid, ('--deep-reduce',)),
     ('reject_memory', valid, ('--deep-memory-mb','1')),

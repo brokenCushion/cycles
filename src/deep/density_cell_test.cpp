@@ -232,33 +232,42 @@ int main()
       using namespace ccl::deep;
       /* Thin interior density, overlapping medium and an adjacent cell. The
        * oracle integrates the independently expanded Bernstein polynomial. */
-      const std::vector<CubicDensityInterval> cells = {
+      std::vector<CubicDensityInterval> cells = {
           {1, 3, {0, .8, .2, 0}}, {2, 4, {.1, .2, .7, .3}},
           {3, 5, {.2, .2, .2, .2}}};
-      const auto fitted = integrate_cubic_density(cells, 1e-7);
-      for (int probe = 0; probe <= 2000; ++probe) {
-        const double z = 1 + 4 * probe / 2000.0;
-        double exact = 0, approximate = 0;
-        for (const auto &s : cells) {
-          const double u = std::clamp((z - s.front) / (s.back - s.front), 0.0, 1.0);
-          const auto &b = s.optical_depth;
-          exact += b[0] * u + 1.5 * (b[1] - b[0]) * u * u +
-                   (b[0] - 2 * b[1] + b[2]) * u * u * u +
-                   (-b[0] + 3 * b[1] - 3 * b[2] + b[3]) * u * u * u * u / 4;
+      for (int dense = 0; dense < 2; ++dense) {
+        // Dense, overlapping cells exercise attenuation-aware fitting. Shuffle
+        // by reversal so correctness cannot depend on input front-to-back order.
+        if (dense) {
+          for (int i = 0; i < 12; ++i)
+            cells.push_back({1.5 + i * .15, 2.5 + i * .15, {20, 40, 5, 30}});
+          std::reverse(cells.begin(), cells.end());
         }
-        for (const auto &s : fitted)
-          approximate += s.optical_depth *
-                         std::clamp((z - s.front) / (s.back - s.front), 0.0, 1.0);
-        check(std::abs(std::exp(-exact) - std::exp(-approximate)) <= 1e-7 + 1e-13,
-              "Cubic interval fit exceeded transmittance budget");
-        if (probe == 2000)
-          check(std::abs(exact - approximate) < 1e-12, "Cubic fit changed total tau");
+        const auto fitted = integrate_cubic_density(cells, 1e-7);
+        for (int probe = 0; probe <= 2000; ++probe) {
+          const double z = 1 + 4 * probe / 2000.0;
+          double exact = 0, approximate = 0;
+          for (const auto &s : cells) {
+            const double u = std::clamp((z - s.front) / (s.back - s.front), 0.0, 1.0);
+            const auto &b = s.optical_depth;
+            exact += b[0] * u + 1.5 * (b[1] - b[0]) * u * u +
+                     (b[0] - 2 * b[1] + b[2]) * u * u * u +
+                     (-b[0] + 3 * b[1] - 3 * b[2] + b[3]) * u * u * u * u / 4;
+          }
+          for (const auto &s : fitted)
+            approximate += s.optical_depth *
+                           std::clamp((z - s.front) / (s.back - s.front), 0.0, 1.0);
+          check(std::abs(std::exp(-exact) - std::exp(-approximate)) <= 1e-7 + 1e-13,
+                "Cubic interval fit exceeded transmittance budget");
+          if (probe == 2000)
+            check(std::abs(exact - approximate) < 1e-12, "Cubic fit changed total tau");
       }
       bool rejected = false;
       try { integrate_cubic_density(cells, 1e-7, 1); }
       catch (const std::invalid_argument &) { rejected = true; }
       check(rejected, "Cubic capacity failure was not reported");
-      rejected = false;
+      }
+      bool rejected = false;
       try { integrate_cubic_density({{1, 2, {0, -1, 0, 0}}}); }
       catch (const std::invalid_argument &) { rejected = true; }
       check(rejected, "Negative cubic density was accepted");

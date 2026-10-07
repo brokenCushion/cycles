@@ -101,7 +101,8 @@ with_ids = bool(settings.get('deep_ids'))
 check(('id' in reader['out']['channelNames'].getValue()) == with_ids,
       'Missing or unexpected deep ID channel')
 metadata = reader['out']['metadata'].getValue()
-z_tolerance = float(metadata.get('cycles:deepZTolerance', 0))
+z_attribute = metadata.get('cycles:deepZTolerance')
+z_tolerance = float(z_attribute.value) if z_attribute is not None else 0.
 check(math.isfinite(z_tolerance) and z_tolerance >= 0, 'Invalid EXR depth tolerance')
 check(math.isclose(z_tolerance, settings.get('deep_z_tolerance', 0), rel_tol=1e-7),
       'EXR depth tolerance differs from requested setting')

@@ -95,7 +95,11 @@ def compare(arguments):
 
 
 def run(before, after, workers):
-    spec,_ = read(after,(0,1))
+    import OpenImageIO as oiio
+    source=oiio.ImageInput.open(str(after))
+    if source is None: raise ValueError(oiio.geterror())
+    spec=source.spec()
+    source.close()
     if workers <= 0: raise ValueError('Workers must be positive')
     step=max(1, math.ceil(spec.height/(workers*4)))
     tasks=[(before,after,(first,min(spec.height,first+step))) for first in range(0,spec.height,step)]
@@ -105,6 +109,8 @@ def run(before, after, workers):
     for field in ('pixels','before_samples','after_samples','before_surfaces','after_surfaces',
                   'merged_groups','removed_samples'):
         result[field]=sum(p[field] for p in parts)
+    if result['pixels'] != spec.width*spec.height:
+        raise ValueError('Exterior comparison did not cover the whole image')
     worst=max(parts,key=lambda p:p['max_exterior_error'])
     result['max_exterior_error']=worst['max_exterior_error'];result['worst_pixel']=worst['worst_pixel']
     result['max_flatten_error']=max(p['max_flatten_error'] for p in parts)

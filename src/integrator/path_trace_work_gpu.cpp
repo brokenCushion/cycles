@@ -1031,7 +1031,8 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
       2 * media_count * sizeof(KernelDeepMedium);
   const int batch_size = int(min(size_t(32768), deep_grid_staging_bytes / (2 * lane_bytes)));
   /* Leave 64 KiB for pinned-page rounding of the eight host allocations. */
-  const size_t event_slots = (deep_grid_staging_bytes - 64 * 1024 - size_t(batch_size) * lane_bytes) /
+  const size_t event_slots = (deep_grid_staging_bytes - 64 * 1024 -
+      size_t(capacity) * sizeof(KernelDeepDensity) - size_t(batch_size) * lane_bytes) /
       (4 * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)));
   if (event_slots < size_t(capacity)) {
     capture->fail(DEEP_ERROR_CAPACITY);
@@ -1088,6 +1089,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
     capture->fail(error);
     device_->set_error(capture->error_message());
   };
+  vector<KernelDeepDensity> sample_density(capacity);
   auto consume = [&](DeepBatch &buffer) {
     if (!buffer.pending)
       return true;
@@ -1113,13 +1115,28 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
       deep_lane_event_writes_ += record.payload_counts & 0xffffu;
       deep_lane_density_writes_ += record.payload_counts >> 16;
       if (record.result.status != DEEP_COMPLETE || record.result.error != DEEP_ERROR_NONE ||
-          record.result.count != range.count) {
+          record.result.count != range.count ||
+          (record.payload_counts >> 16) != range.density_count) {
         fail(record.result.error == DEEP_ERROR_NONE ? DEEP_ERROR_EVENT_CAPACITY : record.result.error);
         return false;
       }
+      const KernelDeepEvent *events = buffer.events.data() + range.offset;
+      unsigned companion = 0;
+      for (unsigned event = 0; event < range.count; ++event) {
+        if (deep_event_type(events[event]) != DEEP_SURFACE) {
+          if (companion == range.density_count) {
+            fail(DEEP_ERROR_EVENT_CAPACITY);
+            return false;
+          }
+          sample_density[event] = buffer.density[range.density_offset + companion++];
+        }
+      }
+      if (companion != range.density_count) {
+        fail(DEEP_ERROR_EVENT_CAPACITY);
+        return false;
+      }
       capture->record_sample(record.x, record.y, record.sample, record.result,
-                            buffer.events.data() + range.offset,
-                            buffer.density.data() + range.offset);
+                            events, sample_density.data());
       ++deep_record_count_;
     }
     deep_spill_seconds_ += time_dt() - spill_start;
@@ -1175,7 +1192,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
       if (!consume(buffer))
         return;
       buffer.count = 0;
-      buffer.slots = 0;
+      buffer.slots = buffer.density_slots = 0;
       const double spill_start = time_dt();
       while (cursor < count && buffer.count < batch_size) {
         const auto &record = deep_records_[cursor];
@@ -1197,9 +1214,15 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
           ++deep_record_count_;
         }
         else {
+          const unsigned companions = record.payload_counts >> 16;
+          if (companions > record.result.count || companions > event_slots - buffer.density_slots) {
+            fail(DEEP_ERROR_EVENT_CAPACITY);
+            return;
+          }
           buffer.ranges[buffer.count++] = {unsigned(buffer.slots), record.result.count,
-                                         unsigned(first + cursor)};
+              unsigned(first + cursor), unsigned(buffer.density_slots), companions};
           buffer.slots += record.result.count;
+          buffer.density_slots += companions;
         }
         ++cursor;
       }
@@ -1233,9 +1256,9 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
       buffer.queue->copy_from_device_prefix(buffer.events,
           buffer.slots * sizeof(KernelDeepEvent));
       buffer.queue->copy_from_device_prefix(buffer.density,
-          buffer.slots * sizeof(KernelDeepDensity));
+          buffer.density_slots * sizeof(KernelDeepDensity));
       deep_readback_bytes_ += size_t(buffer.count) * sizeof(KernelDeepRecord) +
-          buffer.slots * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity));
+          buffer.slots * sizeof(KernelDeepEvent) + buffer.density_slots * sizeof(KernelDeepDensity);
       ++deep_batch_count_;
       next_buffer ^= 1;
     }

@@ -49,6 +49,21 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
     if (!bounded.failed || events[1].front != sentinel.front ||
         deep_event_type(events[1]) != DEEP_SURFACE)
       return 15; // Assigned range overflow cannot overwrite the next lane.
+    bounded = {};
+    bounded.limit = 2;
+    bounded.compact_density = true;
+    bounded.density_limit = 1;
+    deep_write_event(events, density, 0, sentinel, nullptr, &bounded);
+    deep_write_event(events, density, 1,
+        {deep_event_pack(DEEP_VOLUME_CUBIC, 9),1,2,0,0}, &cell, &bounded);
+    if (bounded.failed || bounded.events != 2 || bounded.companions != 1 ||
+        density[0].front != cell.front || density[0].back != cell.back ||
+        bounded.written_bytes != 2*sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity))
+      return 17;
+    deep_write_event(events, density, 1,
+        {deep_event_pack(DEEP_VOLUME_CUBIC, 9),3,4,0,0}, &cell, &bounded);
+    if (!bounded.failed || bounded.companions != 1)
+      return 18;
     const KernelDeepEvent packed{deep_event_pack(DEEP_VOLUME_CUBIC, int(DEEP_OBJECT_MASK)),0,0,0,0};
     if (deep_event_type(packed) != DEEP_VOLUME_CUBIC || deep_event_object(packed) != DEEP_OBJECT_MASK ||
         deep_event_pack(DEEP_SURFACE, int(DEEP_OBJECT_MASK) + 1) != DEEP_EVENT_KIND_MASK)

@@ -158,9 +158,11 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
   KernelDeepWriteState write;
   write.count_only = !events;
   write.limit = ranges ? ranges[index].count : unsigned(max(1, max_events) * event_stride);
+  write.compact_density = ranges != nullptr;
+  write.density_limit = ranges ? ranges[index].density_count : ~0u;
   const unsigned event_offset = ranges ? ranges[index].offset : unsigned(index);
   ccl_global KernelDeepEvent *lane_events = events ? events + event_offset : nullptr;
-  ccl_global KernelDeepDensity *lane_density = density ? density + event_offset : nullptr;
+  ccl_global KernelDeepDensity *lane_density = density ? density + (ranges ? ranges[index].density_offset : event_offset) : nullptr;
   /* Event planes: neighboring lanes write neighboring events at each crossing.
    * The host allocates only the configured number of planes. */
   if (media) {

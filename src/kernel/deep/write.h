@@ -10,15 +10,21 @@ ccl_device_inline void deep_write_event(
     const ccl_private KernelDeepDensity *companion,
     ccl_private KernelDeepWriteState *write)
 {
-  if (!events)
+  if (!events) {
+    if (write && write->count_only) {
+      ++write->events;
+      write->companions += companion ? 1 : 0;
+    }
     return;
-  if (write && unsigned(index) >= write->limit) {
+  }
+  if (write && (unsigned(index) >= write->limit ||
+                (companion && write->compact_density && write->companions >= write->density_limit))) {
     write->failed = true;
     return;
   }
   events[index] = event;
   if (companion)
-    density[index] = *companion;
+    density[write && write->compact_density ? write->companions : unsigned(index)] = *companion;
   if (write) {
     ++write->events;
     write->companions += companion ? 1 : 0;

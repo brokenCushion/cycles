@@ -211,7 +211,8 @@ int main(int argc, char **argv)
             nullptr, spans.data(), 1, 8192, 0, 16384, eps,
             DEEP_MAX_MEDIA, nullptr, ray + 7, &count_only);
         if (counted.status != reduced.status || counted.count != reduced.count ||
-            counted.error != reduced.error || count_only.written_bytes)
+            counted.error != reduced.error || count_only.written_bytes ||
+            count_only.events != reduced.count)
           throw std::runtime_error("Count pass differs from compressed asset capture");
         if (reduced.status != DEEP_COMPLETE || reduced.count > captured.count)
           throw std::runtime_error("Compressed asset capture failed: " +

@@ -93,7 +93,8 @@ __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
           nullptr, density + extra + i, count, DEEP_MAX_VOLUME_EVENTS, 0, 16384, eps,
           DEEP_MAX_MEDIA, nullptr, i + 7, &count_only);
       if (counted.status != reduced.status || counted.count != reduced.count ||
-          counted.error != reduced.error || count_only.written_bytes)
+          counted.error != reduced.error || count_only.written_bytes ||
+            count_only.events != reduced.count)
         result.error = DEEP_ERROR_STATE;
       if (reduced.status != DEEP_COMPLETE || reduced.count > captured.count) {
         result.error = reduced.error;

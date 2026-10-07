@@ -191,7 +191,7 @@ class PathTraceWorkGPU : public PathTraceWork {
     device_memory *host_buffers[4];
     int pinned = 0;
     int count = 0;
-    size_t slots = 0;
+    size_t slots = 0, density_slots = 0;
     bool pending = false;
   };
   unique_ptr<DeepBatch> deep_batches_[2];

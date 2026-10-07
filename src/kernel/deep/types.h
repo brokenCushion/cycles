@@ -98,7 +98,7 @@ struct KernelDeepResult {
 struct KernelDeepRecord {
   unsigned int x, y, sample, population;
   KernelDeepResult result;
-  unsigned int payload_counts; // low/high 16 bits: event/companion stores
+  unsigned int payload_counts; // low/high 16 bits: event/companion stores (predicted in count pass)
 };
 
 static_assert(sizeof(unsigned int) == 4 && sizeof(float) == 4, "Deep record scalar layout");
@@ -118,11 +118,12 @@ struct DeepVolumeCompression {
 };
 
 /* Host assigns flat ranges after the count pass; no device allocation. */
-struct KernelDeepRange { unsigned int offset, count, work; };
-static_assert(sizeof(KernelDeepRange) == 12, "Deep flat range layout");
+struct KernelDeepRange { unsigned int offset, count, work, density_offset, density_count; };
+static_assert(sizeof(KernelDeepRange) == 20, "Deep flat range layout");
 struct KernelDeepWriteState {
   unsigned int written_bytes = 0;
   unsigned int events = 0, companions = 0;
   unsigned int limit = ~0u;
-  bool count_only = false, failed = false;
+  unsigned int density_limit = ~0u;
+  bool count_only = false, compact_density = false, failed = false;
 };

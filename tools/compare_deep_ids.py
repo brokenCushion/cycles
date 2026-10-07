@@ -94,7 +94,14 @@ def read(path, rows=None):
     return spec, data
 
 
-def compare(without_ids, with_ids, verify_hashes=True, rows=None):
+def flattened_transmittance(curve):
+    if any(not (math.isfinite(z) and math.isfinite(back) and math.isfinite(a) and
+                0 < z <= back and 0 < a <= 1) for z, back, a in curve):
+        raise ValueError('Invalid deep interval')
+    return math.prod(1-a for _, _, a in curve)
+
+
+def compare(without_ids, with_ids, verify_hashes=True, rows=None, flatten_only=False):
     import OpenImageIO as oiio
     before, a = read(without_ids,rows)
     after, b = read(with_ids,rows)
@@ -119,7 +126,8 @@ def compare(without_ids, with_ids, verify_hashes=True, rows=None):
         curves = []
         for data, names in zip((a,b),channels):
             curves.append([tuple(data.deep_value(p,c,s) for c in names) for s in range(data.samples(p))])
-        error = curve_error(*curves)
+        error = (abs(flattened_transmittance(curves[0])-flattened_transmittance(curves[1]))
+                 if flatten_only else curve_error(*curves))
         if error > maximum: maximum, worst = error, [before.x+p % before.width, before.y+p // before.width]
         end = 0
         overlapping = False
@@ -137,7 +145,8 @@ def compare(without_ids, with_ids, verify_hashes=True, rows=None):
                 tolerance=tolerance, worst_pixel=worst, pixels=before.width*before.height,
                 overlapping_pixels=overlap_pixels, deep_samples=samples,
                 manifest_objects=len(manifest), observed_ids=counts,
-                oracle='Native UINT IDs; union boundaries and exact exponential stationary points')
+                oracle=('Native UINT IDs; full-flatten alpha only' if flatten_only else
+                        'Native UINT IDs; union boundaries and exact exponential stationary points'))
 
 
 def compare_rows(arguments):
@@ -146,7 +155,7 @@ def compare_rows(arguments):
     return compare(*arguments)
 
 
-def parallel_compare(without_ids, with_ids, workers):
+def parallel_compare(without_ids, with_ids, workers, flatten_only=False):
     import concurrent.futures
     import OpenImageIO as oiio
     source = oiio.ImageInput.open(str(without_ids))
@@ -154,10 +163,10 @@ def parallel_compare(without_ids, with_ids, workers):
     spec = source.spec(); source.close()
     workers = min(workers,spec.height)
     if workers <= 0: raise ValueError('Worker count must be positive')
-    if workers == 1: return compare(without_ids,with_ids)
+    if workers == 1: return compare(without_ids,with_ids,flatten_only=flatten_only)
     ranges = [(spec.height*i//workers,spec.height*(i+1)//workers) for i in range(workers)]
     with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as pool:
-        reports = list(pool.map(compare_rows,[(without_ids,with_ids,True,r) for r in ranges]))
+        reports = list(pool.map(compare_rows,[(without_ids,with_ids,True,r,flatten_only) for r in ranges]))
     worst = max(reports,key=lambda r:r['max_combined_transmittance_error'])
     output = dict(worst)
     for key in ('pixels','overlapping_pixels','deep_samples'):
@@ -221,6 +230,8 @@ def self_test():
                        [(1,2,1-math.exp(-.5)),(2,3,1-math.exp(-1.5)),(3,4,1-math.exp(-1))]) < 1e-15
     assert curve_error([(2,2,.5),(2,2,1)],[(2,2,1)]) == 0
     assert curve_error([],[(2,2,.25)]) == .25
+    assert flattened_transmittance([(2,3,1)]) == 0
+    assert abs(flattened_transmittance([(2,2,.2),(3,3,.3)])-.56) < 1e-15
 
 
 if __name__ == '__main__':
@@ -229,10 +240,12 @@ if __name__ == '__main__':
     parser.add_argument('with_ids',type=Path)
     parser.add_argument('report',type=Path)
     parser.add_argument('--workers',type=int,default=1)
+    parser.add_argument('--flatten-only', action='store_true',
+                        help='Compare combined full-flatten alpha; depth-merged interiors are outside this check')
     parser.add_argument('--isolate', nargs=2, metavar=('OBJECT_NAME','OUTPUT_EXR'))
     args = parser.parse_args()
     self_test()
-    result = parallel_compare(args.without_ids,args.with_ids,args.workers)
+    result = parallel_compare(args.without_ids,args.with_ids,args.workers,args.flatten_only)
     args.report.write_text(json.dumps(result,indent=2)+'\n')
     if result['passed'] and args.isolate:
         isolate(args.with_ids,args.isolate[0],Path(args.isolate[1]))

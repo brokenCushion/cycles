@@ -22,7 +22,6 @@ DeviceQueue::DeviceQueue(Device *device) : device(device)
   DCHECK_NE(device, nullptr);
   is_per_kernel_performance_ = getenv("CYCLES_DEBUG_PER_KERNEL_PERFORMANCE");
 }
-
 #ifdef WITH_CYCLES_DEEP_OPAQUE
 void DeviceQueue::copy_from_device_prefix(device_memory &mem, const size_t bytes)
 {

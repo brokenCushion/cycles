@@ -231,7 +231,6 @@ void CUDADeviceQueue::copy_from_device(device_memory &mem)
           mem.host_pointer, (CUdeviceptr)mem.device_pointer, mem.memory_size(), cuda_stream_),
       "copy_from_device");
 }
-
 #ifdef WITH_CYCLES_DEEP_OPAQUE
 void CUDADeviceQueue::copy_from_device_prefix(device_memory &mem, const size_t bytes)
 {

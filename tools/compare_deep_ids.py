@@ -207,6 +207,14 @@ def isolate(source_path, object_name, output_path):
                 else: selected.set_deep_value(p,c,target,data.deep_value(p,c,source))
     spec.attribute('cycles:deepIDSelection',object_name)
     spec.attribute('cycles:deepIDManifest',json.dumps({f'{identifier:08x}':object_name}))
+    marked = spec.getattribute('cycles:deepIDHoldoutManifest')
+    if marked:
+        key = f'{identifier:08x}'
+        subset = json.loads(marked)
+        if key in subset:
+            spec.attribute('cycles:deepIDHoldoutManifest', json.dumps({key: subset[key]}))
+        else:
+            spec.erase_attribute('cycles:deepIDHoldoutManifest')
     output_path = Path(output_path)
     with tempfile.NamedTemporaryFile(dir=output_path.parent,suffix='.exr',delete=False) as staging:
         temporary = Path(staging.name)

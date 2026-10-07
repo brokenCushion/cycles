@@ -1554,3 +1554,46 @@ realistic pairs and fresh identity/full regression replay all PASS.
 Phase 6 accepted by the user; proceed to 6a and stop for its review.
 Evidence: `builds/validation/landscape-cloud/optimization-phase6/review/snapshot-all-raw-pixel99-7.json`
 and `root-cause-raw-policy-existing.json`.
+
+
+#### Phase 6a - implemented; stopped at CUDA beauty gate
+
+Before: the eight user-accepted Phase 6 pairs are recorded unchanged in
+`builds/validation/landscape-cloud/optimization-phase6a/before.json`.
+Numeric default 1e-4 merges same-object/facing hard surfaces after publication;
+strict forces 0. Surface facing uses the existing 20-byte event payload;
+rounding spends only remaining publication allowance. No beauty source changes.
+
+Same-capture publications, z=0 first then 1e-4 (second export has warm I/O):
+
+| Case | Deep/surface samples, 0 -> 1e-4 | EXR bytes, 0 -> 1e-4 | Export wall s, 0 -> 1e-4 | Renderer commit |
+| --- | --- | --- | --- | --- |
+| Sloped16 / 1024, CPU, IDs off | 262,143 -> 108,317 | 1,394,905 -> 814,641 | 0.414 -> 0.397 | `5accee7d8` |
+| Sloped16 / 1024, CPU, IDs on | 262,143 -> 108,317 | 1,406,093 -> 822,286 | 0.498 -> 0.476 | `5accee7d8` |
+| Sloped16 / 1024, CUDA, IDs off | 262,141 -> 108,325 | 1,314,957 -> 814,724 | 0.390 -> 0.378 | `5accee7d8` |
+
+CPU IDs-off/on beauty and all-depth exterior checks pass. Samples fall 58.7%;
+IDs-on EXR bytes fall 41.5%. Flattened alpha difference is exactly zero;
+maximum exterior error is 2.11e-9, below unchanged 1e-3 header bound.
+CPU aggregate mixture fitting is 0.662 -> 0.674 s (IDs off),
+1.066 -> 1.073 s (IDs on); density fitting is zero. Full stage timings are in
+`builds/validation/landscape-cloud/optimization-phase6a/phase-results.json`.
+
+Nine CTests pass; unchanged beauty sources and all 75 common CUDA kernel
+resource records match. CUDA deep exterior/flatten checks pass, but the final
+raw beauty policy fails five pixels on this new non-volume sloped fixture:
+(0,0) albedo R/G ratios 20.663/18.590 exceed calibrated 11.126/10.667;
+normal X at (3,8), (3,5), (5,0), (11,0) differs by 5.96046e-8 with zero
+four-seed sigma, requiring exact equality. Five ordinary controls calibrate
+fallback counts 171/182/191 (min/median/max), versus deep-on 166; all paired
+image-wide bias channels pass. No compatible snapshot diagnostics exist for
+this fixture. These flags are unresolved, not proven deep defects.
+
+Stopped as required; no thresholds changed and no further renders launched.
+Eight landscape pairs and fresh 81/81 + 30/30/full regression replay remain
+pending. Large evidence: `D:/CyclesDeepScratch/optimization-phase6a/evidence-final/`;
+small summary above records every flagged pixel/channel and fitting counters.
+No Phase 6b or full-resolution production run.
+
+Connected Gaffer comparison (262,143 unmerged / 108,317 merged deep points):
+`D:/CyclesDeepScratch/optimization-phase6a/evidence-final/sloped/CPU/ids-1e-3-cap0-z1e-4/surface_merge_review.gfr`.

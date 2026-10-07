@@ -282,6 +282,8 @@ With per-ray output now small and bounded, rework `capture_deep_tiles`:
 - Double-buffer records/events and use async copies so the next batch's kernel
   overlaps the previous batch's copy and host spill. Synchronize only before
   consuming a buffer. Preserve cancellation/failure semantics.
+- Pack kind into the low two event bits and object index into the upper thirty.
+  Assert the 20-byte ABI and reject scene object counts above the 30-bit range.
 - Larger launches: process all active work of the tile set per launch where the
   staging budget allows, rather than ~2,700-lane batches with ~10% active.
 
@@ -825,7 +827,7 @@ Evidence: `builds/validation/landscape-cloud/optimization-phase3b-rework/after/p
 The larger 1e-4 EXR grows about 5% and host fitting increases; capture,
 readback and spill improve in both numeric modes.
 
-### Phase 3c - checks pass; review stop
+### Phase 3c - accepted
 
 Implementation: `00c2fd7fd`; cross-object rejection test: `cb0208aef`.
 Native object indices survive CPU/CUDA capture, strided readback, direct spill,
@@ -903,5 +905,85 @@ fresh measurements: `before/`; source comparison and kernel resources in its par
 | 587x250 / max4 / 1e-3 | Deep samples / EXR bytes | 3,076,802 / 22,398,061 | 3,076,802 / 22,398,061 | `00c2fd7fd` |
 | 587x250 / max4 / 1e-3 | Peak host bytes / device-wide MiB | 5,617,336,320 / 6243 | 5,767,208,960 / 6224 | `00c2fd7fd` |
 
-Phase 4 has not started. Its measurements must distinguish lane-written bytes
-from copied bytes; object tagging adds storage and makes that distinction necessary.
+### Phase 4 - checks pass; review stop
+
+Implementation: `6ad4e831f`; pinned buffers/drain: `7c4c67d5b`; compact density: `405df643b`.
+Numeric capture counts once, assigns bounded flat event/companion ranges, and uses
+two pinned buffers/queues. Copies contain emitted payload and required metadata.
+Strict retains the plane retry path. Event kind occupies the low two bits;
+object index occupies the upper thirty bits; event/spill ABI is 20 bytes.
+No new approximation or beauty change. Strict **81/81**, numeric **30/30** identical.
+Nine CTests, all-mode CPU/CUDA matrices, both boundary suites and CUDA lifecycle/
+queued-DMA error cleanup pass. Both fixed-case raw/denoised beauty gates pass.
+
+Before times/copied bytes: six fresh accepted-3c renders. Lane bytes are logical
+event/companion stores, including discarded retries; exclude scratch/metadata.
+Before lane bytes apply the original 24/32-byte ABI to counters from an instrumented
+unchanged plane-schedule replay (`legacy-counter-check/`), byte-checked on all six cases.
+After uses 20/32-byte stores. Copies include metadata; worker times are not wall time.
+Evidence: `builds/validation/landscape-cloud/optimization-phase4/after/phase-results.json`.
+
+| Case | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| 47x20 / max16 / strict | Capture / wait+readback (s) | 3.617905 / 2.222515 | 2.854133 / 1.747888 | `405df643b` |
+| 47x20 / max16 / strict | Lane payload bytes actually written | 28,566,240 | 26,307,056 | `405df643b` |
+| 47x20 / max16 / strict | GPU bytes copied | 387,364,096 | 360,742,784 | `405df643b` |
+| 47x20 / max16 / strict | Spill stored / read / written (B) | 14,443,168 / 14,443,168 / 14,804,128 | 13,367,184 / 13,367,184 / 13,728,144 | `405df643b` |
+| 47x20 / max16 / strict | Export (s) | 8.17157 | 8.51457 | `405df643b` |
+| 47x20 / max16 / strict | Density / mixture fit (worker s) | 2.59887 / 22.6421 | 2.50605 / 21.6402 | `405df643b` |
+| 47x20 / max16 / strict | Read / staging / ledger / quantize / serialize (worker s) | 0.0082026 / 0.0051755 / 0.718835 / 2.52159 / 0.0792859 | 0.0062315 / 0.0038644 / 0.642922 / 2.38462 / 0.0782297 | `405df643b` |
+| 47x20 / max16 / strict | Deep samples / EXR bytes | 561,793 / 4,445,714 | 561,793 / 4,445,714 | `405df643b` |
+| 47x20 / max16 / strict | Peak host bytes / device-wide MiB | 5,596,643,328 / 6282 | 5,579,268,096 / 6251 | `405df643b` |
+| 47x20 / max16 / strict | Max accepted-camera oracle error | unchanged payload | 2.2013138e-07 | `405df643b` |
+| 47x20 / max16 / 1e-4 | Capture / wait+readback (s) | 2.907643 / 1.485142 | 1.792865 / 0.6998938 | `405df643b` |
+| 47x20 / max16 / 1e-4 | Lane payload bytes actually written | 16,628,312 | 8,441,436 | `405df643b` |
+| 47x20 / max16 / 1e-4 | GPU bytes copied | 223,319,040 | 9,403,996 | `405df643b` |
+| 47x20 / max16 / 1e-4 | Spill stored / read / written (B) | 9,894,856 / 9,894,856 / 10,255,816 | 9,163,356 / 9,163,356 / 9,524,316 | `405df643b` |
+| 47x20 / max16 / 1e-4 | Export (s) | 3.81418 | 3.76972 | `405df643b` |
+| 47x20 / max16 / 1e-4 | Density / mixture fit (worker s) | 0.272271 / 0.974862 | 0.258975 / 0.939619 | `405df643b` |
+| 47x20 / max16 / 1e-4 | Read / staging / ledger / quantize / serialize (worker s) | 0.0054193 / 0.0034273 / 0.0503082 / 0.122717 / 0.0150086 | 0.0040802 / 0.0030258 / 0.0387229 / 0.119212 / 0.0133339 | `405df643b` |
+| 47x20 / max16 / 1e-4 | Deep samples / EXR bytes | 88,699 / 609,496 | 88,699 / 609,496 | `405df643b` |
+| 47x20 / max16 / 1e-4 | Peak host bytes / device-wide MiB | 5,715,320,832 / 6292 | 5,608,656,896 / 6261 | `405df643b` |
+| 47x20 / max16 / 1e-4 | Max accepted-camera oracle error | unchanged payload | 2.3968224e-05 | `405df643b` |
+| 47x20 / max16 / 1e-3 | Capture / wait+readback (s) | 2.827886 / 1.424176 | 1.758648 / 0.6794962 | `405df643b` |
+| 47x20 / max16 / 1e-3 | Lane payload bytes actually written | 15,232,456 | 7,461,928 | `405df643b` |
+| 47x20 / max16 / 1e-3 | GPU bytes copied | 205,986,816 | 8,424,488 | `405df643b` |
+| 47x20 / max16 / 1e-3 | Spill stored / read / written (B) | 8,839,824 / 8,839,824 / 9,200,784 | 8,183,848 / 8,183,848 / 8,544,808 | `405df643b` |
+| 47x20 / max16 / 1e-3 | Export (s) | 3.67868 | 3.56989 | `405df643b` |
+| 47x20 / max16 / 1e-3 | Density / mixture fit (worker s) | 0.186181 / 0.369666 | 0.180998 / 0.373479 | `405df643b` |
+| 47x20 / max16 / 1e-3 | Read / staging / ledger / quantize / serialize (worker s) | 0.0044256 / 0.0037826 / 0.0284737 / 0.0441312 / 0.0115226 | 0.0039858 / 0.0025839 / 0.0262299 / 0.0440699 / 0.0101053 | `405df643b` |
+| 47x20 / max16 / 1e-3 | Deep samples / EXR bytes | 53,113 / 357,145 | 53,113 / 357,145 | `405df643b` |
+| 47x20 / max16 / 1e-3 | Peak host bytes / device-wide MiB | 5,582,516,224 / 6280 | 5,565,992,960 / 6261 | `405df643b` |
+| 47x20 / max16 / 1e-3 | Max accepted-camera oracle error | unchanged payload | 0.0002409381 | `405df643b` |
+| 587x250 / max4 / strict | Capture / wait+readback (s) | 34.456641 / 31.4241 | 33.977451 / 31.00023 | `405df643b` |
+| 587x250 / max4 / strict | Lane payload bytes actually written | 961,886,432 | 886,604,976 | `405df643b` |
+| 587x250 / max4 / strict | GPU bytes copied | 7,695,868,544 | 7,165,876,672 | `405df643b` |
+| 587x250 / max4 / strict | Spill stored / read / written (B) | 564,528,704 / 641,974,304 / 618,486,776 | 522,463,136 / 599,908,736 / 576,421,208 | `405df643b` |
+| 587x250 / max4 / strict | Export (s) | 33.0363 | 33.1449 | `405df643b` |
+| 587x250 / max4 / strict | Density / mixture fit (worker s) | 76.9261 / 241.783 | 76.8807 / 239.49 | `405df643b` |
+| 587x250 / max4 / strict | Read / staging / ledger / quantize / serialize (worker s) | 0.222827 / 0.227663 / 1.50642 / 142.737 / 7.01567 | 0.215885 / 0.215081 / 1.2784 / 141.639 / 7.155 | `405df643b` |
+| 587x250 / max4 / strict | Deep samples / EXR bytes | 52,189,081 / 394,273,944 | 52,189,081 / 394,273,944 | `405df643b` |
+| 587x250 / max4 / strict | Peak host bytes / device-wide MiB | 5,655,724,032 / 6311 | 5,747,793,920 / 6325 | `405df643b` |
+| 587x250 / max4 / strict | Max accepted-camera oracle error | unchanged payload | 2.2079908e-07 | `405df643b` |
+| 587x250 / max4 / 1e-4 | Capture / wait+readback (s) | 27.271883 / 24.54671 | 11.590895 / 9.00449 | `405df643b` |
+| 587x250 / max4 / 1e-4 | Lane payload bytes actually written | 635,631,432 | 329,905,036 | `405df643b` |
+| 587x250 / max4 / 1e-4 | GPU bytes copied | 4,743,196,416 | 367,473,036 | `405df643b` |
+| 587x250 / max4 / 1e-4 | Spill stored / read / written (B) | 386,674,056 / 465,351,816 / 441,611,904 | 358,081,036 / 430,818,316 / 411,423,916 | `405df643b` |
+| 587x250 / max4 / 1e-4 | Export (s) | 3.83371 | 3.71005 | `405df643b` |
+| 587x250 / max4 / 1e-4 | Density / mixture fit (worker s) | 5.3443 / 17.3344 | 5.27332 / 17.1181 | `405df643b` |
+| 587x250 / max4 / 1e-4 | Read / staging / ledger / quantize / serialize (worker s) | 0.154539 / 0.167225 / 0.542736 / 7.04468 / 1.03599 | 0.146292 / 0.147274 / 0.517254 / 6.97906 / 1.0181 | `405df643b` |
+| 587x250 / max4 / 1e-4 | Deep samples / EXR bytes | 6,813,973 / 59,210,585 | 6,813,973 / 59,210,585 | `405df643b` |
+| 587x250 / max4 / 1e-4 | Peak host bytes / device-wide MiB | 5,611,040,768 / 6308 | 5,524,942,848 / 6337 | `405df643b` |
+| 587x250 / max4 / 1e-4 | Max accepted-camera oracle error | unchanged payload | 3.2887202e-05 | `405df643b` |
+| 587x250 / max4 / 1e-3 | Capture / wait+readback (s) | 26.907714 / 24.24201 | 11.581321 / 9.0634 | `405df643b` |
+| 587x250 / max4 / 1e-3 | Lane payload bytes actually written | 580,095,952 | 291,173,160 | `405df643b` |
+| 587x250 / max4 / 1e-3 | GPU bytes copied | 4,411,939,840 | 328,741,160 | `405df643b` |
+| 587x250 / max4 / 1e-3 | Spill stored / read / written (B) | 344,954,864 / 423,342,944 / 400,152,008 | 319,349,160 / 392,123,160 / 372,743,904 | `405df643b` |
+| 587x250 / max4 / 1e-3 | Export (s) | 2.21531 | 2.16513 | `405df643b` |
+| 587x250 / max4 / 1e-3 | Density / mixture fit (worker s) | 1.94407 / 6.92961 | 1.93253 / 6.8879 | `405df643b` |
+| 587x250 / max4 / 1e-3 | Read / staging / ledger / quantize / serialize (worker s) | 0.140339 / 0.158946 / 0.483878 / 2.377 / 0.465303 | 0.138195 / 0.145489 / 0.475867 / 2.36351 / 0.464082 | `405df643b` |
+| 587x250 / max4 / 1e-3 | Deep samples / EXR bytes | 3,076,802 / 22,398,061 | 3,076,802 / 22,398,061 | `405df643b` |
+| 587x250 / max4 / 1e-3 | Peak host bytes / device-wide MiB | 5,792,567,296 / 6310 | 5,699,452,928 / 6337 | `405df643b` |
+| 587x250 / max4 / 1e-3 | Max accepted-camera oracle error | unchanged payload | 0.00031719342 | `405df643b` |
+
+Phase 5 has not started. No full-resolution production render was launched.

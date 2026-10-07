@@ -1343,4 +1343,73 @@ Results: `builds/validation/landscape-cloud/optimization-phase6/measured/phase-r
 Raw gate: `measured/realistic117/ids-1e-4-cap0/beauty_validation.json` under the same root.
 Previous equal-split failure retained as `optimization-phase6/results-equal-split-stop.json`.
 Gaffer: `optimization-phase6/known-overlap/measured-CPU/known_overlap/deep/Phase6_Known_ID_Review.gfr`.
-**Stopped under the failed-acceptance rule before 6a/6b/Phase 9.**
+#### Phase 6 review - snapshot diagnostic and IDs export performance
+
+Pixel `(99,7)` crosses `cloud_01_variant_0000` (932 stored volume intervals).
+Four independent-seed original adaptive renders give red SD 0.0202626 and
+SE of their mean 0.0101313; the 0.000268996 discrepancy is 0.02655 SE.
+Accepted populations are 208/416/912/416. This is an empirical between-seed
+estimate, not a per-camera variance estimate or a replacement beauty gate.
+
+Snapshot diagnostic: separate executable with `9a017f055`, three ordinary
+deep-off and three deep-on/IDs-on renders, original max1024 adaptive / GPU OIDN,
+117x50, error 1e-4. Capture-only skips post-render host export; all deep GPU work
+remains enabled. The patch was never committed to the deep branch; managed
+beauty sources were restored exactly. These K=3 comparisons are diagnostic,
+not K=5 qualification or a policy change.
+
+| Snapshot runs | Noisy RGB at (99,7) | Population there | Image-wide existing raw gate |
+| --- | --- | --- | --- |
+| Deep-off 1/2/3 | (0.138675958, 0.107834488, 0.102686219), identical | 416 | Reference controls |
+| Deep-on/IDs 1 | Exactly identical to all three controls | 416 | FAIL at (5,5), population 288 |
+| Deep-on/IDs 2/3 | Exactly identical to all three controls | 416 | PASS / PASS |
+
+At (99,7), all checked raw passes also fit the unchanged ULP/envelope rule.
+Image-wide ON1 still fails: noisy max 5.443394e-5 > ordinary envelope
+2.712011e-6; albedo max 0.002548903 > 0.000209540. Counts match; no threshold
+was relaxed and no extra snapshot controls were added. The experiment supports
+majorant involvement at the original pixel, not complete GPU determinism.
+
+IDs host optimization: `df3d3d060`. Native own-process CPU sampling found 86.3%
+of export sample weight in string/frame-metadata construction/destruction.
+Per-pixel cloning copied 358 names x 146,750 pixels (~52.5 million name copies)
+outside the old quantize timer. Borrow the immutable manifest; arithmetic,
+headers, ordering, budgets and capacities remain unchanged. No new dependency.
+
+| Performance 587x250x4 / 1e-3 | Before IDs-on | After IDs-on | Matched after IDs-off |
+| --- | --- | --- | --- |
+| Export wall s | 179.581 | 3.879 | 2.255 |
+| Serial OpenEXR wall s | 1.599 | 1.200 | 0.468 |
+| Serial spill staging wall s | 0.206 | 0.133 | 0.148 |
+| Other export wall s (preparation/diagnostics/barriers) | 177.776 | 2.547 | 1.639 |
+| Density fit aggregate worker s | 7.655 | 2.221 | 2.089 |
+| Mixture fit aggregate worker s | 86.367 | 18.288 | 7.215 |
+| Quantize/coalesce aggregate worker s | 30.962 | 9.193 | 2.387 |
+| Spill bytes | 319,349,160 | 319,349,160 | 319,349,160 |
+| EXR bytes | 63,661,043 | 63,661,043 | 22,398,061 |
+
+Unprofiled export is **46.30x faster (97.84% less wall time)** and **1.72x**
+IDs-off, meeting the ~3x target. Samples remain 7,109,968; EXR/spill bytes
+are unchanged. Worker elapsed timers overlap and must not be added to wall time.
+Profiled wall is 175.458 -> 4.328 s; approximate mean busy logical cores during
+export are 16.47 -> 9.30 of 24 (69% -> 39%). Reduced CPU load removes waste.
+Per-row barriers remain; scanline serialization is serial and now takes 1.200 s
+(~31% of export wall). CPU sample windows are inferred from log times; sampled
+waiting instruction pointers are not measurements of wait duration.
+
+All five existing d880054ba IDs-on EXRs are **whole-file SHA256 identical**
+(small/performance at both errors; realistic all-samples 1e-4). Matched IDs-off
+performance EXR is identical too. Nine CTests pass, including signed-window
+serial/parallel byte identity and actual scanline failure coordinates. All 75
+common CUDA kernel resource records are unchanged; original beauty-source hash
+is unchanged. The snapshot executable is excluded from unchanged-beauty pools.
+
+Reports and reproducible local profiling helpers:
+`builds/validation/landscape-cloud/optimization-phase6/review/review-results.json`,
+`snapshot-comparison.json`, `export-performance.json`, `profile-{before,after}.csv`;
+`builds/phase6_cpu_sampler.cpp`, `run_phase6_review_*.py`.
+
+**Requested review stop:** remaining three realistic pairs and final full
+regression/81+30 identity replay remain pending. No 6a/6b/Phase 9 work started.
+The original raw beauty gate remains unresolved; user decides policy from this
+diagnostic evidence.

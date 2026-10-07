@@ -2,19 +2,17 @@
 
 The [optimization plan](DEEP_OPTIMIZATION_PLAN.md) is the plan of record;
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
-Branch: `codex/landscape-cloud-compatibility`.
+Branch: `codex/landscape-cloud-compatibility`. Phases 0–5 accepted; Phase 6 awaits review.
 
-Phases 0–5 are accepted. Phase 6 deepID is implemented, not qualified.
-Measured per-object FLOAT publication shares the unchanged total budget; dense
-volume + 128 hard-surface regression and nine CTests pass. Strict + IDs rejects
-at preflight. Five numeric whole-image IDs-on/off comparisons pass; both fixed
-cases fully validate at 1e-4/1e-3. IDs increase fitting cost and output size.
+IDs export optimization (`df3d3d060`): 179.58 -> 3.88 s on 587x250x4 / 1e-3,
+46.3x faster, 1.72x matched IDs-off. Five existing IDs-on EXRs remain whole-file
+identical, as does matched IDs-off. Nine CTests pass. Budgets/gates unchanged.
 
-Realistic117 / 1e-4 / all-samples raw beauty fails at (99,7): max RGB difference
-0.00026899576 > 0.00001937151. Twenty extra controls and the 31-render pool do
-not reproduce that state. No gate was relaxed. Remaining three realistic pairs,
-IDs-on oracle and final 81/81 + 30/30/regression replay are pending.
+Original realistic raw beauty at (99,7) remains a policy review item. Separate
+majorant-snapshot diagnostic makes its noisy RGB identical across all six runs,
+but one ON run fails image-wide at (5,5); two pass. The patch is absent from the
+deep branch and managed beauty source; this K=3 evidence is not qualification.
 
-Stopped before 6a/6b. Phase 9 requires separate confirmation.
-Results: `builds/validation/landscape-cloud/optimization-phase6/measured/phase-results.json`.
-Gaffer: `builds/validation/landscape-cloud/optimization-phase6/known-overlap/measured-CPU/known_overlap/deep/Phase6_Known_ID_Review.gfr`.
+Stopped as requested before three remaining realistic pairs and final regression
+replay. No 6a/6b/Phase 9 started.
+Results: `builds/validation/landscape-cloud/optimization-phase6/review/review-results.json`.

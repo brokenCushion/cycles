@@ -383,6 +383,8 @@ static void validate_shader(Scene *scene, Shader *shader,
 void validate_deep_scene(Scene *scene, SessionParams &params)
 {
   deep::error_budget(params.deep.error);
+  require_deep(deep_object_count_valid(scene->objects.size()),
+               "scene object count exceeds the 30-bit deep object-index range");
   const bool transparent = params.deep.transparent;
   const bool volume = params.deep.volume;
   params.deep.volume_grid = false;

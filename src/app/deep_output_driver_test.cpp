@@ -118,7 +118,8 @@ class MemoryDriver : public OutputDriver {
   Device &device_;
 };
 
-static void run(const char *fixture, int mode, const bool cuda = false, const bool volume = false)
+static void run(const char *fixture, int mode, const bool cuda = false, const bool volume = false,
+                const bool grid = false)
 {
   SessionParams params;
   const auto devices = Device::available_devices(cuda ? DEVICE_MASK_CUDA : DEVICE_MASK_CPU);
@@ -131,6 +132,7 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
   params.deep.enabled = true;
   params.deep.transparent = mode == 6;
   params.deep.volume = volume || mode == 7;
+  params.deep.volume_grid = grid;
   params.deep.max_events = cuda ? 64 : 16;
   SceneParams scene_params;
   Result result;
@@ -258,6 +260,12 @@ int main(int argc, const char **argv)
       run(argv[4], mode, cuda, true);
     }
     run(argv[4], 8, cuda, true);
+    if (cuda) {
+      run(argv[4], 7, true, true, true);
+      for (int mode = 1; mode != 6; ++mode)
+        run(argv[4], mode, true, true, true);
+      run(argv[4], 8, true, true, true);
+    }
     std::cout << "PASS: memory delivery, reset, disable, unsupported host, cancellation, "
                  "callback failures and crop rejection\n";
     return 0;

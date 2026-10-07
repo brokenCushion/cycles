@@ -28,7 +28,7 @@ using ccl::deep::Capture;
 using ccl::deep::CaptureTestAccess;
 static_assert(std::is_trivially_copyable_v<KernelDeepEvent>);
 static_assert(std::is_standard_layout_v<KernelDeepEvent>);
-static_assert(offsetof(KernelDeepEvent, object) == 20);
+static_assert(offsetof(KernelDeepEvent, front) == 4);
 static_assert(std::is_trivially_copyable_v<KernelDeepRecord>);
 static_assert(std::is_standard_layout_v<KernelDeepRecord>);
 static void check_impl(bool condition, int line)
@@ -53,13 +53,15 @@ constexpr size_t chain_bytes = 2 * (sizeof(KernelDeepResult) + 2 * sizeof(Kernel
 int main()
 {
   try {
+    check(deep_object_count_valid(1ull << 30));
+    check(!deep_object_count_valid((1ull << 30) + 1));
     for (const bool spill : {false, true}) {
       /* Reused scratch sees growing, shrinking and empty records. Unused
        * density slots must never leak from a previous cubic sample. */
       Capture capture(1, 1, 4, 32 * 1024 * 1024, 3, spill, false, true, true);
-      const KernelDeepEvent events[] = {{DEEP_VOLUME_CUBIC, 1, 2, 0, 0, 7},
-                                       {DEEP_SURFACE, 3, 3, .25f, 0, 31},
-                                       {DEEP_VOLUME, 4, 5, 0, .2f, 42}};
+      const KernelDeepEvent events[] = {{deep_event_pack(DEEP_VOLUME_CUBIC, 7), 1, 2, 0, 0},
+                                       {deep_event_pack(DEEP_SURFACE, 31), 3, 3, .25f, 0},
+                                       {deep_event_pack(DEEP_VOLUME, 42), 4, 5, 0, .2f}};
       const KernelDeepDensity density[] = {{{.1f,.1f,.1f,.1f},1,2}, {}, {}};
       capture.record_sample(0,0,0,{DEEP_COMPLETE,3,DEEP_ERROR_NONE},events,density);
       capture.record_events(0,0,1,nullptr,0);
@@ -72,7 +74,7 @@ int main()
           const auto stored = CaptureTestAccess::events(capture, 0, 0, sample);
           check(stored.size() == counts[sample]);
           for (size_t i = 0; i < stored.size(); ++i)
-            check(stored[i].object == events[sample == 2 ? 2 : i].object);
+            check(deep_event_object(stored[i]) == deep_event_object(events[sample == 2 ? 2 : i]));
         }
       };
       check_objects(); // Memory or direct spill reads.
@@ -139,7 +141,7 @@ int main()
       Capture disk(4, 130, 8, 64 * 1024 * 1024, 8192, true, false, true, true);
       std::vector<KernelDeepEvent> events(8192);
       for (size_t i = 0; i < events.size(); ++i)
-        events[i] = {DEEP_VOLUME, float(i + 1), float(i + 2), 0, .001f, int(i % 64)};
+        events[i] = {deep_event_pack(DEEP_VOLUME, int(i % 64)), float(i + 1), float(i + 2), 0, .001f};
       for (int y = 0; y < 130; ++y)
         for (int x = 0; x < 4; ++x)
           for (int sample = 0; sample < 8; ++sample)
@@ -152,7 +154,7 @@ int main()
             const auto raw = CaptureTestAccess::events(disk, x, y, sample);
             check(raw.size() == (y < 3 ? 8192 : 0));
             for (size_t i = 0; i < raw.size(); ++i)
-              check(raw[i].object == int(i % 64));
+              check(deep_event_object(raw[i]) == int(i % 64));
             const auto ray = disk.volume_sample(x, y, sample);
             check(ray.intervals.size() == (y < 3 ? 8192 : 0));
             if (y < 3) {
@@ -462,7 +464,7 @@ int main()
       check(!skipped.finalize());
       skipped.record_sample(0, 0, 0, {DEEP_COMPLETE, 0, DEEP_ERROR_NONE}, nullptr);
       check(skipped.finalize() && skipped.reconstruct_pixel(0, 0).empty());
-      for (const KernelDeepEvent invalid : {KernelDeepEvent{DEEP_SURFACE, 2, 2, .5f, 0, -2},
+      for (const KernelDeepEvent invalid : {KernelDeepEvent{deep_event_pack(DEEP_SURFACE, -2), 2, 2, .5f, 0},
                                             KernelDeepEvent{DEEP_SURFACE, 2, 3, .5f, 0},
                                             KernelDeepEvent{DEEP_SURFACE, 2, 2, .5f, 1},
                                             KernelDeepEvent{DEEP_VOLUME, 2, 2, 0, 1},

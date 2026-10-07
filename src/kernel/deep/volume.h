@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
-#include "kernel/deep/types.h"
+#include "kernel/deep/write.h"
 #include "kernel/deep/volume_boundary.h"
 #include "kernel/deep/volume_native.h"
 
@@ -13,7 +13,8 @@ ccl_device KernelDeepResult deep_volume_interval(
     const int object, const double start, const double end,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
     const int stride, const int capacity, int count, const double eps_ray,
-    ccl_private DeepVolumeCompression *object_stream)
+    ccl_private DeepVolumeCompression *object_stream,
+    ccl_private KernelDeepWriteState *write = nullptr)
 {
   const VolumeStack entry = {sd->object, sd->shader};
   const float grid_scale = kernel_data_fetch(shaders, sd->shader & SHADER_MASK).deep_density_scale;
@@ -27,7 +28,7 @@ ccl_device KernelDeepResult deep_volume_interval(
     sd->shader_flag = kernel_data_fetch(shaders, entry.shader & SHADER_MASK).flags;
     sd->object_flag = kernel_data_fetch(object_flag, object);
     const KernelDeepResult captured = deep_volume_native(
-        kg, sd, &ray, start, end, grid_scale, events, density, stride, capacity, count, eps_ray, object_stream);
+        kg, sd, &ray, start, end, grid_scale, events, density, stride, capacity, count, eps_ray, object_stream, write);
     if (captured.status != DEEP_COMPLETE)
       return captured;
     count = int(captured.count);
@@ -70,7 +71,8 @@ ccl_device KernelDeepResult deep_volume_interval(
           float z = float(front);
           if (double(z) < front)
             z = nextafterf(z, FLT_MAX);
-          events[count * stride] = {DEEP_SURFACE, z, z, 1, 0, object};
+          deep_write_event(events, density, count * stride,
+              {deep_event_pack(DEEP_SURFACE, object), z, z, 1, 0}, nullptr, write);
           object_stream->terminated = true;
           object_stream->cutoff = z;
           return {DEEP_COMPLETE, unsigned(count + 1), DEEP_ERROR_NONE};
@@ -79,7 +81,7 @@ ccl_device KernelDeepResult deep_volume_interval(
         const auto error = deep_volume_constant(
             depth_origin + start * depth_per_t, depth_origin + end * depth_per_t,
             tau, .25 * eps_ray / capacity,
-            events, density, stride, capacity, &count, object);
+            events, density, stride, capacity, &count, object, write);
         object_stream->tau += tau;
         object_stream->prefix_error += 64 * 2.2204460492503131e-16 *
                                        (1 + object_stream->tau + tau);
@@ -91,8 +93,9 @@ ccl_device KernelDeepResult deep_volume_interval(
       const float rear = float(depth_origin + end * depth_per_t);
       if (!(rear > front) || !(front > 0))
         return {DEEP_FAILED, 0, DEEP_ERROR_DEPTH};
-      events[count * stride] = {
-          DEEP_VOLUME, front, rear, 0, float(double(sigma.x) * (end - start) * len(ray.D)), object};
+      deep_write_event(events, density, count * stride,
+          {deep_event_pack(DEEP_VOLUME, object), front, rear, 0,
+           float(double(sigma.x) * (end - start) * len(ray.D))}, nullptr, write);
       ++count;
     }
   }
@@ -199,7 +202,8 @@ ccl_device KernelDeepResult deep_volume_object(
     const int object, const double clip_start, double &clip_end,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
     const int stride, const int capacity, int count, const double eps_ray,
-    const bool initially_inside = false)
+    const bool initially_inside = false,
+    ccl_private KernelDeepWriteState *write = nullptr)
 {
   double origin[3] = {ray.P.x, ray.P.y, ray.P.z};
   double direction[3] = {ray.D.x, ray.D.y, ray.D.z};
@@ -248,7 +252,7 @@ ccl_device KernelDeepResult deep_volume_object(
       if (start >= 0 && clip_end > start) {
         sd->shader = shader;
         const auto result = deep_volume_interval(kg, state, sd, ray, object, start, clip_end,
-                                    events, density, stride, capacity, count, eps_ray, &object_stream);
+                                    events, density, stride, capacity, count, eps_ray, &object_stream, write);
         if (object_stream.terminated)
           deep_volume_clamp(kg, ray, object_stream.cutoff, clip_end);
         return result;
@@ -275,7 +279,7 @@ ccl_device KernelDeepResult deep_volume_object(
       if (end > start) {
         sd->shader = shader;
         const KernelDeepResult result = deep_volume_interval(
-            kg, state, sd, ray, object, start, end, events, density, stride, capacity, count, eps_ray, &object_stream);
+            kg, state, sd, ray, object, start, end, events, density, stride, capacity, count, eps_ray, &object_stream, write);
         if (result.status != DEEP_COMPLETE)
           return result;
         count = int(result.count);
@@ -304,9 +308,13 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
                                         const int stride,
                                         const int capacity,
                                         ccl_global KernelDeepDensity *density = nullptr,
-                                        const double eps_ray = 0)
+                                        const double eps_ray = 0,
+                                        ccl_private KernelDeepWriteState *write = nullptr,
+                                        const int media_stride = 0,
+                                        const int media_limit = DEEP_MAX_MEDIA)
 {
 #ifdef __VOLUME__
+  const int medium_stride = media_stride ? media_stride : stride;
   Ray ray;
   integrator_state_read_ray(state, &ray);
   const float clip_start = ray.tmin;
@@ -359,11 +367,13 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
     shader_setup_from_ray(kg, &sd, &initial_ray, &hit);
     if (!(sd.runtime_flag & SR_BACKFACING))
       continue;
-    media[object_count * stride] = {hit.object, -1.0f};
+    if (object_count == media_limit)
+      return {DEEP_FAILED, 0, DEEP_ERROR_MEDIA_CAPACITY};
+    media[object_count * medium_stride] = {hit.object, -1.0f};
     ++object_count;
     const KernelDeepResult result = deep_volume_object(
         kg, state, &sd, ray, hit.object, clip_start, clip_end,
-        events, density, stride, capacity, count, eps_ray, true);
+        events, density, stride, capacity, count, eps_ray, true, write);
     if (result.status != DEEP_COMPLETE)
       return result;
     count = int(result.count);
@@ -426,16 +436,16 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
         const bool has_surface = (sd.shader_flag & SD_HAS_ONLY_VOLUME) == 0;
         if (sd.shader_flag & SD_HAS_VOLUME) {
           int index = 0;
-          while (index < object_count && media[index * stride].object != hit.object)
+          while (index < object_count && media[index * medium_stride].object != hit.object)
             ++index;
           if (index == object_count) {
-            if (object_count == DEEP_MAX_MEDIA)
+            if (object_count == media_limit)
               return {DEEP_FAILED, 0, DEEP_ERROR_MEDIA_CAPACITY};
-            media[index * stride] = {hit.object, -1.0f};
+            media[index * medium_stride] = {hit.object, -1.0f};
             ++object_count;
             const KernelDeepResult result = deep_volume_object(
                 kg, state, &sd, ray, hit.object, clip_start, clip_end,
-                events, density, stride, capacity, count, eps_ray);
+                events, density, stride, capacity, count, eps_ray, false, write);
             if (result.status != DEEP_COMPLETE)
               return result;
             count = int(result.count);
@@ -464,7 +474,8 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
               return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
             const float z = deep_camera_depth(
                 kernel_data.cam, kernel_data_array(camera_motion), ray.time, ray.P + hit.t * ray.D);
-            events[count * stride] = {DEEP_SURFACE, z, z, 1 - t.x, 0, hit.object};
+            deep_write_event(events, density, count * stride,
+                {deep_event_pack(DEEP_SURFACE, hit.object), z, z, 1 - t.x, 0}, nullptr, write);
             ++count;
             /* Exact opacity makes every later depth query zero. Stop visibility
              * traversal without an opacity threshold or changes to beauty. */

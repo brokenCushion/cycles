@@ -188,7 +188,7 @@ int main(int argc, char **argv)
       std::vector<ccl::deep::CubicDensityInterval> cubic;
       double stored_tau = 0;
       for (unsigned i = 0; i < captured.count; ++i) {
-        if (events[i].object != ray + 7)
+        if (deep_event_object(events[i]) != ray + 7)
           throw std::runtime_error("Strict grid capture lost object index");
         const auto &b = coefficients[i].optical_depth;
         cubic.push_back({coefficients[i].front, coefficients[i].back, {b[0], b[1], b[2], b[3]}});
@@ -208,7 +208,7 @@ int main(int argc, char **argv)
           throw std::runtime_error("Compressed asset capture failed: " +
                                    std::to_string(reduced.error));
         for (unsigned i = 0; i < reduced.count; ++i)
-          if (compressed[i].object != ray + 7)
+          if (deep_event_object(compressed[i]) != ray + 7)
             throw std::runtime_error("Compressed grid capture lost object index");
         for (int probe = 0; probe <= 256; ++probe) {
           const double z = 1 + 100 * double(probe) / 256;

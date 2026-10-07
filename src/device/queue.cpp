@@ -5,6 +5,10 @@
 #include <iomanip>
 
 #include "device/kernel.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "device/device.h"
+#  include "device/memory.h"
+#endif
 #include "device/queue.h"
 
 #include "util/algorithm.h"
@@ -18,6 +22,17 @@ DeviceQueue::DeviceQueue(Device *device) : device(device)
   DCHECK_NE(device, nullptr);
   is_per_kernel_performance_ = getenv("CYCLES_DEBUG_PER_KERNEL_PERFORMANCE");
 }
+
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+void DeviceQueue::copy_from_device_prefix(device_memory &mem, const size_t bytes)
+{
+  if (bytes != mem.memory_size()) {
+    device->set_error("Bounded deep readback is unsupported by this device queue");
+    return;
+  }
+  copy_from_device(mem);
+}
+#endif
 
 DeviceQueue::~DeviceQueue()
 {

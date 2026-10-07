@@ -38,15 +38,49 @@ struct KernelDeepMedium {
 };
 
 struct KernelDeepEvent {
-  KernelDeepEventKind kind;
+  /* Low 2 bits: event kind. Upper 30 bits: native object index. */
+  unsigned int kind;
   float front, back;
   /* Only the field selected by kind may be nonzero. Alpha is local surface
    * opacity; optical_depth is integrated scalar extinction along a ray segment. */
   float surface_alpha;
   float optical_depth;
-  /* Native Cycles object index; -1 is reserved for synthetic reference records. */
-  int object = -1;
 };
+constexpr unsigned int DEEP_EVENT_KIND_MASK = 3u;
+constexpr unsigned int DEEP_OBJECT_MASK = (1u << 30) - 1u;
+constexpr unsigned long long DEEP_MAX_OBJECT_COUNT = 1ull << 30;
+/* No C++ bitfields: shifts specify identical bytes on every backend. */
+#ifdef __KERNEL_GPU__
+#  define DEEP_INLINE ccl_device_inline
+#else
+#  define DEEP_INLINE constexpr
+#endif
+DEEP_INLINE bool deep_object_count_valid(const unsigned long long count)
+{
+  return count <= DEEP_MAX_OBJECT_COUNT;
+}
+DEEP_INLINE unsigned int deep_event_pack(const KernelDeepEventKind type, const int object = -1)
+{
+  /* Reserved type 3 makes invalid input fail capture validation explicitly. */
+  return (unsigned(type) > unsigned(DEEP_VOLUME_CUBIC) || object < -1 ||
+          (object >= 0 && unsigned(object) > DEEP_OBJECT_MASK)) ?
+             DEEP_EVENT_KIND_MASK : unsigned(type) | ((unsigned(object) & DEEP_OBJECT_MASK) << 2);
+}
+DEEP_INLINE KernelDeepEventKind deep_event_type(const KernelDeepEvent &event)
+{
+  return KernelDeepEventKind(event.kind & DEEP_EVENT_KIND_MASK);
+}
+DEEP_INLINE unsigned int deep_event_object(const KernelDeepEvent &event)
+{
+  return event.kind >> 2;
+}
+#undef DEEP_INLINE
+static_assert(DEEP_VOLUME_CUBIC < 4 && DEEP_OBJECT_MASK == 0x3fffffffu,
+              "Deep event uses two kind bits and thirty object bits");
+#ifndef __KERNEL_GPU__
+static_assert(deep_event_pack(DEEP_VOLUME_CUBIC, int(DEEP_OBJECT_MASK)) == 0xfffffffeu,
+              "Deep object packing preserves all thirty bits");
+#endif
 /* Optional companion buffer for native grid cells, indexed like events.
  * Cubic Bernstein coefficients include physical ray-segment length, so their
  * average is the cell's optical depth. All event kinds share the same object-index layout.
@@ -64,14 +98,16 @@ struct KernelDeepResult {
 struct KernelDeepRecord {
   unsigned int x, y, sample, population;
   KernelDeepResult result;
+  unsigned int payload_counts; // low/high 16 bits: event/companion stores
 };
 
 static_assert(sizeof(unsigned int) == 4 && sizeof(float) == 4, "Deep record scalar layout");
-static_assert(sizeof(KernelDeepEvent) == 24, "Deep event layout");
+static_assert(sizeof(KernelDeepEvent) == 20, "Deep event layout");
 static_assert(sizeof(KernelDeepDensity) == 32, "Deep density layout");
 static_assert(sizeof(KernelDeepResult) == 12, "Deep result layout");
-static_assert(sizeof(KernelDeepRecord) == 28, "Deep metadata layout");
+static_assert(sizeof(KernelDeepRecord) == 32, "Deep metadata layout");
 static_assert(sizeof(KernelDeepMedium) == 8, "Deep medium layout");
+static_assert(DEEP_MAX_VOLUME_EVENTS < (1u << 16), "Deep write counters fit sixteen bits");
 struct DeepVolumeCompression {
   double anchor, last, anchor_tau, tau, lower, upper, roundoff, cutoff;
   double prefix_error, anchor_error;
@@ -79,4 +115,14 @@ struct DeepVolumeCompression {
   int cells;
   int object = -1;
   bool active, terminated;
+};
+
+/* Host assigns flat ranges after the count pass; no device allocation. */
+struct KernelDeepRange { unsigned int offset, count, work; };
+static_assert(sizeof(KernelDeepRange) == 12, "Deep flat range layout");
+struct KernelDeepWriteState {
+  unsigned int written_bytes = 0;
+  unsigned int events = 0, companions = 0;
+  unsigned int limit = ~0u;
+  bool count_only = false, failed = false;
 };

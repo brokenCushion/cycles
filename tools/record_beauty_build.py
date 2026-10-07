@@ -14,7 +14,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 DEEP_HOST = {'src/app/deep_output.cpp', 'src/app/deep_output.h',
              'src/integrator/path_trace_deep_tile.h', 'src/session/output_driver.h',
-             'src/session/deep.h', 'src/session/deep.cpp'}
+             'src/session/deep.h', 'src/session/deep.cpp', 'src/app/deep_output_driver_test.cpp'}
 
 
 def git(*args):
@@ -48,6 +48,8 @@ def beauty_identity(commit):
         if path in ('src/integrator/path_trace.cpp', 'src/app/cycles_standalone.cpp',
                     'src/integrator/path_trace_work_cpu.cpp', 'src/integrator/path_trace_work_gpu.cpp',
                     'src/integrator/path_trace_work_gpu.h',
+                    'src/device/queue.h', 'src/device/queue.cpp',
+                    'src/device/cuda/queue.h', 'src/device/cuda/queue.cpp',
                     'src/device/cpu/kernel.h', 'src/kernel/device/cpu/kernel_arch.h',
                     'src/kernel/device/cpu/kernel_arch_impl.h'):
             files[path] = hashlib.sha256(without_deep_blocks(git('show', commit + ':' + path))).hexdigest()

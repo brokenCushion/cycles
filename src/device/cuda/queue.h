@@ -37,6 +37,9 @@ class CUDADeviceQueue : public DeviceQueue {
   void zero_to_device(device_memory &mem) override;
   void copy_to_device(device_memory &mem) override;
   void copy_from_device(device_memory &mem) override;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  void copy_from_device_prefix(device_memory &mem, size_t bytes) override;
+#endif
   void *copy_from_device_synchronized(device_memory &mem, vector<uint8_t> &storage) override;
 
   virtual CUstream stream()

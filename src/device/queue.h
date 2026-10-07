@@ -152,6 +152,9 @@ class DeviceQueue {
   virtual void zero_to_device(device_memory &mem) = 0;
   virtual void copy_to_device(device_memory &mem) = 0;
   virtual void copy_from_device(device_memory &mem) = 0;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  virtual void copy_from_device_prefix(device_memory &mem, size_t bytes);
+#endif
   virtual void *copy_from_device_synchronized(device_memory &mem, vector<uint8_t> &storage) = 0;
 
   /* Graphics resources interoperability.

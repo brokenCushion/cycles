@@ -30,7 +30,7 @@ class PathTraceWorkGPU : public PathTraceWork {
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   /* Host/device mirrors, medium tracking and contiguous readback scratch.
    * Keep the reservation shared with PathTrace's allocation preflight. */
-  /* 24-byte object-tagged events retain the existing 32 MiB staging gate. */
+  /* Strict retains its bounded plane retry path. */
   static constexpr int deep_grid_batch_size = 62;
   static constexpr int deep_surface_batch_size = 480;
   static_assert(2 * size_t(deep_surface_batch_size) *
@@ -178,11 +178,26 @@ class PathTraceWorkGPU : public PathTraceWork {
   device_vector<KernelDeepEvent> deep_events_;
   device_vector<KernelDeepMedium> deep_media_;
   device_vector<KernelDeepDensity> deep_density_;
+  struct DeepBatch {
+    explicit DeepBatch(Device *device);
+    unique_ptr<DeviceQueue> queue;
+    device_vector<KernelDeepRecord> records;
+    device_vector<KernelDeepRange> ranges;
+    device_vector<KernelDeepEvent> events;
+    device_vector<KernelDeepDensity> density;
+    device_only_memory<KernelDeepMedium> media;
+    int count = 0;
+    size_t slots = 0;
+    bool pending = false;
+  };
+  unique_ptr<DeepBatch> deep_batches_[2];
   void capture_deep_tiles(int num_tiles);
+  void capture_deep_flat(int num_tiles);
   double deep_readback_seconds_ = 0, deep_spill_seconds_ = 0;
   uint64_t deep_record_count_ = 0;
   uint64_t deep_skipped_count_ = 0;
   uint64_t deep_batch_count_ = 0, deep_readback_bytes_ = 0;
+  uint64_t deep_lane_event_writes_ = 0, deep_lane_density_writes_ = 0, deep_sync_count_ = 0;
 #endif
 
   /* Temporary buffer used by the copy_to_display() whenever graphics interoperability is not

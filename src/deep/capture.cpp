@@ -327,7 +327,7 @@ void Capture::read_record(const size_t index,
     if (density && volume_grid_) {
       size_t offset = size_t(stored.event_offset) + result.count * sizeof(*events);
       for (unsigned i = 0; i < result.count; ++i)
-        if (has_density(events[i].kind)) {
+        if (has_density(deep_event_type(events[i]))) {
           read(offset, reinterpret_cast<unsigned char *>(density + i), sizeof(*density));
           offset += sizeof(*density);
         }
@@ -354,7 +354,7 @@ void Capture::store_record(const size_t index,
       const size_t event_bytes = result.count * sizeof(KernelDeepEvent);
       size_t bytes = sizeof(SpillRecord) + event_bytes;
       for (unsigned i = 0; i < result.count; ++i)
-        if (has_density(events[i].kind))
+        if (has_density(deep_event_type(events[i])))
           bytes += sizeof(KernelDeepDensity);
       if (band.event_bytes > size_t(INT64_MAX) - bytes)
         throw std::runtime_error("Deep event file offset overflow");
@@ -370,7 +370,7 @@ void Capture::store_record(const size_t index,
           (event_bytes && std::fwrite(events, 1, event_bytes, band.events) != event_bytes))
         throw std::runtime_error("Deep event file append failed");
       for (unsigned i = 0; i < result.count; ++i)
-        if (has_density(events[i].kind) &&
+        if (has_density(deep_event_type(events[i])) &&
             std::fwrite(density + i, 1, sizeof(*density), band.events) != sizeof(*density))
           throw std::runtime_error("Deep density file append failed");
       band.write_bytes += bytes;
@@ -389,7 +389,7 @@ void Capture::store_record(const size_t index,
         std::copy_n(events, result.count, events_.data() + index * capacity_);
       if (volume_grid_)
         for (unsigned i = 0; i < result.count; ++i)
-          if (has_density(events[i].kind))
+          if (has_density(deep_event_type(events[i])))
             density_[index * capacity_ + i] = density[i];
     }
     ++completed_;
@@ -421,7 +421,7 @@ void Capture::record(const int x, const int y, const uint32_t sample, const floa
     set_error(INVALID_DEPTH);
     return;
   }
-  const KernelDeepEvent event{DEEP_SURFACE, depth, depth, 1, 0, object};
+  const KernelDeepEvent event{deep_event_pack(DEEP_SURFACE, object), depth, depth, 1, 0};
   record_sample(x, y, sample, {DEEP_COMPLETE, depth == 0 ? 0u : 1u, DEEP_ERROR_NONE}, &event);
 }
 void Capture::record_events(const int x,
@@ -465,9 +465,9 @@ void Capture::record_sample(const int x,
   }
   for (unsigned i = 0; i < result.count; ++i) {
     const KernelDeepEvent &e = events[i];
-    const bool surface = e.kind == DEEP_SURFACE;
-    const bool cubic = e.kind == DEEP_VOLUME_CUBIC;
-    if (has_density(e.kind)) {
+    const bool surface = deep_event_type(e) == DEEP_SURFACE;
+    const bool cubic = deep_event_type(e) == DEEP_VOLUME_CUBIC;
+    if (has_density(deep_event_type(e))) {
       if (!volume_grid_ || !density || (cubic && e.optical_depth != 0)) {
         set_error(INVALID_DEPTH);
         return;
@@ -484,12 +484,12 @@ void Capture::record_sample(const int x,
           return;
         }
     }
-    if (e.object < -1 || !std::isfinite(e.front) || e.front <= 0 || !std::isfinite(e.back) ||
+    if (!std::isfinite(e.front) || e.front <= 0 || !std::isfinite(e.back) ||
         !std::isfinite(e.surface_alpha) || !std::isfinite(e.optical_depth) ||
         (surface ? (e.back != e.front || e.surface_alpha < 0 || e.surface_alpha > 1 ||
                     e.optical_depth != 0) :
-                   ((!cubic && e.kind != DEEP_VOLUME) || !volume_ ||
-                    (has_density(e.kind) ? e.back < e.front : e.back <= e.front) ||
+                   ((!cubic && deep_event_type(e) != DEEP_VOLUME) || !volume_ ||
+                    (has_density(deep_event_type(e)) ? e.back < e.front : e.back <= e.front) ||
                     e.optical_depth < 0 || e.surface_alpha != 0)) ||
         (!volume_ && i && e.front < events[i - 1].front) ||
         (!max_events_ && (!surface || e.surface_alpha != 1)))
@@ -568,24 +568,24 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
   const KernelDeepEvent *record = events.data();
   double opaque_depth = std::numeric_limits<double>::infinity();
   for (unsigned i = 0; i < result.count; ++i)
-    if (record[i].kind == DEEP_SURFACE && record[i].surface_alpha == 1)
+    if (deep_event_type(record[i]) == DEEP_SURFACE && record[i].surface_alpha == 1)
       opaque_depth = std::min(opaque_depth, double(record[i].front));
   std::vector<CubicDensityInterval> cubic;
   for (unsigned i = 0; i < result.count; ++i) {
     const auto &event = record[i];
     /* A fully opaque surface makes all deeper extinction invisible to every
      * depth query. This is exact occlusion, with no opacity threshold. */
-    const double front = has_density(event.kind) ? density[i].front : event.front;
+    const double front = has_density(deep_event_type(event)) ? density[i].front : event.front;
     if (front > opaque_depth ||
-        (event.kind != DEEP_SURFACE && front == opaque_depth))
+        (deep_event_type(event) != DEEP_SURFACE && front == opaque_depth))
       continue;
-    if (event.kind == DEEP_SURFACE)
+    if (deep_event_type(event) == DEEP_SURFACE)
       output.camera.events.push_back({event.front, event.surface_alpha});
-    else if (event.kind == DEEP_VOLUME_CUBIC) {
+    else if (deep_event_type(event) == DEEP_VOLUME_CUBIC) {
       const auto &b = density[i].optical_depth;
       cubic.push_back({density[i].front, density[i].back, {b[0], b[1], b[2], b[3]}});
     }
-    else if (has_density(event.kind))
+    else if (has_density(deep_event_type(event)))
       output.intervals.push_back({density[i].front, density[i].back,
           double(density[i].optical_depth[0]) + double(density[i].optical_depth[1])});
     else
@@ -715,7 +715,7 @@ void Capture::load_stream(Band &band, FILE *file, const size_t bytes,
     for (unsigned i = 0; i < header.result.count; ++i) {
       KernelDeepEvent event;
       std::memcpy(&event, staged_events_.data() + offset + i * sizeof(event), sizeof(event));
-      if (has_density(event.kind))
+      if (has_density(deep_event_type(event)))
         density_bytes += sizeof(KernelDeepDensity);
     }
     offset += event_bytes;
@@ -760,7 +760,7 @@ void Capture::rebucket(Band &band) const
     remaining -= event_bytes;
     size_t densities = 0;
     for (unsigned i = 0; i < header.result.count; ++i)
-      densities += has_density(events[i].kind);
+      densities += has_density(deep_event_type(events[i]));
     const size_t density_bytes = densities * sizeof(KernelDeepDensity);
     if (density.size() < densities)
       density.resize(densities);

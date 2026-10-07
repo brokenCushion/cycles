@@ -69,7 +69,7 @@ __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
     float previous = 0;
     for (unsigned j = 0; j < captured.count; ++j) {
       const auto &event = events[j * count + i];
-      if (event.object != i + 7 || event.kind != DEEP_VOLUME_CUBIC || event.front < previous ||
+      if (deep_event_object(event) != i + 7 || deep_event_type(event) != DEEP_VOLUME_CUBIC || event.front < previous ||
           !(density[j * count + i].back > density[j * count + i].front) ||
           event.back < event.front || event.surface_alpha != 0 || event.optical_depth != 0)
         result.error = DEEP_ERROR_DEPTH;
@@ -91,7 +91,7 @@ __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
         break;
       }
       for (unsigned j = 0; j < reduced.count; ++j)
-        if (events[extra + j * count + i].object != i + 7)
+        if (deep_event_object(events[extra + j * count + i]) != i + 7)
           result.error = DEEP_ERROR_STATE;
       for (int probe = 0; probe <= 256; ++probe) {
         const double z = 1 + 100 * double(probe) / 256;

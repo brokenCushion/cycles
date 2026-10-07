@@ -11,7 +11,8 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
                                               IntegratorState state,
                                               ccl_global KernelDeepEvent *events,
                                               const int event_stride,
-                                              const int max_events)
+                                              const int max_events,
+                                              ccl_private KernelDeepWriteState *write = nullptr)
 {
   if (INTEGRATOR_STATE(state, path, queued_kernel) != DEVICE_KERNEL_INTEGRATOR_INTERSECT_CLOSEST ||
       INTEGRATOR_STATE(state, path, bounce) != 0 ||
@@ -39,7 +40,8 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
     if (!isfinite(depth) || depth <= 0)
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_DEPTH};
     if (!max_events) {
-      events[0] = {DEEP_SURFACE, depth, depth, 1, 0, isect.object};
+      deep_write_event(events, nullptr, 0,
+          {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1, 0}, nullptr, write);
       return {DEEP_COMPLETE, 1, DEEP_ERROR_NONE};
     }
     ShaderDataTinyStorage storage;
@@ -73,7 +75,8 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
         transparency.x < 0 || transparency.x > 1 || transparency.y != transparency.x ||
         transparency.z != transparency.x)
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_EXTINCTION};
-    events[count * event_stride] = {DEEP_SURFACE, depth, depth, 1 - transparency.x, 0, isect.object};
+    deep_write_event(events, nullptr, count * event_stride,
+        {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1 - transparency.x, 0}, nullptr, write);
     ++count;
     if (transparency.x == 0)
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
@@ -102,19 +105,32 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
                              ccl_global KernelDeepEvent *events,
                              ccl_global KernelDeepMedium *media,
                              ccl_global KernelDeepDensity *density,
-                             const float eps_ray)
+                             const float eps_ray,
+                             const ccl_global KernelDeepRange *ranges,
+                             const int tile_count,
+                             const int media_count)
 {
   const int index = ccl_gpu_global_id_x();
   if (index >= count)
     return;
-  const ccl_global KernelWorkTile *tile = &tiles[tile_index];
-  const int work = offset + index;
+  int selected_tile = tile_index;
+  int work = ranges ? int(ranges[index].work) : offset + index;
+  if (tile_index < 0) {
+    selected_tile = 0;
+    while (selected_tile < tile_count && work >= tiles[selected_tile].work_size) {
+      work -= tiles[selected_tile++].work_size;
+    }
+    if (selected_tile == tile_count)
+      return;
+  }
+  const ccl_global KernelWorkTile *tile = &tiles[selected_tile];
   const int state = tile->path_index_offset + work;
   ccl_global KernelDeepRecord *record = &records[index];
   uint x, y, scheduled;
   get_work_pixel(tile, work, &x, &y, &scheduled);
   record->x = x;
   record->y = y;
+  record->payload_counts = 0;
   record->population = 0;
   record->sample = 0;
   record->result = {DEEP_ACTIVE, 0, DEEP_ERROR_NONE};
@@ -139,6 +155,12 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
   const auto flag = INTEGRATOR_STATE(state, path, flag);
   const auto rng_offset = INTEGRATOR_STATE(state, path, rng_offset);
   const auto transparent_bounce = INTEGRATOR_STATE(state, path, transparent_bounce);
+  KernelDeepWriteState write;
+  write.count_only = !events;
+  write.limit = ranges ? ranges[index].count : unsigned(max(1, max_events) * event_stride);
+  const unsigned event_offset = ranges ? ranges[index].offset : unsigned(index);
+  ccl_global KernelDeepEvent *lane_events = events ? events + event_offset : nullptr;
+  ccl_global KernelDeepDensity *lane_density = density ? density + event_offset : nullptr;
   /* Event planes: neighboring lanes write neighboring events at each crossing.
    * The host allocates only the configured number of planes. */
   if (media) {
@@ -150,12 +172,16 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
       record->result = {DEEP_FAILED, 0, DEEP_ERROR_STATE};
     else
       record->result = deep_volume(
-          nullptr, state, events + index, media + index, event_stride, max_events,
-          density ? density + index : nullptr, eps_ray);
+          nullptr, state, lane_events,
+          media + (ranges || !events ? index * media_count : index), event_stride, max_events,
+          lane_density, eps_ray, &write, ranges || !events ? 1 : event_stride, media_count);
   }
   else {
-    record->result = deep_surface_cuda(nullptr, state, events + index, event_stride, max_events);
+    record->result = deep_surface_cuda(nullptr, state, lane_events, event_stride, max_events, &write);
   }
+  record->payload_counts = write.events | (write.companions << 16);
+  if (write.failed)
+    record->result = {DEEP_FAILED, record->result.count, DEEP_ERROR_EVENT_CAPACITY};
   /* Restore every field modified by visibility traversal, including failure.
    * Ray, intersection, throughput, queue counters and beauty buffers are untouched. */
   INTEGRATOR_STATE_WRITE(state, path, flag) = flag;

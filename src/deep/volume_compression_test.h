@@ -15,11 +15,11 @@ ccl_device double compression_exact_tau(const double *b, const double u)
 ccl_device double compression_record_tau(const KernelDeepEvent event,
                                           const KernelDeepDensity span, const double z)
 {
-  if (event.kind == DEEP_SURFACE)
+  if (deep_event_type(event) == DEEP_SURFACE)
     return z >= event.front ? 1.7976931348623157e308 : 0;
   double u = (z - span.front) / (span.back - span.front);
   u = u < 0 ? 0 : (u > 1 ? 1 : u);
-  if (event.kind == DEEP_VOLUME)
+  if (deep_event_type(event) == DEEP_VOLUME)
     return u * (double(span.optical_depth[0]) + double(span.optical_depth[1]));
   const double b[4] = {span.optical_depth[0], span.optical_depth[1],
                        span.optical_depth[2], span.optical_depth[3]};
@@ -29,6 +29,31 @@ ccl_device double compression_record_tau(const KernelDeepEvent event,
 ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
                                         ccl_global KernelDeepDensity *density)
 {
+  {
+    const KernelDeepEvent sentinel{deep_event_pack(DEEP_SURFACE, 9), 7, 7, .5f, 0};
+    events[0] = events[1] = sentinel;
+    const KernelDeepDensity cell{{.02f,.02f,.02f,.02f},1,2};
+    KernelDeepWriteState counted;
+    counted.count_only = true;
+    int count = 0;
+    if (deep_volume_exact(cell, nullptr, density, 1, 8192, &count, 9, &counted) !=
+        DEEP_ERROR_NONE || count != 1 || counted.written_bytes || counted.failed)
+      return 13;
+    KernelDeepWriteState bounded;
+    bounded.limit = 1;
+    count = 0;
+    deep_volume_exact(cell, events, density, 1, 8192, &count, 9, &bounded);
+    if (bounded.failed || bounded.written_bytes != sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity))
+      return 14;
+    deep_volume_exact(cell, events, density, 1, 8192, &count, 9, &bounded);
+    if (!bounded.failed || events[1].front != sentinel.front ||
+        deep_event_type(events[1]) != DEEP_SURFACE)
+      return 15; // Assigned range overflow cannot overwrite the next lane.
+    const KernelDeepEvent packed{deep_event_pack(DEEP_VOLUME_CUBIC, int(DEEP_OBJECT_MASK)),0,0,0,0};
+    if (deep_event_type(packed) != DEEP_VOLUME_CUBIC || deep_event_object(packed) != DEEP_OBJECT_MASK ||
+        deep_event_pack(DEEP_SURFACE, int(DEEP_OBJECT_MASK) + 1) != DEEP_EVENT_KIND_MASK)
+      return 16;
+  }
   /* Constant, convex/concave ramps, and adversarial interior peaks/valleys.
    * Large camera depths exercise the double sidecar and FLOAT collapse. */
   const double cases[6][4] = {{.02, .02, .02, .02}, {0, 0, 0, 2},
@@ -46,8 +71,8 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
                                      events, density, 1, 8192, &count) != DEEP_ERROR_NONE ||
         deep_volume_compression_flush(&stream, 1e-8, events, density,
                                       1, 8192, &count) != DEEP_ERROR_NONE || count != 2 ||
-        !stream.terminated || events[1].kind != DEEP_SURFACE || stream.cutoff < 4 ||
-        events[0].object != 17 || events[1].object != 17)
+        !stream.terminated || deep_event_type(events[1]) != DEEP_SURFACE || stream.cutoff < 4 ||
+        deep_event_object(events[0]) != 17 || deep_event_object(events[1]) != 17)
       return 9; /* Vacuum must preserve absorbed prefix, not force subdivisions. */
   }
   for (int mode = 0; mode < 2; ++mode) {
@@ -74,7 +99,7 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
                                           events, density, 1, 8192, &count) != DEEP_ERROR_NONE)
           return 7;
         for (int i = first; i < count; ++i)
-          if (events[i].object != object + 7)
+          if (deep_event_object(events[i]) != object + 7)
             return 15; // Exact, compressed and opaque records retain their object.
       }
       if (count > 24)
@@ -123,7 +148,7 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
           const double z = start + u;
           double tau = 0;
           for (int i = 0; i < count; ++i) {
-            if (events[i].kind != DEEP_VOLUME_CUBIC || !(density[i].back > density[i].front))
+            if (deep_event_type(events[i]) != DEEP_VOLUME_CUBIC || !(density[i].back > density[i].front))
               return 3; /* A singleton retains its exact cubic bytes. */
             tau += compression_record_tau(events[i], density[i], z);
           }
@@ -154,7 +179,7 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
         return 11;
     }
     if (deep_volume_compression_flush(&stream, 1e-8, events, density, 1, 8192, &count) !=
-        DEEP_ERROR_NONE || count != 1 || events[0].kind != DEEP_VOLUME || events[0].object != 17)
+        DEEP_ERROR_NONE || count != 1 || deep_event_type(events[0]) != DEEP_VOLUME || deep_event_object(events[0]) != 17)
       return 12;
   }
   return 0;

@@ -382,6 +382,7 @@ void PathTraceWorkGPU::render_samples(RenderStatistics &statistics,
   deep_record_count_ = 0;
   deep_skipped_count_ = 0;
   deep_batch_count_ = deep_readback_bytes_ = 0;
+  deep_lane_event_writes_ = deep_lane_density_writes_ = deep_sync_count_ = 0;
 #endif
   uint64_t num_busy_accum = 0;
 
@@ -433,7 +434,11 @@ void PathTraceWorkGPU::render_samples(RenderStatistics &statistics,
                        << " capture_readback_seconds=" << deep_readback_seconds_
                        << " spill_seconds=" << deep_spill_seconds_
                        << " batches=" << deep_batch_count_
-                       << " synchronizations=" << deep_batch_count_
+                       << " synchronizations=" << deep_sync_count_
+                       << " lane_event_writes=" << deep_lane_event_writes_
+                       << " lane_density_writes=" << deep_lane_density_writes_
+                       << " lane_written_bytes=" << deep_lane_event_writes_ * sizeof(KernelDeepEvent) +
+                                                      deep_lane_density_writes_ * sizeof(KernelDeepDensity)
                        << " readback_bytes=" << deep_readback_bytes_
                        << " event_capacity=" << max(1, deep_capture_->max_events())
                        << " device_bytes_peak=" << device_->stats.mem_peak
@@ -986,9 +991,244 @@ void PathTraceWorkGPU::enqueue_work_tiles(DeviceKernel kernel,
 }
 
 #ifdef WITH_CYCLES_DEEP_OPAQUE
+PathTraceWorkGPU::DeepBatch::DeepBatch(Device *device)
+    : queue(device->gpu_queue_create()),
+      records(device, "deep flat records", MEM_READ_WRITE),
+      ranges(device, "deep flat ranges", MEM_READ_WRITE),
+      events(device, "deep flat events", MEM_READ_WRITE),
+      density(device, "deep flat density", MEM_READ_WRITE),
+      media(device, "deep flat media")
+{
+}
+
+void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
+{
+  deep::Capture *capture = deep_capture_;
+  const int capacity = capture->max_events();
+  if (capacity < 1 || capacity > int(DEEP_MAX_VOLUME_EVENTS)) {
+    capture->fail(DEEP_ERROR_CAPACITY);
+    return;
+  }
+  /* Both host/device mirrors, count metadata and both queues' medium scratch
+   * share the existing 32 MiB reservation. No beauty allocation changes. */
+  const int media_count = max(1, min(int(DEEP_MAX_MEDIA), device_scene_->data.film.pad1));
+  const size_t lane_bytes = 2 * sizeof(KernelDeepRecord) +
+      4 * (sizeof(KernelDeepRecord) + sizeof(KernelDeepRange)) +
+      2 * media_count * sizeof(KernelDeepMedium);
+  const int batch_size = int(min(size_t(32768), deep_grid_staging_bytes / (2 * lane_bytes)));
+  const size_t event_slots = (deep_grid_staging_bytes - size_t(batch_size) * lane_bytes) /
+      (4 * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)));
+  if (event_slots < size_t(capacity)) {
+    capture->fail(DEEP_ERROR_CAPACITY);
+    return;
+  }
+  /* These belong to the strict plane path and must not consume a second budget. */
+  deep_events_.free();
+  deep_density_.free();
+  deep_media_.free();
+  deep_records_.alloc(batch_size);
+  if (!deep_records_.device_pointer)
+    queue_->zero_to_device(deep_records_);
+  for (auto &buffer : deep_batches_) {
+    if (!buffer)
+      buffer = make_unique<DeepBatch>(device_);
+    buffer->records.alloc(batch_size);
+    buffer->ranges.alloc(batch_size);
+    buffer->events.alloc(event_slots);
+    buffer->density.alloc(event_slots);
+    buffer->media.alloc_to_device(size_t(batch_size) * media_count);
+    for (device_memory *mem : {static_cast<device_memory *>(&buffer->records),
+                              static_cast<device_memory *>(&buffer->ranges),
+                              static_cast<device_memory *>(&buffer->events),
+                              static_cast<device_memory *>(&buffer->density)}) {
+      if (!mem->device_pointer)
+        buffer->queue->zero_to_device(*mem);
+    }
+    buffer->pending = true;
+    buffer->count = 0;
+  }
+  /* Every return drains pending copies before host buffers can be changed or
+   * freed. Beauty does not resume until both visibility queues are idle. */
+  struct Drain {
+    unique_ptr<DeepBatch> *buffers;
+    ~Drain()
+    {
+      for (int i = 0; i < 2; ++i) {
+        if (buffers[i]->pending) {
+          buffers[i]->queue->synchronize();
+          buffers[i]->pending = false;
+        }
+      }
+    }
+  } drain{deep_batches_};
+  auto fail = [&](const KernelDeepError error = DEEP_ERROR_STATE) {
+    capture->fail(error);
+    device_->set_error(capture->error_message());
+  };
+  auto consume = [&](DeepBatch &buffer) {
+    if (!buffer.pending)
+      return true;
+    const double start = time_dt();
+    ++deep_sync_count_;
+    const bool ok = buffer.queue->synchronize();
+    buffer.pending = false;
+    deep_readback_seconds_ += time_dt() - start;
+    if (is_cancel_requested()) {
+      capture->fail();
+      return false;
+    }
+    if (!ok || device_->have_error()) {
+      fail();
+      return false;
+    }
+    const double spill_start = time_dt();
+    for (int i = 0; i < buffer.count; ++i) {
+      const auto &record = buffer.records[i];
+      const auto &range = buffer.ranges[i];
+      deep_lane_event_writes_ += record.payload_counts & 0xffffu;
+      deep_lane_density_writes_ += record.payload_counts >> 16;
+      if (record.result.status != DEEP_COMPLETE || record.result.error != DEEP_ERROR_NONE ||
+          record.result.count != range.count) {
+        fail(record.result.error == DEEP_ERROR_NONE ? DEEP_ERROR_EVENT_CAPACITY : record.result.error);
+        return false;
+      }
+      capture->record_sample(record.x, record.y, record.sample, record.result,
+                            buffer.events.data() + range.offset,
+                            buffer.density.data() + range.offset);
+      ++deep_record_count_;
+    }
+    deep_spill_seconds_ += time_dt() - spill_start;
+    return true;
+  };
+  const device_ptr tiles = work_tiles_.device_pointer;
+  const device_ptr render_buffer = buffers_->buffer.device_pointer;
+  const float eps_ray = std::nextafter(
+      float(.5 * deep::error_budget(capture->error()).density), 0.0f);
+  const int flat_tile = -1, stride = 1;
+  const device_ptr no_events = 0, no_ranges = 0;
+  int total_work = 0;
+  for (int tile = 0; tile < num_tiles; ++tile)
+    total_work += work_tiles_[tile].work_size;
+  for (int first = 0; first < total_work; first += batch_size) {
+    /* Count and output traversals share camera state, but own medium scratch.
+     * Draining here keeps count scratch independent without device events. */
+    for (auto &buffer : deep_batches_)
+      if (!consume(*buffer))
+        return;
+    if (is_cancel_requested()) {
+      capture->fail();
+      return;
+    }
+    if (device_->have_error()) {
+      fail();
+      return;
+    }
+    const int count = min(batch_size, total_work - first);
+    const device_ptr records = deep_records_.device_pointer;
+    const device_ptr density = deep_batches_[0]->density.device_pointer;
+    const device_ptr media = deep_batches_[0]->media.device_pointer;
+    const DeviceKernelArguments count_args(&tiles, &flat_tile, &first, &count, &capacity,
+        &stride, &render_buffer, &records, &no_events, &media, &density, &eps_ray,
+        &no_ranges, &num_tiles, &media_count);
+    const double count_start = time_dt();
+    if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, count_args)) {
+      fail();
+      return;
+    }
+    queue_->copy_from_device_prefix(deep_records_, size_t(count) * sizeof(KernelDeepRecord));
+    ++deep_batch_count_;
+    ++deep_sync_count_;
+    deep_readback_bytes_ += size_t(count) * sizeof(KernelDeepRecord);
+    if (!queue_->synchronize()) {
+      fail();
+      return;
+    }
+    deep_readback_seconds_ += time_dt() - count_start;
+    int cursor = 0, next_buffer = 0;
+    while (cursor < count) {
+      auto &buffer = *deep_batches_[next_buffer];
+      if (!consume(buffer))
+        return;
+      buffer.count = 0;
+      buffer.slots = 0;
+      const double spill_start = time_dt();
+      while (cursor < count && buffer.count < batch_size) {
+        const auto &record = deep_records_[cursor];
+        if (record.result.count > unsigned(capacity) ||
+            (record.result.status != DEEP_COMPLETE && record.result.status != DEEP_SKIPPED) ||
+            record.result.error != DEEP_ERROR_NONE) {
+          fail(record.result.error == DEEP_ERROR_NONE ? DEEP_ERROR_EVENT_CAPACITY : record.result.error);
+          return;
+        }
+        if (record.result.count > event_slots - buffer.slots)
+          break;
+        if (capture->adaptive())
+          capture->set_population(record.x, record.y, record.population);
+        if (record.result.status == DEEP_SKIPPED) {
+          ++deep_skipped_count_;
+        }
+        else if (!record.result.count) {
+          capture->record_sample(record.x, record.y, record.sample, record.result, nullptr, nullptr);
+          ++deep_record_count_;
+        }
+        else {
+          buffer.ranges[buffer.count++] = {unsigned(buffer.slots), record.result.count,
+                                         unsigned(first + cursor)};
+          buffer.slots += record.result.count;
+        }
+        ++cursor;
+      }
+      deep_spill_seconds_ += time_dt() - spill_start;
+      if (!buffer.count)
+        continue;
+      if (is_cancel_requested()) {
+        capture->fail();
+        return;
+      }
+      if (device_->have_error()) {
+        fail();
+        return;
+      }
+      const device_ptr out_records = buffer.records.device_pointer;
+      const device_ptr out_events = buffer.events.device_pointer;
+      const device_ptr out_density = buffer.density.device_pointer;
+      const device_ptr out_media = buffer.media.device_pointer;
+      const device_ptr ranges = buffer.ranges.device_pointer;
+      buffer.queue->copy_to_device(buffer.ranges);
+      const DeviceKernelArguments output_args(&tiles, &flat_tile, &first, &buffer.count,
+          &capacity, &stride, &render_buffer, &out_records, &out_events, &out_media,
+          &out_density, &eps_ray, &ranges, &num_tiles, &media_count);
+      buffer.pending = true;
+      if (!buffer.queue->enqueue(DEVICE_KERNEL_DEEP_SURFACE, buffer.count, output_args)) {
+        fail();
+        return;
+      }
+      buffer.queue->copy_from_device_prefix(buffer.records,
+          size_t(buffer.count) * sizeof(KernelDeepRecord));
+      buffer.queue->copy_from_device_prefix(buffer.events,
+          buffer.slots * sizeof(KernelDeepEvent));
+      buffer.queue->copy_from_device_prefix(buffer.density,
+          buffer.slots * sizeof(KernelDeepDensity));
+      deep_readback_bytes_ += size_t(buffer.count) * sizeof(KernelDeepRecord) +
+          buffer.slots * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity));
+      ++deep_batch_count_;
+      next_buffer ^= 1;
+    }
+  }
+  for (auto &buffer : deep_batches_)
+    consume(*buffer);
+}
+
 void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
 {
   deep::Capture *capture = deep_capture_;
+  if (capture->volume_grid() && capture->error() > 0 &&
+      !getenv("CYCLES_DEEP_VALIDATE_PLANE_LAYOUT")) {
+    capture_deep_flat(num_tiles);
+    return;
+  }
+  deep_batches_[0].reset();
+  deep_batches_[1].reset();
   const int max_events = capture->max_events();
   const int event_capacity = max(1, max_events);
   if (max_events < 0 || event_capacity >
@@ -1065,6 +1305,8 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
           }
           const float eps_ray = capture->volume_grid() && capture->error() > 0 ?
                                      std::nextafter(float(.5 * deep::error_budget(capture->error()).density), 0.0f) : 0;
+          const device_ptr no_ranges = 0;
+          const int media_count = DEEP_MAX_MEDIA;
           const DeviceKernelArguments args(&tiles,
                                            &tile,
                                            &offset,
@@ -1076,7 +1318,10 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
                                            &events,
                                            &media,
                                            &density,
-                                           &eps_ray);
+                                           &eps_ray,
+                                           &no_ranges,
+                                           &num_tiles,
+                                           &media_count);
           const double readback_start = time_dt();
           if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, args)) {
             capture->fail();
@@ -1089,9 +1334,15 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
             queue_->copy_from_device(deep_events_);
           ++deep_batch_count_;
           deep_readback_bytes_ += deep_records_.memory_size();
+          ++deep_sync_count_;
           if (!queue_->synchronize()) {
             capture->fail();
             return;
+          }
+          for (int i = 0; i < count; ++i)
+            {
+            deep_lane_event_writes_ += deep_records_[i].payload_counts & 0xffffu;
+            deep_lane_density_writes_ += deep_records_[i].payload_counts >> 16;
           }
           if (capture->volume_grid()) {
             /* Read counts, then populated planes into the fixed allocations.

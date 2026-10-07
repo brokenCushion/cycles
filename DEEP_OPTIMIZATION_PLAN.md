@@ -1570,31 +1570,79 @@ Evidence: `builds/validation/landscape-cloud/optimization-phase6/review/snapshot
 and `root-cause-raw-policy-existing.json`.
 
 
-#### Phase 6a - implemented; qualification resumed under approved host-only scope
+#### Phase 6a - complete; awaiting user review
 
-Before: the eight user-accepted Phase 6 pairs are recorded unchanged in
+Before: eight accepted Phase 6 pairs, preserved in
 `builds/validation/landscape-cloud/optimization-phase6a/before.json`.
-Numeric default 1e-4 merges same-object/facing hard surfaces after publication;
-strict forces 0. Surface facing uses the existing 20-byte event payload;
-rounding spends only remaining publication allowance. No beauty source changes.
+Same-object/facing hard surfaces merge after publication; numeric default
+`--deep-z-tolerance 1e-4`, strict forces 0. No extra transmittance allowance:
+FLOAT rounding spends remaining publication headroom. Exterior transmittance
+is bounded; depths inside each merged span are a separate, recorded depth
+approximation. Existing 20-byte device event and spill layout remain intact.
 
-Same-capture publications, z=0 first then 1e-4 (second export has warm I/O):
+Same captured rays, z=0 first then default 1e-4. The second export has warm
+I/O. MB means decimal bytes / 1e6. Original adaptive max-1024 settings and GPU
+OIDN remain unchanged for realistic117. Renderer commit `5accee7d8`;
+validators/policy through `bffe258b7`.
 
-| Case | Deep/surface samples, 0 -> 1e-4 | EXR bytes, 0 -> 1e-4 | Export wall s, 0 -> 1e-4 | Renderer commit |
-| --- | --- | --- | --- | --- |
-| Sloped16 / 1024, CPU, IDs off | 262,143 -> 108,317 | 1,394,905 -> 814,641 | 0.414 -> 0.397 | `5accee7d8` |
-| Sloped16 / 1024, CPU, IDs on | 262,143 -> 108,317 | 1,406,093 -> 822,286 | 0.498 -> 0.476 | `5accee7d8` |
-| Sloped16 / 1024, CUDA, IDs off | 262,141 -> 108,325 | 1,314,957 -> 814,724 | 0.390 -> 0.378 | `5accee7d8` |
+| Case | Error / deep cap | IDs | Deep samples, 0 -> 1e-4 | EXR MB, 0 -> 1e-4 | Export wall s, 0 -> 1e-4 | Commit |
+| --- | --- | --- | --- | --- | --- | --- |
+| sloped16x16 / 1024 CPU | 1e-3 / all | off | 262,143 -> 108,317 | 1.395 -> 0.815 | 0.414 -> 0.397 | `5accee7d8` |
+| sloped16x16 / 1024 CPU | 1e-3 / all | on | 262,143 -> 108,317 | 1.406 -> 0.822 | 0.498 -> 0.476 | `5accee7d8` |
+| sloped16x16 / 1024 CUDA | 1e-3 / all | off | 262,141 -> 108,325 | 1.315 -> 0.815 | 0.390 -> 0.378 | `5accee7d8` |
+| sloped16x16 / 1024 CUDA | 1e-3 / all | on | 262,141 -> 108,325 | 1.326 -> 0.823 | 0.477 -> 0.451 | `5accee7d8` |
+| small | 1e-4 / all | off | 88,699 -> 87,538 | 0.609 -> 0.614 | 5.397 -> 5.002 | `5accee7d8` |
+| small | 1e-4 / all | on | 442,344 -> 441,179 | 3.680 -> 3.674 | 5.809 -> 5.629 | `5accee7d8` |
+| small | 1e-3 / all | off | 53,113 -> 51,973 | 0.357 -> 0.361 | 5.132 -> 5.098 | `5accee7d8` |
+| small | 1e-3 / all | on | 160,773 -> 159,629 | 1.122 -> 1.131 | 5.383 -> 4.708 | `5accee7d8` |
+| performance | 1e-4 / all | off | 6,813,973 -> 6,658,162 | 59.211 -> 58.549 | 4.417 -> 4.279 | `5accee7d8` |
+| performance | 1e-4 / all | on | 19,881,881 -> 19,722,474 | 167.918 -> 167.594 | 9.480 -> 9.675 | `5accee7d8` |
+| performance | 1e-3 / all | off | 3,076,802 -> 2,922,312 | 22.398 -> 22.175 | 2.541 -> 2.595 | `5accee7d8` |
+| performance | 1e-3 / all | on | 7,109,968 -> 6,951,905 | 63.661 -> 63.143 | 4.427 -> 4.447 | `5accee7d8` |
+| realistic117 | 1e-4 / all | off | 6,622,479 -> 3,554,038 | 44.987 -> 28.561 | 178.048 -> 174.061 | `5accee7d8` |
+| realistic117 | 1e-4 / all | on | 9,829,984 -> 6,614,294 | 70.215 -> 52.643 | 337.956 -> 334.381 | `5accee7d8` |
+| realistic117 | 1e-4 / 64 | off | 1,111,434 -> 952,302 | 8.625 -> 7.877 | 23.240 -> 23.485 | `5accee7d8` |
+| realistic117 | 1e-4 / 64 | on | 3,411,125 -> 3,247,295 | 27.125 -> 26.523 | 32.539 -> 32.158 | `5accee7d8` |
+| realistic117 | 1e-3 / all | off | 6,498,864 -> 3,443,234 | 43.734 -> 27.386 | 149.958 -> 146.799 | `5accee7d8` |
+| realistic117 | 1e-3 / all | on | 7,410,538 -> 4,209,432 | 52.350 -> 34.894 | 199.470 -> 201.623 | `5accee7d8` |
+| realistic117 | 1e-3 / 64 | off | 972,866 -> 814,555 | 7.312 -> 6.270 | 21.261 -> 20.599 | `5accee7d8` |
+| realistic117 | 1e-3 / 64 | on | 1,644,724 -> 1,481,771 | 13.482 -> 12.828 | 23.382 -> 22.680 | `5accee7d8` |
 
-CPU IDs-off/on beauty and all-depth exterior checks pass. Samples fall 58.7%;
-IDs-on EXR bytes fall 41.5%. Flattened alpha difference is exactly zero;
-maximum exterior error is 2.11e-9, below unchanged 1e-3 header bound.
-CPU aggregate mixture fitting is 0.662 -> 0.674 s (IDs off),
-1.066 -> 1.073 s (IDs on); density fitting is zero. Full stage timings are in
+All eight IDs-off/on combined-alpha comparisons PASS with exactly zero
+full-flatten difference. Every same-capture z comparison also has exactly zero
+flatten difference; maximum exterior transmittance error is 2.66807475e-08,
+within the unchanged EXR header bounds. Independent accepted-camera/physical
+volume oracle and depth-cut checks PASS; validators read error from headers.
+
+Surface/hard-step records on realistic117, IDs on, z=0 -> 1e-4:
+Zero-width hard steps are included; each merged surface group counts once.
+
+- 1e-4, deep cap all: 5,859,539 -> 2,643,849 (54.9% fewer).
+- 1e-4, deep cap 64: 843,215 -> 679,385 (19.4% fewer).
+- 1e-3, deep cap all: 5,837,712 -> 2,636,606 (54.8% fewer).
+- 1e-3, deep cap 64: 840,871 -> 677,918 (19.4% fewer).
+
+Sloped16/1024 CPU IDs-on surface records: 262,143 -> 108,317 (58.7% fewer);
+EXR 1,406,093 -> 822,286 bytes (41.5% smaller). At realistic117/1e-3/all with
+IDs on, total records fall 43.2% and EXR bytes fall 33.3%. Export speed is
+largely unchanged: merging follows curve fitting, and some cases are slightly
+slower or produce slightly larger compressed files. No capture speedup claimed.
+
+Fitting times are summed worker times, not export wall time. Sloped CPU IDs-on:
+density 0 -> 0 s; mixture 1.066 -> 1.073 s; quantize/coalesce 0.069 -> 0.073 s.
+Realistic117/1e-3/all IDs-on: density 17.191 -> 17.063 s; mixture
+428.474 -> 427.349 s; quantize/coalesce 4.392 -> 4.648 s. Full per-case timings,
+old Phase 6 baseline, paired measurements and actual validation reports:
 `builds/validation/landscape-cloud/optimization-phase6a/phase-results.json`.
 
-Nine CTests pass; unchanged beauty sources and all 75 common CUDA kernel
-resource records match. Saved CUDA flags re-evaluated without new renders:
+Fresh replay PASS: strict 81/81; numeric z=0 30/30; nine CTests; six
+CPU/CUDA strict/numeric compatibility matrices; four IDs matrices; CPU/CUDA
+boundary suites; CUDA host lifecycle; 26 IDs alpha comparisons, two known
+overlaps and four exact-UINT known-alpha object selections. Host-only beauty
+proof PASS: unchanged beauty-source hash, all 75 common CUDA kernel resource
+records unchanged, and CPU exact equality. No new CUDA calibration controls.
+
+Saved five flagged pixels re-evaluated without new renders:
 
 | Pixel / channel | Absolute difference | Rule-1 absolute limit | Result |
 | --- | --- | --- | --- |
@@ -1602,13 +1650,14 @@ resource records match. Saved CUDA flags re-evaluated without new renders:
 | (0,0), albedo R | 7.74860382e-7 | 4.17232513e-7 | Outside measured range; informational |
 | (0,0), albedo G | 7.15255737e-7 | 4.10396083e-7 | Outside measured range; informational |
 
-There are five ordinary controls, below the user-required 20; step 2 is
-informational only. All original flags remain in the saved report. The
-approved host-only proof (unchanged sources, 75 resources, CPU exact) passes.
-Re-evaluation: `builds/validation/landscape-cloud/optimization-phase6a/five-pixel-re-evaluation.json`.
-Eight landscape pairs and fresh 81/81 + 30/30/full regression replay resumed;
-no further beauty controls, no Phase 6b or full-resolution production run.
-Large evidence: `D:/CyclesDeepScratch/optimization-phase6a/evidence-final/`.
+Five ordinary controls are below the required 20. Step 2 is informational;
+6a qualifies by the user-approved host-only proof, not CUDA pixel thresholds.
+Section 2 records the final ULP floor, calibration minimum and phase scope.
+Saved original flags remain in `five-pixel-re-evaluation.json`.
 
-Connected Gaffer comparison (262,143 unmerged / 108,317 merged deep points):
+Large evidence/TEMP: `D:/CyclesDeepScratch/optimization-phase6a/`.
+Connected Gaffer before/default landscape:
+`D:/CyclesDeepScratch/optimization-phase6a/evidence-final/realistic117/CUDA/ids-1e-3-cap64-z1e-4/phase6a_landscape_review.gfr`.
+Sloped full-surface comparison:
 `D:/CyclesDeepScratch/optimization-phase6a/evidence-final/sloped/CPU/ids-1e-3-cap0-z1e-4/surface_merge_review.gfr`.
+Stop for Phase 6a acceptance; no Phase 6b or full-resolution run launched.

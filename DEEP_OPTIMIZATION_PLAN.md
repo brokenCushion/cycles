@@ -337,6 +337,52 @@ compatibility matrices and small landscape; Gaffer and the OpenEXR reader load
 the overlapping samples correctly; selecting one object's id isolates it
 (checked on an overlap fixture with known per-object alpha).
 
+#### 6a - Same-object surface depth merging (from MoonRay `deep_z_tolerance`)
+
+High sample counts give one surface many distinct deep samples per pixel (each
+camera ray hits a sloped or curved surface at a slightly different depth).
+Merge them, as MoonRay does, using the object index carried since Phase 3c.
+This works whether or not the `id` channel is written.
+- Merge only surface samples with the same object index and the same facing,
+  whose depths lie within a relative depth tolerance of each other. Never merge
+  across objects, across volume intervals, or across a gap occupied by another
+  object's sample.
+- A merged group becomes one sample spanning `[z_min, z_max]` (ZBack = z_max;
+  a single-depth group stays a hard surface with Z = ZBack). Its alpha is the
+  group's combined alpha, so transmittance in front of `z_min` and behind
+  `z_max` is unchanged; only depths inside the span are approximated.
+- This is a depth-domain approximation, separate from the transmittance error
+  budget. Document it as such and record it in the header
+  (`cycles:deepZTolerance`).
+- Setting: `--deep-z-tolerance` (Blender `deep_z_tolerance`), relative to
+  depth. Default `1e-4` in non-strict modes (5 cm at 500 m); `0` disables.
+  Strict forces 0.
+- Acceptance: strict 81/81 and z-tolerance 0 numeric 30/30 identical. With the
+  default, transmittance outside every merged span matches the unmerged output
+  within the header error, and full-flatten alpha is unchanged. Report surface
+  sample count and EXR size reduction on the 117x50 / max-1024 landscape and a
+  sloped high-sample surface fixture.
+
+#### 6b - Holdout objects (RenderMan and MoonRay render matte objects into deep)
+
+`src/session/deep.cpp` currently rejects scenes containing holdout objects
+("holdout, shadow catcher and caustics are unsupported"), so many production
+scenes fail outright.
+- Accept the object holdout flag and the Holdout shader. In deep, holdout
+  geometry contributes its normal camera opacity (it occludes what is behind
+  it). The beauty already renders it with zero alpha and colour, so
+  DeepRecolor-style compositing yields a correct deep holdout.
+- Do not change beauty or the existing holdout pass. Shadow catcher and caustics
+  stay rejected with their existing messages.
+- With `--deep-ids`, mark holdout objects in the manifest so compositors can
+  identify them.
+- Acceptance: fixtures with an object holdout and a material holdout, in front
+  of and inside a volume, on CPU and CUDA. Deep alpha matches the same scene
+  with the holdout replaced by an ordinary opaque object; beauty gate vs.
+  deep-off; strict 81/81 for existing suites.
+
+Stop after 6, 6a and 6b each.
+
 ### Phase 7 - Single regression command and repo hygiene
 
 Goal: make every future change cheap to verify, so effort goes into code rather
@@ -357,7 +403,9 @@ than evidence writing.
   template parameter, film/pass plumbing) in `src/deep/README.md` with the
   reason for each.
 
-### Phase 8 - OptiX backend
+### Phase 8 - OptiX backend and OSL shaders
+
+#### 8a - OptiX with native (SVM) shaders
 
 Most NVIDIA users render with OptiX; today enabling deep forces the slower CUDA
 backend for the whole render. The visibility chain is mostly BVH traversal, so
@@ -370,14 +418,71 @@ RT cores should also speed up capture itself.
 - Acceptance: CPU/CUDA/OptiX matrices; OptiX deep alpha within header tolerance
   of CUDA; beauty gate vs. OptiX deep-off.
 
+Stop after 8a (OptiX with SVM shaders, as above) before starting 8b/8c.
+
+#### 8b - OSL surface shaders (CPU and OptiX)
+
+Requested by a studio developer: scenes whose materials are written in OSL must
+work with deep on the GPU. In Cycles, GPU OSL runs only on OptiX, which is why
+this belongs here. Today `src/session/deep.cpp` rejects GPU OSL ("CUDA deep
+supports native SVM only") and allows only restricted CPU OSL fixtures.
+- OptiX OSL shaders are compiled into the OptiX pipeline and reached through
+  its callables. Build the deep capture program into that same pipeline so the
+  deep visibility chain can evaluate OSL surface shaders. Do not change how
+  beauty compiles or calls OSL.
+- Deep needs only scalar transparency from surfaces. Keep the existing runtime
+  checks: non-grey transparency, cache misses and invalid values fail
+  explicitly.
+- Replace node-graph allowlisting for OSL with a compile-time query of each OSL
+  shader group (OSL exposes what a group uses): reject shaders whose
+  transparency could differ between the deep chain and beauty, such as `trace()`,
+  ray-type queries other than camera, path-dependent attributes (ray depth,
+  ray length), or unknown attributes. Each rejection names the shader and the
+  reason. Constant, texture and noise-driven transparency is allowed.
+- CPU OSL support grows to match, because CPU is the reference for OptiX OSL.
+- Acceptance: new OSL fixtures (constant, textured and noise transparency,
+  mixed OSL/SVM scenes, each rejection case) pass on CPU and OptiX. OptiX deep
+  alpha matches CPU within the header tolerance. Beauty gate vs. OSL deep-off on
+  both devices. Strict mode remains 81/81 for existing SVM suites.
+
+Stop after 8b before starting 8c.
+
+#### 8c - OSL volume shaders
+
+The analytic VDB path reads the density grid directly and needs a node graph
+that `deep.cpp` can prove is "density x constant". An OSL volume shader cannot be
+analysed that way, so OSL volumes need the general shader-evaluation path
+(previously listed under "Later"; it moves here).
+- Evaluate the real volume shader with `PATH_RAY_EXTINCTION` at fixed steps
+  along each medium interval and integrate extinction (same visibility chain,
+  no beauty state or RNG changes, bounded per-thread scratch).
+- Step size: from the object's grid voxel size when the shader reads a grid,
+  otherwise from a new explicit setting (`--deep-volume-step`, Blender
+  `deep_volume_step`). Write it to the EXR header.
+- This path's error is stated, not proven: document that it depends on step
+  size versus how fast the shader varies. Validate against a 4x-finer-step
+  reference render; report the measured difference. Keep the analytic VDB path
+  as the fast path whenever the graph qualifies (SVM or OSL-free).
+- The same path also serves SVM volume graphs that today fail pattern matching.
+  Keep it opt-in for those (`--deep-volume-shader-eval`) so existing analytic
+  results are unchanged.
+- Acceptance: OSL constant, textured and grid-reading volumes on CPU and
+  OptiX; within the stated tolerance of the finer-step reference; OptiX vs CPU
+  within header tolerance; beauty gate; existing analytic suites unchanged.
+
 ### Phase 9 - Landscape production run (last)
 
 Run only after Phases 0-8 pass and the user confirms. One run validates the
 final pipeline. Use OptiX if Phase 8 passed (CUDA otherwise; record which).
 
 Run the full landscape (1175x500, max 1024 adaptive, GPU OIDN) with
-`--deep-error 1e-3 --deep-samples 64 --deep-ids`, then `1e-3` with ids off
-for the size/time comparison. Report capture time, export time, peak host/GPU
+`--deep-error 1e-3 --deep-samples 0 --deep-ids` first, then
+`--deep-error 1e-3 --deep-samples 64 --deep-ids`; retain the ids-off size/time
+comparison. Set both `TEMP` and `TMP` to D: for these runs: C: has about
+86 GB free, while the all-samples spill estimate is about 181 GB. The Phase 5
+beauty-only projection scales fixed startup cost with pixel count and is an
+upper bound; the measured full-resolution beauty took about 7 minutes, not
+the projected 52 minutes. Report capture time, export time, peak host/GPU
 memory, EXR size, alpha oracle, Gaffer cuts, beauty gate. Create the connected
 Gaffer review only after gates pass. Optionally run `1e-4`, and strict only if
 the earlier phases make it practical (< 12 h).
@@ -392,10 +497,15 @@ handle.
 
 ### Later
 
-- General volume shader fallback: instead of graph pattern matching in
-  `src/session/deep.cpp` (Ray Depth / multiply / add / power), evaluate the real
-  volume shader with `PATH_RAY_EXTINCTION` along the ray at voxel-scale steps,
-  with a stated (not proven) error. Keep the analytic VDB path as the fast path.
+- General volume shader fallback: moved into Phase 8c.
+- Subpixel coverage masks (MoonRay's OpenDCX output, from DreamWorks): an 8x8
+  coverage mask and surface flags per deep sample, so separately rendered
+  elements merge correctly at edges. This fixes the known scalar-alpha merge
+  limitation stated in `src/deep/README.md` (two half-covered elements can
+  combine to 0.5 or 1). Compositors need the OpenDCX Nuke plugins, so do this
+  only if edge problems appear in production deep merges. Capture would record
+  each camera sample's subpixel position; reconstruction would keep per-mask
+  coverage instead of averaging it away.
 - Resumable capture (persist band files + manifest) only if long runs remain
   after Phases 1-5.
 

@@ -4,14 +4,15 @@ The [optimization plan](DEEP_OPTIMIZATION_PLAN.md) is the plan of record;
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
 Branch: `codex/landscape-cloud-compatibility`.
 
-Phases 0-3c are accepted. Phase 4 passes its checks and is at its review stop.
-Numeric capture uses bounded flat event/density ranges and two pinned queues.
-Events are 20 bytes; the object index shares the kind word. Strict retains its
-retry path. GPU output, spill and error bounds preserve existing data.
-Strict: 81/81 identical; numeric: 30/30 identical. Both fixed-case beauty gates,
-nine CTests, all-mode CPU/CUDA matrices, both boundary suites and CUDA
-cancellation/error cleanup pass. Staging stays within 32 MiB; GPU peak below 8192 MiB.
-Phase 5 and full-resolution production validation have not started.
+Phases 0-4 are accepted. Phase 5 passes its checks and is at its review stop.
+Deep sample limits retain the first N accepted beauty cameras, including misses.
+N=0 preserves payload/headers; positive N records its effective maximum in EXR.
+Beauty sampling is unchanged. Oracles read the limit from the header and compare
+that prefix; sampling differences against all cameras are informational.
+Strict 81/81; numeric 30/30 identical. Nine CTests, all-mode CPU/CUDA matrices,
+both boundary suites, CUDA lifecycle and extra cap=1 matrices pass. Deep64 with
+128 beauty samples passes alpha/depth cuts and raw/denoised beauty isolation.
+Phase 6 and the full-resolution production run have not started.
 
-Evidence: `builds/validation/landscape-cloud/optimization-phase4/after/phase-results.json`.
-Gaffer: `builds/validation/landscape-cloud/optimization-phase4/after/performance/1e-3/native_vdb_review.gfr`.
+Evidence: `builds/validation/landscape-cloud/optimization-phase5/after/phase-results.json`.
+Gaffer: `builds/validation/landscape-cloud/optimization-phase5/after/prefix128/Phase5_SampleCount_Review.gfr`.

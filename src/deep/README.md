@@ -1,8 +1,8 @@
 # Cycles deep alpha
 
 Produces **Z/ZBack/A camera visibility** with separate native beauty.
-**M8 is complete within the qualified CPU/CUDA support matrix.** Deep RGB and
-additional backends are deferred to M9.
+Current scope and qualification follow the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
+and [current status](../../DEEP_IMPLEMENTATION_STATUS.md). Deep RGB remains deferred.
 
 - [Release status](../../DEEP_IMPLEMENTATION_STATUS.md): qualified capabilities and M8 sign-off.
 - [Milestones](../../DEEP_MILESTONES.md): M8 acceptance gates and M9 scope.
@@ -54,6 +54,12 @@ Each pixel ledger contains uniquely identified, completed camera samples with
 nonnegative weights. Completed misses contribute to normalization. Incomplete
 samples, duplicate IDs, invalid events and zero total weight fail explicitly.
 Depth is positive axial camera distance in scene units.
+
+`DeepSettings::samples`, `--deep-samples` and Blender `deep_samples` select the
+first N accepted camera samples, including misses; 0 uses all beauty samples.
+Beauty sampling is unchanged. Positive N publishes its effective maximum in
+`cycles:deepSamples`; 0 omits the attribute for legacy identity. Curve error
+bounds apply to the retained prefix; differences from all samples are sampling variation.
 
 For each camera sample, surface events multiply transmittance by `(1 - alpha)`;
 volumes contribute `exp(-optical_depth)`. Reconstruction averages transmittance,

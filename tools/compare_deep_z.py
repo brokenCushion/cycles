@@ -51,7 +51,8 @@ def collapse(before, after, tolerance):
         kept, rest = [], []
         while tail < len(before) and before[tail][0] == before[tail][1] == back:
             v = before[tail]
-            if reserved[v]: rest.append(v); reserved[v] -= 1
+            if v[3] != identifier: rest.append(v)
+            elif reserved[v]: rest.append(v); reserved[v] -= 1
             else: kept.append(v)
             tail += 1
         before[end:tail] = kept + rest
@@ -153,6 +154,8 @@ def self_test():
     assert collapse(coincident, [(500.,500.,.44,7)], 1e-4)[2:] == (1, 1)
     endpoint = source + [(500.01,500.01,.01,7)]
     assert collapse(endpoint, [(500.,500.01,.44,7),endpoint[-1]], 1e-4)[2:] == (1, 1)
+    touching = source + [(500.01,500.01,.1,8),(500.015,500.015,.2,8)]
+    assert collapse(touching, [(500.,500.01,.44,7),(500.01,500.015,.28,8)], 1e-4)[2:] == (2, 2)
     for barrier in ((500.005,500.005,.1,8),(500.005,500.006,.1,7)):
         try: collapse([source[0],barrier,source[1]],[(500.,500.01,.44,7)],1e-4)
         except ValueError: pass

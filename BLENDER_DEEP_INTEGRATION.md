@@ -68,7 +68,8 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
   MurmurHash3 seed 0. Different objects retain overlapping samples. Select IDs
   as UINT before Gaffer converts channels to FLOAT; `tools/compare_deep_ids.py`
   provides exact selection and combined-alpha validation. IDs-off retains legacy
-  output. Same-object depth merging and holdouts are separate review stops.
+  output. Strict + IDs is rejected; IDs require a numeric deep error setting.
+  Same-object depth merging and holdouts are separate review stops.
 - Output: scalar Z/ZBack/A and separate native beauty. No deep RGB or refracted
   light-path reconstruction. Glass uses native camera-alpha semantics.
 - One enabled view layer, mono background render, no automatic tiling.

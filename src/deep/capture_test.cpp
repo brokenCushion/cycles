@@ -52,6 +52,19 @@ constexpr size_t single_record_bytes = sizeof(KernelDeepResult) + sizeof(KernelD
 constexpr size_t chain_bytes = 2 * (sizeof(KernelDeepResult) + 2 * sizeof(KernelDeepEvent));
 int main()
 {
+  static_assert(sizeof(ccl::deep::SurfaceEvent) == 24);
+  static_assert(sizeof(ccl::deep::IntervalSample) == 32);
+  for (const bool spill : {false, true})
+    for (const int facing : {-1, 0, 1}) {
+      Capture capture(1, 1, 1, 4*1024*1024, 1, spill);
+      const KernelDeepEvent event{deep_event_pack(DEEP_SURFACE, 7), 2, 2, .5f, float(facing)};
+      capture.record_events(0,0,0,&event,1);
+      check(capture.finalize());
+      const auto raw=capture.events(0,0,0);
+      check(raw.size() == 1 && raw[0].object == 7 && raw[0].facing == facing);
+      const auto curve=capture.reconstruct_pixel(0,0);
+      check(curve.size() == 1 && curve[0].object == 7 && curve[0].facing == facing);
+    }
   try {
     check(deep_object_count_valid(1ull << 30));
     check(!deep_object_count_valid((1ull << 30) + 1));
@@ -477,7 +490,7 @@ int main()
       check(skipped.finalize() && skipped.reconstruct_pixel(0, 0).empty());
       for (const KernelDeepEvent invalid : {KernelDeepEvent{deep_event_pack(DEEP_SURFACE, -2), 2, 2, .5f, 0},
                                             KernelDeepEvent{DEEP_SURFACE, 2, 3, .5f, 0},
-                                            KernelDeepEvent{DEEP_SURFACE, 2, 2, .5f, 1},
+                                            KernelDeepEvent{DEEP_SURFACE, 2, 2, .5f, 2},
                                             KernelDeepEvent{DEEP_VOLUME, 2, 2, 0, 1},
                                             KernelDeepEvent{DEEP_VOLUME, 2, 3, .5f, 1},
                                             KernelDeepEvent{KernelDeepEventKind(99), 2, 3, 0, 1}})

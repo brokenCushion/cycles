@@ -1551,6 +1551,6 @@ step; every original image-wide bias channel still passes. CPU remains exact.
 
 Raw policy application, independent alpha qualification, remaining three
 realistic pairs and fresh identity/full regression replay all PASS.
-Phase 6 is ready for acceptance review; stop before 6a.
+Phase 6 accepted by the user; proceed to 6a and stop for its review.
 Evidence: `builds/validation/landscape-cloud/optimization-phase6/review/snapshot-all-raw-pixel99-7.json`
 and `root-cause-raw-policy-existing.json`.

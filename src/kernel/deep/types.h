@@ -41,8 +41,9 @@ struct KernelDeepEvent {
   /* Low 2 bits: event kind. Upper 30 bits: native object index. */
   unsigned int kind;
   float front, back;
-  /* Only the field selected by kind may be nonzero. Alpha is local surface
-   * opacity; optical_depth is integrated scalar extinction along a ray segment. */
+  /* Alpha is local surface opacity. For volumes optical_depth is integrated
+   * extinction; for surfaces this otherwise unused field carries facing:
+   * +1 front, -1 back, 0 synthetic. The event and spill layout stay 20 bytes. */
   float surface_alpha;
   float optical_depth;
 };

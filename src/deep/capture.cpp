@@ -494,7 +494,7 @@ void Capture::record_sample(const int x,
     if (!std::isfinite(e.front) || e.front <= 0 || !std::isfinite(e.back) ||
         !std::isfinite(e.surface_alpha) || !std::isfinite(e.optical_depth) ||
         (surface ? (e.back != e.front || e.surface_alpha < 0 || e.surface_alpha > 1 ||
-                    e.optical_depth != 0) :
+                    (e.optical_depth != 0 && e.optical_depth != 1 && e.optical_depth != -1)) :
                    ((!cubic && deep_event_type(e) != DEEP_VOLUME) || !volume_ ||
                     (has_density(deep_event_type(e)) ? e.back < e.front : e.back <= e.front) ||
                     e.optical_depth < 0 || e.surface_alpha != 0)) ||
@@ -587,11 +587,11 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
     if (front > opaque_depth ||
         (deep_event_type(event) != DEEP_SURFACE && front == opaque_depth))
       continue;
-    const int object = ids() ? int(deep_event_object(event)) : -1;
+    const int object = int(deep_event_object(event));
     if (ids() && size_t(object) >= object_manifest.size())
       throw std::runtime_error("Deep event object outside manifest");
     if (deep_event_type(event) == DEEP_SURFACE)
-      output.camera.events.push_back({event.front, event.surface_alpha, object});
+      output.camera.events.push_back({event.front, event.surface_alpha, object, int(event.optical_depth)});
     else if (deep_event_type(event) == DEEP_VOLUME_CUBIC) {
       const auto &b = density[i].optical_depth;
       (ids() ? object_cubic[object] : cubic).push_back(
@@ -961,7 +961,7 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
     sample.intervals.reserve(curve.size() - surfaces);
     for (const auto &span : curve)
       if (span.front == span.back)
-        sample.camera.events.push_back({span.front, span.alpha, span.object});
+        sample.camera.events.push_back({span.front, span.alpha, span.object, span.facing});
       else
         sample.intervals.push_back({span.front, span.back, -std::log1p(-span.alpha), span.object});
     return sample;

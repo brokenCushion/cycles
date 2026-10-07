@@ -12,6 +12,7 @@ struct SurfaceEvent {
   /* Local opacity, before attenuation by earlier events. */
   double alpha;
   int object = -1;
+  int facing = 0; /* +1 front, -1 back, 0 synthetic or mixed provenance. */
 };
 
 struct CameraSample {
@@ -36,6 +37,7 @@ struct SurfaceSample {
   /* Effective pixel opacity, not intrinsic material opacity. ZBack equals depth. */
   double alpha;
   int object = -1;
+  int facing = 0;
 };
 
 /* Double-precision surface reference. Input order is immaterial; depths must be

@@ -21,6 +21,7 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
   image.data_window = image.display_window;
   image.compression = deep::DeepCompression::Zips;
   image.error = tile.error();
+  image.z_tolerance = tile.z_tolerance();
   image.deep_samples = tile.sample_limit();
   image.object_manifest = tile.object_manifest();
   image.ids = tile.ids();
@@ -120,7 +121,7 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
         for (int x = 0; x < tile.width; ++x) {
           std::vector<deep::SurfaceSample> pixel;
           for (const auto &sample : tile.get_pixel(x, tile.height - 1 - y))
-            pixel.push_back({sample.front, sample.alpha, sample.object});
+            pixel.push_back({sample.front, sample.alpha, sample.object, sample.facing});
           row.push_back(std::move(pixel));
         }
         check_cancel();

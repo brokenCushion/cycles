@@ -155,7 +155,7 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
         kg->data.cam, kg->camera_motion.data, ray.time, ray.P + ray.D * isect.t);
     if (!isfinite(depth) || depth <= 0)
       return {DEEP_FAILED, 0, DEEP_ERROR_DEPTH};
-    events[count] = {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1.0f - transparency.x, 0};
+    events[count] = {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1.0f - transparency.x, backfacing ? -1.0f : 1.0f};
     ++count;
     if (transparency.x == 0)
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};

@@ -17,7 +17,8 @@ device = sys.argv[4] if len(sys.argv) > 4 else 'CPU'
 error = sys.argv[5] if len(sys.argv) > 5 else 'strict'
 deep_samples = int(sys.argv[6]) if len(sys.argv) > 6 else 0
 deep_ids = len(sys.argv) > 7 and sys.argv[7] == "ids"
-if len(sys.argv) > 7 and not deep_ids:
+z_tolerance = sys.argv[8] if len(sys.argv) > 8 else "0"
+if len(sys.argv) > 7 and sys.argv[7] not in ("ids", "noids"):
     raise ValueError("Expected ids as the optional final argument")
 if deep_samples < 0:
     raise ValueError('Deep sample limit must be nonnegative')
@@ -87,7 +88,7 @@ for name, case in manifest['cases'].items():
         if deep_samples:
             command[1:1] = ['--log', 'cycles', '--log-level', 'info']
         if kind == 'deep':
-            command += ['--deep-samples', str(deep_samples)]
+            command += ['--deep-samples', str(deep_samples), '--deep-z-tolerance', z_tolerance]
             if deep_ids: command += ['--deep-ids']
             command += ['--deep-error', error, '--deep', '--deep-volume', '--deep-memory-mb', '1024',
                         '--deep-max-events', str(case.get('deep_max_events', 16))]

@@ -91,6 +91,8 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
         name="Deep Volume Visibility", default=False,
         description="Capture scalar absorption through supported volume density grids",
     )
+    deep_z_tolerance: FloatProperty(name="Deep Surface Depth Tolerance", default=1e-4, min=0,
+        description="Relative same-object surface depth span; 0 disables; strict forces 0")
     deep_error: FloatProperty(name="Deep Transmittance Error", default=1e-3, min=0, max=1e-2,
         description="0 selects strict; nonzero must exceed the 1e-6 FLOAT precision floor")
     deep_memory_mb: IntProperty(name="Deep Working Memory MiB", default=512, min=1, max=2147483647)
@@ -113,7 +115,7 @@ edit('blender/addon/ui.py', 'class CYCLES_RENDER_PT_film_pixel_filter', """class
         col = layout.column()
         col.active = context.scene.cycles.use_deep_output
         for prop in ("deep_output_path", "use_deep_volume", "use_deep_ids",
-                     "deep_error", "deep_samples", "deep_max_events", "deep_memory_mb"):
+                     "deep_error", "deep_z_tolerance", "deep_samples", "deep_max_events", "deep_memory_mb"):
             col.prop(context.scene.cycles, prop)
 
 
@@ -127,6 +129,7 @@ edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_
     params.deep.transparent = true;
     params.deep.volume = get_boolean(cscene, "use_deep_volume");
     params.deep.error = get_float(cscene, "deep_error");
+    params.deep.z_tolerance = get_float(cscene, "deep_z_tolerance");
     params.deep.samples = get_int(cscene, "deep_samples");
     params.deep.ids = get_boolean(cscene, "use_deep_ids");
     params.deep.max_events = get_int(cscene, "deep_max_events");
@@ -180,6 +183,7 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.volume_export_workers = tile.volume_export_workers();
   image.export_statistics = tile.export_statistics();
   image.error = tile.error();
+  image.z_tolerance = tile.z_tolerance();
   image.deep_samples = tile.sample_limit();
   image.object_manifest = tile.object_manifest();
   image.ids = tile.ids();
@@ -187,11 +191,12 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
     if (tile.cancelled())
       throw std::runtime_error("Blender deep export cancelled; final file preserved");
   };
+  const auto publish = [&](const string &path) {
   if (tile.volume) {
     /* Accepted per-camera intervals on a small grid, before pixel mixture
      * reconstruction/reduction. This is diagnostic evidence, not a completed
      * frame marker; the EXR is published independently below. */
-    deep::AtomicOutput diagnostic(deep_path_ + ".samples.csv");
+    deep::AtomicOutput diagnostic(path + ".samples.csv");
     std::ofstream records(diagnostic.temporary());
     records.exceptions(std::ios::badbit | std::ios::failbit);
     records << "file_x,file_y,sample,front,back,value,kind,event\\n"
@@ -226,7 +231,7 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
         diagnostic.publish();
       }
     };
-    deep::write_volume_exr_pixels(deep_path_, image, [&](const int x, const int y) {
+    deep::write_volume_exr_pixels(path, image, [&](const int x, const int y) {
       check_cancel();
       auto pixel = tile.get_pixel(x, tile.height - 1 - y);
       check_cancel();
@@ -236,7 +241,7 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   }
   /* Small, reproducible diagnostic grid for independent reader validation.
    * This is raw accepted camera data, before pixel reconstruction/FLOAT export. */
-  deep::AtomicOutput records_publication(deep_path_ + ".samples.csv");
+  deep::AtomicOutput records_publication(path + ".samples.csv");
   std::ofstream records(records_publication.temporary());
   records.exceptions(std::ios::badbit | std::ios::failbit);
   records << "file_x,file_y,sample,depth,alpha,event\\n"
@@ -269,16 +274,42 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
       records_publication.publish();
     }
   };
-  deep::write_deep_exr_rows(deep_path_, image, [&](const int y) {
+  deep::write_deep_exr_rows(path, image, [&](const int y) {
     check_cancel();
     std::vector<std::vector<deep::SurfaceSample>> row(tile.width);
     for (int x = 0; x < tile.width; ++x) {
       for (const auto &sample : tile.get_pixel(x, tile.height - 1 - y))
-        row[x].push_back({sample.front, sample.alpha, sample.object});
+        row[x].push_back({sample.front, sample.alpha, sample.object, sample.facing});
     }
     check_cancel();
     return row;
   }, check_cancel, begin_row, end_row);
+  };
+  /* Validation-only companion: both publications read the same immutable
+   * accepted-camera capture. This avoids adaptive GPU variation in the
+   * depth-domain check and avoids rendering or capturing the scene twice. */
+  const char *baseline = std::getenv("CYCLES_DEEP_Z_BASELINE");
+  if (baseline && baseline[0] && image.error && image.z_tolerance) {
+    const float tolerance = image.z_tolerance;
+    image.z_tolerance = 0;
+    const auto start = std::chrono::steady_clock::now();
+    publish(baseline);
+    const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    std::ofstream timing(string(baseline) + ".timing.json");
+    timing.exceptions(std::ios::badbit | std::ios::failbit);
+    timing << std::setprecision(17) << '{' << char(34) << "export_seconds" << char(34) << ':' << seconds;
+    if (image.export_statistics) {
+      using Stage = deep::ExportStatistics;
+      timing << ',' << char(34) << "density_fit" << char(34) << ':' << image.export_statistics->seconds(Stage::DensityFit)
+             << ',' << char(34) << "mixture_fit" << char(34) << ':' << image.export_statistics->seconds(Stage::MixtureFit)
+             << ',' << char(34) << "quantize_coalesce" << char(34) << ':' << image.export_statistics->seconds(Stage::Quantize);
+      for (auto &value : image.export_statistics->nanoseconds) value.store(0);
+    }
+    timing << "}";
+    timing.close();
+    image.z_tolerance = tolerance;
+  }
+  publish(deep_path_);
 }
 #endif
 

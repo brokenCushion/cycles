@@ -58,6 +58,7 @@ class Capture {
   { object_manifest = std::move(manifest); ids_ = true; }
   bool ids() const { return ids_; }
   float error() const { return error_setting_; }
+  float z_tolerance = 0;
   bool volume() const
   {
     return volume_;

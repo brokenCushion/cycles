@@ -17,6 +17,60 @@
 #include <memory>
 
 namespace ccl::deep {
+std::vector<IntervalSample> merge_surface_depths(const std::vector<IntervalSample> &source,
+                                                const double tolerance,
+                                                const double allowance)
+{
+  if (!std::isfinite(tolerance) || tolerance < 0 || !std::isfinite(allowance) || allowance < 0)
+    throw std::invalid_argument("Invalid surface depth merging allowance");
+  if (tolerance == 0) return source;
+  std::vector<IntervalSample> result;
+  result.reserve(source.size());
+  double volume_back = 0, rounding = 0;
+  for (size_t i = 0; i < source.size();) {
+    const auto &first = source[i];
+    size_t end = i + 1;
+    double t = 1 - first.alpha;
+    if (first.front == first.back && first.object >= 0 && first.facing &&
+        volume_back <= first.front &&
+        !(i && source[i - 1].front == first.front && source[i - 1].object != first.object))
+      while (end < source.size()) {
+        const auto &next = source[end];
+        /* Bound the whole group diameter, not each adjacent pair (no drift).
+         * Global ordering makes another object's step or a volume a barrier;
+         * volume_back also catches an overlapping volume starting earlier. */
+        if (next.front != next.back || next.object != first.object || next.facing != first.facing ||
+            next.front - first.front > tolerance * first.front)
+          break;
+        t *= 1 - next.alpha;
+        ++end;
+      }
+    if (end > i + 1) {
+      const double exact = 1 - t, alpha = double(float(exact));
+      /* Outside this span the exact product is unchanged. Product differences
+       * telescope with factors <= 1, so sum(|FLOAT alpha - exact product|)
+       * bounds every exterior depth and the flattened alpha. This spends only
+       * remaining publication headroom; depth approximation gets no T budget. */
+      const double cost = std::abs(alpha - exact) +
+                          8 * (end - i) * std::numeric_limits<double>::epsilon();
+      if (rounding + cost <= allowance) {
+        result.push_back({first.front, source[end - 1].back, alpha, first.object, first.facing});
+        rounding += cost;
+        i = end;
+        continue;
+      }
+      /* Keep a rejected group exact; retrying every suffix would be quadratic. */
+      result.insert(result.end(), source.begin() + i, source.begin() + end);
+      i = end;
+      continue;
+    }
+    if (first.front < first.back) volume_back = std::max(volume_back, first.back);
+    result.push_back(first);
+    ++i;
+  }
+  return result;
+}
+
 std::vector<VolumeInterval> integrate_cubic_density(
     const std::vector<CubicDensityInterval> &segments,
     const double tolerance,
@@ -420,7 +474,8 @@ double interval_transmittance(const std::vector<IntervalSample> &samples,
     }
     else {
       const double fraction = std::clamp((depth - s.front) / (s.back - s.front), 0.0, 1.0);
-      t *= std::exp(std::log1p(-s.alpha) * fraction);
+      if (fraction > 0)
+        t *= std::exp(std::log1p(-s.alpha) * fraction);
     }
   }
   return t;
@@ -554,7 +609,7 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
                                     pair[0].camera.weight + pair[1].camera.weight, true, {}}, {}};
         for (const auto &span : curve)
           if (span.front == span.back)
-            merged.camera.events.push_back({span.front, span.alpha});
+            merged.camera.events.push_back({span.front, span.alpha, span.object, span.facing});
           else
             merged.intervals.push_back({span.front, span.back, -std::log1p(-span.alpha)});
         pair.clear();
@@ -573,13 +628,13 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
   /* Source rates stay fixed while successive candidate merges are tested. */
   std::array<double, 64> merge_rates;
   size_t merge_count = 0;
-  auto emit = [&](double front, double back, double a, double b) {
+  auto emit = [&](double front, double back, double a, double b, int object = -1, int facing = 0) {
     if (a <= b || a == 0)
       return;
     const double alpha = 1 - b / a;
     if (front < back && alpha == 1)
       throw std::runtime_error("Volume interval opacity cannot be represented");
-    const IntervalSample next{front, back, alpha};
+    const IntervalSample next{front, back, alpha, object, facing};
     if (reduction_tolerance > 0 && !result.empty()) {
       const auto &previous = result.back();
       if (previous.front < previous.back && previous.back == front && front < back) {
@@ -701,6 +756,13 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
   };
   std::sort(boundaries.begin(), boundaries.end());
   boundaries.erase(std::unique(boundaries.begin(), boundaries.end()), boundaries.end());
+  std::vector<SurfaceEvent> tags;
+  for (const auto &sample : samples)
+    if (sample.camera.weight > 0)
+      for (const auto &event : sample.camera.events)
+        if (event.alpha > 0) tags.push_back(event);
+  std::sort(tags.begin(), tags.end(), [](const auto &a, const auto &b) { return a.depth < b.depth; });
+  size_t tag = 0;
   const bool pair = samples.size() == 2;
   /* Boundary queries sweep forward; recursive fitting retains random access. */
   double before = boundaries.empty() ? 1 : raw(boundaries.front(), true, nullptr, true);
@@ -708,7 +770,14 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
     const double z = boundaries[i];
     double wa = .5;
     const double ta = raw(z, false, pair ? &wa : nullptr, true);
-    emit(z, z, before, ta);
+    int object = -1, facing = 0;
+    bool found = false;
+    while (tag < tags.size() && tags[tag].depth == z) {
+      const auto &event = tags[tag++];
+      if (!found) { object = event.object; facing = event.facing; found = true; }
+      else if (object != event.object || facing != event.facing) { object = -1; facing = 0; }
+    }
+    emit(z, z, before, ta, object, facing);
     if (i + 1 == boundaries.size())
       break;
     const double end = boundaries[i + 1], mid = z + (end - z) / 2;
@@ -826,7 +895,7 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
                                             max_intervals, 0);
       check_size(curve.spans, entry.first, spans.size());
       for (const auto &v : spans)
-        curve.spans.push_back({v.front, v.back, v.alpha, entry.first});
+        curve.spans.push_back({v.front, v.back, v.alpha, entry.first, v.facing});
     }
     working.push_back(std::move(curve));
   }
@@ -860,7 +929,7 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
       ledgers[side].resize(objects.size());
       for (const auto &v : (side == 0 ? left : right).spans) {
         auto &ledger = ledgers[side][objects.at(v.object)];
-        if (v.front == v.back) ledger.camera.events.push_back({v.front, v.alpha});
+        if (v.front == v.back) ledger.camera.events.push_back({v.front, v.alpha, v.object, v.facing});
         else ledger.intervals.push_back({v.front, v.back, -std::log1p(-v.alpha)});
       }
       curves[side].reserve(objects.size());
@@ -883,12 +952,12 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
     std::vector<double> object_transmission(objects.size(), 1);
     std::vector<double> merge_errors(objects.size(), 0), merge_prefixes(objects.size(), 1);
     std::vector<size_t> last_spans(objects.size(), SIZE_MAX);
-    auto emit = [&](double front, double back, double alpha, int object) {
+    auto emit = [&](double front, double back, double alpha, int object, int facing = 0) {
       if (alpha <= 0) return;
       if (!std::isfinite(alpha) || alpha > 1 || (front < back && alpha == 1))
         throw std::runtime_error("Deep ID opacity cannot be represented");
       const size_t index = objects.at(object);
-      const IntervalSample next{front, back, alpha, object};
+      const IntervalSample next{front, back, alpha, object, facing};
       bool merged = false;
       if (last_spans[index] != SIZE_MAX) {
         auto &previous = output.spans[last_spans[index]];
@@ -922,11 +991,18 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
        * telescopes to the ordinary camera-average surface opacity. */
       for (const auto &entry : objects) {
         const double before = t[0] + t[1];
+        int facing = 0; bool found = false, mixed = false;
         for (int side = 0; side < 2; ++side)
           for (const auto &event : ledgers[side][entry.second].camera.events)
-            if (event.depth == z) t[side] *= 1 - event.alpha;
+            if (event.depth == z) {
+              t[side] *= 1 - event.alpha;
+              if (event.alpha > 0) {
+                if (!found) { facing = event.facing; found = true; }
+                else mixed |= facing != event.facing;
+              }
+            }
         const double after = t[0] + t[1];
-        if (before > after) emit(z, z, 1 - after / before, entry.first);
+        if (before > after) emit(z, z, 1 - after / before, entry.first, mixed ? 0 : facing);
       }
       if (k + 1 == boundaries.size()) break;
       const double end = boundaries[k + 1], mid = z + (end - z) / 2;

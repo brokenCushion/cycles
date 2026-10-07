@@ -398,6 +398,8 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
     }
   }
   deep::error_budget(params.deep.error);
+  require_deep(std::isfinite(params.deep.z_tolerance) && params.deep.z_tolerance >= 0,
+               "surface depth tolerance must be finite and nonnegative");
   require_deep(params.deep.samples >= 0, "deep sample limit must be nonnegative");
   require_deep(deep_object_count_valid(scene->objects.size()),
                "scene object count exceeds the 30-bit deep object-index range");

@@ -475,7 +475,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
             const float z = deep_camera_depth(
                 kernel_data.cam, kernel_data_array(camera_motion), ray.time, ray.P + hit.t * ray.D);
             deep_write_event(events, density, count * stride,
-                {deep_event_pack(DEEP_SURFACE, hit.object), z, z, 1 - t.x, 0}, nullptr, write);
+                {deep_event_pack(DEEP_SURFACE, hit.object), z, z, 1 - t.x, back ? -1.0f : 1.0f}, nullptr, write);
             ++count;
             /* Exact opacity makes every later depth query zero. Stop visibility
              * traversal without an opacity threshold or changes to beauty. */

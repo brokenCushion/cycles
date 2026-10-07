@@ -26,7 +26,7 @@ class PathTraceDeepTile final : public OutputDriver::DeepTile {
     }
     std::vector<deep::IntervalSample> result;
     for (const auto &s : capture_.reconstruct_pixel(x, y)) {
-      result.push_back({s.depth, s.depth, s.alpha, s.object});
+      result.push_back({s.depth, s.depth, s.alpha, s.object, s.facing});
     }
     return result;
   }
@@ -41,6 +41,7 @@ class PathTraceDeepTile final : public OutputDriver::DeepTile {
     return capture_.volume_row_sample_limit();
   }
   float error() const override { return capture_.error(); }
+  float z_tolerance() const override { return capture_.z_tolerance; }
   std::vector<std::pair<uint32_t, std::string>> object_manifest() const override
   { return capture_.object_manifest; }
   bool ids() const override { return capture_.ids(); }

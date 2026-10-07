@@ -33,6 +33,75 @@ void require(bool value, const std::string &message)
   }
 }
 
+void surface_depth_merging(const std::filesystem::path &directory)
+{
+  PixelLedger ledger{0, 0, {}};
+  for (int i = 0; i < 1024; ++i)
+    ledger.samples.push_back({uint64_t(i), 1, true, {{double(float(500 + i * .0001)), 1, 0, 1}}});
+  const auto surface = reconstruct(ledger);
+  std::vector<IntervalSample> source;
+  for (const auto &s : surface) source.push_back({s.depth, s.depth, s.alpha, s.object, s.facing});
+  const auto merged = merge_surface_depths(source, 1e-4, 1e-6);
+  require(source.size() == 1024 && merged.size() == 3, "Sloped surface diameter merging failed");
+  for (const auto &s : merged)
+    require(s.back - s.front <= 1e-4 * s.front, "Adjacent-step chaining exceeded tolerance");
+  require(merge_surface_depths(source, 0, 0).size() == source.size(), "Zero tolerance changed count");
+  require(merge_surface_depths(source, 1e-4, 0).size() == source.size(), "Rounding exceeded allowance");
+  require(interval_transmittance(merged, 499) == 1 && interval_transmittance(merged, 501) == 0,
+          "Opaque merged span produced nonfinite exterior transmittance");
+  const std::vector<IntervalSample> pair{{500,500,.2,0,1}, {500.01,500.01,.3,0,1}};
+  auto check_barrier = [&](IntervalSample barrier, size_t at) {
+    auto curve = pair; curve.insert(curve.begin()+at, barrier);
+    require(merge_surface_depths(curve, 1e-4, 1e-6).size() == 3, "Depth merge crossed a barrier");
+  };
+  check_barrier({500.005,500.005,.1,1,1}, 1);
+  check_barrier({500.005,500.005,.1,0,-1}, 1);
+  check_barrier({500.005,500.006,.1,0,0}, 1);
+  check_barrier({499,501,.1,1,0}, 0);
+  auto unknown = pair; unknown[1].facing = 0;
+  require(merge_surface_depths(unknown, 1e-4, 1e-6).size() == 2, "Synthetic step merged");
+  const auto two = merge_surface_depths(pair, 1e-4, 1e-6);
+  require(two.size() == 1 && std::abs(two[0].alpha - .44) < 3e-8, "Group alpha is not the product");
+  require(interval_transmittance(pair, 499) == interval_transmittance(two, 499), "Front T changed");
+  require(std::abs(interval_transmittance(pair, 501) - interval_transmittance(two, 501)) < 3e-8,
+          "Back T changed");
+  bool rejected = false;
+  try { merge_surface_depths(pair, NAN, 1e-6); } catch (const std::invalid_argument &) { rejected = true; }
+  require(rejected, "Nonfinite depth tolerance accepted");
+
+  for (const bool ids : {false, true}) {
+    SurfaceImage image{{0,0,0,0}, {0,0,0,0}};
+    image.error = 1e-4f; image.z_tolerance = 1e-4f; image.ids = ids;
+    image.object_manifest = {{0xabcdef01, "sloped surface"}};
+    for (const bool volume : {false, true}) {
+      const auto path = directory / (std::string("sloped_1024_") + (ids ? "ids_" : "") +
+                                      (volume ? "volume.exr" : "surface.exr"));
+      if (volume) write_volume_exr(path, image, {source});
+      else write_deep_exr_rows(path, image, [&](int) { return std::vector<std::vector<SurfaceSample>>{surface}; });
+      Imf::DeepScanLineInputFile input(path.string().c_str(), 1);
+      require(input.header().typedAttribute<Imf::DoubleAttribute>("cycles:deepZTolerance").value() ==
+                  double(image.z_tolerance), "Missing depth-domain header");
+      unsigned count = 0; Imf::DeepFrameBuffer fb;
+      fb.insertSampleCountSlice(Imf::Slice::Make(Imf::UINT, &count, input.header().dataWindow()));
+      input.setFrameBuffer(fb); input.readPixelSampleCounts(0,0);
+      require(count == 3, "Publication lost surface provenance or did not merge");
+      std::vector<float> z(count), back(count), alpha(count);
+      float *zp=z.data(), *bp=back.data(), *ap=alpha.data();
+      for (const auto &entry : {std::pair<const char *, float **>{"Z", &zp}, {"ZBack", &bp}, {"A", &ap}})
+        fb.insert(entry.first, Imf::DeepSlice(Imf::FLOAT, reinterpret_cast<char *>(entry.second),
+                                             sizeof(float *), sizeof(float *), sizeof(float)));
+      input.setFrameBuffer(fb); input.readPixels(0,0);
+      double t=1;
+      for (size_t i=0;i<count;++i) {
+        require(back[i] > z[i] && back[i]-z[i] <= image.z_tolerance*z[i], "Invalid published span");
+        t *= 1-double(alpha[i]);
+      }
+      require(t == 0, "Opaque flattened alpha changed");
+    }
+  }
+  std::cout << "PASS 1024-camera sloped surface, facing/object/volume barriers, span/header and alpha\n";
+}
+
 void volume_projection(const std::filesystem::path &directory)
 {
   /* Independent rounding passes the export allowance here, but introduces
@@ -605,6 +674,7 @@ int main(int argc, char **argv)
     volume_projection(directory);
     id_round_trip(directory);
     measured_id_publication(directory);
+    surface_depth_merging(directory);
     std::ofstream manifest(directory / "expected_pixels.csv");
     manifest.exceptions(std::ios::badbit | std::ios::failbit);
     manifest << "file_x,file_y,samples,flattened_alpha\n" << std::setprecision(17);

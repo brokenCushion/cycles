@@ -116,7 +116,15 @@ std::vector<VolumeInterval> integrate_linear_density(
 struct IntervalSample {
   double front, back, alpha;
   int object = -1;
+  int facing = 0; /* Nonzero only for a surface with unmixed provenance. */
 };
+
+/* Depth-domain approximation: only same-object, same-facing hard steps merge.
+ * FLOAT alpha rounding spends the supplied remaining publication allowance.
+ * Input is globally depth sorted; volumes and intervening objects are barriers. */
+std::vector<IntervalSample> merge_surface_depths(const std::vector<IntervalSample> &source,
+                                                double relative_tolerance,
+                                                double rounding_allowance);
 
 /* Reference only: averages sample transmittance, then fits nonoverlapping
  * exponential intervals. Surface steps have front == back. Error is absolute

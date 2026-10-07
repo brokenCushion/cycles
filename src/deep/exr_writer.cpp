@@ -50,12 +50,12 @@ struct FloatPixel {
 
 /* Compare every interval of the two step functions, including either side of
  * their union of boundaries. A small Z rounding error can cause a large T error. */
-void check_quantization(const std::vector<SurfaceSample> &source,
+double check_quantization(const std::vector<SurfaceSample> &source,
                         const FloatPixel &output,
                         const double tolerance = export_error)
 {
   size_t i = 0, j = 0;
-  double source_t = 1.0, output_t = 1.0;
+  double source_t = 1.0, output_t = 1.0, error = 0;
   while (i < source.size() || j < output.z.size()) {
     const double z = std::min(i < source.size() ? source[i].depth : INFINITY,
                               j < output.z.size() ? double(output.z[j]) : INFINITY);
@@ -65,9 +65,27 @@ void check_quantization(const std::vector<SurfaceSample> &source,
     while (j < output.z.size() && double(output.z[j]) == z) {
       output_t *= 1.0 - double(output.a[j++]);
     }
-    if (std::abs(source_t - output_t) > tolerance) {
+    error = std::max(error, std::abs(source_t - output_t));
+    if (error > tolerance) {
       throw std::invalid_argument("FLOAT depth/alpha exceeds deep transmittance error budget");
     }
+  }
+  return error;
+}
+
+void merge_pixel(const SurfaceImage &image, FloatPixel &out,
+                 const std::vector<SurfaceSample> &tags, const double allowance)
+{
+  if (!image.error || !image.z_tolerance) return;
+  std::vector<IntervalSample> curve;
+  curve.reserve(tags.size());
+  for (size_t i = 0; i < tags.size(); ++i)
+    curve.push_back({out.z[i], out.z[i], out.a[i], tags[i].object, tags[i].facing});
+  curve = merge_surface_depths(curve, image.z_tolerance, std::max(0.0, allowance));
+  out.z.clear(); out.back.clear(); out.a.clear(); out.id.clear();
+  for (const auto &v : curve) {
+    out.z.push_back(float(v.front)); out.back.push_back(float(v.back)); out.a.push_back(float(v.alpha));
+    if (image.ids) out.id.push_back(image.object_manifest[v.object].first);
   }
 }
 
@@ -118,7 +136,8 @@ std::vector<FloatPixel> prepare(const SurfaceImage &image)
       result[p].a.push_back(a);
       previous = sample.depth;
     }
-    check_quantization(pixel, result[p]);
+    const double error = check_quantization(pixel, result[p]);
+    merge_pixel(image, result[p], pixel, export_error - error);
   }
   return result;
 }
@@ -165,6 +184,8 @@ void insert_ids(Imf::DeepFrameBuffer &fb, std::vector<FloatPixel> &pixels,
 
 Imf::Header make_header(const SurfaceImage &image)
 {
+  if (!std::isfinite(image.z_tolerance) || image.z_tolerance < 0)
+    throw std::invalid_argument("Invalid surface depth tolerance");
   if (image.deep_samples < 0)
     throw std::invalid_argument("Invalid deep sample limit");
   const auto budget = error_budget(image.error);
@@ -200,6 +221,8 @@ Imf::Header make_header(const SurfaceImage &image)
                           (image.reduction_error ? image.reduction_error : export_error)));
   if (image.error)
     header.insert("cycles:deepError", Imf::DoubleAttribute(budget.effective));
+  if (image.error && image.z_tolerance)
+    header.insert("cycles:deepZTolerance", Imf::DoubleAttribute(image.z_tolerance));
   if (image.deep_samples)
     header.insert("cycles:deepSamples", Imf::IntAttribute(image.deep_samples));
   /* Do not advertise deepImageState: distinct double depths can round together. */
@@ -281,7 +304,7 @@ static std::vector<IntervalSample> project_volume_depths(const std::vector<Inter
   for (size_t begin = 0; begin < source.size();) {
     if (source[begin].front == source[begin].back) {
       result.push_back({double(float(source[begin].front)), double(float(source[begin].back)),
-                        double(float(source[begin].alpha))});
+                        double(float(source[begin].alpha)), source[begin].object, source[begin].facing});
       ++begin;
       continue;
     }
@@ -360,7 +383,7 @@ static std::vector<FloatPixel> prepare_volume(
         std::vector<IntervalSample> rounded;
         rounded.reserve(entry.second.size());
         for (const auto &v : entry.second)
-          rounded.push_back({double(float(v.front)), double(float(v.back)), double(float(v.alpha))});
+          rounded.push_back({double(float(v.front)), double(float(v.back)), double(float(v.alpha)), v.object, v.facing});
         const double rounded_error = interval_curve_error(entry.second, rounded);
         if (rounded_error < error) {
           error = rounded_error;
@@ -422,7 +445,21 @@ static std::vector<FloatPixel> prepare_volume(
           }
         }
       }
-      check_sum();
+      const double measured_error = check_sum();
+      std::vector<IntervalSample> merged;
+      if (image.error && image.z_tolerance) {
+        for (const auto &entry : quantized)
+          for (auto v : entry.second) { v.object = entry.first; merged.push_back(v); }
+        std::sort(merged.begin(), merged.end(), [&](const auto &a, const auto &b) {
+          if (a.front != b.front) return a.front < b.front;
+          if (a.back != b.back) return a.back < b.back;
+          return image.object_manifest[a.object].first < image.object_manifest[b.object].first;
+        });
+        merged = merge_surface_depths(merged, image.z_tolerance,
+                                      std::max(0.0, allowance - measured_error));
+        quantized.clear();
+        for (const auto &v : merged) quantized[v.object].push_back(v);
+      }
       auto &destination = output[p];
       for (const auto &entry : quantized)
         for (const auto &v : entry.second) {
@@ -485,7 +522,7 @@ static std::vector<FloatPixel> prepare_volume(
       std::vector<IntervalSample> rounded;
       rounded.reserve(source[p].size());
       for (const auto &s : source[p]) {
-        rounded.push_back({double(float(s.front)), double(float(s.back)), double(float(s.alpha))});
+        rounded.push_back({double(float(s.front)), double(float(s.back)), double(float(s.alpha)), s.object, s.facing});
       }
       const double rounded_error = interval_curve_error(source[p], rounded);
       if (rounded_error < error) {
@@ -502,6 +539,8 @@ static std::vector<FloatPixel> prepare_volume(
               << ": " << error << " > " << allowance;
       throw std::invalid_argument(message.str());
     }
+    if (image.error && image.z_tolerance)
+      quantized = merge_surface_depths(quantized, image.z_tolerance, std::max(0.0, allowance - error));
     pixels[p].z.reserve(quantized.size());
     pixels[p].back.reserve(quantized.size());
     pixels[p].a.reserve(quantized.size());
@@ -656,14 +695,17 @@ std::vector<SurfaceSample> reduce_surface(const std::vector<SurfaceSample> &sour
   std::vector<SurfaceSample> result;
   result.reserve(source.size());
   double reference = 1, emitted = 1;
+  int object = -1, facing = 0; bool pending = false;
   for (size_t i = 0; i < source.size(); ++i) {
+    if (!pending) { object = source[i].object; facing = source[i].facing; pending = true; }
+    else if (object != source[i].object || facing != source[i].facing) { object = -1; facing = 0; }
     reference *= 1 - source[i].alpha;
     /* Delay small steps, retaining original depths and exact final opacity.
      * This bound is global, not a per-merge allowance that can accumulate. */
     if (emitted - reference > tolerance || i + 1 == source.size()) {
       if (emitted > reference)
-        result.push_back({source[i].depth, 1 - reference / emitted});
-      emitted = reference;
+        result.push_back({source[i].depth, 1 - reference / emitted, object, facing});
+      emitted = reference; pending = false;
     }
   }
   return result;
@@ -704,15 +746,22 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
             pixels[x].z.push_back(float(sample.depth));
             pixels[x].a.push_back(float(sample.alpha));
           }
-          check_quantization(scanline.pixels[x], pixels[x], image.reduction_error);
+          const double error = check_quantization(scanline.pixels[x], pixels[x], image.reduction_error);
+          merge_pixel(image, pixels[x], reduced, image.reduction_error - error);
         }
       }
+      if (!image.reduction_error || image.ids)
+        for (size_t x = 0; x < width; ++x) {
+          const double error = check_quantization(scanline.pixels[x], pixels[x]);
+          merge_pixel(image, pixels[x], scanline.pixels[x], export_error - error);
+        }
       std::vector<unsigned int> counts(width);
-      std::vector<float *> z(width), a(width);
+      std::vector<float *> z(width), a(width), back(width);
       for (size_t x = 0; x < width; ++x) {
         counts[x] = unsigned(pixels[x].z.size());
         z[x] = pixels[x].z.data();
         a[x] = pixels[x].a.data();
+        back[x] = pixels[x].back.empty() ? z[x] : pixels[x].back.data();
       }
       const Imath::Box2i bounds({dw.min.x, int(y)}, {dw.max.x, int(y)});
       Imf::DeepFrameBuffer fb;
@@ -722,8 +771,10 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
       const auto as = Imf::Slice::Make(
           Imf::FLOAT, a.data(), bounds, sizeof(float *), width * sizeof(float *));
       fb.insert("Z", Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
+      const auto bs = Imf::Slice::Make(
+          Imf::FLOAT, back.data(), bounds, sizeof(float *), width * sizeof(float *));
       fb.insert("ZBack",
-                Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
+                Imf::DeepSlice(Imf::FLOAT, bs.base, bs.xStride, bs.yStride, sizeof(float)));
       fb.insert("A", Imf::DeepSlice(Imf::FLOAT, as.base, as.xStride, as.yStride, sizeof(float)));
       std::vector<uint32_t *> ids;
       if (image.ids) insert_ids(fb, pixels, bounds, ids);

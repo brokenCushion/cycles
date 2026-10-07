@@ -36,6 +36,7 @@ struct Boundary {
   double alpha;
   size_t sample;
   int object;
+  int facing;
 };
 
 }  // namespace
@@ -85,7 +86,7 @@ std::vector<SurfaceSample> reconstruct(const PixelLedger &pixel, const bool with
     }
     for (const SurfaceEvent &event : samples[i]->events) {
       if (event.alpha > 0.0) {
-        boundaries.push_back({event.depth, event.alpha, i, event.object});
+        boundaries.push_back({event.depth, event.alpha, i, event.object, event.facing});
       }
     }
   }
@@ -108,8 +109,12 @@ std::vector<SurfaceSample> reconstruct(const PixelLedger &pixel, const bool with
     const int object = boundaries[i].object;
     if (with_ids && object < 0)
       throw std::invalid_argument("Deep ID surface lacks an object index");
+    int provenance = object, facing = boundaries[i].facing;
     do {
       const Boundary &event = boundaries[i++];
+      if (event.object != provenance || event.facing != facing) {
+        provenance = -1; facing = 0;
+      }
       transmittance[event.sample] *= 1.0 - event.alpha;
     } while (i < boundaries.size() && boundaries[i].depth == depth &&
              (!with_ids || boundaries[i].object == object));
@@ -127,7 +132,7 @@ std::vector<SurfaceSample> reconstruct(const PixelLedger &pixel, const bool with
       after = before;
     }
     if (after < before) {
-      result.push_back({depth, 1.0 - after / before, with_ids ? object : -1});
+      result.push_back({depth, 1.0 - after / before, with_ids ? object : provenance, facing});
     }
     before = after;
   }

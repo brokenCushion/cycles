@@ -200,25 +200,12 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
         capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, events, density);
       }
       else {
-        /* Execute the scheduled intersection once; megakernel resumes at its successor.
-         *
-         * Only prim is a defined miss marker; type and t can be uninitialized. */
-        kernels_.integrator_intersect_closest(kernel_globals, state, render_buffer);
-        if (state->isect.prim == PRIM_NONE) {
-          capture->record(work_tile.x, work_tile.y, state->path.sample, 0.0f);
-        }
-        else if (state->isect.type == PRIMITIVE_TRIANGLE) {
-          const float3 p = float3(state->ray.P) + float3(state->ray.D) * state->isect.t;
-          const float depth = deep_camera_depth(kernel_globals->data.cam,
-                                                kernel_globals->camera_motion.data,
-                                                state->ray.time, p);
-          if (depth > 0.0f)
-            capture->record(work_tile.x, work_tile.y, state->path.sample, depth, state->isect.object);
-          else
-            capture->fail();
-        }
-        else
-          capture->fail();
+        /* Independent opaque traversal also records surface facing. Beauty
+         * keeps its original queued intersection and unmodified path state. */
+        KernelDeepEvent event;
+        const KernelDeepResult result = kernels_.deep_surface(
+            kernel_globals, state, &event, 1, false, nullptr, 0);
+        capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, &event);
       }
     }
 #endif

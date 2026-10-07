@@ -44,6 +44,8 @@ parser.add_argument('--beauty-snapshot-build', type=Path,
                     help='Isolated diagnostic build manifest; resolves only matching-case flagged pixels')
 parser.add_argument('--oracle-python', type=Path,
                     help='Existing NumPy Python environment for bounded, large camera-CSV checks')
+parser.add_argument('--z-baseline', type=Path,
+                    help='Same-capture z=0 EXR; requires its independent z_comparison.json')
 parser.add_argument('--beauty-pool', type=Path, action='append', default=[],
                     help='Ordinary control directory with matching settings and unchanged beauty source')
 parser.add_argument('--beauty-builds', type=Path,
@@ -99,6 +101,23 @@ with_ids = bool(settings.get('deep_ids'))
 check(('id' in reader['out']['channelNames'].getValue()) == with_ids,
       'Missing or unexpected deep ID channel')
 metadata = reader['out']['metadata'].getValue()
+z_tolerance = float(metadata.get('cycles:deepZTolerance', 0))
+check(math.isfinite(z_tolerance) and z_tolerance >= 0, 'Invalid EXR depth tolerance')
+check(math.isclose(z_tolerance, settings.get('deep_z_tolerance', 0), rel_tol=1e-7),
+      'EXR depth tolerance differs from requested setting')
+oracle_reader = reader
+z_comparison = None
+if z_tolerance:
+    check(args.z_baseline is not None, 'Depth merging requires a same-capture exterior comparison')
+    z_comparison = json.loads((directory / 'z_comparison.json').read_text())
+    check(z_comparison['passed'] and z_comparison['before_file'] == str(args.z_baseline.resolve()) and
+          z_comparison['after_file'] == str((directory / 'scene.deep.exr').resolve()) and
+          z_comparison['tolerance'] == deep_tolerance and z_comparison['z_tolerance'] == z_tolerance,
+          'Invalid or mismatched exterior comparison')
+    oracle_reader = GafferImage.ImageReader()
+    oracle_reader['fileName'].setValue(args.z_baseline.as_posix())
+    check('cycles:deepZTolerance' not in oracle_reader['out']['metadata'].getValue(),
+          'Oracle companion must disable depth merging')
 check(('cycles:deepIDManifest' in metadata) == with_ids,
       'Missing or unexpected deep ID manifest')
 if with_ids:
@@ -306,7 +325,8 @@ for y in sorted(set([i*(height-1)//8 for i in range(9)])):
             check(all(math.isfinite(v) for v in (front, back, alpha)) and
                   front > 0 and back >= front and front >= previous and 0 < alpha <= 1,
                   'Invalid or unordered deep interval')
-            check(back == front or alpha < 1, 'Opaque extended interval')
+            check(back == front or alpha < 1 or (z_tolerance and back-front <= z_tolerance*front),
+                  'Opaque extended interval outside a permitted merged surface span')
             previous = front if with_ids else back
             low, high = min(low, front), max(high, back)
         pixels[x, y] = samples
@@ -325,7 +345,10 @@ def transmittance(samples, depth):
                 surface *= 1-alpha
         else:
             fraction = min(1, max(0, (depth-front)/(back-front)))
-            tau -= math.log1p(-alpha)*fraction
+            if alpha == 1:
+                if fraction > 0: surface = 0
+            else:
+                tau -= math.log1p(-alpha)*fraction
     return surface*math.exp(-tau)
 
 
@@ -423,7 +446,7 @@ if diagnostic.exists() and args.oracle_python:
           'Large-scene oracle mode is separate from named overlap/empty fixtures')
     stored_path = directory / 'stored_diagnostic_curves.json'
     stored_path.write_text(json.dumps(dict(samples=capture_samples, adaptive=settings['adaptive'], deep_error=deep_tolerance,
-        pixels=[dict(x=x, y=y, samples=deep_pixel(reader['out'], imath.V2i(x, height-1-y)))
+        pixels=[dict(x=x, y=y, samples=deep_pixel(oracle_reader['out'], imath.V2i(x, height-1-y)))
                 for x, y in sorted({(i*(width-1)//8, j*(height-1)//8)
                                    for i in range(9) for j in range(9)})])))
     oracle_report = directory / 'accepted_camera_oracle.json'
@@ -486,7 +509,7 @@ elif diagnostic.exists():
         accepted_populations.append(len(accepted))
         camera_populations[x, file_y] = len(accepted)
         functions = [curve(v, s) for v, s in accepted]
-        output = deep_pixel(reader['out'], imath.V2i(x, height-1-file_y))
+        output = deep_pixel(oracle_reader['out'], imath.V2i(x, height-1-file_y))
         actual = curve([(a, b, -math.log1p(-v)) for a, b, v in output if a < b],
                        [(a, v) for a, b, v in output if a == b])
         boundaries = {z for v, s in accepted for a, b, _ in v for z in (a, b)}
@@ -564,6 +587,9 @@ for depth in cuts:
 (directory / 'curve_validation.json').write_text(json.dumps({
     'accepted_camera_probes': raw_probes, 'max_accepted_camera_error': raw_error,
     'max_slice_error': slice_error, 'worst_slice': worst_slice}, indent=2)+'\n')
+if z_comparison is not None:
+    check(raw_error + z_comparison['max_exterior_error'] <= deep_tolerance,
+          'Accepted-camera plus exterior publication errors exceed the unchanged header bound')
 # Save a review even when compositor precision fails the gate. The final report
 # and exit status remain failing; a viewable graph is not numerical sign-off.
 cut['farClip']['enabled'].setValue(False)
@@ -617,6 +643,7 @@ loaded['fileName'].setValue(review.as_posix())
 loaded.load()
 check(loaded.getFocus().isSame(loaded['VDBDeepPoints']), 'Review focus did not reload')
 report = {'deep_error': deep_tolerance, 'passed': beauty_passed and slice_error <= deep_tolerance,
+          'deep_z_tolerance': z_tolerance, 'exterior_comparison': z_comparison,
           'native_sample_count_divisor': native_sample_count_divisor,
           'beauty_passed': beauty_passed, 'depth_cuts_passed': slice_error <= deep_tolerance,
           'scope': 'Gaffer EXR interoperability and beauty isolation',

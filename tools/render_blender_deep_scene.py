@@ -28,6 +28,7 @@ parser.add_argument('--deep-max-events', type=int, default=16)
 parser.add_argument('--deep-memory-mb', type=int, default=512)
 parser.add_argument('--deep-ids', action='store_true')
 parser.add_argument('--deep-error', default='0.001')
+parser.add_argument('--deep-z-tolerance', type=float, default=1e-4)
 parser.add_argument('--deep-samples', type=int, default=0)
 parser.add_argument('--fixed-sampling', action='store_true')
 parser.add_argument('--seed', type=int, help='Independent deep-off Monte Carlo control seed')
@@ -38,6 +39,8 @@ parser.add_argument('--diagnostic-sample-count', action='store_true',
 parser.add_argument('--capture-only', action='store_true',
                     help='Diagnostic capture/beauty test; skips curve fitting and deep EXR publication')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
+if not math.isfinite(args.deep_z_tolerance) or args.deep_z_tolerance < 0:
+    raise ValueError('Deep z tolerance must be finite and nonnegative')
 if args.deep_samples < 0:
     raise ValueError('Deep samples must be nonnegative')
 if args.fixed_sampling:
@@ -102,6 +105,7 @@ if args.deep:
     scene.cycles.use_deep_output = True
     scene.cycles.use_deep_volume = args.deep_volume
     scene.cycles.deep_error = error
+    scene.cycles.deep_z_tolerance = args.deep_z_tolerance
     scene.cycles.deep_samples = args.deep_samples
     if hasattr(scene.cycles, "use_deep_ids"):
         scene.cycles.use_deep_ids = args.deep_ids
@@ -146,6 +150,7 @@ report = {
     'device': args.device,
     'deep_volume': args.deep and args.deep_volume,
     'deep_error': error if args.deep else None,
+    'deep_z_tolerance': args.deep_z_tolerance if args.deep and error else 0,
     'deep_samples': args.deep_samples if args.deep else None,
     'deep_ids': args.deep_ids if args.deep else False,
     'deep_max_events': args.deep_max_events if args.deep else None,

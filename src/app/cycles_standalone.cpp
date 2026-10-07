@@ -59,6 +59,7 @@ struct Options {
   string deep_records_filepath;
   int deep_memory_mb = 64;
   string deep_error = "0.001";
+  string deep_z_tolerance = "0.0001";
   bool deep_ids = false;
   int deep_samples = 0;
   bool deep_transparent = false;
@@ -191,6 +192,10 @@ static void session_init()
     DeepSettings &deep = options.session_params.deep;
     deep.enabled = true;
     deep.samples = options.deep_samples;
+    size_t z_consumed = 0;
+    deep.z_tolerance = std::stof(options.deep_z_tolerance, &z_consumed);
+    if (z_consumed != options.deep_z_tolerance.size())
+      throw std::invalid_argument("Invalid --deep-z-tolerance");
     deep.ids = options.deep_ids;
     deep.transparent = options.deep_transparent;
     deep.volume = options.deep_volume;
@@ -492,6 +497,9 @@ static void options_parse(const int argc, const char **argv)
   ap.arg("--deep-error %s:ERROR")
       .help("Absolute transmittance error: strict or (1e-6,0.01], default 0.001")
       .action([&](auto argv) { parse_string(argv, &options.deep_error); });
+  ap.arg("--deep-z-tolerance %s:TOLERANCE")
+      .help("Relative same-object surface depth span; default 0.0001, strict forces 0")
+      .action([&](auto argv) { parse_string(argv, &options.deep_z_tolerance); });
   ap.arg("--deep-memory-mb %d:MIB")
       .help("Deep working memory budget in MiB (default 64; raw capture spills to temp disk)")
       .action([&](auto argv) { parse_int(argv, &options.deep_memory_mb); });

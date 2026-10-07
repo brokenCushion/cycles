@@ -39,15 +39,15 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
         kernel_data.cam, kernel_data_array(camera_motion), ray.time, ray.P + ray.D * isect.t);
     if (!isfinite(depth) || depth <= 0)
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_DEPTH};
-    if (!max_events) {
-      deep_write_event(events, nullptr, 0,
-          {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1, 0}, nullptr, write);
-      return {DEEP_COMPLETE, 1, DEEP_ERROR_NONE};
-    }
     ShaderDataTinyStorage storage;
     ShaderData &sd = *AS_SHADER_DATA(&storage);
     shader_setup_from_ray(kg, &sd, &ray, &isect);
     const bool backfacing = (sd.runtime_flag & SR_BACKFACING) != 0;
+    if (!max_events) {
+      deep_write_event(events, nullptr, 0,
+          {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1, backfacing ? -1.0f : 1.0f}, nullptr, write);
+      return {DEEP_COMPLETE, 1, DEEP_ERROR_NONE};
+    }
     if (count && deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing))
     {
       ray.tmin = intersection_t_offset(isect.t);
@@ -76,7 +76,7 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
         transparency.z != transparency.x)
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_EXTINCTION};
     deep_write_event(events, nullptr, count * event_stride,
-        {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1 - transparency.x, 0}, nullptr, write);
+        {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1 - transparency.x, backfacing ? -1.0f : 1.0f}, nullptr, write);
     ++count;
     if (transparency.x == 0)
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};

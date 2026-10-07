@@ -166,6 +166,15 @@ int main(int argc, char **argv)
         rejects([&] { reconstruct_volume_ids(rays, 1e-4, 1, SIZE_MAX); });
         rejects([&] { reconstruct_volume_ids(rays, 1e-4, 65536, 1); });
       }
+      const std::vector<VolumeCameraSample> opaque_tail = {
+          {{0, 1, true, {}}, {{1, 20, 200, 0}, {1, 20, 40, 1}}},
+          {{1, 1, true, {}}, {{1, 20, 220, 0}, {1, 20, 60, 1}}}};
+      const auto bounded_tail = reconstruct_volume_ids(opaque_tail, 1e-7, 65536, SIZE_MAX);
+      for (int i = 0; i <= 10000; ++i) {
+        const double z = 1 + i * .0019;
+        check(std::abs(interval_transmittance(bounded_tail,z)-oracle(opaque_tail,z)) <= 1e-7,
+              "Transmission-weighted ID tail bound exceeded the exact oracle");
+      }
       auto invalid = overlap;
       invalid[0].intervals[0].object = -1;
       rejects([&] { reconstruct_volume_ids(invalid, 1e-4, 65536, SIZE_MAX); });

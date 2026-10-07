@@ -871,12 +871,38 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
       return t * std::exp(-tau);
     };
     TaggedCurve output{left.camera, left.weight + right.weight, {}};
+    std::vector<double> object_transmission(objects.size(), 1);
+    std::vector<double> merge_errors(objects.size(), 0), merge_prefixes(objects.size(), 1);
+    std::vector<size_t> last_spans(objects.size(), SIZE_MAX);
     auto emit = [&](double front, double back, double alpha, int object) {
       if (alpha <= 0) return;
       if (!std::isfinite(alpha) || alpha > 1 || (front < back && alpha == 1))
         throw std::runtime_error("Deep ID opacity cannot be represented");
-      check_size(output.spans.size() + 1);
-      output.spans.push_back({front, back, alpha, object});
+      const size_t index = objects.at(object);
+      const IntervalSample next{front, back, alpha, object};
+      bool merged = false;
+      if (last_spans[index] != SIZE_MAX) {
+        auto &previous = output.spans[last_spans[index]];
+        if (previous.front < previous.back && previous.back == front && front < back) {
+          const double combined_alpha = -std::expm1(std::log1p(-previous.alpha) + std::log1p(-alpha));
+          const IntervalSample combined{previous.front, back, combined_alpha, object};
+          const double error = merge_errors[index] + merge_prefixes[index] *
+              merge_error(previous, next, combined) + 32 * std::numeric_limits<double>::epsilon();
+          if (combined_alpha <= max_interval_alpha && error <= allowance / (2 * objects.size())) {
+            previous = combined;
+            merge_errors[index] = error;
+            merged = true;
+          }
+        }
+      }
+      if (!merged) {
+        check_size(output.spans.size() + 1);
+        last_spans[index] = output.spans.size();
+        merge_errors[index] = 0;
+        merge_prefixes[index] = object_transmission[index];
+        output.spans.push_back(next);
+      }
+      object_transmission[index] *= 1 - alpha;
     };
     std::vector<double> rates[2];
     rates[0].resize(objects.size()); rates[1].resize(objects.size());
@@ -906,29 +932,52 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
         if (l + rr == 0) return;
         const double h = b - a, delta = r[0] - r[1];
         /* r_id(z)=w0(z)*r0_id+w1(z)*r1_id; w0'=-delta*w0*w1.
-         * Therefore |(log T_id)''| <= |r0_id-r1_id|*|delta|/4.
+         * Therefore |(log T_id)''| <= |r0_id-r1_id|*|delta|*max(w0*w1).
+         * The weight is monotone between source boundaries, so this
+         * variance maximum is at an endpoint or the half-weight crossing.
+         * Extinguished camera groups have zero variance and no rate cost.
          * Chord error <= that*h^2/8. exp(-tau) is 1-Lipschitz for
-         * nonnegative tau. Share allowance across IDs and tree levels;
+         * nonnegative tau, with Lipschitz constant T_id(a) after its
+         * already emitted prefix. This prefix is exact at each completed
+         * span endpoint, so opaque tails need not be fitted as visible
+         * unit-transmission curves. Share allowance across IDs and tree levels;
          * products and convex averages add their absolute T bounds.
+         * Split each level equally between this chord fit and same-ID
+         * streaming coalescing (the existing merge_error bound). Each
+         * coalesced span retains its accumulated bound, never a fresh
+         * allowance per merge. Both preserve span endpoint transmission.
          * Integral hazards preserve every span endpoint exactly. No
          * independent per-object image average (E[AB] != E[A]E[B]). */
-        double curvature = 0;
-        for (size_t i = 0; i < objects.size(); ++i)
-          curvature = std::max(curvature, std::abs(rates[0][i] - rates[1][i]) * std::abs(delta));
-        if (curvature * h * h / 32 > allowance / objects.size() ||
-            std::max(r[0], r[1]) * h > max_interval_tau) {
+        const double w = l / (l + rr);
+        double integral, variance = 0;
+        if (w == 0 || w == 1 || delta == 0) integral = w * h;
+        else {
+          const double logit = std::log(w) - std::log1p(-w) - delta * h;
+          const double e = std::exp(-std::abs(logit));
+          const double wb = logit >= 0 ? 1 / (1 + e) : e / (1 + e);
+          variance = .25;
+          if ((w < .5 && wb < .5) || (w > .5 && wb > .5))
+            variance = std::min(.25, std::max(w * (1-w), wb * (1-wb)) +
+                                    32 * std::numeric_limits<double>::epsilon());
+          if (delta > 0) integral = -std::log1p(w * std::expm1(-delta * h)) / delta;
+          else integral = h + std::log1p((1 - w) * std::expm1(delta * h)) / (-delta);
+        }
+        integral = std::clamp(integral, 0.0, h);
+        double curvature = 0, maximum_tau = 0;
+        for (size_t i = 0; i < objects.size(); ++i) {
+          curvature = std::max(curvature,
+              object_transmission[i] * std::abs(rates[0][i] - rates[1][i]) * std::abs(delta));
+          maximum_tau = std::max(maximum_tau,
+              rates[0][i] * integral + rates[1][i] * (h - integral));
+        }
+        if (curvature * variance * h * h / 8 > allowance / (2 * objects.size()) ||
+            maximum_tau > max_interval_tau) {
           const double m = a + h / 2;
           if (level == 60 || m == a || m == b)
             throw std::runtime_error("Deep ID fitting precision exhausted");
           self(self, a, m, level + 1); self(self, m, b, level + 1);
           return;
         }
-        const double w = l / (l + rr);
-        double integral;
-        if (w == 0 || w == 1 || delta == 0) integral = w * h;
-        else if (delta > 0) integral = -std::log1p(w * std::expm1(-delta * h)) / delta;
-        else integral = h + std::log1p((1 - w) * std::expm1(delta * h)) / (-delta);
-        integral = std::clamp(integral, 0.0, h);
         for (const auto &entry : objects) {
           const size_t i = entry.second;
           const double tau = rates[0][i] * integral + rates[1][i] * (h - integral);

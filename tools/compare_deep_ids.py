@@ -73,27 +73,39 @@ def curve_error(left, right):
     return max(maximum, abs(t[0]-t[1]))
 
 
-def read(path):
+def read(path, rows=None):
     import OpenImageIO as oiio
     source = oiio.ImageInput.open(str(path))
     if source is None: raise ValueError(oiio.geterror())
     spec = source.spec()
-    data = source.read_native_deep_image()
+    if not spec.deep:
+        source.close()
+        raise ValueError('Expected a deep image')
+    if rows is None:
+        data = source.read_native_deep_image()
+    else:
+        first, last = rows
+        if not 0 <= first < last <= spec.height: raise ValueError('Invalid row range')
+        data = source.read_native_deep_scanlines(0,0,spec.y+first,spec.y+last,spec.z,0,spec.nchannels)
+        spec.y += first
+        spec.height = last-first
     source.close()
     if data is None: raise ValueError('Could not read native deep data')
     return spec, data
 
 
-def compare(without_ids, with_ids, verify_hashes=True):
+def compare(without_ids, with_ids, verify_hashes=True, rows=None):
     import OpenImageIO as oiio
-    before, a = read(without_ids)
-    after, b = read(with_ids)
+    before, a = read(without_ids,rows)
+    after, b = read(with_ids,rows)
     if (before.x,before.y,before.width,before.height) != (after.x,after.y,after.width,after.height):
         raise ValueError('Image windows differ')
     if 'id' not in after.channelnames or 'id' in before.channelnames:
         raise ValueError('Expected IDs-on versus IDs-off inputs')
     channel = after.channelnames.index('id')
     if after.channelformats[channel] != oiio.UINT: raise ValueError('ID channel is not UINT')
+    if after.getattribute('cycles:deepIDHash') != 'MurmurHash3_32_seed0':
+        raise ValueError('Unsupported deep ID hashing scheme')
     manifest = json.loads(after.getattribute('cycles:deepIDManifest'))
     if verify_hashes and any(name_hash(name) != int(identifier,16) for identifier,name in manifest.items()):
         raise ValueError('Manifest does not use Cryptomatte name hashes')
@@ -108,7 +120,7 @@ def compare(without_ids, with_ids, verify_hashes=True):
         for data, names in zip((a,b),channels):
             curves.append([tuple(data.deep_value(p,c,s) for c in names) for s in range(data.samples(p))])
         error = curve_error(*curves)
-        if error > maximum: maximum, worst = error, [p % before.width, p // before.width]
+        if error > maximum: maximum, worst = error, [before.x+p % before.width, before.y+p // before.width]
         end = 0
         overlapping = False
         for s,(front,back,alpha) in enumerate(curves[1]):
@@ -126,6 +138,40 @@ def compare(without_ids, with_ids, verify_hashes=True):
                 overlapping_pixels=overlap_pixels, deep_samples=samples,
                 manifest_objects=len(manifest), observed_ids=counts,
                 oracle='Native UINT IDs; union boundaries and exact exponential stationary points')
+
+
+def compare_rows(arguments):
+    import OpenImageIO as oiio
+    oiio.attribute("threads",1)
+    return compare(*arguments)
+
+
+def parallel_compare(without_ids, with_ids, workers):
+    import concurrent.futures
+    import OpenImageIO as oiio
+    source = oiio.ImageInput.open(str(without_ids))
+    if source is None: raise ValueError(oiio.geterror())
+    spec = source.spec(); source.close()
+    workers = min(workers,spec.height)
+    if workers <= 0: raise ValueError('Worker count must be positive')
+    if workers == 1: return compare(without_ids,with_ids)
+    ranges = [(spec.height*i//workers,spec.height*(i+1)//workers) for i in range(workers)]
+    with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as pool:
+        reports = list(pool.map(compare_rows,[(without_ids,with_ids,True,r) for r in ranges]))
+    worst = max(reports,key=lambda r:r['max_combined_transmittance_error'])
+    output = dict(worst)
+    for key in ('pixels','overlapping_pixels','deep_samples'):
+        output[key] = sum(r[key] for r in reports)
+    assert output['pixels'] == spec.width*spec.height
+    assert all(r['tolerance']==output['tolerance'] for r in reports)
+    output['passed'] = all(r['passed'] for r in reports)
+    output['observed_ids'] = {}
+    for report in reports:
+        for key,count in report['observed_ids'].items():
+            output['observed_ids'][key] = output['observed_ids'].get(key,0)+count
+    output['workers'] = workers
+    output['row_ranges'] = ranges
+    return output
 
 
 def isolate(source_path, object_name, output_path):
@@ -182,10 +228,11 @@ if __name__ == '__main__':
     parser.add_argument('without_ids',type=Path)
     parser.add_argument('with_ids',type=Path)
     parser.add_argument('report',type=Path)
+    parser.add_argument('--workers',type=int,default=1)
     parser.add_argument('--isolate', nargs=2, metavar=('OBJECT_NAME','OUTPUT_EXR'))
     args = parser.parse_args()
     self_test()
-    result = compare(args.without_ids,args.with_ids)
+    result = parallel_compare(args.without_ids,args.with_ids,args.workers)
     args.report.write_text(json.dumps(result,indent=2)+'\n')
     if result['passed'] and args.isolate:
         isolate(args.with_ids,args.isolate[0],Path(args.isolate[1]))

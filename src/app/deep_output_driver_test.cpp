@@ -221,6 +221,14 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
           check(!session.progress.get_error(), "CUDA capacity reset failed");
         }
       }
+      if (ids) {
+        params.deep.ids = result.ids = false;
+        render(10, 7);
+        check(!session.progress.get_error(), "disabling IDs on reset failed");
+        params.deep.ids = result.ids = true;
+        render(10, 7);
+        check(!session.progress.get_error(), "enabling IDs on reset failed");
+      }
       const int previous_deep = result.deep_calls, previous_flat = result.flat_calls;
       params.deep.enabled = false;
       render(8, 6);

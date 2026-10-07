@@ -100,7 +100,10 @@ if args.deep:
     scene.cycles.use_deep_volume = args.deep_volume
     scene.cycles.deep_error = error
     scene.cycles.deep_samples = args.deep_samples
-    scene.cycles.use_deep_ids = args.deep_ids
+    if hasattr(scene.cycles, "use_deep_ids"):
+        scene.cycles.use_deep_ids = args.deep_ids
+    elif args.deep_ids:
+        raise RuntimeError("This Blender does not include deep IDs")
     scene.cycles.deep_output_path = str(directory / 'scene.deep.exr')
     scene.cycles.deep_max_events = args.deep_max_events
     scene.cycles.deep_memory_mb = args.deep_memory_mb

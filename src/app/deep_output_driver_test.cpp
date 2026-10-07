@@ -28,7 +28,7 @@ struct Result {
   int last_deep_flat_call = 0;
   int width = 0, height = 0, samples = 0;
   double expected_transmittance = 0;
-  bool volume = false;
+  bool volume = false, ids = false;
   bool supported = true, fail_flat = false, fail_deep = false, cancel_flat = false;
   bool fail_device = false;
   std::vector<deep::IntervalSample> retained;
@@ -66,10 +66,17 @@ class MemoryDriver : public OutputDriver {
     check(tile.width == result_.width && tile.height == result_.height, "stale dimensions");
     check(tile.layer == "host-layer" && tile.view == "host-view", "missing host metadata");
     check(tile.volume == result_.volume, "incorrect volume mode");
+    check(tile.ids() == result_.ids, "incorrect host ID mode");
+    const auto manifest = tile.object_manifest();
+    check(result_.ids ? !manifest.empty() : manifest.empty(), "incorrect host ID manifest");
     for (int y = 0; y < tile.height; ++y) {
       for (int x = 0; x < tile.width; ++x) {
         check(tile.population(x, y) == result_.samples, "stale camera population");
         const auto pixel = tile.get_pixel(x, y);
+        if (result_.ids)
+          for (const auto &span : pixel)
+            check(span.object >= 0 && size_t(span.object) < manifest.size(),
+                  "host reconstruction lost object index");
         if (tile.volume) {
           check(!pixel.empty(), "missing volume intervals");
           double reconstructed_t = 1, raw_t = 0;
@@ -121,7 +128,7 @@ class MemoryDriver : public OutputDriver {
 };
 
 static void run(const char *fixture, int mode, const bool cuda = false, const bool volume = false,
-                const int sample_limit = 0)
+                const int sample_limit = 0, const bool ids = false)
 {
   SessionParams params;
   const auto devices = Device::available_devices(cuda ? DEVICE_MASK_CUDA : DEVICE_MASK_CPU);
@@ -133,6 +140,7 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
   params.threads = 2;
   params.deep.enabled = true;
   params.deep.samples = sample_limit;
+  params.deep.ids = ids;
   params.deep.transparent = mode == 6;
   params.deep.volume = volume || mode == 7;
   params.deep.max_events = cuda ? 64 : 16;
@@ -140,6 +148,7 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
   Result result;
   result.expected_transmittance = mode == 6 ? 0.5 : 0;
   result.volume = params.deep.volume;
+  result.ids = ids;
   {
     Session session(params, scene_params);
     xml_read_file(session.scene.get(), fixture);
@@ -295,6 +304,8 @@ int main(int argc, const char **argv)
       run(argv[4], mode, cuda, true);
     }
     run(argv[4], 8, cuda, true);
+    run(argv[2], 0, cuda, false, 0, true);
+    run(argv[4], 0, cuda, true, 0, true);
     for (const int limit : {1, 2, 64}) {
       run(argv[2], 0, cuda, false, limit);
       run(argv[4], 0, cuda, true, limit);

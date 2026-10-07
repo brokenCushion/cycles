@@ -332,7 +332,7 @@ static std::vector<IntervalSample> project_volume_depths(const std::vector<Inter
 
 static std::vector<FloatPixel> prepare_volume(
     const SurfaceImage &image, const std::vector<std::vector<IntervalSample>> &source,
-    const double publication_scale = 1)
+    const double publication_scale = 1, const size_t pixel_offset = 0)
 {
   if (!image.pixels.empty() || image.reduction_error != 0)
     throw std::invalid_argument("Volume fixture writer requires empty surface pixels and no reduction");
@@ -383,8 +383,8 @@ static std::vector<FloatPixel> prepare_volume(
           const size_t width = size_t(image.data_window.max_x) - image.data_window.min_x + 1;
           std::ostringstream message;
           message << "FLOAT volume curve exceeds transmittance error budget at pixel "
-                  << int64_t(image.data_window.min_x) + int64_t(p % width) << ','
-                  << int64_t(image.data_window.min_y) + int64_t(p / width)
+                  << int64_t(image.data_window.min_x) + int64_t((p + pixel_offset) % width) << ','
+                  << int64_t(image.data_window.min_y) + int64_t((p + pixel_offset) / width)
                   << ": sum=" << sum << " > " << allowance << ", objects=" << objects.size()
                   << ", top contributors=";
           for (size_t i = 0; i < std::min(size_t(5), contributors.size()); ++i) {
@@ -557,15 +557,22 @@ void write_volume_exr_pixels(Imf::OStream &stream,
       std::vector<FloatPixel> pixels(width);
       std::atomic<size_t> row_samples{0};
       const auto prepare_pixel = [&](const size_t x) {
-        SurfaceImage metadata = image;
         const int file_x = int(int64_t(dw.min.x) + x);
-        metadata.data_window = {file_x, int(y), file_x, int(y)};
+        /* ID publication only reads settings/manifest. Borrow that immutable
+         * frame metadata instead of copying every object name per pixel. */
+        SurfaceImage metadata;
+        if (!image.ids) {
+          metadata = image;
+          metadata.data_window = {file_x, int(y), file_x, int(y)};
+        }
         std::vector<std::vector<IntervalSample>> source(1);
         source[0] = pixel(file_x, int(y));
         std::vector<FloatPixel> converted;
         {
           ExportTimer timer{image.export_statistics, ExportStatistics::Quantize};
-          converted = prepare_volume(metadata, source);
+          const size_t offset = size_t(y - dw.min.y) * width + x;
+          converted = prepare_volume(image.ids ? image : metadata, source, 1,
+                                     image.ids ? offset : 0);
         }
         /* Capture reserves DOUBLE fitting scratch separately. The scanline
          * retains only the final FLOAT arrays, including their capacities. */

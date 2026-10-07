@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <stdexcept>
 
@@ -161,6 +162,21 @@ void measured_id_publication(const std::filesystem::path &directory)
   require(sum <= allowance, "Measured publication exceeds the unchanged total");
   require(input.header().typedAttribute<Imf::DoubleAttribute>("cycles:deepError").value() ==
               double(image.error), "Measured allocation changed effective header error");
+  /* Borrowed frame metadata must preserve scanline bytes and signed windows. */
+  for (const ImageWindow window : {ImageWindow{-2, -1, 1, 1}, ImageWindow{5, 7, 8, 9}}) {
+    auto rows = image;
+    rows.data_window = rows.display_window = window;
+    const auto serial = directory / "id_rows_serial.exr";
+    const auto parallel = directory / "id_rows_parallel.exr";
+    rows.volume_export_workers = 1;
+    write_volume_exr_pixels(serial, rows, [&](int, int) { return source; });
+    rows.volume_export_workers = 4;
+    write_volume_exr_pixels(parallel, rows, [&](int, int) { return source; });
+    std::ifstream a(serial, std::ios::binary), b(parallel, std::ios::binary);
+    require(std::string(std::istreambuf_iterator<char>(a), {}) ==
+                std::string(std::istreambuf_iterator<char>(b), {}),
+            "Parallel ID scanline bytes changed");
+  }
   image.data_window = image.display_window = {5, 7, 5, 7};
   source.erase(source.begin(), source.begin() + dense.size());
   source.insert(source.begin(), {2.00000001, 2.00000002, .5, 0});
@@ -175,6 +191,19 @@ void measured_id_publication(const std::filesystem::path &directory)
   require(failed, "Measured publication overflow lost pixel/object/contributor diagnostics");
   require(!std::filesystem::exists(directory / "measured_id_failure.exr"),
           "Rejected measured publication created an EXR");
+  image.data_window = image.display_window = {5, 7, 6, 8};
+  failed = false;
+  try {
+    write_volume_exr_pixels(directory / "measured_id_row_failure.exr", image,
+        [&](int x, int y) {
+          return x == 6 && y == 8 ? source : std::vector<IntervalSample>{{1, 1, .5, 1}};
+        });
+  }
+  catch (const std::invalid_argument &error) {
+    failed = std::string(error.what()).find("pixel 6,8") != std::string::npos;
+  }
+  require(failed && !std::filesystem::exists(directory / "measured_id_row_failure.exr"),
+          "Borrowed ID metadata lost the scanline failure coordinate or atomic publication");
   std::cout << "PASS measured ID publication: equal split fails; final sum=" << sum
             << " <= " << allowance << ", explicit contributor diagnostics\n";
 }

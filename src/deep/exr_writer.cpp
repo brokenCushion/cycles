@@ -345,27 +345,92 @@ static std::vector<FloatPixel> prepare_volume(
           throw std::invalid_argument("Deep interval object outside manifest");
         objects[v.object].push_back(v);
       }
+      const auto budget = error_budget(image.error);
+      const double allowance = budget.publication * publication_scale;
+      std::map<int, std::vector<IntervalSample>> quantized;
+      std::map<int, double> errors;
+      size_t interval_count = 0;
       for (auto &entry : objects) {
         std::sort(entry.second.begin(), entry.second.end(), [](const auto &a, const auto &b) {
           if (a.front != b.front) return a.front < b.front;
           return a.back < b.back;
         });
-        SurfaceImage metadata = image;
-        metadata.ids = false;
-        metadata.data_window = {0, 0, 0, 0};
-        metadata.display_window = metadata.data_window;
-        const auto converted = prepare_volume(metadata, {entry.second},
-                                              publication_scale / objects.size());
-        auto &pixel = output[p];
-        for (size_t i = 0; i < converted[0].z.size(); ++i) {
-          pixel.z.push_back(converted[0].z[i]);
-          pixel.back.push_back(converted[0].back[i]);
-          pixel.a.push_back(converted[0].a[i]);
-          pixel.id.push_back(image.object_manifest[entry.first].first);
+        auto projected = project_volume_depths(entry.second);
+        double error = interval_curve_error(entry.second, projected);
+        std::vector<IntervalSample> rounded;
+        rounded.reserve(entry.second.size());
+        for (const auto &v : entry.second)
+          rounded.push_back({double(float(v.front)), double(float(v.back)), double(float(v.alpha))});
+        const double rounded_error = interval_curve_error(entry.second, rounded);
+        if (rounded_error < error) {
+          error = rounded_error;
+          projected = std::move(rounded);
+        }
+        interval_count += std::count_if(projected.begin(), projected.end(),
+            [](const auto &v) { return v.front < v.back; });
+        errors[entry.first] = error;
+        quantized[entry.first] = std::move(projected);
+      }
+      auto check_sum = [&] {
+        double sum = 0;
+        for (const auto &entry : errors)
+          sum = std::nextafter(sum + entry.second, INFINITY);
+        if (sum > allowance) {
+          std::vector<std::pair<int, double>> contributors(errors.begin(), errors.end());
+          std::sort(contributors.begin(), contributors.end(), [](const auto &a, const auto &b) {
+            return a.second != b.second ? a.second > b.second : a.first < b.first;
+          });
+          const size_t width = size_t(image.data_window.max_x) - image.data_window.min_x + 1;
+          std::ostringstream message;
+          message << "FLOAT volume curve exceeds transmittance error budget at pixel "
+                  << int64_t(image.data_window.min_x) + int64_t(p % width) << ','
+                  << int64_t(image.data_window.min_y) + int64_t(p / width)
+                  << ": sum=" << sum << " > " << allowance << ", objects=" << objects.size()
+                  << ", top contributors=";
+          for (size_t i = 0; i < std::min(size_t(5), contributors.size()); ++i) {
+            const auto &entry = contributors[i];
+            message << entry.first << ':' << image.object_manifest[entry.first].second
+                    << '=' << entry.second << ' ';
+          }
+          throw std::invalid_argument(message.str());
+        }
+        return sum;
+      };
+      const double remaining = std::max(0.0, allowance - check_sum());
+      /* Product transmittance differences telescope: the sum of measured
+       * object errors bounds the combined curve. Reserve actual FLOAT costs,
+       * not an equal allowance per object. Surfaces cannot coalesce; distribute
+       * remaining headroom by volume interval count. The extra coalescing
+       * allocation permits proposals, not a larger final bound: every accepted
+       * proposal fits its share of remaining publication headroom, and the
+       * final measured sum must still fit the unchanged publication budget. */
+      for (auto &entry : quantized) {
+        auto &curve = entry.second;
+        const size_t count = std::count_if(curve.begin(), curve.end(),
+            [](const auto &v) { return v.front < v.back; });
+        if (curve.size() > 64 && count) {
+          const double share = double(count) / interval_count;
+          const auto reduced = reduce_interval_curve(
+              curve, share * (remaining + budget.coalescing * publication_scale));
+          if (reduced.size() < curve.size()) {
+            auto projected = project_volume_depths(reduced);
+            const double error = interval_curve_error(objects.at(entry.first), projected);
+            if (error <= errors.at(entry.first) + share * remaining) {
+              errors[entry.first] = error;
+              curve = std::move(projected);
+            }
+          }
         }
       }
-      /* Each object was rounded/coalesced against its own curve. Product
-       * transmittance error is <= sum of the per-object allocations. */
+      check_sum();
+      auto &destination = output[p];
+      for (const auto &entry : quantized)
+        for (const auto &v : entry.second) {
+          destination.z.push_back(float(v.front));
+          destination.back.push_back(float(v.back));
+          destination.a.push_back(float(v.alpha));
+          destination.id.push_back(image.object_manifest[entry.first].first);
+        }
       auto &pixel = output[p];
       std::vector<size_t> order(pixel.z.size());
       std::iota(order.begin(), order.end(), 0);

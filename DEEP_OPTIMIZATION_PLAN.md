@@ -334,6 +334,16 @@ Standard production deep compositing uses a per-sample object/instance ID
   IDs. Reject strict + IDs at preflight: `--deep-ids requires a numeric
   --deep-error; strict mode reproduces legacy output without IDs`. This changes
   the support matrix, not any capacity or error gate; test the rejection.
+- Publication decision: measure each object's FLOAT rounding error before
+  coalescing (choose the better existing cumulative projection/direct rounding).
+  Require their sum <= `budget.publication`; otherwise report the actual pixel,
+  object count and largest contributors. Distribute remaining headroom plus
+  the coalescing proposal allocation by volume interval count. Accept only
+  proposals whose measured error fits their share of remaining headroom; recheck
+  the final sum <= the same publication budget. The coalescing proposal allowance
+  does not enlarge the final total. Header error, effective error, all total
+  bounds and IDs-off arithmetic are unchanged. Test dense volume + many exact
+  hard surfaces: equal split fails but measured allocation passes the same total.
 - Numeric IDs-on qualification: small 47x20x16, performance 587x250x4, and
   realistic 117x50 with original 1024 adaptive/GPU OIDN, at both 1e-3 and 1e-4.
   Realistic uses deep-samples 0 and 64. Compare combined alpha against matching

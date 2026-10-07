@@ -108,6 +108,77 @@ void id_round_trip(const std::filesystem::path &directory)
   std::cout << "PASS UINT deep ID overlap, selected alpha, surface ties and manifest round-trip\n";
 }
 
+void measured_id_publication(const std::filesystem::path &directory)
+{
+  SurfaceImage image{{0, 0, 0, 0}, {0, 0, 0, 0}};
+  image.ids = true;
+  image.error = 1e-4f;
+  image.object_manifest.push_back({1, "DenseVolume"});
+  std::vector<IntervalSample> dense, source;
+  for (int i = 0; i < 200; ++i)
+    dense.push_back({1200.00006 + .1 * i, 1200.00006 + .1 * (i + 1),
+                     -std::expm1(-(.001 + i * .00001)), 0});
+  source = dense;
+  for (int object = 1; object <= 128; ++object) {
+    image.object_manifest.push_back({unsigned(object + 1), "Surface" + std::to_string(object)});
+    source.push_back({1400 + object * .125, 1400 + object * .125, .5, object});
+  }
+  const double allowance = error_budget(image.error).publication;
+  /* The first boundary has an unavoidable FLOAT-depth rounding error.
+   * Both independent rounding and cumulative projection put it at this depth,
+   * proving that even the better variant cannot fit the old equal split. */
+  const double boundary_error = -std::expm1(
+      -.001 * (dense[0].front - double(float(dense[0].front))) / .1);
+  require(boundary_error > allowance / image.object_manifest.size(),
+          "Measured allocation fixture would pass equal splitting");
+  const auto path = directory / "measured_id_publication.exr";
+  write_volume_exr(path, image, {source});
+  Imf::DeepScanLineInputFile input(path.string().c_str(), 1);
+  unsigned count = 0;
+  Imf::DeepFrameBuffer fb;
+  fb.insertSampleCountSlice(Imf::Slice::Make(Imf::UINT, &count, input.header().dataWindow()));
+  input.setFrameBuffer(fb); input.readPixelSampleCounts(0, 0);
+  std::vector<unsigned> ids(count);
+  std::vector<float> z(count), back(count), alpha(count);
+  unsigned *ip = ids.data();
+  float *zp = z.data(), *bp = back.data(), *ap = alpha.data();
+  fb.insert("id", Imf::DeepSlice(Imf::UINT, reinterpret_cast<char *>(&ip), sizeof(ip), sizeof(ip), sizeof(unsigned)));
+  for (auto channel : {std::make_pair("Z", &zp), std::make_pair("ZBack", &bp), std::make_pair("A", &ap)})
+    fb.insert(channel.first, Imf::DeepSlice(Imf::FLOAT, reinterpret_cast<char *>(channel.second),
+                                          sizeof(float *), sizeof(float *), sizeof(float)));
+  input.setFrameBuffer(fb); input.readPixelSampleCounts(0, 0); input.readPixels(0, 0);
+  double sum = 0;
+  for (unsigned object = 0; object < image.object_manifest.size(); ++object) {
+    std::vector<IntervalSample> original, actual;
+    for (const auto &v : source) if (v.object == int(object)) original.push_back(v);
+    for (size_t i = 0; i < count; ++i)
+      if (ids[i] == object + 1) actual.push_back({z[i], back[i], alpha[i]});
+    require(!actual.empty(), "Measured publication lost an object's samples");
+    sum += interval_curve_error(original, actual);
+    if (object) require(actual.size() == 1 && actual[0].alpha == .5,
+                        "Measured publication altered an exact surface");
+  }
+  require(sum <= allowance, "Measured publication exceeds the unchanged total");
+  require(input.header().typedAttribute<Imf::DoubleAttribute>("cycles:deepError").value() ==
+              double(image.error), "Measured allocation changed effective header error");
+  image.data_window = image.display_window = {5, 7, 5, 7};
+  source.erase(source.begin(), source.begin() + dense.size());
+  source.insert(source.begin(), {2.00000001, 2.00000002, .5, 0});
+  bool failed = false;
+  try { write_volume_exr(directory / "measured_id_failure.exr", image, {source}); }
+  catch (const std::invalid_argument &error) {
+    const std::string message = error.what();
+    failed = message.find("pixel 5,7") != std::string::npos &&
+             message.find("objects=129") != std::string::npos &&
+             message.find("DenseVolume") != std::string::npos;
+  }
+  require(failed, "Measured publication overflow lost pixel/object/contributor diagnostics");
+  require(!std::filesystem::exists(directory / "measured_id_failure.exr"),
+          "Rejected measured publication created an EXR");
+  std::cout << "PASS measured ID publication: equal split fails; final sum=" << sum
+            << " <= " << allowance << ", explicit contributor diagnostics\n";
+}
+
 std::vector<PixelLedger> ledgers()
 {
   std::vector<PixelLedger> p = {
@@ -504,6 +575,7 @@ int main(int argc, char **argv)
     failures(base, directory);
     volume_projection(directory);
     id_round_trip(directory);
+    measured_id_publication(directory);
     std::ofstream manifest(directory / "expected_pixels.csv");
     manifest.exceptions(std::ios::badbit | std::ios::failbit);
     manifest << "file_x,file_y,samples,flattened_alpha\n" << std::setprecision(17);

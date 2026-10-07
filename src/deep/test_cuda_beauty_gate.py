@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from cuda_beauty_gate import (float32_ulp, raw_pass_gate, reference_pool,
-                             completed_sample_count, monte_carlo_gate, bias_gate)
+                             completed_sample_count, monte_carlo_gate, bias_gate, exact_state_counts)
 
 assert completed_sample_count('Rendered 8 samples in 0.2 seconds (0.025 seconds per sample)\n'
                               '| Rendered 16 samples in 0.4 seconds\n', 64) == 16
@@ -45,6 +45,21 @@ for channel in (4,8,10):
     changed[channel] += 8*float32_ulp(snapshot[channel])
     assert not raw_pass_gate(changed,416,[snapshot],[416],envelope=0)['passed']
 assert not raw_pass_gate(snapshot,944,[snapshot],[416],envelope=0)['passed']
+# Duplicate shortcut is exact across every channel and count, not an ULP guess.
+states = [snapshot, list(snapshot), snapshot, [*snapshot[:-1], 993.0]]
+populations = [416, 416, 944, 416]
+duplicates = exact_state_counts(states, populations)
+assert [duplicates[(n,tuple(v))] for v,n in zip(states,populations)] == [2,2,1,1]
+for i,(v,n) in enumerate(zip(states,populations)):
+    full = raw_pass_gate(v,n,states[:i]+states[i+1:],populations[:i]+populations[i+1:],envelope=0)['passed']
+    if duplicates[(n,tuple(v))] > 1:
+        assert full
+try:
+    exact_state_counts([[math.nan],[math.nan]],[416,416])
+except ValueError:
+    pass
+else:
+    raise AssertionError('Nonfinite duplicate state accepted')
 with TemporaryDirectory() as temporary:
     root = Path(temporary)
     builds = root / 'builds.json'

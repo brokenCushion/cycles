@@ -8,6 +8,7 @@ from pathlib import Path
 import struct
 import statistics
 import hashlib
+from collections import Counter
 
 SETTINGS_KEYS = ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
     'camera_world_matrix', 'camera_frame', 'frame', 'adaptive', 'adaptive_threshold',
@@ -51,6 +52,13 @@ def float32_ulp(value):
     if exponent == 255:
         raise ValueError('Outside finite FLOAT range')
     return math.ldexp(1.0, -149 if exponent == 0 else exponent - 150)
+
+
+def exact_state_counts(values, populations):
+    """Exact whole-state duplicates prove a leave-one-out reproduced match."""
+    if len(values) != len(populations) or any(not math.isfinite(v) for row in values for v in row):
+        raise ValueError('Invalid pool raw states')
+    return Counter((n, tuple(row)) for n, row in zip(populations, values))
 
 
 def raw_pass_gate(values, population, references, populations, envelope=None):
@@ -431,7 +439,10 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                             # Every control is tested against the rest, never itself.
                             # Use precisely the deep-on count and whole-state 4-ULP
                             # match, then the same pixel SE and nearest-channel delta.
+                            duplicates = exact_state_counts(pool_values, pool_populations)
                             for held, row in enumerate(pool_values):
+                                if duplicates[(pool_populations[held], tuple(row))] > 1:
+                                    continue
                                 others = [r for r, n in enumerate(pool_populations)
                                           if r != held and n == pool_populations[held]]
                                 refs = [pool_values[r] for r in others]

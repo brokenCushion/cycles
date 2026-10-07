@@ -1248,8 +1248,8 @@ Evidence: `builds/validation/landscape-cloud/optimization-phase5/after/phase-res
 | 47x20 / fixed128 / 1e-3; all vs N=64 | Cut z=1044.27: fractional-edge alpha max / mean difference (153 pixels; information) | reference | 0.028125048 / 0.007280516 | `6a9d4831d` |
 | CPU / CUDA adaptive64 | Native accepted / deep retained cameras | configured maximum 64 | 16 / 16 on both devices | `2fde67322` |
 
-Phase 6 measured publication passes; qualification is stopped at the raw beauty gate;
-see its results below. No full-resolution production render was launched.
+Phase 6 qualification is complete and ready for acceptance review below.
+No full-resolution production render was launched.
 
 #### Phase 5 realistic landscape - review stop
 
@@ -1332,73 +1332,82 @@ The Phase 5 projection was reviewed. Phase 6 results follow; no full-resolution
 run was launched.
 
 
-#### Phase 6 deepID - measured publication passes; beauty qualification stopped
+#### Phase 6 deepID - qualification complete; ready for acceptance review
 
-Measured allocation and dense-volume + 128 hard-surface regression: `d880054ba`.
-The equal split fails that test; measured FLOAT rounding plus interval-weighted
-coalescing passes under the same publication total. Explicit unrepresentable
-data failure includes actual pixel, object count and top contributors. No header
-error, effective budget, capacity or acceptance gate changed. Nine CTests pass.
+Measured publication allocation: `d880054ba`; unchanged-output manifest borrowing:
+`df3d3d060`; diagnostic raw policy: `0695723e0`, `b334f6b98`.
+All eight fixed/realistic pairs pass combined alpha within the EXR header bound,
+accepted-camera oracle, depth cuts and beauty. Strict + IDs remains rejected.
+No capacity, numerical bound, bias/count gate or beauty kernel was changed.
 
-Fresh paired IDs-on/off combined-alpha comparisons pass for all five completed
-cases below. Both small and performance cases additionally pass the independent
-accepted-camera oracle, CUDA beauty and Gaffer depth cuts. Original realistic
-max1024 adaptive/GPU OIDN case passes combined alpha; IDs-off fully validates.
-Its IDs-on qualification stops on the raw beauty gate, not publication.
+Original small/performance paired captures are retained; optimized IDs timings
+use whole-file-identical fast reruns. The original realistic 1e-4/all output
+also uses its byte-identical fast rerun for export timing. Remaining three
+realistic pairs are fresh, original max1024 adaptive / GPU OIDN, 117x50.
+Spill is stored capture bytes; oracle error below is IDs-on.
 
-Every off -> on entry is a fresh matched render. Spill is stored capture bytes.
-Export is wall time; fitting below is aggregate worker time.
+| Case / error / deep cap | Combined-alpha max error | Deep samples off -> on | EXR bytes off -> on | Export s off -> on | Spill bytes off -> on | IDs-on max oracle error | Renderer commit |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| small / 1e-4 / 0 | 2.5795151e-05 PASS | 88,699 -> 442,344 | 609,496 -> 3,680,249 | 3.857 -> 3.846 | 9,163,356 -> 9,163,356 | 5.7053008e-06 | `df3d3d060` |
+| small / 1e-3 / 0 | 0.00026875283 PASS | 53,113 -> 160,773 | 357,145 -> 1,122,051 | 3.488 -> 3.479 | 8,183,848 -> 8,183,848 | 5.4626e-05 | `df3d3d060` |
+| performance / 1e-4 / 0 | 3.5507321e-05 PASS | 6,813,973 -> 19,881,881 | 59,210,585 -> 167,918,116 | 3.820 -> 8.495 | 358,081,036 -> 358,081,036 | 1.5252144e-05 | `df3d3d060` |
+| performance / 1e-3 / 0 | 0.00036298053 PASS | 3,076,802 -> 7,109,968 | 22,398,061 -> 63,661,043 | 2.174 -> 3.879 | 319,349,160 -> 319,349,160 | 0.00013339434 | `df3d3d060` |
+| realistic117 / 1e-4 / 0 | 2.4554377e-05 PASS | 6,622,479 -> 9,829,984 | 44,986,754 -> 70,215,403 | 148.812 -> 288.764 | 2,013,298,248 -> 2,013,298,248 | 4.0245418e-06 | `df3d3d060` |
+| realistic117 / 1e-4 / 64 | 2.4180777e-05 PASS | 1,111,434 -> 3,411,125 | 8,624,581 -> 27,125,148 | 17.425 -> 26.230 | 227,635,644 -> 227,635,644 | 4.4029672e-06 | `df3d3d060` |
+| realistic117 / 1e-3 / 0 | 0.00025040133 PASS | 6,498,864 -> 7,410,538 | 43,733,868 -> 52,349,769 | 114.371 -> 161.843 | 1,805,448,120 -> 1,805,448,120 | 3.883482e-05 | `df3d3d060` |
+| realistic117 / 1e-3 / 64 | 0.00025059752 PASS | 972,866 -> 1,644,724 | 7,312,462 -> 13,481,587 | 15.271 -> 18.211 | 202,833,084 -> 202,833,084 | 3.9885244e-05 | `df3d3d060` |
 
-| Case / error / deep cap | Combined-alpha max error | Deep samples off -> on | EXR bytes off -> on | Export s off -> on | Spill bytes off -> on | Commit |
-| --- | --- | --- | --- | --- | --- | --- |
-| small / 1e-4 / 0 | 2.5795151e-05 PASS | 88,699 -> 442,344 | 609,496 -> 3,680,249 | 3.857 -> 5.045 | 9,163,356 -> 9,163,356 | `d880054ba` |
-| small / 1e-3 / 0 | 0.00026875283 PASS | 53,113 -> 160,773 | 357,145 -> 1,122,051 | 3.488 -> 4.699 | 8,183,848 -> 8,183,848 | `d880054ba` |
-| performance / 1e-4 / 0 | 3.5507321e-05 PASS | 6,813,973 -> 19,881,881 | 59,210,585 -> 167,918,116 | 3.820 -> 171.930 | 358,081,036 -> 358,081,036 | `d880054ba` |
-| performance / 1e-3 / 0 | 0.00036298053 PASS | 3,076,802 -> 7,109,968 | 22,398,061 -> 63,661,043 | 2.174 -> 179.581 | 319,349,160 -> 319,349,160 | `d880054ba` |
-| realistic117 / 1e-4 / 0 | 2.4554377e-05 PASS | 6,622,479 -> 9,829,984 | 44,986,754 -> 70,215,403 | 148.812 -> 286.681 | 2,013,298,248 -> 2,013,298,248 | `d880054ba` |
+Fitting is aggregate worker time, not export wall time:
 
-CPU fitting breakdown (aggregate worker seconds):
-
-| Case / error | Density fit off -> on | Mixture fit off -> on | Quantize/coalesce off -> on |
+| Case / error / cap | Density fit off -> on (s) | Mixture fit off -> on (s) | Quantize/coalesce off -> on (s) |
 | --- | --- | --- | --- |
-| small / 1e-4 | 0.277 -> 0.367 | 0.982 -> 5.280 | 0.118 -> 0.596 |
-| small / 1e-3 | 0.187 -> 0.269 | 0.380 -> 3.017 | 0.043 -> 0.297 |
-| performance / 1e-4 | 5.450 -> 15.025 | 17.744 -> 154.127 | 6.954 -> 68.253 |
-| performance / 1e-3 | 2.018 -> 7.655 | 7.183 -> 86.367 | 2.362 -> 30.962 |
-| realistic117 / 1e-4 | 32.474 -> 34.544 | 267.005 -> 1129.650 | 2.327 -> 7.518 |
+| small / 1e-4 / 0 | 0.277 -> 0.265 | 0.982 -> 2.527 | 0.118 -> 0.395 |
+| small / 1e-3 / 0 | 0.187 -> 0.191 | 0.380 -> 1.057 | 0.043 -> 0.141 |
+| performance / 1e-4 / 0 | 5.450 -> 6.011 | 17.744 -> 45.684 | 6.954 -> 27.614 |
+| performance / 1e-3 / 0 | 2.018 -> 2.221 | 7.183 -> 18.288 | 2.362 -> 9.193 |
+| realistic117 / 1e-4 / 0 | 32.474 -> 35.142 | 267.005 -> 1155.850 | 2.327 -> 7.316 |
+| realistic117 / 1e-4 / 64 | 3.852 -> 4.100 | 26.276 -> 93.628 | 0.735 -> 3.429 |
+| realistic117 / 1e-3 / 0 | 14.477 -> 15.845 | 103.612 -> 432.373 | 1.959 -> 4.255 |
+| realistic117 / 1e-3 / 64 | 1.750 -> 1.916 | 10.152 -> 35.288 | 0.389 -> 1.322 |
 
-IDs substantially increase fitting cost, sample count and EXR size; no speedup
-is claimed. Spill bytes are identical for each pair.
+Fresh replay: strict payload/deterministic-header identity **81/81**; numeric
+IDs-off identity **30/30**; **9/9 CTests**; CPU/CUDA compatibility matrices at
+strict, 1e-4 and 1e-3; both boundary suites and CUDA host/session lifecycle PASS.
+Numeric IDs-on matrices pass on both devices. All 26 combined-alpha matrix
+comparisons, two known-overlap comparisons and four exact-UINT known-alpha
+selections pass. Connected Gaffer selections/point clouds pass too.
 
-**Unchanged CUDA raw beauty gate FAIL:** realistic117 / `1e-4` / all samples,
-pixel `(99,7)`, 944 accepted samples. Noisy RGB is
-`(0.1436965466, 0.1121631563, 0.1096889749)` versus K=5 references
-`(0.1439655423, 0.1123654321, 0.1098298728)`. Max delta
-`0.0002689957619` exceeds the unchanged pass-wide limit `0.00001937150955`.
-All 20 additional ordinary deep-off controls completed. The accumulated pool
-has 31 compatible renders; none reproduces all checked inputs within four ULP
-at the same sample count. Denoised output remains inside the accepted envelope.
-This raw state is unresolved; ordinary GPU variation has not been established.
-No additional controls or relaxed gates were used.
+Resolved statistical flags: original realistic117 IDs-on 1e-4/all at (99,7),
+and fresh IDs-off 1e-4/64 at (96,39). Every diagnostic deep-on matches ONE
+diagnostic deep-off across ALL raw channels within existing 4 ULP, exact counts.
+The latter reuses the same beauty/camera/sampling case with diagnostic IDs-on/all
+capture; target/diagnostic deep options are recorded. This resolves beauty only;
+each target's alpha/oracle/reader checks pass independently. Original calibrated
+flags and all unchanged bias tests are retained. No new diagnostic renders.
 
-Realistic IDs-on independent oracle was stopped once this final raw failure was
-established. Remaining realistic pairs (`1e-4`/64, `1e-3`/0 and /64), final full
-regression replay and fresh IDs-off 81/81 + 30/30 identity replay are pending.
-Earlier IDs-off 81/81 and 30/30 results remain historical evidence only.
+Validator optimization `6f6a50d2b`: identical whole-state/count duplicates prove
+a reproduced match without rechecking all peers; all controls retain their
+distribution entries and bias weights. Unique states use the existing check.
 
-All 75 common CUDA beauty kernel resource records remain unchanged; beauty
-source hashes are unchanged. Exact UINT known-overlap selections pass CPU/CUDA
-and connected Gaffer point-cloud validation (192 points per fog; analytic alpha
-errors 9.075e-9 / 2.093e-8). Strict + IDs remains explicitly unsupported.
+| Case | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| performance587x250x4; 81 actual pixels, 76 controls | Leave-one-out matching substep (s) | 1.479451 | 0.021065 | `6f6a50d2b` |
+| Same 6,156 held-out decisions | Exact decision identity | reference | 6,156/6,156 | `6f6a50d2b` |
 
-The local parallel oracle helper now delegates non-probe `range` calls unchanged;
-complete probe coverage was checked against unsharded surface-only/empty chunks.
-No independent oracle formula or tolerance changed.
+This is a 70.23x substep speedup, not a render/full-validator speedup. Only the
+unfinished strict performance validator was restarted; its completed EXR stayed
+unchanged. The interruption is recorded separately from numerical gate results.
+All 75 common beauty kernel resource records and managed beauty-source hashes
+remain unchanged; the snapshot patch stays on its isolated diagnostic branch.
 
-Results: `builds/validation/landscape-cloud/optimization-phase6/measured/phase-results.json`.
-Raw gate: `measured/realistic117/ids-1e-4-cap0/beauty_validation.json` under the same root.
-Previous equal-split failure retained as `optimization-phase6/results-equal-split-stop.json`.
-Gaffer: `optimization-phase6/known-overlap/measured-CPU/known_overlap/deep/Phase6_Known_ID_Review.gfr`.
+Evidence: `builds/validation/landscape-cloud/optimization-phase6/acceptance/`
+`phase-results.json`, `identity.json`, `ids-comparisons.json`, `queue.json`,
+`post-queue.json`, `calibration-shortcut.json`. Original measured/diagnostic/
+profiling reports are preserved in the sibling `measured` and `review` folders.
+Gaffer: `acceptance/known-ids-CPU/known_overlap/deep/Phase6_Known_ID_Review.gfr`;
+`acceptance/realistic117/ids-1e-3-cap64/native_vdb_review.gfr`.
+Stop here for Phase 6 acceptance review; no 6a/6b/Phase 9 work started.
+
 #### Phase 6 review - snapshot diagnostic and IDs export performance
 
 Pixel `(99,7)` crosses `cloud_01_variant_0000` (932 stored volume intervals).
@@ -1465,77 +1474,8 @@ Reports and reproducible local profiling helpers:
 `snapshot-comparison.json`, `export-performance.json`, `profile-{before,after}.csv`;
 `builds/phase6_cpu_sampler.cpp`, `run_phase6_review_*.py`.
 
-**Requested review stop:** remaining three realistic pairs and final full
-regression/81+30 identity replay remain pending. No 6a/6b/Phase 9 work started.
-The original raw beauty gate remains unresolved; user decides policy from this
-diagnostic evidence.
-
-#### Phase 6 uncalibrated policy application - superseded historical stop
-
-Applied the final Section 2 user rule to the existing unmodified-engine
-realistic117 / original max1024 adaptive / GPU OIDN / IDs-on / 1e-4 / cap0.
-Reused the four independent seeds and the 31 eligible ordinary controls;
-the majorant-snapshot executable is excluded. No new renders or changed gates.
-
-| Check | Measured | Required | Result |
-| --- | --- | --- | --- |
-| Same-count reference coverage | 5,850/5,850 | Every pixel | PASS |
-| Per-channel image bias | All 12 checked channels pass | abs(mean) <= 3 SE | PASS |
-| Step-2 pixels | 15/5,850 = 0.256410% | <= 0.1% (at most 5 pixels) | FAIL |
-| (99,7) raw noisy RGB | max ratio 0.026551 | <= 0.1 | PASS |
-| (99,7) raw denoising albedo | max ratio 0.161284 | <= 0.1 | FAIL |
-
-At (99,7), sample count 944 has matching ordinary references.
-The earlier 0.027 statement concerned noisy red only; the per-pass/channel
-policy also checks albedo, whose four-seed SE is smaller:
-
-| (99,7) channel | Absolute nearest difference | Four-seed SE | Difference/SE | Result |
-| --- | --- | --- | --- | --- |
-| ViewLayer.Denoising Albedo.R | 0.00109705329 | 0.00718872133 | 0.152607569 | FAIL |
-| ViewLayer.Denoising Albedo.G | 0.00109708309 | 0.00680219724 | 0.161283634 | FAIL |
-| ViewLayer.Denoising Albedo.B | 0.00109708309 | 0.0068739883 | 0.159599209 | FAIL |
-| ViewLayer.Noisy Image.R | 0.000268995762 | 0.0101312867 | 0.026550997 | PASS |
-| ViewLayer.Noisy Image.G | 0.000202275813 | 0.0194436784 | 0.0104031659 | PASS |
-| ViewLayer.Noisy Image.B | 0.00014089793 | 0.0221461001 | 0.00636220051 | PASS |
-| ViewLayer.Noisy Image.A | 0 | 0 | 0 | PASS |
-
-Every step-2 pixel (max ratio over its checked channels; full channel details
-and nearest references are in the machine report):
-
-| File pixel | Max difference/SE | Channel bounds |
-| --- | --- | --- |
-| (57,41) | 2.2381929e-05 | PASS |
-| (95,36) | 3.8709293e-08 | PASS |
-| (66,31) | 1.70307132e-07 | PASS |
-| (101,30) | 7.65698793e-08 | PASS |
-| (60,29) | 8.75922272e-09 | PASS |
-| (93,29) | 2.22087425e-08 | PASS |
-| (46,24) | 2.18037146e-07 | PASS |
-| (11,23) | 2.39943925e-06 | PASS |
-| (11,15) | 6.47424984e-08 | PASS |
-| (55,13) | 3.87819947e-08 | PASS |
-| (88,13) | 4.73450073e-08 | PASS |
-| (99,7) | 0.161283634 | FAIL |
-| (60,6) | 5.79094279e-07 | PASS |
-| (77,6) | 4.67900582e-08 | PASS |
-| (27,4) | 5.48884645e-08 | PASS |
-
-The other 14 pixels pass their channel noise bounds; most are tiny normal
-component differences near zero. They previously passed the image-wide K=5
-envelope but do not reproduce all checked passes together within 4 ULP.
-The final rule gives that historical envelope no independent acceptance path,
-so these pixels correctly count toward the 0.1% limit. Every bias channel
-passes with the user-confirmed paired-pixel estimator.
-
-Validator changes are host tooling only. Runnable unit checks cover count/state
-matching, four-seed SE, zero variance and detection of constant signed bias.
-The real saved-input replay checks all channels/pixels and fails explicitly.
-CPU exact comparison code, renderer source, EXR publication and budgets unchanged.
-
-Report: `builds/validation/landscape-cloud/optimization-phase6/review/final-raw-policy-existing.json`.
-**Stopped under the failed-acceptance rule:** three remaining realistic pairs,
-fresh IDs-off 81/81 + 30/30 replay and final full regression replay are NOT RUN.
-Phase 6 remains unaccepted; no 6a/6b/Phase 9 work started.
+The diagnostic flag is resolved under the final Section 2 root-cause rule;
+qualification is complete in the Phase 6 table above.
 
 #### Phase 6 calibrated CUDA raw policy - historical flag before root-cause resolution
 
@@ -1577,10 +1517,8 @@ handling and the unchanged signed-bias test. Renderer/CPU comparison unchanged.
 Reports: `builds/validation/landscape-cloud/optimization-phase6/review/calibrated-raw-policy-existing.json`;
 calibration holds each of the 31 per-render counts and per-channel maxima.
 Log: `builds/phase6-calibrated-raw-policy.log`.
-**STOP: possible real deep-to-beauty effect under the final policy.** Do not
-revise the policy again. Three remaining realistic pairs, fresh 81/81 + 30/30
-identity replay and final full regression replay NOT RUN. Phase 6 unaccepted;
-no 6a/6b/Phase 9 started.
+The original albedo flag is preserved and resolved by the saved all-raw
+diagnostic agreement below; no calibrated limit or bias threshold changed.
 
 #### Phase 6 root-cause review - realistic117 1e-4 resolved
 
@@ -1611,8 +1549,8 @@ No new diagnostic renders or gate thresholds were introduced. The original
 calibrated albedo flag is retained but resolved by the user-approved root-cause
 step; every original image-wide bias channel still passes. CPU remains exact.
 
-Raw policy application: PASS for existing IDs-on realistic117 1e-4/all. Deep
-publication/oracle qualification is being completed, followed by three pending
-realistic pairs and fresh identity/full regression replay before Phase 6 review.
+Raw policy application, independent alpha qualification, remaining three
+realistic pairs and fresh identity/full regression replay all PASS.
+Phase 6 is ready for acceptance review; stop before 6a.
 Evidence: `builds/validation/landscape-cloud/optimization-phase6/review/snapshot-all-raw-pixel99-7.json`
 and `root-cause-raw-policy-existing.json`.

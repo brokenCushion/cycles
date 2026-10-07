@@ -106,7 +106,9 @@ beauty-source hashes and kernel resource records. No beauty kernel change.
    matches ONE diagnostic deep-off across all channels within 4 FLOAT ULP and
    identical accepted counts. Report bit identity separately, never claim it
    when only this existing agreement rule passes. Verify six independent
-   renders, diagnostic executable and matching case/capture settings. Keep the
+   renders, diagnostic executable and matching beauty/camera/sampling case.
+   Record both target and diagnostic deep capture options; this resolves beauty
+   only and never substitutes for each target's deep-alpha qualification. Keep the
    patch diagnostic-only and out of both the deep branch and ordinary pool.
    Preserve the original calibrated flags/results and record each resolution.
    Unresolved pixels or any unchanged bias/count gate failure stop work for

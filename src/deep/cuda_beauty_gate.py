@@ -123,9 +123,6 @@ def snapshot_raw_agreement(directory, off, on, manifest, pixels, channels):
             raise ValueError('Snapshot case/beauty settings mismatch: '+str(p))
         if s['deep'] != (p in on):
             raise ValueError('Snapshot on/off role mismatch')
-        if p in on and any(s.get(k) != settings.get(k) for k in
-                ('deep_error','deep_samples','deep_ids','deep_volume','deep_max_events','deep_memory_mb')):
-            raise ValueError('Snapshot deep capture settings mismatch: '+str(p))
         node = GafferImage.ImageReader()
         node['fileName'].setValue((p/'render-passes.exr').as_posix())
         nodes.append(node)
@@ -154,6 +151,9 @@ def snapshot_raw_agreement(directory, off, on, manifest, pixels, channels):
             bit_identical=all(v == values[0] for v in values), channels=channels,
             runs=[str(p) for p in off+on], values=values, sample_counts=populations,
             checks=checks, snapshot_executable_sha256=build['executable_sha256'],
+            target_deep_settings={k: settings.get(k) for k in ('deep_error','deep_samples','deep_ids')},
+            diagnostic_deep_settings=[{k: json.loads((p/'render.json').read_text()).get(k)
+                                      for k in ('deep_error','deep_samples','deep_ids')} for p in on],
             diagnostic_only=True, rule='Each deep-on matches ONE snapshot deep-off across ALL raw channels within unchanged 4 FLOAT ULP and exact counts'))
     return results
 

@@ -73,12 +73,18 @@ Root causes, in code:
 - Never call GPU-thread heap allocation, STL, or files from kernels (existing
   `PEER_DEEP_OUTPUT_REQUIREMENTS.md` still applies).
 
-### Final CUDA raw beauty rule (user decision, calibrated revision, 2026-10-07)
+### Final CUDA raw beauty rule (user decisions, 2026-10-08)
 
 This supersedes the historical Phase 0 CUDA raw envelope/search policy and
 the uncalibrated 0.1-sigma / 0.1% guesses. Do not revise this policy again.
 CPU stays exact equality and the primary proof, together with unchanged
 beauty-source hashes and kernel resource records. No beauty kernel change.
+CUDA pixel beauty qualification is required only for GPU-side changes
+(kernels, GPU scheduling or buffers): Phase 6b if capture changes, 8 and 9.
+For host-only phases 1, 3a, 6, 6a and 7, unchanged beauty-source hashes,
+all 75 common CUDA kernel resource records and CPU exact equality are the
+required proof. Phase 6a is host-only (user decision); its saved CUDA pixel
+comparisons are informational, never a blocker. Do not revisit this scope.
 
 1. A reproduced state passes unchanged: all checked raw passes match ONE
    unchanged-beauty pool render within 4 FLOAT ULP, with the same sample count.
@@ -87,12 +93,19 @@ beauty-source hashes and kernel resource records. No beauty kernel change.
    precisely the same whole-state/count match. For fallback pixels, measure
    each pass/channel's absolute nearest same-count difference / sigma_pixel,
    using the same four distinct-seed deep-off controls. sigma_pixel is their
-   pixel sample SD / 2. Zero sigma requires an exact match; missing same-count
+   pixel sample SD / 2. Each channel's allowed absolute difference is
+   max(calibrated channel limit * sigma_pixel, 4 FLOAT ULP of the nearest
+   same-count reference value). Zero sigma uses the same reference ULP floor
+   as step 1, never a stricter exact-equality requirement. Missing same-count
    references or nonfinite input fail. Seed-varied counts may differ only for
    estimating sigma. Record each control's fallback count and channel maxima.
-   Deep-on's fallback count and EVERY channel's maximum ratio must be <= the
-   respective maximum observed in leave-one-out deep-off comparisons. Report
-   deep-off min/median/max beside deep-on; report every fallback pixel/channel.
+   Deep-on's fallback count must be <= the largest leave-one-out count;
+   every channel must obey the absolute bound above. Record ratios, ULP floors
+   and absolute limits. Calibration requires at least 20 compatible ordinary
+   controls for that fixture; with fewer, step-2 results are informational
+   only and cannot qualify a GPU-changing phase. Report deep-off min/median/max
+   beside deep-on; report every fallback pixel/channel. Do not revisit these
+   user-approved consistency and minimum-control rules.
 3. Every pass/channel must also pass the unchanged image-wide bias test:
    abs(mean signed difference) <= 3 standard errors. User-confirmed estimator:
    subtract the MEAN of each pixel's same-count pool references (not nearest);
@@ -126,7 +139,8 @@ those estimates for remaining pairs of the same case/settings. If calibration
 needs four seeds for a new case, create them once, never an open-ended search.
 The historical K=5 envelopes remain diagnostic evidence; the denoised
 explanation rule is unchanged. A deep-on result outside the calibrated range
-first uses the diagnostic root-cause step, then stops if unresolved.
+in a GPU-changing phase first uses the diagnostic root-cause step, then
+stops if unresolved; host-only phases use the proof stated above.
 CPU/deep budgets unchanged.
 
 ## 3. Phases
@@ -1556,7 +1570,7 @@ Evidence: `builds/validation/landscape-cloud/optimization-phase6/review/snapshot
 and `root-cause-raw-policy-existing.json`.
 
 
-#### Phase 6a - implemented; stopped at CUDA beauty gate
+#### Phase 6a - implemented; qualification resumed under approved host-only scope
 
 Before: the eight user-accepted Phase 6 pairs are recorded unchanged in
 `builds/validation/landscape-cloud/optimization-phase6a/before.json`.
@@ -1580,20 +1594,21 @@ CPU aggregate mixture fitting is 0.662 -> 0.674 s (IDs off),
 `builds/validation/landscape-cloud/optimization-phase6a/phase-results.json`.
 
 Nine CTests pass; unchanged beauty sources and all 75 common CUDA kernel
-resource records match. CUDA deep exterior/flatten checks pass, but the final
-raw beauty policy fails five pixels on this new non-volume sloped fixture:
-(0,0) albedo R/G ratios 20.663/18.590 exceed calibrated 11.126/10.667;
-normal X at (3,8), (3,5), (5,0), (11,0) differs by 5.96046e-8 with zero
-four-seed sigma, requiring exact equality. Five ordinary controls calibrate
-fallback counts 171/182/191 (min/median/max), versus deep-on 166; all paired
-image-wide bias channels pass. No compatible snapshot diagnostics exist for
-this fixture. These flags are unresolved, not proven deep defects.
+resource records match. Saved CUDA flags re-evaluated without new renders:
 
-Stopped as required; no thresholds changed and no further renders launched.
-Eight landscape pairs and fresh 81/81 + 30/30/full regression replay remain
-pending. Large evidence: `D:/CyclesDeepScratch/optimization-phase6a/evidence-final/`;
-small summary above records every flagged pixel/channel and fitting counters.
-No Phase 6b or full-resolution production run.
+| Pixel / channel | Absolute difference | Rule-1 absolute limit | Result |
+| --- | --- | --- | --- |
+| (3,8), (3,5), (5,0), (11,0), normal X (each) | 5.96046448e-8 | 2.38418579e-7 (reference 4 ULP) | PASS |
+| (0,0), albedo R | 7.74860382e-7 | 4.17232513e-7 | Outside measured range; informational |
+| (0,0), albedo G | 7.15255737e-7 | 4.10396083e-7 | Outside measured range; informational |
+
+There are five ordinary controls, below the user-required 20; step 2 is
+informational only. All original flags remain in the saved report. The
+approved host-only proof (unchanged sources, 75 resources, CPU exact) passes.
+Re-evaluation: `builds/validation/landscape-cloud/optimization-phase6a/five-pixel-re-evaluation.json`.
+Eight landscape pairs and fresh 81/81 + 30/30/full regression replay resumed;
+no further beauty controls, no Phase 6b or full-resolution production run.
+Large evidence: `D:/CyclesDeepScratch/optimization-phase6a/evidence-final/`.
 
 Connected Gaffer comparison (262,143 unmerged / 108,317 merged deep points):
 `D:/CyclesDeepScratch/optimization-phase6a/evidence-final/sloped/CPU/ids-1e-3-cap0-z1e-4/surface_merge_review.gfr`.

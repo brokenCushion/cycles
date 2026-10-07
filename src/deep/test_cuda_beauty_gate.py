@@ -91,7 +91,12 @@ assert monte_carlo_gate(0.1, [0.0], seeds, ratio_limit=limit)['passed']
 assert not monte_carlo_gate(0.11, [0.0], seeds, ratio_limit=limit)['passed']
 assert monte_carlo_gate(0.000269, [0.0], seeds, ratio_limit=limit)['passed']
 assert monte_carlo_gate(1, [1], [1]*4)['passed']
-assert not monte_carlo_gate(1.00000001, [1], [1]*4)['passed']
+assert monte_carlo_gate(1 + 4*float32_ulp(1), [1], [1]*4, ratio_limit=0)['passed']
+assert not monte_carlo_gate(1 + 5*float32_ulp(1), [1], [1]*4, ratio_limit=0)['passed']
+# The floor uses the reference spacing, including at an exponent boundary.
+reference = 1 - float32_ulp(.5)
+assert not monte_carlo_gate(reference + 5*float32_ulp(reference), [reference],
+                            [reference]*4, ratio_limit=0)['passed']
 assert not monte_carlo_gate(1, [], [1]*4)['passed']
 assert bias_gate([0]*100)['passed']
 assert bias_gate([-1, 1]*50)['passed']

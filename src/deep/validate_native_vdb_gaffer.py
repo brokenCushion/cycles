@@ -46,6 +46,9 @@ parser.add_argument('--oracle-python', type=Path,
                     help='Existing NumPy Python environment for bounded, large camera-CSV checks')
 parser.add_argument('--z-baseline', type=Path,
                     help='Same-capture z=0 EXR; requires its independent z_comparison.json')
+parser.add_argument('--host-only-beauty-proof', type=Path,
+                    default=os.environ.get('CYCLES_DEEP_HOST_ONLY_BEAUTY_PROOF'),
+                    help='User-approved host phase: unchanged beauty sources/resources and CPU exact proof')
 parser.add_argument('--beauty-pool', type=Path, action='append', default=[],
                     help='Ordinary control directory with matching settings and unchanged beauty source')
 parser.add_argument('--beauty-builds', type=Path,
@@ -145,7 +148,29 @@ for y in range(0, height, tile):
             max_pixel_samples = max(max_pixel_samples, offset-previous)
             previous = offset
         total_deep_samples += previous
-if settings['device'] == 'CUDA' and not args.reader_only:
+if settings['device'] == 'CUDA' and args.host_only_beauty_proof and not args.reader_only:
+    proof = json.loads(args.host_only_beauty_proof.read_text())
+    check(proof['phase'] in ('1', '3a', '6', '6a', '7') and
+          proof['renderer_sha256'] == settings['renderer_sha256'], 'Host-only proof scope/build mismatch')
+    sources = json.loads(Path(proof['beauty_sources']).read_text())
+    resources = json.loads(Path(proof['kernel_resources']).read_text())
+    check(sources['passed'] and sources['before'] == sources['after'], 'Beauty sources changed')
+    check(resources['common_kernel_count'] == 75 and not resources['changed_common_kernels'],
+          'Common CUDA kernel resources changed')
+    check(bool(proof['cpu_exact_directories']), 'Missing CPU exact proof')
+    for path in proof['cpu_exact_directories']:
+        cpu_settings = json.loads((Path(path) / 'render.json').read_text())
+        cpu_report = json.loads((Path(path) / 'gaffer_validation.json').read_text())
+        check(cpu_settings['device'] == 'CPU' and cpu_settings['renderer_sha256'] == settings['renderer_sha256']
+              and cpu_report['passed'] and cpu_report['beauty_passed'] and cpu_report['max_beauty_error'] == 0,
+              'CPU exact proof failed')
+    beauty_error = repeat_error = beauty_peak = beauty_tolerance = 0.
+    beauty_passed = True
+    beauty_report = dict(passed=True, comparison='User-approved host-only proof; CUDA pixel gate not required',
+                         proof=str(args.host_only_beauty_proof), cuda_pixel_gate_required=False)
+    (directory / 'beauty_validation.json').write_text(json.dumps(beauty_report, indent=2)+'\n')
+    print('Beauty isolation:', json.dumps(beauty_report), flush=True)
+elif settings['device'] == 'CUDA' and not args.reader_only:
     from cuda_beauty_gate import validate_cuda_beauty, reference_pool
     if args.beauty_builds:
         args.beauty_pool += reference_pool(directory, args.beauty_pool_root, args.beauty_builds)

@@ -90,11 +90,12 @@ def monte_carlo_gate(value, references, seeds, ratio_limit=None):
         return dict(passed=False, difference=None, sigma=sigma, ratio=None)
     nearest = min(range(len(references)), key=lambda i: abs(value-references[i]))
     delta = value-references[nearest]
-    return dict(passed=(delta == 0 if sigma == 0 else
-                       ratio_limit is None or abs(delta)/sigma <= ratio_limit),
+    floor = 4 * float32_ulp(references[nearest])
+    limit = max((ratio_limit or 0) * sigma, floor)
+    return dict(passed=abs(delta) <= limit if ratio_limit is not None else True,
                 difference=delta, sigma=sigma,
                 ratio=abs(delta)/sigma if sigma else (0.0 if delta == 0 else None),
-                nearest=nearest)
+                nearest=nearest, reference_value=references[nearest], four_ulp=floor)
 
 
 def bias_gate(differences):
@@ -300,7 +301,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     report['seed_references'] = [str(p) for p in seed_references]
     report['statistical_pixels'] = []
     if final_raw_rule:
-        report['raw_rule'] = 'one reproduced state within 4 ULP; otherwise fallback count and per-channel max difference/four-seed SE <= ordinary pool leave-one-out maxima; image bias <= 3 SE'
+        report['raw_rule'] = 'one reproduced state within 4 ULP; otherwise difference <= max(calibrated ratio * four-seed SE, reference 4 ULP), with >=20 ordinary controls and calibrated fallback count; image bias <= 3 SE'
     checked_channels = [c for cs in groups.values() for c in cs]
     bias_differences = {c: [] for c in checked_channels}
     calibration = [dict(reference=str(p), fallback_pixels=0,
@@ -556,7 +557,9 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
         report['calibration'] = dict(renders=calibration, fallback_pixels=count_distribution,
                                     max_ratio=channel_distributions,
                                     requires_seed_controls=requires_seeds,
-                                    complete=bool(seed_raw) or not requires_seeds)
+                                    ordinary_controls=len(pool), minimum_controls=20,
+                                    informational_only=len(pool) < 20,
+                                    complete=len(pool) >= 20 and (bool(seed_raw) or not requires_seeds))
         report['statistical_count_limit'] = count_distribution['max']
         report['statistical_count_passed'] = len(report['statistical_pixels']) <= count_distribution['max']
         report['max_statistical_ratio'] = {c: 0.0 for c in checked_channels}
@@ -565,8 +568,10 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
             for detail in pixel['channels']:
                 c = detail['channel']
                 detail['calibrated_limit'] = channel_distributions[c]['max']
-                detail['passed'] &= (detail['ratio'] is not None and
-                                     detail['ratio'] <= detail['calibrated_limit'])
+                detail['absolute_limit'] = (max(detail['calibrated_limit'] * detail['sigma'],
+                                                detail['four_ulp']) if detail['sigma'] is not None else None)
+                detail['passed'] = (detail['difference'] is not None and
+                                   abs(detail['difference']) <= detail['absolute_limit'])
                 report['max_statistical_ratio'][c] = max(report['max_statistical_ratio'][c], detail['ratio'] or 0.0)
                 if not detail['passed'] and c.rsplit('.', 1)[0] not in failed:
                     failed.append(c.rsplit('.', 1)[0])

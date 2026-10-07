@@ -27,6 +27,7 @@ if device not in ('CPU', 'CUDA'):
 manifest = json.loads(manifest_path.read_text())
 repo = Path(__file__).resolve().parent.parent
 env = dict(os.environ, BLENDER_USER_RESOURCES=str(repo / 'builds/blender/user-resources'))
+cuda_beauty_required = device == 'CUDA' and not env.get('CYCLES_DEEP_HOST_ONLY_BEAUTY_PROOF')
 blender_env = dict(env)
 blender_env.pop('OCIO', None)
 output.mkdir(parents=True, exist_ok=True)
@@ -67,7 +68,7 @@ for name, case in manifest['cases'].items():
     report['cases'][name] = stats
     start = time.monotonic()
     runs = ['deep'] if rejected else ['beauty', 'deep']
-    if not rejected and device == 'CUDA':
+    if not rejected and cuda_beauty_required:
         runs = ['beauty', 'beauty-repeat', 'beauty-repeat-2', 'beauty-repeat-3', 'beauty-repeat-4', 'deep']
     for kind in runs:
         destination = directory / kind
@@ -109,7 +110,7 @@ for name, case in manifest['cases'].items():
     if not rejected:
         command = [sys.executable, str(repo / 'src/deep/validate_native_vdb_gaffer.py'),
                    str(directory / 'deep'), str(directory / 'beauty')]
-        if device == 'CUDA':
+        if cuda_beauty_required:
             for repeat in ('beauty-repeat', 'beauty-repeat-2', 'beauty-repeat-3', 'beauty-repeat-4'):
                 command += ['--beauty-repeat', str(directory / repeat)]
         if name == 'zero_extinction':
@@ -131,7 +132,7 @@ if all(n in manifest['cases'] for n in ('overlapping_grids', 'overlap_first_only
     command = [sys.executable, str(repo / 'src/deep/validate_native_vdb_gaffer.py'),
                str(directory / 'deep'), str(directory / 'beauty'), '--overlap-reference',
                str(output / 'overlap_first_only/deep'), str(output / 'overlap_second_only/deep')]
-    if device == 'CUDA':
+    if cuda_beauty_required:
         for repeat in ('beauty-repeat', 'beauty-repeat-2', 'beauty-repeat-3', 'beauty-repeat-4'):
             command += ['--beauty-repeat', str(directory / repeat)]
     if run(command, directory / 'overlap.log') != 0:

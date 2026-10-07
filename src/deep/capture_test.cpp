@@ -54,6 +54,20 @@ int main()
 {
   static_assert(sizeof(ccl::deep::SurfaceEvent) == 24);
   static_assert(sizeof(ccl::deep::IntervalSample) == 32);
+  {
+    Capture replay(1,3,1,4*1024*1024,1,true);
+    replay.retain_for_validation = true;
+    const KernelDeepEvent event{deep_event_pack(DEEP_SURFACE,7),2,2,.5f,1};
+    for (int y=0;y<3;++y) replay.record_events(0,y,0,&event,1);
+    check(replay.finalize());
+    for (int pass=0;pass<2;++pass)
+      for (int y=2;y>=0;--y) {
+        replay.begin_export_row(y);
+        const auto curve=replay.reconstruct_pixel(0,y);
+        check(curve.size()==1 && curve[0].alpha==.5 && curve[0].facing==1);
+        replay.end_export_row(y);
+      }
+  }
   for (const bool spill : {false, true})
     for (const int facing : {-1, 0, 1}) {
       Capture capture(1, 1, 1, 4*1024*1024, 1, spill);

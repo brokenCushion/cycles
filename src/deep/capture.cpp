@@ -819,6 +819,8 @@ void Capture::begin_export_row(const int y) const
     exporting_ = true;
     next_export_y_ = height_ - 1;
   }
+  if (retain_for_validation && next_export_y_ == -1 && !export_row_open_)
+    next_export_y_ = height_ - 1;
   if (export_row_open_ || y != next_export_y_)
     throw std::runtime_error("Deep export rows must be sequential Y-down");
   Band &band = band_for_pixel(size_t(y) * width_);
@@ -848,12 +850,16 @@ void Capture::end_export_row(const int y) const
     std::vector<unsigned char>().swap(staged_events_);
     staged_first_y_ = -1;
     staged_rows_ = 0;
-    if (band.rebucketed)
-      band.row_files[y - band.first_y].reset();
-    else {
-      std::fclose(band.index);
-      std::fclose(band.events);
-      band.index = band.events = nullptr;
+    /* Validation companions reuse disk records, never retain frame RAM.
+     * FILE owners still close/remove their temporary files at destruction. */
+    if (!retain_for_validation) {
+      if (band.rebucketed)
+        band.row_files[y - band.first_y].reset();
+      else {
+        std::fclose(band.index);
+        std::fclose(band.events);
+        band.index = band.events = nullptr;
+      }
     }
   }
   export_row_open_ = false;

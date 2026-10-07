@@ -59,6 +59,7 @@ class Capture {
   bool ids() const { return ids_; }
   float error() const { return error_setting_; }
   float z_tolerance = 0;
+  bool retain_for_validation = false; /* Same-capture companion export, disk only. */
   bool volume() const
   {
     return volume_;

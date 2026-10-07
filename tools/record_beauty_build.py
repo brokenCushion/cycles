@@ -45,7 +45,11 @@ def beauty_identity(commit):
         metadata, path = line.split('\t')
         if path.startswith(('src/deep/', 'src/kernel/deep/')) or path in DEEP_HOST:
             continue
-        if path in ('src/integrator/path_trace.cpp', 'src/app/cycles_standalone.cpp',
+        if path == 'src/kernel/CMakeLists.txt':
+            source = re.sub(rb'(?ms)^set\(SRC_KERNEL_DEEP_HEADERS\n.*?^\)\n', b'',
+                            git('show', commit + ':' + path))
+            files[path] = hashlib.sha256(source).hexdigest()
+        elif path in ('src/integrator/path_trace.cpp', 'src/app/cycles_standalone.cpp',
                     'src/integrator/path_trace_work_cpu.cpp', 'src/integrator/path_trace_work_gpu.cpp',
                     'src/integrator/path_trace_work_gpu.h',
                     'src/device/queue.h', 'src/device/queue.cpp',

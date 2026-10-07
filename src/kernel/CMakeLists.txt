@@ -269,6 +269,7 @@ set(SRC_KERNEL_DEEP_HEADERS
   deep/volume_native.h
   deep/surface_boundary.h
   deep/types.h
+  deep/write.h
   deep/surface_cuda.h
 )
 

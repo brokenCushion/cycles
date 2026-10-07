@@ -392,6 +392,7 @@ check(diagnostic.exists() or settings['samples'] == 1 or args.reader_only,
 check(not args.overlap_reference or diagnostic.exists(), 'Overlap check requires diagnostics')
 raw_error, raw_probes, raw_pixels = 0.0, 0, 0
 accepted_populations = []
+camera_populations = {}
 if diagnostic.exists() and args.oracle_python:
     check(not args.overlap_reference and not args.expect_empty,
           'Large-scene oracle mode is separate from named overlap/empty fixtures')
@@ -410,6 +411,7 @@ if diagnostic.exists() and args.oracle_python:
     raw_probes = evidence['accepted_camera_probes']
     raw_pixels = evidence['accepted_camera_pixels']
     accepted_populations = evidence['accepted_populations']
+    camera_populations = {(p['x'], p['y']): p['count'] for p in evidence['camera_populations']}
 elif diagnostic.exists():
     cameras = read_cameras(diagnostic)
     if args.expect_empty:
@@ -457,6 +459,7 @@ elif diagnostic.exists():
     for x, file_y in sorted(expected_pixels):
         accepted = [cameras[key] for key in sorted(cameras) if key[:2] == (x, file_y)]
         accepted_populations.append(len(accepted))
+        camera_populations[x, file_y] = len(accepted)
         functions = [curve(v, s) for v, s in accepted]
         output = deep_pixel(reader['out'], imath.V2i(x, height-1-file_y))
         actual = curve([(a, b, -math.log1p(-v)) for a, b, v in output if a < b],
@@ -474,6 +477,21 @@ elif diagnostic.exists():
         raw_pixels += 1
     check(raw_error <= deep_tolerance, 'EXR differs from accepted camera transmittance')
 
+
+if requested_samples and not args.reader_only:
+    check(settings.get('diagnostic_sample_count_pass'),
+          'Sample-limited qualification requires native accepted-count diagnostics')
+    counts = GafferImage.ImageReader()
+    counts['fileName'].setValue((directory / 'render-passes.exr').as_posix())
+    names = [c for c in counts['out']['channelNames'].getValue() if 'Debug Sample Count' in c]
+    check(len(names) == 1 and bool(camera_populations), 'Missing native accepted-count pass/populations')
+    for (x, y), population in camera_populations.items():
+        origin, index = tile_index(imath.V2i(x, height-1-y))
+        value = float(counts['out'].channelData(names[0], origin)[index]) * settings['samples']
+        check(math.isfinite(value) and abs(value-round(value)) <= 1e-4 and
+              1 <= round(value) <= settings['samples'], 'Invalid native accepted population')
+        check(population == min(round(value), capture_samples),
+              'Deep population differs from min(native accepted, EXR sample limit)')
 
 flat = add('FullDeepAlpha', GafferImage.DeepToFlat(), -15, 20)
 flat['in'].setInput(reader['out'])
@@ -539,7 +557,8 @@ note['description'].setValue(f'Source: {Path(settings["source_file"]).name}\n'
     'Select VDBDeepPoints to view points read from the deep EXR.\n'
     'Enable VolumeDepthCut farClip to slice the stored volume.\n'
     'Scalar extinction Z/ZBack/A; emission and scattered colour are not stored.\n'
-    f'{width}x{height}, {settings["samples"]} camera samples; '
+    f'{width}x{height}, at most {capture_samples} deep camera samples '
+    f'from {settings["samples"]} beauty samples; '
     f'preview pixel stride {preview_stride}, at most 1,000,000 points.')
 review = directory / 'native_vdb_review.gfr'
 script['fileName'].setValue(review.as_posix())

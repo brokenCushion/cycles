@@ -77,7 +77,7 @@ for name, case in manifest['cases'].items():
                    str(repo / 'tools/render_blender_deep_scene.py'), '--',
                    '--output', str(destination), '--samples', str(case['samples']), '--percentage', '100',
                    '--device', device]
-        if device == 'CUDA':
+        if device == 'CUDA' or deep_samples:
             command += ['--save-render-passes', '--diagnostic-sample-count']
         elif name in ('denoised_volume', 'adaptive_denoised_volume'):
             command += ['--save-render-passes']

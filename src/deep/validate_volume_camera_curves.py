@@ -69,6 +69,7 @@ def validate(source, stored_path, report_path):
         raise RuntimeError('Invalid EXR-derived error bound')
     outputs = {(p['x'], p['y']): p['samples'] for p in stored['pixels']}
     seen, populations = set(), []
+    camera_populations = []
     maximum, probes = 0.0, 0
     with source.open() as stream:
         rows = csv.DictReader(stream)
@@ -112,6 +113,7 @@ def validate(source, stored_path, report_path):
             if not functions or (not stored['adaptive'] and len(functions) != stored['samples']):
                 raise RuntimeError('Incomplete camera population')
             populations.append(len(functions))
+            camera_populations.append(dict(x=pixel[0], y=pixel[1], count=len(functions)))
             output = outputs[pixel]
             actual, ends, steps = curve([(a, b, -math.log1p(-v)) for a, b, v in output if a < b],
                                         [(a, v) for a, b, v in output if a == b])
@@ -136,7 +138,8 @@ def validate(source, stored_path, report_path):
         raise RuntimeError('Missing diagnostic pixels')
     report = dict(passed=maximum <= tolerance, deep_error=tolerance, max_accepted_camera_error=maximum,
                   accepted_camera_probes=probes, accepted_camera_pixels=len(seen),
-                  accepted_populations=populations, oracle='Independent NumPy extinction sweep; one pixel at a time')
+                  accepted_populations=populations, camera_populations=camera_populations,
+                  oracle='Independent NumPy extinction sweep; one pixel at a time')
     report_path.write_text(json.dumps(report, indent=2))
     if not report['passed']:
         raise RuntimeError('Accepted-camera curve error exceeds EXR bound')

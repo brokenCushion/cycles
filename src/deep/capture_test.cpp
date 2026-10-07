@@ -377,6 +377,17 @@ int main()
     rejects([] { Capture c(-1, 2, 1, 1024); });
     rejects([] { Capture c(1, 2, 0, 1024); });
     rejects([] { Capture c(1, 1, 4097, 1024); });
+    rejects([] { Capture c(1, 1, 1, 1024, 0, false, false, false, false, 1, 0, -1); });
+    rejects([] { Capture c(1, 1, 1, 1024, 0, false, false, false, false, 1, 0, 2); });
+    for (const bool spill : {false, true}) {
+      Capture limited(1, 1, 2, 64 * 1024 * 1024, 0, spill, true, false, false, 1, 0, 2);
+      limited.record(0, 0, 0, 1);
+      limited.record(0, 0, 1, 0); // Misses still contribute to the prefix population.
+      limited.set_population(0, 0, 2);
+      check(limited.finalize() && limited.sample_limit() == 2 && limited.population(0, 0) == 2);
+      const auto pixel = limited.reconstruct_pixel(0, 0);
+      check(pixel.size() == 1 && pixel[0].alpha == .5);
+    }
     rejects([] { Capture c(1000, 1000, 1000, 1024); });
     rejects([] { Capture c(INT32_MAX, INT32_MAX, 4096, SIZE_MAX); });
     Capture capture(2, 1, 4, 8 * single_record_bytes);

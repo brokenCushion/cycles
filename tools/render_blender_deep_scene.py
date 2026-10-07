@@ -27,6 +27,8 @@ parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
 parser.add_argument('--deep-max-events', type=int, default=16)
 parser.add_argument('--deep-memory-mb', type=int, default=512)
 parser.add_argument('--deep-error', default='0.001')
+parser.add_argument('--deep-samples', type=int, default=0)
+parser.add_argument('--fixed-sampling', action='store_true')
 parser.add_argument('--save-render-passes', action='store_true',
                     help='Save native noisy/denoising passes for beauty isolation checks')
 parser.add_argument('--diagnostic-sample-count', action='store_true',
@@ -34,6 +36,10 @@ parser.add_argument('--diagnostic-sample-count', action='store_true',
 parser.add_argument('--capture-only', action='store_true',
                     help='Diagnostic capture/beauty test; skips curve fitting and deep EXR publication')
 args = parser.parse_args(sys.argv[sys.argv.index('--')+1:])
+if args.deep_samples < 0:
+    raise ValueError('Deep samples must be nonnegative')
+if args.fixed_sampling:
+    bpy.context.scene.cycles.use_adaptive_sampling = False
 error = 0.0 if args.deep_error == 'strict' else float(args.deep_error)
 if args.deep_error != 'strict' and not (1e-6 < error <= 1e-2):
     raise ValueError('Deep error must be strict or (1e-6,0.01]')
@@ -92,6 +98,7 @@ if args.deep:
     scene.cycles.use_deep_output = True
     scene.cycles.use_deep_volume = args.deep_volume
     scene.cycles.deep_error = error
+    scene.cycles.deep_samples = args.deep_samples
     scene.cycles.deep_output_path = str(directory / 'scene.deep.exr')
     scene.cycles.deep_max_events = args.deep_max_events
     scene.cycles.deep_memory_mb = args.deep_memory_mb
@@ -131,6 +138,7 @@ report = {
     'device': args.device,
     'deep_volume': args.deep and args.deep_volume,
     'deep_error': error if args.deep else None,
+    'deep_samples': args.deep_samples if args.deep else None,
     'deep_max_events': args.deep_max_events if args.deep else None,
     'deep_memory_mb': args.deep_memory_mb if args.deep else None,
     'view_layers': [layer.name for layer in scene.view_layers if layer.use],

@@ -94,6 +94,8 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
     deep_error: FloatProperty(name="Deep Transmittance Error", default=1e-3, min=0, max=1e-2,
         description="0 selects strict; nonzero must exceed the 1e-6 FLOAT precision floor")
     deep_memory_mb: IntProperty(name="Deep Working Memory MiB", default=512, min=1, max=2147483647)
+    deep_samples: IntProperty(name="Deep Samples", default=0, min=0, max=4096,
+        description="First N accepted camera samples; 0 uses all beauty samples")
 ''')
 edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_denoise_params', '''#ifdef WITH_CYCLES_DEEP_OPAQUE
   params.deep.enabled = background && !(b_engine.flag & blender::RE_ENGINE_PREVIEW) &&
@@ -102,6 +104,7 @@ edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_
     params.deep.transparent = true;
     params.deep.volume = get_boolean(cscene, "use_deep_volume");
     params.deep.error = get_float(cscene, "deep_error");
+    params.deep.samples = get_int(cscene, "deep_samples");
     params.deep.max_events = get_int(cscene, "deep_max_events");
     params.deep.memory_bytes = size_t(get_int(cscene, "deep_memory_mb")) * 1024 * 1024;
     /* Deep publication covers a complete frame. Native automatic tiling is not
@@ -153,6 +156,7 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.volume_export_workers = tile.volume_export_workers();
   image.export_statistics = tile.export_statistics();
   image.error = tile.error();
+  image.deep_samples = tile.sample_limit();
   const auto check_cancel = [&] {
     if (tile.cancelled())
       throw std::runtime_error("Blender deep export cancelled; final file preserved");

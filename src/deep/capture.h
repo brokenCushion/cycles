@@ -33,7 +33,8 @@ class Capture {
           bool volume = false,
           bool volume_grid = false,
           int export_workers = 1,
-          float error = 0);
+          float error = 0,
+          int sample_limit = 0);
   ~Capture();
   void record(int x, int y, uint32_t sample, float depth, int object = -1);
   /* Only complete records count as accepted camera samples. */
@@ -100,6 +101,7 @@ class Capture {
   {
     return samples_;
   }
+  int sample_limit() const { return sample_limit_; }
   /* Successful stdio transfers, including index initialization and page rereads.
    * These are logical file I/O bytes, not physical disk traffic through OS caches. */
   struct SpillStatistics {
@@ -118,6 +120,7 @@ class Capture {
   size_t volume_pixel_bytes_ = 0;
   int volume_export_workers_ = 1;
   int width_, height_, samples_;
+  int sample_limit_ = 0;
   std::vector<KernelDeepResult> results_;
   std::vector<uint32_t> populations_;
   int max_events_;

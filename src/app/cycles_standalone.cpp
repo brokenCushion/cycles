@@ -59,6 +59,7 @@ struct Options {
   string deep_records_filepath;
   int deep_memory_mb = 64;
   string deep_error = "0.001";
+  int deep_samples = 0;
   bool deep_transparent = false;
   bool deep_volume = false;
   int deep_max_events = 16;
@@ -188,6 +189,7 @@ static void session_init()
       throw std::invalid_argument("Deep working memory budget must be positive");
     DeepSettings &deep = options.session_params.deep;
     deep.enabled = true;
+    deep.samples = options.deep_samples;
     deep.transparent = options.deep_transparent;
     deep.volume = options.deep_volume;
     if (options.deep_error == "strict")
@@ -491,6 +493,9 @@ static void options_parse(const int argc, const char **argv)
   ap.arg("--deep-memory-mb %d:MIB")
       .help("Deep working memory budget in MiB (default 64; raw capture spills to temp disk)")
       .action([&](auto argv) { parse_int(argv, &options.deep_memory_mb); });
+  ap.arg("--deep-samples %d:SAMPLES")
+      .help("First N accepted camera samples for deep; 0 uses all beauty samples")
+      .action([&](auto argv) { parse_int(argv, &options.deep_samples); });
   ap.arg("--deep-transparent", &options.deep_transparent)
       .help("Enable experimental M4 scalar transparent visibility traversal (CPU SVM/OSL)");
   ap.arg("--deep-volume", &options.deep_volume)

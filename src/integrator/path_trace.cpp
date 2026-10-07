@@ -747,11 +747,14 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
       throw std::invalid_argument("Native deep GPU staging exceeds memory budget");
     capture_bytes -= PathTraceWorkGPU::deep_grid_staging_bytes;
   }
+  if (settings.samples < 0)
+    throw std::invalid_argument("Deep sample limit must be nonnegative");
+  const int capture_samples = settings.samples ? min(samples, settings.samples) : samples;
   deep_capture_ = make_unique<deep::Capture>(
-      params.width, params.height, samples, capture_bytes,
+      params.width, params.height, capture_samples, capture_bytes,
       (settings.transparent || settings.volume) ? event_capacity : 0,
       true, adaptive, settings.volume, settings.volume_grid, TaskScheduler::max_concurrency(),
-      settings.error);
+      settings.error, settings.samples ? capture_samples : 0);
   for (auto &work : path_trace_works_) {
     work->set_deep_capture(deep_capture_.get());
   }

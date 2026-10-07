@@ -275,6 +275,9 @@ void expect_invalid(const SurfaceImage &image)
 void failures(const SurfaceImage &valid, const std::filesystem::path &directory)
 {
   auto bad = valid;
+  bad.deep_samples = -1;
+  expect_invalid(bad);
+  bad = valid;
   bad.pixels.pop_back();
   expect_invalid(bad);
   bad = valid;
@@ -417,6 +420,16 @@ int main(int argc, char **argv)
       const auto *attribute = input.header().findTypedAttribute<Imf::DoubleAttribute>("cycles:deepError");
       require(error ? attribute && attribute->value() == double(error) : attribute == nullptr,
               "Effective error header/strict header preservation mismatch");
+    }
+    for (int count : {0, 1, 64}) {
+      auto image = base;
+      image.deep_samples = count;
+      const auto path = directory / "settings" / ("samples_" + std::to_string(count) + ".exr");
+      write_deep_exr(path, image);
+      Imf::DeepScanLineInputFile input(path.string().c_str());
+      const auto *attribute = input.header().findTypedAttribute<Imf::IntAttribute>("cycles:deepSamples");
+      require(count ? attribute && attribute->value() == count : attribute == nullptr,
+              "Deep sample limit header/legacy preservation mismatch");
     }
     for (const auto compression : {DeepCompression::None, DeepCompression::Zips}) {
       const std::string suffix = compression == DeepCompression::None ? "none" : "zips";

@@ -116,6 +116,8 @@ std::vector<FloatPixel> prepare(const SurfaceImage &image)
 
 Imf::Header make_header(const SurfaceImage &image)
 {
+  if (image.deep_samples < 0)
+    throw std::invalid_argument("Invalid deep sample limit");
   const auto budget = error_budget(image.error);
   if (image.error && image.reduction_error && image.reduction_error != budget.effective)
     throw std::invalid_argument("Surface reduction must use the shared deep error setting");
@@ -144,6 +146,8 @@ Imf::Header make_header(const SurfaceImage &image)
                           (image.reduction_error ? image.reduction_error : export_error)));
   if (image.error)
     header.insert("cycles:deepError", Imf::DoubleAttribute(budget.effective));
+  if (image.deep_samples)
+    header.insert("cycles:deepSamples", Imf::IntAttribute(image.deep_samples));
   /* Do not advertise deepImageState: distinct double depths can round together. */
   try {
     header.sanityCheck();

@@ -39,6 +39,16 @@ def population_reference_error(value, population, references):
                 if count == population), default=math.inf)
 
 
+def deep_samples(image, beauty_samples):
+    """Legacy missing header means all; a published limit is an effective maximum."""
+    value = image['metadata'].getValue().get('cycles:deepSamples')
+    if value is None:
+        return beauty_samples
+    count = int(value.value)
+    check(0 < count <= beauty_samples, 'Invalid EXR deep sample limit')
+    return count
+
+
 def beauty_repeat_gate(device, difference, ordinary_repeat):
     """CPU is exact; CUDA uses the independently measured repeat envelope."""
     check(device in ('CPU', 'CUDA'), 'Unknown beauty device')

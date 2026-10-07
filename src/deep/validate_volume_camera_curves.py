@@ -78,6 +78,10 @@ def validate(source, stored_path, report_path):
             seen.add(pixel)
             functions, boundaries = [], set()
             for sample, camera_rows in itertools.groupby(group, lambda row: int(row['sample'])):
+                if sample >= stored['samples'] and stored.get('source_samples', stored['samples']) > stored['samples']:
+                    if sample >= stored['source_samples']:
+                        raise RuntimeError('Out-of-range source camera sample')
+                    continue
                 if sample != len(functions) or sample >= stored['samples']:
                     raise RuntimeError('Missing, repeated or out-of-range camera sample')
                 intervals, surfaces = [], []

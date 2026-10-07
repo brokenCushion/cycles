@@ -120,7 +120,8 @@ class MemoryDriver : public OutputDriver {
   Device &device_;
 };
 
-static void run(const char *fixture, int mode, const bool cuda = false, const bool volume = false)
+static void run(const char *fixture, int mode, const bool cuda = false, const bool volume = false,
+                const int sample_limit = 0)
 {
   SessionParams params;
   const auto devices = Device::available_devices(cuda ? DEVICE_MASK_CUDA : DEVICE_MASK_CPU);
@@ -131,6 +132,7 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
   params.samples = 2;
   params.threads = 2;
   params.deep.enabled = true;
+  params.deep.samples = sample_limit;
   params.deep.transparent = mode == 6;
   params.deep.volume = volume || mode == 7;
   params.deep.max_events = cuda ? 64 : 16;
@@ -156,7 +158,7 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
     auto render = [&](int width, int height) {
       result.width = buffers.width = buffers.full_width = width;
       result.height = buffers.height = buffers.full_height = height;
-      result.samples = params.samples;
+      result.samples = sample_limit ? min(params.samples, sample_limit) : params.samples;
       session.scene->camera->set_full_width(width);
       session.scene->camera->set_full_height(height);
       session.scene->camera->compute_auto_viewplane();
@@ -237,7 +239,7 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
             "deep capture did not recover after failure/cancellation");
     }
   }
-  if (mode == 0) {
+  if (mode == 0 && !volume) {
     check(!result.retained.empty() && result.retained.back().alpha == 1,
           "host-owned samples must survive session destruction");
   }
@@ -293,6 +295,10 @@ int main(int argc, const char **argv)
       run(argv[4], mode, cuda, true);
     }
     run(argv[4], 8, cuda, true);
+    for (const int limit : {1, 2, 64}) {
+      run(argv[2], 0, cuda, false, limit);
+      run(argv[4], 0, cuda, true, limit);
+    }
     std::cout << "PASS: memory delivery, reset, disable, unsupported host, cancellation, "
                  "callback failures and crop rejection\n";
     return 0;

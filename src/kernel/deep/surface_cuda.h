@@ -108,7 +108,8 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
                              const float eps_ray,
                              const ccl_global KernelDeepRange *ranges,
                              const int tile_count,
-                             const int media_count)
+                             const int media_count,
+                             const int sample_limit)
 {
   const int index = ccl_gpu_global_id_x();
   if (index >= count)
@@ -140,7 +141,8 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
       return;
     }
     const ccl_global float *pixel = film_pass_pixel_render_buffer(nullptr, state, render_buffer);
-    record->population = __float_as_uint(pixel[kernel_data.film.pass_sample_count]);
+    record->population = min(__float_as_uint(pixel[kernel_data.film.pass_sample_count]),
+                             uint(sample_limit));
     /* Camera initialization has finished for this entire batch. The convergence
      * flag has not changed since initialization, so it identifies rejected lanes
      * without inspecting their uninitialized sample/ray fields. A skipped lane
@@ -152,6 +154,10 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
     }
   }
   record->sample = INTEGRATOR_STATE(state, path, sample);
+  if (record->sample >= uint(sample_limit)) {
+    record->result = {DEEP_SKIPPED, 0, DEEP_ERROR_NONE};
+    return;
+  }
   const auto flag = INTEGRATOR_STATE(state, path, flag);
   const auto rng_offset = INTEGRATOR_STATE(state, path, rng_offset);
   const auto transparent_bounce = INTEGRATOR_STATE(state, path, transparent_bounce);

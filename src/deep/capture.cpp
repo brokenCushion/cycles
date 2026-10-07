@@ -21,10 +21,14 @@ Capture::Capture(const int width,
                  const bool volume,
                  const bool volume_grid,
                  const int export_workers,
-                 const float error)
+                 const float error,
+                 const int sample_limit)
     : error_setting_(error), width_(width), height_(height), samples_(samples), max_events_(max_events), volume_(volume),
       volume_grid_(volume_grid)
 {
+  if (sample_limit < 0 || (sample_limit && sample_limit != samples))
+    throw std::invalid_argument("Invalid deep sample limit");
+  sample_limit_ = sample_limit;
   error_budget(error);
   if (export_workers <= 0)
     throw std::invalid_argument("Deep export requires positive worker count");

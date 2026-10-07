@@ -15,6 +15,9 @@ import time
 blender, manifest_path, output = (Path(v).resolve() for v in sys.argv[1:4])
 device = sys.argv[4] if len(sys.argv) > 4 else 'CPU'
 error = sys.argv[5] if len(sys.argv) > 5 else 'strict'
+deep_samples = int(sys.argv[6]) if len(sys.argv) > 6 else 0
+if deep_samples < 0:
+    raise ValueError('Deep sample limit must be nonnegative')
 if device not in ('CPU', 'CUDA'):
     raise ValueError('Expected CPU or CUDA')
 manifest = json.loads(manifest_path.read_text())
@@ -79,6 +82,7 @@ for name, case in manifest['cases'].items():
         elif name in ('denoised_volume', 'adaptive_denoised_volume'):
             command += ['--save-render-passes']
         if kind == 'deep':
+            command += ['--deep-samples', str(deep_samples)]
             command += ['--deep-error', error, '--deep', '--deep-volume', '--deep-memory-mb', '1024',
                         '--deep-max-events', str(case.get('deep_max_events', 16))]
         log = directory / (kind + '.log')

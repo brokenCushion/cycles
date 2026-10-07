@@ -23,7 +23,7 @@ import GafferScene
 import imath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from validate_gaffer import deep_error, check, deep_pixel, tile_index, population_reference_error, beauty_repeat_gate
+from validate_gaffer import deep_error, deep_samples, check, deep_pixel, tile_index, population_reference_error, beauty_repeat_gate
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('directory', type=Path)
@@ -75,6 +75,12 @@ reader = add('NativeVDBDeep', GafferImage.ImageReader(), 0, 40)
 reader['fileName'].setValue((directory / 'scene.deep.exr').as_posix())
 check(reader['out']['deep'].getValue(), 'Output is not deep')
 deep_tolerance = deep_error(reader['out'])
+capture_samples = deep_samples(reader['out'], settings['samples'])
+requested_samples = settings.get('deep_samples') or 0
+check(capture_samples == (min(requested_samples, settings['samples']) if requested_samples else settings['samples']),
+      'EXR deep sample limit differs from requested setting')
+check(bool(requested_samples) == ('cycles:deepSamples' in reader['out']['metadata'].getValue()),
+      'Missing or unexpected EXR deep sample limit')
 if settings.get('deep_error', 0):
     check('cycles:deepError' in reader['out']['metadata'].getValue() and
           math.isclose(deep_tolerance, settings['deep_error'], rel_tol=1e-7),
@@ -122,6 +128,8 @@ if settings['device'] == 'CUDA' and not args.reader_only:
                 '--percentage', str(settings['percentage']), '--device', 'CUDA',
                 '--threads', str(settings['threads']), '--save-render-passes',
                 '--diagnostic-sample-count']
+            if not settings['adaptive']:
+                command += ['--fixed-sampling']
             env = dict(os.environ)
             for key in ('OCIO', 'CYCLES_KERNEL_PATH', 'CYCLES_DEEP_VALIDATE_CAPTURE_ONLY'):
                 env.pop(key, None)
@@ -356,7 +364,7 @@ def read_cameras(path):
             check(identity not in identities, 'Duplicate volume diagnostic record')
             identities.add(identity)
             check(0 <= key[0] < width and 0 <= key[1] < height and
-                  0 <= key[2] < settings['samples'], 'Invalid diagnostic identity')
+                  0 <= key[2] < capture_samples, 'Invalid diagnostic identity')
             intervals, surfaces = cameras.setdefault(key, ([], []))
             a, b, v = (float(row[k]) for k in ('front', 'back', 'value'))
             check(all(math.isfinite(n) for n in (a, b, v)), 'Nonfinite diagnostic value')
@@ -373,7 +381,7 @@ def read_cameras(path):
     check({(x, y) for x, y, s in cameras} == expected_pixels, 'Missing diagnostic pixels')
     for x, y in expected_pixels:
         accepted = {s for px, py, s in cameras if (px, py) == (x, y)}
-        count = len(accepted) if settings['adaptive'] else settings['samples']
+        count = len(accepted) if settings['adaptive'] else capture_samples
         check(count > 0 and accepted == set(range(count)), 'Missing diagnostic cameras')
     return cameras
 
@@ -388,7 +396,7 @@ if diagnostic.exists() and args.oracle_python:
     check(not args.overlap_reference and not args.expect_empty,
           'Large-scene oracle mode is separate from named overlap/empty fixtures')
     stored_path = directory / 'stored_diagnostic_curves.json'
-    stored_path.write_text(json.dumps(dict(samples=settings['samples'], adaptive=settings['adaptive'], deep_error=deep_tolerance,
+    stored_path.write_text(json.dumps(dict(samples=capture_samples, adaptive=settings['adaptive'], deep_error=deep_tolerance,
         pixels=[dict(x=x, y=y, samples=deep_pixel(reader['out'], imath.V2i(x, height-1-y)))
                 for x, y in sorted({(i*(width-1)//8, j*(height-1)//8)
                                    for i in range(9) for j in range(9)})])))
@@ -548,7 +556,7 @@ report = {'deep_error': deep_tolerance, 'passed': beauty_passed and slice_error 
           'scope': 'Gaffer EXR interoperability and beauty isolation',
           'expected_empty': args.expect_empty,
           'total_deep_samples': total_deep_samples, 'max_pixel_samples': max_pixel_samples,
-          'camera_samples': settings['samples'], 'device': settings['device'],
+          'camera_samples': capture_samples, 'beauty_samples': settings['samples'], 'device': settings['device'],
           'min_accepted_population': min(accepted_populations, default=0),
           'max_accepted_population': max(accepted_populations, default=0),
           'accepted_camera_pixels': raw_pixels, 'accepted_camera_probes': raw_probes,

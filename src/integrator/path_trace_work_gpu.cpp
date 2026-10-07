@@ -1026,6 +1026,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
   /* Both host/device mirrors, count metadata and both queues' medium scratch
    * share the existing 32 MiB reservation. No beauty allocation changes. */
   const int media_count = max(1, min(int(DEEP_MAX_MEDIA), device_scene_->data.film.pad1));
+  const int sample_limit = capture->samples();
   const size_t lane_bytes = 2 * sizeof(KernelDeepRecord) +
       4 * (sizeof(KernelDeepRecord) + sizeof(KernelDeepRange)) +
       2 * media_count * sizeof(KernelDeepMedium);
@@ -1171,7 +1172,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
     const device_ptr media = deep_batches_[0]->media.device_pointer;
     const DeviceKernelArguments count_args(&tiles, &flat_tile, &first, &count, &capacity,
         &stride, &render_buffer, &records, &no_events, &media, &density, &eps_ray,
-        &no_ranges, &num_tiles, &media_count);
+        &no_ranges, &num_tiles, &media_count, &sample_limit);
     const double count_start = time_dt();
     if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, count_args)) {
       fail();
@@ -1245,7 +1246,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
       buffer.queue->copy_to_device(buffer.ranges);
       const DeviceKernelArguments output_args(&tiles, &flat_tile, &first, &buffer.count,
           &capacity, &stride, &render_buffer, &out_records, &out_events, &out_media,
-          &out_density, &eps_ray, &ranges, &num_tiles, &media_count);
+          &out_density, &eps_ray, &ranges, &num_tiles, &media_count, &sample_limit);
       buffer.pending = true;
       if (!buffer.queue->enqueue(DEVICE_KERNEL_DEEP_SURFACE, buffer.count, output_args)) {
         fail();
@@ -1355,6 +1356,7 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
                                      std::nextafter(float(.5 * deep::error_budget(capture->error()).density), 0.0f) : 0;
           const device_ptr no_ranges = 0;
           const int media_count = DEEP_MAX_MEDIA;
+          const int sample_limit = capture->samples();
           const DeviceKernelArguments args(&tiles,
                                            &tile,
                                            &offset,
@@ -1369,7 +1371,8 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
                                            &eps_ray,
                                            &no_ranges,
                                            &num_tiles,
-                                           &media_count);
+                                           &media_count,
+                                           &sample_limit);
           const double readback_start = time_dt();
           if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, args)) {
             capture->fail();
@@ -1438,13 +1441,13 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
               continue;
             if (capture->adaptive()) {
               capture->set_population(record.x, record.y, record.population);
-              if (record.result.status == DEEP_SKIPPED && record.result.count == 0 &&
-                  record.result.error == DEEP_ERROR_NONE)
-              {
-                ++deep_skipped_count_;
-                complete[begin + i] = 1;
-                continue;
-              }
+            }
+            if (record.result.status == DEEP_SKIPPED && record.result.count == 0 &&
+                record.result.error == DEEP_ERROR_NONE)
+            {
+              ++deep_skipped_count_;
+              complete[begin + i] = 1;
+              continue;
             }
             if (record.result.status != DEEP_COMPLETE || record.result.error != DEEP_ERROR_NONE) {
               capture->fail(record.result.error);

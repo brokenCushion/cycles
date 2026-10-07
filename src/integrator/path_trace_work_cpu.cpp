@@ -174,7 +174,8 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
     }
 
 #ifdef WITH_CYCLES_DEEP_OPAQUE
-    if (deep::Capture *capture = deep_capture_) {
+    if (deep::Capture *capture = deep_capture_;
+        capture && state->path.sample < capture->samples()) {
       if (has_bake || (state->path.queued_kernel != DEVICE_KERNEL_INTEGRATOR_INTERSECT_CLOSEST &&
                       !(capture->volume() && state->path.queued_kernel ==
                           DEVICE_KERNEL_INTEGRATOR_INTERSECT_VOLUME_STACK)) ||
@@ -268,7 +269,7 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
       const size_t pixel = work_tile.offset + work_tile.x + work_tile.y * work_tile.stride;
       const uint32_t count = __float_as_uint(
           render_buffer[pixel * film.pass_stride + film.pass_sample_count]);
-      capture->set_population(work_tile.x, work_tile.y, count);
+      capture->set_population(work_tile.x, work_tile.y, min(count, uint32_t(capture->samples())));
     }
   }
 #endif

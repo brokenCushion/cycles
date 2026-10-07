@@ -38,7 +38,8 @@ at most `1e-2`. `cycles:deepError` records the effective FLOAT setting.
 Strict preserves the old payload and all deterministic headers, including
 `cycles:maxTransmittanceError`; validators read that legacy bound in strict.
 Surface `--deep-reduce` and volume coalescing share the same setting/budget.
-Phase 3a uses host fitting only; device compression is a later stop.
+Numeric modes include bounded per-object device compression; strict retains exact
+cubic capture. The plan records the budget split and qualification results.
 
 For a beauty comparison, repeat into a separate output directory without `--deep`.
 Use identical device, samples and resolution. The helper preserves scene geometry,
@@ -59,7 +60,15 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
 ## Host contract and limits
 
 - Settings: `use_deep_output`, `use_deep_volume`, `deep_output_path`,
-  `deep_max_events`, `deep_memory_mb`. Deep is off by default.
+  `deep_max_events`, `deep_memory_mb`, `deep_error`, `deep_samples`,
+  `use_deep_ids`. Film > Deep Output exposes these controls. Deep and IDs are off
+  by default.
+- Optional `--deep-ids` / `use_deep_ids` writes per-sample UINT `id` and
+  `cycles:deepIDManifest` (hex ID to object name), using Cycles Cryptomatte
+  MurmurHash3 seed 0. Different objects retain overlapping samples. Select IDs
+  as UINT before Gaffer converts channels to FLOAT; `tools/compare_deep_ids.py`
+  provides exact selection and combined-alpha validation. IDs-off retains legacy
+  output. Same-object depth merging and holdouts are separate review stops.
 - Output: scalar Z/ZBack/A and separate native beauty. No deep RGB or refracted
   light-path reconstruction. Glass uses native camera-alpha semantics.
 - One enabled view layer, mono background render, no automatic tiling.

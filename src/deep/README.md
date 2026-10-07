@@ -61,6 +61,12 @@ Beauty sampling is unchanged. Positive N publishes its effective maximum in
 `cycles:deepSamples`; 0 omits the attribute for legacy identity. Curve error
 bounds apply to the retained prefix; differences from all samples are sampling variation.
 
+`DeepSettings::ids`, `--deep-ids` and Blender `use_deep_ids` enable the optional
+UINT `id` channel. `cycles:deepIDManifest` maps raw MurmurHash3 seed-0 hashes to
+object names. Reconstruction preserves object tags through camera averaging;
+different objects retain overlapping intervals. IDs-off follows the original path.
+Use `tools/compare_deep_ids.py` for exact UINT selection before a FLOAT reader.
+
 For each camera sample, surface events multiply transmittance by `(1 - alpha)`;
 volumes contribute `exp(-optical_depth)`. Reconstruction averages transmittance,
 then emits local alpha as `1 - T_after / T_before`. It does not average local

@@ -12,27 +12,51 @@ import argparse
 import concurrent.futures
 import json
 import math
+from collections import Counter
 from pathlib import Path
 
 from compare_deep_ids import read, curve_error
 
 
 def collapse(before, after, tolerance):
+    # Equal-depth records commute. Publication may permute exact ties while
+    # regrouping IDs; canonicalize only those ties, without changing values.
+    key = lambda v: (v[0], v[1], v[3], v[2])
+    before, after = sorted(before, key=key), sorted(after, key=key)
     left, right = [], []
     i = groups = removed = 0
     volume_back = 0
-    for sample in after:
+    for index, sample in enumerate(after):
         if i < len(before) and sample == before[i]:
             left.append(sample[:3]); right.append(sample[:3])
             if sample[0] < sample[1]: volume_back = max(volume_back, sample[1])
             i += 1
             continue
         front, back, alpha, identifier = sample
-        if not (front < back and back-front <= tolerance*front and volume_back <= front):
+        if not (front <= back and back-front <= tolerance*front and volume_back <= front):
             raise ValueError('Changed record is not a permitted surface depth span')
         begin = i
         transmission = 1.
-        while i < len(before) and before[i][0] <= back:
+        # A FLOAT-collapsed volume step or another hard surface may remain at
+        # the group's back endpoint. Reserve those bit-exact later records,
+        # permuting only coincident hard steps; never move an interior barrier.
+        reserved = Counter()
+        for later_index in range(index+1, len(after)):
+            later = after[later_index]
+            if later[0] > back: break
+            if later[0] == later[1] == back: reserved[later] += 1
+        end = i
+        while end < len(before) and before[end][0] < back: end += 1
+        tail = end
+        kept, rest = [], []
+        while tail < len(before) and before[tail][0] == before[tail][1] == back:
+            v = before[tail]
+            if reserved[v]: rest.append(v); reserved[v] -= 1
+            else: kept.append(v)
+            tail += 1
+        before[end:tail] = kept + rest
+        group_end = end + len(kept)
+        while i < group_end:
             z, zback, a, obj = before[i]
             if z != zback or obj != identifier or z < front:
                 raise ValueError('Merge crossed a volume or another object')
@@ -124,6 +148,11 @@ def self_test():
     source=[(500.,500.,.2,7),(500.01,500.01,.3,7)]
     left,right,groups,removed=collapse(source,[(500.,500.01,.44,7)],1e-4)
     assert groups == removed == 1 and curve_error(left,right) < 1e-15
+    assert collapse(source, list(reversed(source)), 1e-4)[2:] == (0, 0)
+    coincident = [(500.,500.,.2,7),(500.,500.,.3,7)]
+    assert collapse(coincident, [(500.,500.,.44,7)], 1e-4)[2:] == (1, 1)
+    endpoint = source + [(500.01,500.01,.01,7)]
+    assert collapse(endpoint, [(500.,500.01,.44,7),endpoint[-1]], 1e-4)[2:] == (1, 1)
     for barrier in ((500.005,500.005,.1,8),(500.005,500.006,.1,7)):
         try: collapse([source[0],barrier,source[1]],[(500.,500.01,.44,7)],1e-4)
         except ValueError: pass

@@ -175,6 +175,26 @@ void id_round_trip(const std::filesystem::path &directory)
           std::abs((1 - alphas[1]) - std::exp(-1.2)) < 1e-7, "ID selection alpha changed");
   image.pixels = {{{2, .2, 0}, {2, .3, 1}}};
   write_deep_exr(directory / "surface_ids.exr", image);
+  require(input.header().find("cycles:deepIDHoldoutManifest") == input.header().end(),
+          "Ordinary ID output acquired holdout metadata");
+  image.holdout_manifest = {image.object_manifest.front()};
+  const auto holdout_path = directory / "holdout_ids.exr";
+  write_deep_exr(holdout_path, image);
+  Imf::DeepScanLineInputFile holdout(holdout_path.string().c_str(), 1);
+  const auto marked = holdout.header().typedAttribute<Imf::StringAttribute>(
+      "cycles:deepIDHoldoutManifest").value();
+  require(marked.find("abcdef01") != std::string::npos &&
+          marked.find("12345678") == std::string::npos &&
+          marked.find("\\u000a") != std::string::npos,
+          "Holdout manifest subset/escaping failed");
+  for (const bool ids_enabled : {true, false}) {
+    image.ids = ids_enabled;
+    image.holdout_manifest = {{0xdeadbeef, "unknown"}};
+    bool rejected = false;
+    try { write_deep_exr(directory / "invalid_holdout.exr", image); }
+    catch (const std::invalid_argument &) { rejected = true; }
+    require(rejected, "Invalid holdout/ID manifest accepted");
+  }
   std::cout << "PASS UINT deep ID overlap, selected alpha, surface ties and manifest round-trip\n";
 }
 

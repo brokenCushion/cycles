@@ -44,6 +44,8 @@ class PathTraceDeepTile final : public OutputDriver::DeepTile {
   float z_tolerance() const override { return capture_.z_tolerance; }
   std::vector<std::pair<uint32_t, std::string>> object_manifest() const override
   { return capture_.object_manifest; }
+  std::vector<std::pair<uint32_t, std::string>> holdout_manifest() const override
+  { return capture_.holdout_manifest; }
   bool ids() const override { return capture_.ids(); }
   int sample_limit() const override { return capture_.sample_limit(); }
   int volume_export_workers() const override { return capture_.volume_export_workers(); }

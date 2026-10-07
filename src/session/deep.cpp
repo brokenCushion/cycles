@@ -246,6 +246,18 @@ static bool deep_closure_can_transmit(ShaderNode *node)
   return false;
 }
 
+static bool deep_shader_has_holdout(Shader *shader)
+{
+  if (!shader || !shader->graph)
+    return false; /* Missing graphs still fail normal shader preflight. */
+  ShaderNodeSet nodes;
+  deep_shader_dependencies(nodes, shader->graph->output()->input("Surface"));
+  for (ShaderNode *node : nodes)
+    if (node->type->name == ustring("holdout"))
+      return true;
+  return false;
+}
+
 static void validate_shader(Scene *scene, Shader *shader,
                             const bool background,
                             const bool transparent = false,
@@ -354,7 +366,7 @@ static void validate_shader(Scene *scene, Shader *shader,
       }
       require_deep(type == "output" || type == "emission" || type == "diffuse_bsdf" ||
                        type == "principled_bsdf" || type == "glass_bsdf" ||
-                       type == "translucent_bsdf" ||
+                       type == "translucent_bsdf" || type == "holdout" ||
                        type == "transparent_bsdf" || type == "mix_closure" ||
                        type == "checker_texture" || type == "texture_coordinate" ||
                        type == "mapping" || type == "noise_texture" ||
@@ -371,7 +383,8 @@ static void validate_shader(Scene *scene, Shader *shader,
       continue;
     }
     require_deep(type == "output" || (background ? type == "background_shader" :
-                                                   (type == "emission" || type == "diffuse_bsdf")),
+                                                   (type == "emission" || type == "diffuse_bsdf" ||
+                                                    type == "holdout")),
                  "only constant diffuse/emission surfaces and constant background are supported");
     if (type != "output") {
       for (ShaderInput *input : node->inputs)
@@ -386,6 +399,7 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
   require_deep(!params.deep.ids || params.deep.error != 0,
                "--deep-ids requires a numeric --deep-error; strict mode reproduces legacy output without IDs");
   params.deep.object_manifest.clear();
+  params.deep.holdout_manifest.clear();
   if (params.deep.ids) {
     std::map<uint32_t, std::string> names;
     for (const Object *object : scene->objects) {
@@ -395,6 +409,15 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
       require_deep(inserted.second || inserted.first->second == name,
                    "object-name hash collision in deep ID manifest");
       params.deep.object_manifest.emplace_back(id, name);
+      bool holdout = object->get_use_holdout();
+      if (const Geometry *geometry = object->get_geometry()) {
+        if (geometry->get_used_shaders().empty())
+          holdout |= deep_shader_has_holdout(scene->default_surface);
+        for (Node *node : geometry->get_used_shaders())
+          holdout |= deep_shader_has_holdout(static_cast<Shader *>(node));
+      }
+      if (holdout)
+        params.deep.holdout_manifest.emplace_back(id, name);
     }
   }
   deep::error_budget(params.deep.error);
@@ -605,7 +628,10 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
      * objects have no surface closure and cannot create deep opacity events. */
     if (object->get_geometry() && object->get_geometry()->is_light())
       continue;
-    require_deep(!object->get_use_holdout() && !object->get_is_shadow_catcher() &&
+    /* Holdout affects beauty colour/alpha, not the straight camera opacity
+     * already recorded by capture. Preserve the legacy rejection diagnostic
+     * for shadow catchers and caustics; their support has not changed. */
+    require_deep(!object->get_is_shadow_catcher() &&
                      !object->get_is_caustics_caster() && !object->get_is_caustics_receiver(),
                  "holdout, shadow catcher and caustics are unsupported");
   }

@@ -128,6 +128,10 @@ if with_ids:
     manifest = json.loads(str(metadata['cycles:deepIDManifest']))
     check(isinstance(manifest, dict) and all(len(k) == 8 for k in manifest),
           'Invalid deep ID name manifest')
+if 'cycles:deepIDHoldoutManifest' in metadata:
+    marked = json.loads(str(metadata['cycles:deepIDHoldoutManifest']))
+    check(with_ids and isinstance(marked, dict) and bool(marked) and
+          all(manifest.get(k) == v for k, v in marked.items()), 'Invalid holdout manifest subset')
 fmt = reader['out']['format'].getValue()
 width, height = fmt.width(), fmt.height()
 check([width, height] == [v * settings['percentage'] // 100 for v in settings['resolution']],
@@ -150,8 +154,12 @@ for y in range(0, height, tile):
         total_deep_samples += previous
 if settings['device'] == 'CUDA' and args.host_only_beauty_proof and not args.reader_only:
     proof = json.loads(args.host_only_beauty_proof.read_text())
-    check(proof['phase'] in ('1', '3a', '6', '6a', '7') and
+    check(proof['phase'] in ('1', '3a', '6', '6a', '6b', '7') and
           proof['renderer_sha256'] == settings['renderer_sha256'], 'Host-only proof scope/build mismatch')
+    if proof['phase'] == '6b':
+        gpu_sources = json.loads(Path(proof['gpu_sources']).read_text())
+        check(gpu_sources['passed'] and gpu_sources['before'] == gpu_sources['after'],
+              'Phase 6b changed GPU sources; CUDA pixel beauty gate is required')
     sources = json.loads(Path(proof['beauty_sources']).read_text())
     resources = json.loads(Path(proof['kernel_resources']).read_text())
     check(sources['passed'] and sources['before'] == sources['after'], 'Beauty sources changed')

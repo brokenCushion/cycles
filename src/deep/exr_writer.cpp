@@ -144,10 +144,10 @@ std::vector<FloatPixel> prepare(const SurfaceImage &image)
 
 /* Manifest keys are the raw MurmurHash3 hex values used by Cycles
  * Cryptomatte, not the exponent-adjusted FLOAT bit patterns. */
-std::string id_manifest(const SurfaceImage &image)
+std::string id_manifest(const std::vector<std::pair<uint32_t, std::string>> &entries)
 {
   std::map<uint32_t, std::string> names;
-  for (const auto &entry : image.object_manifest) {
+  for (const auto &entry : entries) {
     const auto inserted = names.emplace(entry);
     if (!inserted.second && inserted.first->second != entry.second)
       throw std::invalid_argument("Deep ID name hash collision");
@@ -188,6 +188,8 @@ Imf::Header make_header(const SurfaceImage &image)
     throw std::invalid_argument("Invalid surface depth tolerance");
   if (image.deep_samples < 0)
     throw std::invalid_argument("Invalid deep sample limit");
+  if (!image.ids && !image.holdout_manifest.empty())
+    throw std::invalid_argument("Deep holdout manifest requires IDs");
   const auto budget = error_budget(image.error);
   if (image.error && image.reduction_error && image.reduction_error != budget.effective)
     throw std::invalid_argument("Surface reduction must use the shared deep error setting");
@@ -208,7 +210,14 @@ Imf::Header make_header(const SurfaceImage &image)
   }
   if (image.ids) {
     header.channels().insert("id", Imf::Channel(Imf::UINT));
-    header.insert("cycles:deepIDManifest", Imf::StringAttribute(id_manifest(image)));
+    header.insert("cycles:deepIDManifest", Imf::StringAttribute(id_manifest(image.object_manifest)));
+    if (!image.holdout_manifest.empty()) {
+      for (const auto &entry : image.holdout_manifest)
+        if (std::find(image.object_manifest.begin(), image.object_manifest.end(), entry) ==
+            image.object_manifest.end())
+          throw std::invalid_argument("Deep holdout manifest entry is absent from the ID manifest");
+      header.insert("cycles:deepIDHoldoutManifest", Imf::StringAttribute(id_manifest(image.holdout_manifest)));
+    }
     header.insert("cycles:deepIDHash", Imf::StringAttribute("MurmurHash3_32_seed0"));
   }
   header.insert("cycles:frame", Imf::IntAttribute(image.frame));
@@ -733,6 +742,7 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
       scanline.compression = image.compression;
       scanline.ids = image.ids;
       scanline.object_manifest = image.object_manifest;
+      scanline.holdout_manifest = image.holdout_manifest;
       scanline.data_window = {dw.min.x, int(y), dw.max.x, int(y)};
       scanline.pixels = row(int(y));
       auto pixels = prepare(scanline);

@@ -29,6 +29,7 @@ struct SurfaceImage {
   float z_tolerance = 0; /* Depth-domain approximation, independent of error. */
   bool ids = false;
   std::vector<std::pair<uint32_t, std::string>> object_manifest;
+  std::vector<std::pair<uint32_t, std::string>> holdout_manifest;
   int deep_samples = 0; /* 0 omits the header for legacy all-sample identity. */
   double reduction_error = 0.0;
   ExportStatistics *export_statistics = nullptr;

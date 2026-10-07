@@ -24,6 +24,7 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
   image.z_tolerance = tile.z_tolerance();
   image.deep_samples = tile.sample_limit();
   image.object_manifest = tile.object_manifest();
+  image.holdout_manifest = tile.holdout_manifest();
   image.ids = tile.ids();
   image.reduction_error = reduce ? (image.error ? deep::error_budget(image.error).effective : 1e-3) : 0;
   image.volume_row_sample_limit = tile.volume_row_sample_limit();

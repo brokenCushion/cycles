@@ -186,6 +186,7 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.z_tolerance = tile.z_tolerance();
   image.deep_samples = tile.sample_limit();
   image.object_manifest = tile.object_manifest();
+  image.holdout_manifest = tile.holdout_manifest();
   image.ids = tile.ids();
   const auto check_cancel = [&] {
     if (tile.cancelled())

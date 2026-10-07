@@ -68,6 +68,12 @@ different objects retain overlapping intervals. IDs-off follows the original pat
 Strict + IDs is rejected at preflight; IDs require a numeric error setting.
 Use `tools/compare_deep_ids.py` for exact UINT selection before a FLOAT reader.
 
+Object holdout flags and Holdout surface closures retain their normal camera
+opacity in deep; native beauty keeps its matte colour/alpha. With IDs,
+`cycles:deepIDHoldoutManifest` is a hash/name subset of `cycles:deepIDManifest`
+for objects with the flag or a reachable Holdout closure. It is omitted when
+empty. Shadow catchers and caustics remain rejected.
+
 For each camera sample, surface events multiply transmittance by `(1 - alpha)`;
 volumes contribute `exp(-optical_depth)`. Reconstruction averages transmittance,
 then emits local alpha as `1 - T_after / T_before`. It does not average local

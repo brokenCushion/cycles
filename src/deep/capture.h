@@ -54,6 +54,7 @@ class Capture {
                                    double density_tolerance = volume_density_error) const;
   std::vector<IntervalSample> reconstruct_volume_pixel(int x, int y) const;
   std::vector<std::pair<uint32_t, std::string>> object_manifest;
+  std::vector<std::pair<uint32_t, std::string>> holdout_manifest;
   void set_object_manifest(std::vector<std::pair<uint32_t, std::string>> manifest)
   { object_manifest = std::move(manifest); ids_ = true; }
   bool ids() const { return ids_; }

@@ -81,7 +81,8 @@ CPU stays exact equality and the primary proof, together with unchanged
 beauty-source hashes and kernel resource records. No beauty kernel change.
 CUDA pixel beauty qualification is required only for GPU-side changes
 (kernels, GPU scheduling or buffers): Phase 6b if capture changes, 8 and 9.
-For host-only phases 1, 3a, 6, 6a and 7, unchanged beauty-source hashes,
+For host-only phases 1, 3a, 6, 6a, 6b (when capture is unchanged) and 7,
+unchanged beauty-source hashes,
 all 75 common CUDA kernel resource records and CPU exact equality are the
 required proof. Phase 6a is host-only (user decision); its saved CUDA pixel
 comparisons are informational, never a blocker. Do not revisit this scope.
@@ -1570,7 +1571,7 @@ Evidence: `builds/validation/landscape-cloud/optimization-phase6/review/snapshot
 and `root-cause-raw-policy-existing.json`.
 
 
-#### Phase 6a - complete; awaiting user review
+#### Phase 6a - accepted
 
 Before: eight accepted Phase 6 pairs, preserved in
 `builds/validation/landscape-cloud/optimization-phase6a/before.json`.
@@ -1660,4 +1661,43 @@ Connected Gaffer before/default landscape:
 `D:/CyclesDeepScratch/optimization-phase6a/evidence-final/realistic117/CUDA/ids-1e-3-cap64-z1e-4/phase6a_landscape_review.gfr`.
 Sloped full-surface comparison:
 `D:/CyclesDeepScratch/optimization-phase6a/evidence-final/sloped/CPU/ids-1e-3-cap0-z1e-4/surface_merge_review.gfr`.
-Stop for Phase 6a acceptance; no Phase 6b or full-resolution run launched.
+Phase 6a accepted by the user. Full-resolution Phase 9 remains unlaunched.
+
+#### Phase 6a follow-up - controlled export check
+
+Realistic117, original 1024 adaptive, GPU OIDN, error 1e-3/all, z=0.
+Phase 6 executable then current, sequentially, 24 threads, TEMP on D:,
+Blender native colour config (OCIO unset), no concurrent render/compile jobs.
+Raw spill is process-owned temporary storage, so cross-executable replay was
+unavailable. Sampled raw-camera CSVs are SHA256-identical and both deep outputs
+are bit-identical to the accepted Phase 6 dataset, including deterministic headers.
+
+| Case / metric | Phase 6 | Current | Commit |
+| --- | --- | --- | --- |
+| IDs off / export wall s | 109.800 | 108.745 | `5accee7d8` |
+| IDs on / export wall s | 154.472 | 138.080 | `5accee7d8` |
+| IDs off / aggregate mixture-fit s | 100.554 | 104.021 | `5accee7d8` |
+| IDs on / aggregate mixture-fit s | 424.957 | 362.439 | `5accee7d8` |
+
+No current-build slowdown reproduced; no renderer fix. Read/staging/serialization
+stay close (full stage counters in report). Historical paired/single-export
+measurements do not isolate a build regression. Earlier diagnostic runs inherited
+Gaffer OCIO and changed adaptive convergence; preserved but excluded from this
+native-case conclusion. No threshold was introduced or changed.
+Report: `builds/validation/landscape-cloud/optimization-phase6a/export-recheck-native/results.json`.
+Large data: `D:/CyclesDeepScratch/optimization-phase6a/export-recheck-native/`.
+
+#### Phase 6b - implementation scope and before baseline
+
+Host-only: admit native object/material holdout in preflight and carry a
+holdout-name manifest through the existing output-driver API. Existing capture
+already records their ordinary camera opacity. No GPU capture, scheduling,
+buffer or beauty-code change is planned; the host-only proof applies.
+Before: fixed cases from accepted 6a and the controlled native export check,
+`builds/validation/landscape-cloud/optimization-phase6b/before.json`.
+
+6b IDs metadata: `cycles:deepIDHoldoutManifest` maps raw UINT hashes to names
+for object holdout flags or reachable Holdout surface closures. It is a checked
+subset of the unchanged `cycles:deepIDManifest`, omitted when empty. This keeps
+legacy IDs and all non-holdout output headers intact. Shadow-catcher/caustics
+rejections retain their exact legacy diagnostic. No beauty/capture source change.

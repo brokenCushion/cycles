@@ -78,6 +78,8 @@ class OutputDriver {
     virtual bool ids() const { return false; }
     virtual int sample_limit() const { return 0; }
     virtual std::vector<std::pair<uint32_t, std::string>> object_manifest() const { return {}; }
+    /* Objects with a holdout flag or a reachable Holdout surface closure. */
+    virtual std::vector<std::pair<uint32_t, std::string>> holdout_manifest() const { return {}; }
     virtual int volume_export_workers() const { return 1; }
     virtual deep::ExportStatistics *export_statistics() const { return nullptr; }
     /* Actual accepted camera population, including misses. Diagnostic reads

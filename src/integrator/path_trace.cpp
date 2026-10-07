@@ -760,6 +760,7 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
   deep_capture_->retain_for_validation = deep_capture_->z_tolerance > 0 && baseline && baseline[0];
   if (settings.ids)
     deep_capture_->set_object_manifest(settings.object_manifest);
+  deep_capture_->holdout_manifest = settings.holdout_manifest;
   for (auto &work : path_trace_works_) {
     work->set_deep_capture(deep_capture_.get());
   }

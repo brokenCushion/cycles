@@ -87,7 +87,7 @@ def compare(arguments):
         raise ValueError('Missing depth tolerance or mismatched transmittance budget')
     if a.getattribute('cycles:deepZTolerance'): raise ValueError('Before must disable depth merging')
     for name in ('cycles:deepError','cycles:deepSamples','cycles:deepScope',
-                 'cycles:deepIDManifest','cycles:deepIDHash','compression'):
+                 'cycles:deepIDManifest','cycles:deepIDHoldoutManifest','cycles:deepIDHash','compression'):
         if a.getattribute(name) != b.getattribute(name): raise ValueError('Data header differs: '+name)
     channels = [a.channelnames.index(c) for c in ('Z','ZBack','A')]
     id_channel = a.channelnames.index('id') if 'id' in a.channelnames else None

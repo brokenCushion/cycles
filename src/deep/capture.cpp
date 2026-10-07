@@ -931,8 +931,15 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   auto fit = [&](std::vector<VolumeCameraSample> samples, double tolerance, size_t limit,
                  double reduction, size_t bytes = std::numeric_limits<size_t>::max()) {
     ExportTimer timer{&export_statistics, ExportStatistics::MixtureFit};
-    return ids() ? reconstruct_volume_ids(std::move(samples), tolerance + reduction, limit, bytes) :
-                   reconstruct_volume(std::move(samples), tolerance, limit, reduction, bytes);
+    if (!ids())
+      return reconstruct_volume(std::move(samples), tolerance, limit, reduction, bytes);
+    try {
+      return reconstruct_volume_ids(std::move(samples), tolerance + reduction, limit, bytes);
+    }
+    catch (const std::runtime_error &error) {
+      throw std::runtime_error(std::string(error.what()) + ", pixel=" +
+                               std::to_string(x) + "," + std::to_string(y));
+    }
   };
   if (!volume_ || error_.load() != NONE)
     throw std::runtime_error("Invalid volume capture reconstruction");

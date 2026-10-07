@@ -330,6 +330,16 @@ Standard production deep compositing uses a per-sample object/instance ID
 - With ids on, reconstruction, reduction and averaging only merge samples with
   the same ID. Overlapping media of different objects become separate,
   overlapping deep samples instead of summed extinction.
+- Support decision: strict exists only to reproduce legacy output, which had no
+  IDs. Reject strict + IDs at preflight: `--deep-ids requires a numeric
+  --deep-error; strict mode reproduces legacy output without IDs`. This changes
+  the support matrix, not any capacity or error gate; test the rejection.
+- Numeric IDs-on qualification: small 47x20x16, performance 587x250x4, and
+  realistic 117x50 with original 1024 adaptive/GPU OIDN, at both 1e-3 and 1e-4.
+  Realistic uses deep-samples 0 and 64. Compare combined alpha against matching
+  IDs-off within the header bound, and report sample counts, EXR bytes, export
+  time and spill. Replay the full regression set. On any numeric interval-cap
+  failure, stop and report the pixel and per-object interval counts; keep 65,536.
 
 Acceptance: ids off is byte-identical to Phase 5. With ids on: combined alpha
 (after deep flatten/merge) matches ids off within the header tolerance on the

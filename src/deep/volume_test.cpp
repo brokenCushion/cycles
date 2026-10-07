@@ -124,6 +124,15 @@ int main(int argc, char **argv)
       const std::vector<VolumeCameraSample> overlap = {
           {{0, 1, true, {}}, {{1, 4, .9, 0}, {2, 5, 1.2, 1}}}};
       const auto isolated = reconstruct_volume_ids(overlap, 1e-7, 65536, SIZE_MAX);
+      try {
+        reconstruct_volume_ids(overlap, 1e-7, 1, SIZE_MAX);
+        check(false, "Deep ID interval overflow was accepted");
+      }
+      catch (const std::runtime_error &error) {
+        const std::string message = error.what();
+        check(message.find("intervals=2, limit=1, per_object=0:1 1:1") != std::string::npos,
+              "Deep ID overflow lost per-object interval counts");
+      }
       for (int object = 0; object < 2; ++object) {
         std::vector<IntervalSample> selection;
         for (const auto &v : isolated) if (v.object == object) selection.push_back(v);

@@ -793,9 +793,18 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
   }
   if (max_weight == 0)
     throw std::invalid_argument("Deep ID pixel requires positive camera weight");
-  auto check_size = [&](const size_t size) {
-    if (size > max_intervals)
-      throw std::runtime_error("Deep ID reconstruction interval budget exceeded");
+  auto check_size = [&](const std::vector<IntervalSample> &spans,
+                        const int object, const size_t added) {
+    if (added <= max_intervals - std::min(max_intervals, spans.size())) return;
+    std::map<int, size_t> counts;
+    for (const auto &span : spans) ++counts[span.object];
+    counts[object] += added;
+    std::string message = "Deep ID reconstruction interval budget exceeded: intervals=" +
+                          std::to_string(spans.size() + added) + ", limit=" +
+                          std::to_string(max_intervals) + ", per_object=";
+    for (const auto &entry : counts)
+      message += std::to_string(entry.first) + ":" + std::to_string(entry.second) + " ";
+    throw std::runtime_error(message);
   };
   for (auto &sample : samples) {
     if (sample.camera.weight == 0) continue;
@@ -815,7 +824,7 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
       entry.second.camera.complete = true;
       const auto spans = reconstruct_volume({std::move(entry.second)}, allowance / objects.size(),
                                             max_intervals, 0);
-      check_size(curve.spans.size() + spans.size());
+      check_size(curve.spans, entry.first, spans.size());
       for (const auto &v : spans)
         curve.spans.push_back({v.front, v.back, v.alpha, entry.first});
     }
@@ -896,7 +905,7 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
         }
       }
       if (!merged) {
-        check_size(output.spans.size() + 1);
+        check_size(output.spans, object, 1);
         last_spans[index] = output.spans.size();
         merge_errors[index] = 0;
         merge_prefixes[index] = object_transmission[index];

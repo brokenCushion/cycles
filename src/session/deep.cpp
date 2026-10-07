@@ -383,6 +383,8 @@ static void validate_shader(Scene *scene, Shader *shader,
 
 void validate_deep_scene(Scene *scene, SessionParams &params)
 {
+  require_deep(!params.deep.ids || params.deep.error != 0,
+               "--deep-ids requires a numeric --deep-error; strict mode reproduces legacy output without IDs");
   params.deep.object_manifest.clear();
   if (params.deep.ids) {
     std::map<uint32_t, std::string> names;

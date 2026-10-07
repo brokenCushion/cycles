@@ -141,6 +141,10 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
   params.deep.enabled = true;
   params.deep.samples = sample_limit;
   params.deep.ids = ids;
+  if (mode == 9) {
+    params.deep.ids = true;
+    params.deep.error = 0;
+  }
   params.deep.transparent = mode == 6;
   params.deep.volume = volume || mode == 7;
   params.deep.max_events = cuda ? 64 : 16;
@@ -179,7 +183,13 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
       buffers.full_x = 1;
     }
     render(16, 12);
-    if (mode == 1 || mode == 5) {
+    if (mode == 9) {
+      check(session.progress.get_error() && result.flat_calls == 0 && result.deep_calls == 0 &&
+                session.progress.get_error_message().find(
+                    "--deep-ids requires a numeric --deep-error") != string::npos,
+            "strict IDs must fail explicitly at preflight before rendering");
+    }
+    else if (mode == 1 || mode == 5) {
       check(session.progress.get_error() && result.flat_calls == 0 && result.deep_calls == 0,
             "unsupported host/crop must fail before rendering");
     }
@@ -312,6 +322,8 @@ int main(int argc, const char **argv)
       run(argv[4], mode, cuda, true);
     }
     run(argv[4], 8, cuda, true);
+    run(argv[2], 9, cuda);
+    run(argv[4], 9, cuda, true);
     run(argv[2], 0, cuda, false, 0, true);
     run(argv[4], 0, cuda, true, 0, true);
     for (const int limit : {1, 2, 64}) {

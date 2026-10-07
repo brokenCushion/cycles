@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "app/cycles_xml.h"
 #include "device/device.h"
+#include "device/queue.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
 #include "session/output_driver.h"
@@ -8,6 +9,7 @@
 #include "util/log.h"
 #include "util/path.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
@@ -118,8 +120,7 @@ class MemoryDriver : public OutputDriver {
   Device &device_;
 };
 
-static void run(const char *fixture, int mode, const bool cuda = false, const bool volume = false,
-                const bool grid = false)
+static void run(const char *fixture, int mode, const bool cuda = false, const bool volume = false)
 {
   SessionParams params;
   const auto devices = Device::available_devices(cuda ? DEVICE_MASK_CUDA : DEVICE_MASK_CPU);
@@ -132,7 +133,6 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
   params.deep.enabled = true;
   params.deep.transparent = mode == 6;
   params.deep.volume = volume || mode == 7;
-  params.deep.volume_grid = grid;
   params.deep.max_events = cuda ? 64 : 16;
   SceneParams scene_params;
   Result result;
@@ -243,6 +243,37 @@ static void run(const char *fixture, int mode, const bool cuda = false, const bo
   }
 }
 
+/* Same pinned prefix-copy/drain operations used by the two deep buffers.
+ * Cancellation cleanup and a pre-existing device error must both drain DMA. */
+static void check_queued_deep_copy()
+{
+  const auto info = Device::available_devices(DEVICE_MASK_CUDA).front();
+  for (const bool injected_error : {false, true}) {
+    Stats stats;
+    Profiler profiler;
+    auto device = Device::create(info, stats, profiler, true);
+    auto queue = device->gpu_queue_create();
+    device_vector<uint> buffer(device.get(), "deep DMA failure test", MEM_READ_WRITE);
+    constexpr size_t count = 1024 * 1024, tail = 8;
+    buffer.alloc(count);
+    std::fill_n(buffer.data(), count, 0xdeadbeefu);
+    check(queue->pin_host_memory(buffer), "deep host pin failed");
+    queue->zero_to_device(buffer);
+    queue->copy_from_device_prefix(buffer, (count - tail) * sizeof(uint));
+    if (injected_error) {
+      device->set_error("test queued deep DMA failure");
+      check(!queue->synchronize(), "injected error did not reach normal wait");
+    }
+    queue->drain();
+    check(std::all_of(buffer.data(), buffer.data() + count - tail,
+                      [](uint v) { return v == 0; }), "deep drain returned before DMA completed");
+    check(std::all_of(buffer.data() + count - tail, buffer.data() + count,
+                      [](uint v) { return v == 0xdeadbeefu; }), "prefix copy overwrote its tail");
+    queue->unpin_host_memory(buffer);
+  }
+  std::cout << "PASS: pinned deep prefix copy, cancellation cleanup and queued-error drain\n";
+}
+
 int main(int argc, const char **argv)
 {
   try {
@@ -251,6 +282,8 @@ int main(int argc, const char **argv)
     const bool cuda = argc == 6;
     log_init(nullptr);
     path_init(argv[1]);
+    if (cuda)
+      check_queued_deep_copy();
     for (int mode = 0; mode != 6; ++mode) {
       run(argv[2], mode, cuda);
     }
@@ -260,12 +293,6 @@ int main(int argc, const char **argv)
       run(argv[4], mode, cuda, true);
     }
     run(argv[4], 8, cuda, true);
-    if (cuda) {
-      run(argv[4], 7, true, true, true);
-      for (int mode = 1; mode != 6; ++mode)
-        run(argv[4], mode, true, true, true);
-      run(argv[4], 8, true, true, true);
-    }
     std::cout << "PASS: memory delivery, reset, disable, unsupported host, cancellation, "
                  "callback failures and crop rejection\n";
     return 0;

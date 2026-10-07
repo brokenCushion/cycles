@@ -232,6 +232,14 @@ void CUDADeviceQueue::copy_from_device(device_memory &mem)
       "copy_from_device");
 }
 #ifdef WITH_CYCLES_DEEP_OPAQUE
+void CUDADeviceQueue::drain()
+{
+  /* synchronize() returns early on a prior error. Pending DMA must still finish
+   * before deep host storage is unregistered, resized or freed. */
+  const CUDAContextScope scope(cuda_device_);
+  assert_success(cuStreamSynchronize(cuda_stream_), "drain deep queue");
+}
+
 bool CUDADeviceQueue::pin_host_memory(device_memory &mem)
 {
   const CUDAContextScope scope(cuda_device_);

@@ -1005,7 +1005,7 @@ PathTraceWorkGPU::DeepBatch::DeepBatch(Device *device)
 PathTraceWorkGPU::DeepBatch::~DeepBatch()
 {
   if (pending)
-    queue->synchronize();
+    queue->drain();
   unpin();
 }
 
@@ -1078,7 +1078,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
     {
       for (int i = 0; i < 2; ++i) {
         if (buffers[i]->pending) {
-          buffers[i]->queue->synchronize();
+          buffers[i]->queue->drain();
           buffers[i]->pending = false;
         }
       }
@@ -1094,6 +1094,8 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
     const double start = time_dt();
     ++deep_sync_count_;
     const bool ok = buffer.queue->synchronize();
+    if (!ok)
+      buffer.queue->drain();
     buffer.pending = false;
     deep_readback_seconds_ += time_dt() - start;
     if (is_cancel_requested()) {

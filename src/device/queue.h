@@ -156,6 +156,7 @@ class DeviceQueue {
   virtual void copy_from_device_prefix(device_memory &mem, size_t bytes);
   virtual bool pin_host_memory(device_memory &) { return false; }
   virtual void unpin_host_memory(device_memory &) {}
+  virtual void drain() { synchronize(); }
 #endif
   virtual void *copy_from_device_synchronized(device_memory &mem, vector<uint8_t> &storage) = 0;
 

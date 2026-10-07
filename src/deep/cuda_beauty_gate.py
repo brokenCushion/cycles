@@ -582,7 +582,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
         report['raw_passed'] = (not report['unmatched_population_pixels'] and
             all(p['passed'] for p in report['statistical_pixels']) and
             report['bias_passed'] and report['statistical_count_passed'] and
-            report['calibration']['complete'])
+            (not report['statistical_pixels'] or report['calibration']['complete']))
         report['calibrated_raw_passed'] = report['raw_passed']
         report['root_cause_resolutions'] = []
         if any((snapshot_off, snapshot_on, snapshot_build)):

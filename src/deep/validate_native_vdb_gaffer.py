@@ -164,7 +164,7 @@ if settings['device'] == 'CUDA' and args.host_only_beauty_proof and not args.rea
         check(cpu_settings['device'] == 'CPU' and cpu_settings['renderer_sha256'] == settings['renderer_sha256']
               and cpu_report['passed'] and cpu_report['beauty_passed'] and cpu_report['max_beauty_error'] == 0,
               'CPU exact proof failed')
-    beauty_error = repeat_error = beauty_peak = beauty_tolerance = 0.
+    beauty_error = repeat_error = beauty_peak = beauty_tolerance = None
     beauty_passed = True
     beauty_report = dict(passed=True, comparison='User-approved host-only proof; CUDA pixel gate not required',
                          proof=str(args.host_only_beauty_proof), cuda_pixel_gate_required=False)

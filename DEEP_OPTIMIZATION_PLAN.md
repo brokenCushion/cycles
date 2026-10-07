@@ -1192,7 +1192,7 @@ Evidence: `builds/validation/landscape-cloud/optimization-phase5/after/phase-res
 | 47x20 / fixed128 / 1e-3; all vs N=64 | Cut z=1044.27: fractional-edge alpha max / mean difference (153 pixels; information) | reference | 0.028125048 / 0.007280516 | `6a9d4831d` |
 | CPU / CUDA adaptive64 | Native accepted / deep retained cameras | configured maximum 64 | 16 / 16 on both devices | `2fde67322` |
 
-Phase 6 numeric qualification is stopped at the FLOAT publication gate;
+Phase 6 measured publication passes; qualification is stopped at the raw beauty gate;
 see its results below. No full-resolution production render was launched.
 
 #### Phase 5 realistic landscape - review stop
@@ -1276,42 +1276,71 @@ The Phase 5 projection was reviewed. Phase 6 results follow; no full-resolution
 run was launched.
 
 
-#### Phase 6 deepID - numeric qualification stopped, not accepted
+#### Phase 6 deepID - measured publication passes; beauty qualification stopped
 
-Support decision and preflight/diagnostic tests: `5c1ea733c`. Strict + IDs is
-unsupported because legacy output never had IDs. CPU and CUDA host tests reject
-it before beauty/deep delivery; installed standalone rejection publishes no EXR.
-Nine CTests pass. No capacity or error gate changed.
+Measured allocation and dense-volume + 128 hard-surface regression: `d880054ba`.
+The equal split fails that test; measured FLOAT rounding plus interval-weighted
+coalescing passes under the same publication total. Explicit unrepresentable
+data failure includes actual pixel, object count and top contributors. No header
+error, effective budget, capacity or acceptance gate changed. Nine CTests pass.
 
-The first numeric case failed the per-object FLOAT publication check before
-publishing output. The existing scalar writer allocates publication error over
-active objects; this one-object curve measured 1.36069e-06 > 1.16864e-06.
-This is a serialization allowance failure, not an interval-cap failure or a
-measured combined-alpha failure. The reported `0,0` belongs to the synthetic
-single-object helper, not necessarily the actual scene pixel. The new interval
-capacity diagnostic retains actual capture pixel coordinates and object counts.
+Fresh paired IDs-on/off combined-alpha comparisons pass for all five completed
+cases below. Both small and performance cases additionally pass the independent
+accepted-camera oracle, CUDA beauty and Gaffer depth cuts. Original realistic
+max1024 adaptive/GPU OIDN case passes combined alpha; IDs-off fully validates.
+Its IDs-on qualification stops on the raw beauty gate, not publication.
 
-| Case / error / deep limit | Combined-alpha gate | IDs-off samples / EXR bytes / export s / spill bytes | IDs-on samples / EXR bytes / export s / spill bytes | Commit |
-| --- | --- | --- | --- | --- |
-| Small 47x20x16 / `1e-4` / 0 | **Publication FAIL; comparison unavailable** | 88,699 / 609,496 / 3.479 / 9,163,356 | No published EXR; completed metrics unavailable | `5c1ea733c` |
-| Small / `1e-3` / 0 | Not run after failed gate | — | — | `5c1ea733c` |
-| Performance 587x250x4 / `1e-4`, `1e-3` / 0 | Not run after failed gate | — | — | `5c1ea733c` |
-| Realistic 117x50 original max1024 adaptive / `1e-4`, `1e-3` / 0, 64 | Not run after failed gate | — | — | `5c1ea733c` |
+Every off -> on entry is a fresh matched render. Spill is stored capture bytes.
+Export is wall time; fitting below is aggregate worker time.
 
-IDs-off reference above is the already-qualified `9646bee92` run, not a fresh
-paired run. Its density / mixture fitting times were 0.251 / 0.819 aggregate
-worker seconds. Failed IDs-on export has no completed export/fitting/spill timer
-or final sample count; no zeros are substituted for missing results.
-Scheduler completed in 1.819 s; process wall time 308.703 s includes
-one-time CUDA compilation (289.310 s). Peak working set
-5.390 GiB; device-wide GPU peak 5602 MiB.
+| Case / error / deep cap | Combined-alpha max error | Deep samples off -> on | EXR bytes off -> on | Export s off -> on | Spill bytes off -> on | Commit |
+| --- | --- | --- | --- | --- | --- | --- |
+| small / 1e-4 / 0 | 2.5795151e-05 PASS | 88,699 -> 442,344 | 609,496 -> 3,680,249 | 3.857 -> 5.045 | 9,163,356 -> 9,163,356 | `d880054ba` |
+| small / 1e-3 / 0 | 0.00026875283 PASS | 53,113 -> 160,773 | 357,145 -> 1,122,051 | 3.488 -> 4.699 | 8,183,848 -> 8,183,848 | `d880054ba` |
+| performance / 1e-4 / 0 | 3.5507321e-05 PASS | 6,813,973 -> 19,881,881 | 59,210,585 -> 167,918,116 | 3.820 -> 171.930 | 358,081,036 -> 358,081,036 | `d880054ba` |
+| performance / 1e-3 / 0 | 0.00036298053 PASS | 3,076,802 -> 7,109,968 | 22,398,061 -> 63,661,043 | 2.174 -> 179.581 | 319,349,160 -> 319,349,160 | `d880054ba` |
+| realistic117 / 1e-4 / 0 | 2.4554377e-05 PASS | 6,622,479 -> 9,829,984 | 44,986,754 -> 70,215,403 | 148.812 -> 286.681 | 2,013,298,248 -> 2,013,298,248 | `d880054ba` |
 
-The previous IDs-off qualification passed strict 81/81, numeric 30/30, all-mode
-CPU/CUDA matrices, boundaries and lifecycle. Known-overlap exact UINT selection
-passed and its connected Gaffer graph remains available. That evidence is
-preserved in `results-strict-ids-stop.json`; it does not replace the requested
-final full regression replay, which remains pending.
+CPU fitting breakdown (aggregate worker seconds):
 
-Current measurements and logs:
-`builds/validation/landscape-cloud/optimization-phase6/results.json`.
-Stop under the failed-acceptance rule: do not start 6a, 6b or Phase 9.
+| Case / error | Density fit off -> on | Mixture fit off -> on | Quantize/coalesce off -> on |
+| --- | --- | --- | --- |
+| small / 1e-4 | 0.277 -> 0.367 | 0.982 -> 5.280 | 0.118 -> 0.596 |
+| small / 1e-3 | 0.187 -> 0.269 | 0.380 -> 3.017 | 0.043 -> 0.297 |
+| performance / 1e-4 | 5.450 -> 15.025 | 17.744 -> 154.127 | 6.954 -> 68.253 |
+| performance / 1e-3 | 2.018 -> 7.655 | 7.183 -> 86.367 | 2.362 -> 30.962 |
+| realistic117 / 1e-4 | 32.474 -> 34.544 | 267.005 -> 1129.650 | 2.327 -> 7.518 |
+
+IDs substantially increase fitting cost, sample count and EXR size; no speedup
+is claimed. Spill bytes are identical for each pair.
+
+**Unchanged CUDA raw beauty gate FAIL:** realistic117 / `1e-4` / all samples,
+pixel `(99,7)`, 944 accepted samples. Noisy RGB is
+`(0.1436965466, 0.1121631563, 0.1096889749)` versus K=5 references
+`(0.1439655423, 0.1123654321, 0.1098298728)`. Max delta
+`0.0002689957619` exceeds the unchanged pass-wide limit `0.00001937150955`.
+All 20 additional ordinary deep-off controls completed. The accumulated pool
+has 31 compatible renders; none reproduces all checked inputs within four ULP
+at the same sample count. Denoised output remains inside the accepted envelope.
+This raw state is unresolved; ordinary GPU variation has not been established.
+No additional controls or relaxed gates were used.
+
+Realistic IDs-on independent oracle was stopped once this final raw failure was
+established. Remaining realistic pairs (`1e-4`/64, `1e-3`/0 and /64), final full
+regression replay and fresh IDs-off 81/81 + 30/30 identity replay are pending.
+Earlier IDs-off 81/81 and 30/30 results remain historical evidence only.
+
+All 75 common CUDA beauty kernel resource records remain unchanged; beauty
+source hashes are unchanged. Exact UINT known-overlap selections pass CPU/CUDA
+and connected Gaffer point-cloud validation (192 points per fog; analytic alpha
+errors 9.075e-9 / 2.093e-8). Strict + IDs remains explicitly unsupported.
+
+The local parallel oracle helper now delegates non-probe `range` calls unchanged;
+complete probe coverage was checked against unsharded surface-only/empty chunks.
+No independent oracle formula or tolerance changed.
+
+Results: `builds/validation/landscape-cloud/optimization-phase6/measured/phase-results.json`.
+Raw gate: `measured/realistic117/ids-1e-4-cap0/beauty_validation.json` under the same root.
+Previous equal-split failure retained as `optimization-phase6/results-equal-split-stop.json`.
+Gaffer: `optimization-phase6/known-overlap/measured-CPU/known_overlap/deep/Phase6_Known_ID_Review.gfr`.
+**Stopped under the failed-acceptance rule before 6a/6b/Phase 9.**

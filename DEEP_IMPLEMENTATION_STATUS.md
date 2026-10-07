@@ -4,20 +4,17 @@ The [optimization plan](DEEP_OPTIMIZATION_PLAN.md) is the plan of record;
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
 Branch: `codex/landscape-cloud-compatibility`.
 
-Phases 0–5 are accepted. Phase 6 (deepID) is implemented but **not qualified**.
-Optional UINT `id` and its object-name manifest preserve overlapping objects.
-Strict + IDs is unsupported and explicitly rejected before rendering. Nine
-CTests pass, including surface/volume preflight rejection and overflow counts.
-The installed standalone rejection creates no EXR. Capacities and gates are unchanged.
+Phases 0â€“5 are accepted. Phase 6 deepID is implemented, not qualified.
+Measured per-object FLOAT publication shares the unchanged total budget; dense
+volume + 128 hard-surface regression and nine CTests pass. Strict + IDs rejects
+at preflight. Five numeric whole-image IDs-on/off comparisons pass; both fixed
+cases fully validate at 1e-4/1e-3. IDs increase fitting cost and output size.
 
-Numeric qualification stopped on the first 47x20x16 CUDA IDs-on case at 1e-4:
-per-object FLOAT publication error 1.36069e-6 exceeds its 1.16864e-6 allowance.
-No interval-cap failure occurred; no EXR was published. Remaining requested
-numeric pairs and the final full regression replay are pending.
-Earlier IDs-off evidence remains strict 81/81 and numeric 30/30 identical;
-known-overlap exact UINT selection and its connected Gaffer graph passed.
+Realistic117 / 1e-4 / all-samples raw beauty fails at (99,7): max RGB difference
+0.00026899576 > 0.00001937151. Twenty extra controls and the 31-render pool do
+not reproduce that state. No gate was relaxed. Remaining three realistic pairs,
+IDs-on oracle and final 81/81 + 30/30/regression replay are pending.
 
-**Stopped under the failed-acceptance rule, before 6a/6b.** Phase 9 requires
-separate user confirmation; run all samples then 64, at 1e-3, TEMP/TMP on D:.
-Results: `builds/validation/landscape-cloud/optimization-phase6/results.json`.
-Gaffer: `builds/validation/landscape-cloud/optimization-phase6/known-overlap/final-CPU/known_overlap/deep/Phase6_Known_ID_Review.gfr`.
+Stopped before 6a/6b. Phase 9 requires separate confirmation.
+Results: `builds/validation/landscape-cloud/optimization-phase6/measured/phase-results.json`.
+Gaffer: `builds/validation/landscape-cloud/optimization-phase6/known-overlap/measured-CPU/known_overlap/deep/Phase6_Known_ID_Review.gfr`.

@@ -5,6 +5,7 @@ gaffer env python SCRIPT RENDER_DIRECTORY
 Requires render.json, beauty.exr, scene.deep.exr and its raw .samples.csv grid.
 """
 from validate_gaffer import deep_error
+from sample_csv import open_samples
 import csv
 import json
 import math
@@ -40,18 +41,19 @@ width, height = fmt.width(), fmt.height()
 check([width,height] == [v*settings['percentage']//100 for v in settings['resolution']],
       'Deep output resolution mismatch')
 raw = {}
-for row in csv.DictReader((directory/'scene.deep.exr.samples.csv').open(newline='')):
-    x,y,s,event = (int(row[k]) for k in ('file_x','file_y','sample','event'))
-    key = (x,y,s)
-    z,a = (struct.unpack('f',struct.pack('f',float(row[k])))[0] for k in ('depth','alpha'))
-    if event == -1:
-        check(key not in raw and z==a==0, 'Invalid/duplicate camera miss')
-        raw[key] = []
-    else:
-        events = raw.setdefault(key,[])
-        check(event == len(events) and math.isfinite(z) and z>0 and 0<=a<=1,
-              'Invalid raw camera event')
-        events.append((z,a))
+with open_samples(directory/'scene.deep.exr.samples.csv') as sample_stream:
+    for row in csv.DictReader(sample_stream):
+        x,y,s,event = (int(row[k]) for k in ('file_x','file_y','sample','event'))
+        key = (x,y,s)
+        z,a = (struct.unpack('f',struct.pack('f',float(row[k])))[0] for k in ('depth','alpha'))
+        if event == -1:
+            check(key not in raw and z==a==0, 'Invalid/duplicate camera miss')
+            raw[key] = []
+        else:
+            events = raw.setdefault(key,[])
+            check(event == len(events) and math.isfinite(z) and z>0 and 0<=a<=1,
+                  'Invalid raw camera event')
+            events.append((z,a))
 expected_grid = {(x,y) for y in range(height) for x in range(width)
                  if (x%max(1,width//8)==0 or x==width-1) and
                     (y%max(1,height//8)==0 or y==height-1)}

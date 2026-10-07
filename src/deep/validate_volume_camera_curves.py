@@ -11,6 +11,7 @@ import math
 from pathlib import Path
 
 import numpy as np
+from sample_csv import open_samples
 
 
 def curve(intervals, surfaces):
@@ -71,7 +72,7 @@ def validate(source, stored_path, report_path):
     seen, populations = set(), []
     camera_populations = []
     maximum, probes = 0.0, 0
-    with source.open() as stream:
+    with open_samples(source) as stream:
         rows = csv.DictReader(stream)
         for pixel, group in itertools.groupby(rows, lambda row: (int(row['file_x']), int(row['file_y']))):
             if pixel not in outputs or pixel in seen:

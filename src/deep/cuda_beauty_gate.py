@@ -8,7 +8,11 @@ from pathlib import Path
 import struct
 import statistics
 import hashlib
+import sys
 from collections import Counter
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tools'))
+from deep_exr import image_reader, image_format, image_channels, image_tile, image_tile_size
 
 SETTINGS_KEYS = ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
     'camera_world_matrix', 'camera_frame', 'frame', 'adaptive', 'adaptive_threshold',
@@ -108,10 +112,8 @@ def bias_gate(differences):
                 standard_error=se, limit=3*se, pixels=len(differences))
 
 
-def snapshot_raw_agreement(directory, off, on, manifest, pixels, channels):
+def snapshot_raw_agreement(directory, off, on, manifest, pixels, channels, reader_backend="gaffer"):
     """Resolve only an identical case in the isolated majorant diagnostic build."""
-    import GafferImage
-    import imath
     settings = json.loads((Path(directory)/'render.json').read_text())
     build = json.loads(Path(manifest).read_text())
     if not build.get('diagnostic_only') or build.get('snapshot_commit') != '9a017f055':
@@ -132,24 +134,23 @@ def snapshot_raw_agreement(directory, off, on, manifest, pixels, channels):
             raise ValueError('Snapshot case/beauty settings mismatch: '+str(p))
         if s['deep'] != (p in on):
             raise ValueError('Snapshot on/off role mismatch')
-        node = GafferImage.ImageReader()
-        node['fileName'].setValue((p/'render-passes.exr').as_posix())
+        node = image_reader((p/'render-passes.exr'),reader_backend)
         nodes.append(node)
         counts.append(s['samples'])
-    fmt = nodes[0]['out']['format'].getValue()
-    if any(n['out']['format'].getValue() != fmt or
-           any(c not in n['out']['channelNames'].getValue() for c in channels) for n in nodes):
+    fmt = image_format(nodes[0])
+    if any(image_format(n) != fmt or
+           any(c not in image_channels(n) for c in channels) for n in nodes):
         raise ValueError('Snapshot raw image/channel mismatch')
     count_index = next(i for i, c in enumerate(channels) if 'Debug Sample Count' in c)
-    tile = GafferImage.ImagePlug.tileSize()
+    tile = image_tile_size(reader_backend)
     results = []
     for x, file_y in pixels:
         y = fmt.height()-1-file_y
         if not (0 <= x < fmt.width() and 0 <= y < fmt.height()):
             raise ValueError('Snapshot pixel outside image')
-        origin = imath.V2i((x//tile)*tile, (y//tile)*tile)
-        index = (y-origin.y)*tile+x-origin.x
-        values = [[float(n['out'].channelData(c,origin)[index]) for c in channels] for n in nodes]
+        origin = ((x//tile)*tile, (y//tile)*tile)
+        index = (y-origin[1])*tile+x-origin[0]
+        values = [[float(image_tile(n,c,origin)[index]) for c in channels] for n in nodes]
         populations = [v[count_index]*maximum for v, maximum in zip(values, counts)]
         if any(not math.isfinite(n) or abs(n-round(n)) > 1e-4 or n < 1 for n in populations):
             raise ValueError('Invalid snapshot accepted sample count')
@@ -168,10 +169,8 @@ def snapshot_raw_agreement(directory, off, on, manifest, pixels, channels):
 
 
 def validate_cuda_beauty(directory, references, qualification=True, output=None, pool=(), builds=None,
-                         seed_references=(), snapshot_off=(), snapshot_on=(), snapshot_build=None):
+                         seed_references=(), snapshot_off=(), snapshot_on=(), snapshot_build=None, reader_backend="gaffer"):
     """Check all stored denoiser inputs; trace every denoised outlier at its pixel."""
-    import GafferImage
-    import imath
 
     directory = Path(directory).resolve()
     references = [Path(p).resolve() for p in references]
@@ -230,8 +229,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     def readers(filename):
         result = []
         for p in paths:
-            node = GafferImage.ImageReader()
-            node['fileName'].setValue((p / filename).as_posix())
+            node = image_reader((p / filename),reader_backend)
             result.append(node)
         return result
     raw, beauty = readers('render-passes.exr'), readers('beauty.exr')
@@ -246,28 +244,25 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
         if len(paths) >= 5:
             nodes = []
             for p in paths:
-                node = GafferImage.ImageReader()
-                node['fileName'].setValue((p / 'beauty.exr').as_posix())
+                node = image_reader((p / 'beauty.exr'),reader_backend)
                 nodes.append(node)
             historical.append((parent, nodes))
     pool_raw = []
     for p in pool:
-        node = GafferImage.ImageReader()
-        node['fileName'].setValue((p / 'render-passes.exr').as_posix())
+        node = image_reader((p / 'render-passes.exr'),reader_backend)
         pool_raw.append(node)
     seed_raw = []
     for p in seed_references:
-        node = GafferImage.ImageReader()
-        node['fileName'].setValue((p / 'render-passes.exr').as_posix())
+        node = image_reader((p / 'render-passes.exr'),reader_backend)
         seed_raw.append(node)
-    fmt = raw[0]['out']['format'].getValue()
-    if any(n['out']['format'].getValue() != fmt for n in raw + beauty):
+    fmt = image_format(raw[0])
+    if any(image_format(n) != fmt for n in raw + beauty):
         raise ValueError('Reference image size mismatch')
-    names = list(raw[0]['out']['channelNames'].getValue())
-    if any(list(n['out']['channelNames'].getValue()) != names for n in raw):
+    names = list(image_channels(raw[0]))
+    if any(list(image_channels(n)) != names for n in raw):
         raise ValueError('Denoiser input channel mismatch')
-    if any(n['out']['format'].getValue() != fmt or
-           list(n['out']['channelNames'].getValue()) != names for n in pool_raw + seed_raw):
+    if any(image_format(n) != fmt or
+           list(image_channels(n)) != names for n in pool_raw + seed_raw):
         raise ValueError('Pool image/channel mismatch')
     counts = [c for c in names if 'Debug Sample Count' in c]
     if len(counts) != 1:
@@ -311,7 +306,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     output = Path(output) if output else directory / 'cuda_beauty_validation.json'
     output.parent.mkdir(parents=True, exist_ok=True)
     trace = output.with_suffix('.pixels.csv')
-    tile_size = GafferImage.ImagePlug.tileSize()
+    tile_size = image_tile_size(reader_backend)
     width, height = fmt.width(), fmt.height()
     channels = ('R', 'G', 'B', 'A')
     maximum_samples = settings[0]['samples']
@@ -322,26 +317,26 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     historical_envelopes = {str(parent):0.0 for parent, _ in historical}
     for y in range(0, height, tile_size):
         for x in range(0, width, tile_size):
-            origin = imath.V2i(x,y)
+            origin = (x,y)
             valid = [j*tile_size+i for j in range(min(tile_size,height-y))
                      for i in range(min(tile_size,width-x))]
             for group, cs in groups.items():
                 for c in cs:
-                    data = [r['out'].channelData(c,origin) for r in raw[1:]]
+                    data = [image_tile(r,c,origin) for r in raw[1:]]
                     for index in valid:
                         values = [float(d[index]) for d in data]
                         if not all(math.isfinite(v) for v in values):
                             raise ValueError('Nonfinite reference denoiser input')
                         envelopes[group] = max(envelopes[group],max(values)-min(values))
             for c in channels:
-                data = [r['out'].channelData(c,origin) for r in beauty[1:]]
+                data = [image_tile(r,c,origin) for r in beauty[1:]]
                 for index in valid:
                     values = [float(d[index]) for d in data]
                     if not all(math.isfinite(v) for v in values):
                         raise ValueError('Nonfinite reference denoised beauty')
                     denoised_envelope = max(denoised_envelope,max(values)-min(values))
                 for parent, nodes in historical:
-                    data = [n['out'].channelData(c,origin) for n in nodes]
+                    data = [image_tile(n,c,origin) for n in nodes]
                     for index in valid:
                         values = [float(d[index]) for d in data]
                         if not all(math.isfinite(v) for v in values):
@@ -359,15 +354,15 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
         writer.writeheader()
         for y in range(0, height, tile_size):
             for x in range(0, width, tile_size):
-                origin = imath.V2i(x, y)
-                count_data = [r['out'].channelData(counts[0], origin) for r in raw]
-                raw_data = {c: [r['out'].channelData(c, origin) for r in raw]
+                origin = (x,y)
+                count_data = [image_tile(r,counts[0],origin) for r in raw]
+                raw_data = {c: [image_tile(r,c,origin) for r in raw]
                             for cs in groups.values() for c in cs}
-                color_data = {c: [r['out'].channelData(c, origin) for r in beauty] for c in channels}
+                color_data = {c: [image_tile(r,c,origin) for r in beauty] for c in channels}
                 if final_raw_rule:
-                    pool_data = {c: [r['out'].channelData(c, origin) for r in pool_raw]
+                    pool_data = {c: [image_tile(r,c,origin) for r in pool_raw]
                                  for c in checked_channels}
-                    seed_data = {c: [r['out'].channelData(c, origin) for r in seed_raw]
+                    seed_data = {c: [image_tile(r,c,origin) for r in seed_raw]
                                  for c in checked_channels}
                 for j in range(min(tile_size, height-y)):
                     for i in range(min(tile_size, width-x)):
@@ -508,10 +503,10 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                             cs = [c for group in groups for c in groups[group]]
                             v = [float(raw_data[c][0][index]) for c in cs]
                             for p, node in zip(pool, pool_raw):
-                                n = float(node['out'].channelData(counts[0], origin)[index]) * maximum_samples
+                                n = float(image_tile(node,counts[0],origin)[index]) * maximum_samples
                                 if not math.isfinite(n) or abs(n-round(n)) > 1e-4 or round(n) != populations[0]:
                                     continue
-                                ref = [float(node['out'].channelData(c, origin)[index]) for c in cs]
+                                ref = [float(image_tile(node,c,origin)[index]) for c in cs]
                                 gate = raw_pass_gate(v, populations[0], [ref], [round(n)], envelope=0)
                                 if gate['passed']:
                                     for group in failed_groups:
@@ -592,7 +587,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                        if not p['passed'] or not report['statistical_count_passed']]
             if flagged:
                 report['root_cause_resolutions'] = snapshot_raw_agreement(directory,
-                    snapshot_off, snapshot_on, snapshot_build, flagged, checked_channels)
+                    snapshot_off, snapshot_on, snapshot_build, flagged, checked_channels, reader_backend)
                 resolved = {tuple(p['file_pixel']) for p in report['root_cause_resolutions'] if p['passed']}
                 for pixel in report['statistical_pixels']:
                     pixel['resolved_by_majorant_snapshot'] = tuple(pixel['file_pixel']) in resolved

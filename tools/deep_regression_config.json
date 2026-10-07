@@ -1,0 +1,15 @@
+{
+  "source_baseline": "24da5f880",
+  "blender": "D:/CyclesDeepScratch/optimization-phase6b/blender/blender.exe",
+  "cycles": "D:/CyclesDeepScratch/optimization-phase6b/standalone/cycles.exe",
+  "ctest_build": "builds/build-m6",
+  "golden": "builds/validation/landscape-cloud/optimization-phase6/acceptance",
+  "landscape": "builds/validation/landscape-cloud/scene-paths-fixed.blend",
+  "cpu_cases": "builds/validation/landscape-cloud/final-fixtures/cases.json",
+  "cuda_cases": "builds/validation/landscape-cloud/retained-final-cases.json",
+  "known_cases": "builds/validation/landscape-cloud/optimization-phase6/known-overlap/cases.json",
+  "beauty_builds": "builds/validation/beauty-builds.json",
+  "resource_baseline": "builds/validation/landscape-cloud/optimization-phase6a/kernel-resources.json",
+  "on_cubin": "builds/blender/user-resources/cache/kernels/cycles_kernel_sm_86_3C839A13F9A178EFA959FBC03A96FC0F.cubin",
+  "off_cubin": "builds/blender/user-resources/cache/kernels/cycles_kernel_sm_86_3C839A13F9A178EFA959FBC03A96FC0F.cubin"
+}

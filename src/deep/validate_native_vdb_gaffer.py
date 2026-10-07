@@ -25,6 +25,7 @@ import imath
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from validate_gaffer import deep_error, deep_samples, check, deep_pixel, tile_index, population_reference_error, beauty_repeat_gate
 from cuda_beauty_gate import completed_sample_count
+from sample_csv import open_samples, samples_exist
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('directory', type=Path)
@@ -439,7 +440,7 @@ def curve(intervals, surfaces):
 
 def read_cameras(path):
     cameras, identities = {}, set()
-    with path.open() as stream:
+    with open_samples(path) as stream:
         for row in csv.DictReader(stream):
             key = tuple(int(row[k]) for k in ('file_x', 'file_y', 'sample'))
             identity = key + (int(row['event']),)
@@ -469,13 +470,13 @@ def read_cameras(path):
 
 
 diagnostic = directory / 'scene.deep.exr.samples.csv'
-check(diagnostic.exists() or settings['samples'] == 1 or args.reader_only,
+check(samples_exist(diagnostic) or settings['samples'] == 1 or args.reader_only,
       'Multi-sample qualification requires accepted-camera diagnostics')
-check(not args.overlap_reference or diagnostic.exists(), 'Overlap check requires diagnostics')
+check(not args.overlap_reference or samples_exist(diagnostic), 'Overlap check requires diagnostics')
 raw_error, raw_probes, raw_pixels = 0.0, 0, 0
 accepted_populations = []
 camera_populations = {}
-if diagnostic.exists() and args.oracle_python:
+if samples_exist(diagnostic) and args.oracle_python:
     check(not args.overlap_reference and not args.expect_empty,
           'Large-scene oracle mode is separate from named overlap/empty fixtures')
     stored_path = directory / 'stored_diagnostic_curves.json'
@@ -494,7 +495,7 @@ if diagnostic.exists() and args.oracle_python:
     raw_pixels = evidence['accepted_camera_pixels']
     accepted_populations = evidence['accepted_populations']
     camera_populations = {(p['x'], p['y']): p['count'] for p in evidence['camera_populations']}
-elif diagnostic.exists():
+elif samples_exist(diagnostic):
     cameras = read_cameras(diagnostic)
     if args.expect_empty:
         check(all(not v and not s for v, s in cameras.values()),
@@ -687,7 +688,7 @@ report = {'deep_error': deep_tolerance, 'passed': beauty_passed and slice_error 
           'min_accepted_population': min(accepted_populations, default=0),
           'max_accepted_population': max(accepted_populations, default=0),
           'accepted_camera_pixels': raw_pixels, 'accepted_camera_probes': raw_probes,
-          'max_accepted_camera_error': raw_error if diagnostic.exists() else None,
+          'max_accepted_camera_error': raw_error if samples_exist(diagnostic) else None,
           'preview_pixel_stride': preview_stride,
           'resolution': [width, height], 'diagnostic_pixels': len(pixels),
           'max_beauty_error': beauty_error, 'max_beauty_repeat_error': repeat_error,

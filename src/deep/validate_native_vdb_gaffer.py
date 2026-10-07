@@ -127,7 +127,7 @@ if settings['device'] == 'CUDA' and not args.reader_only:
                                     seed_references=args.beauty_seed)
     # The final user rule replaces open-ended repeated-state searches. Estimate
     # noise once with four seeds only if a pixel is not already reproduced.
-    if cuda_report['statistical_pixels'] and not args.beauty_seed and args.beauty_builds:
+    if cuda_report['calibration']['requires_seed_controls'] and not args.beauty_seed and args.beauty_builds:
         registry = json.loads(args.beauty_builds.read_text())['builds']
         blender = Path(registry[settings['renderer_sha256']]['executable'])
         for attempt in range(1, 5):

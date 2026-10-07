@@ -72,7 +72,7 @@ def raw_pass_gate(values, population, references, populations, envelope=None):
                 envelope=[envelope]*len(values), limits=limits)
 
 
-def monte_carlo_gate(value, references, seeds):
+def monte_carlo_gate(value, references, seeds, ratio_limit=None):
     """Four independent pixel estimates; SE = sample SD / sqrt(4)."""
     if len(seeds) != 4 or not all(math.isfinite(v) for v in [value] + references + seeds):
         raise ValueError('Need four finite seed-varied pixel estimates')
@@ -81,7 +81,9 @@ def monte_carlo_gate(value, references, seeds):
         return dict(passed=False, difference=None, sigma=sigma, ratio=None)
     nearest = min(range(len(references)), key=lambda i: abs(value-references[i]))
     delta = value-references[nearest]
-    return dict(passed=abs(delta) <= 0.1*sigma, difference=delta, sigma=sigma,
+    return dict(passed=(delta == 0 if sigma == 0 else
+                       ratio_limit is None or abs(delta)/sigma <= ratio_limit),
+                difference=delta, sigma=sigma,
                 ratio=abs(delta)/sigma if sigma else (0.0 if delta == 0 else None),
                 nearest=nearest)
 
@@ -161,7 +163,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
         return result
     raw, beauty = readers('render-passes.exr'), readers('beauty.exr')
     # Retain qualified K-run denoised envelopes across unchanged beauty builds.
-    # Raw gates still use ONLY the current K references and reproduced-state rule.
+    # Raw acceptance is calibrated using the entire compatible ordinary pool.
     historical_groups = {}
     for p in pool:
         if (p / 'beauty.exr').is_file():
@@ -225,11 +227,14 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     report['reproduced_pixels'] = []
     report['seed_references'] = [str(p) for p in seed_references]
     report['statistical_pixels'] = []
-    report['statistical_fraction_limit'] = 0.001
     if final_raw_rule:
-        report['raw_rule'] = 'one reproduced state within 4 ULP; otherwise same-count nearest <= 0.1 four-seed pixel SE; image bias <= 3 SE; statistical pixels <= 0.1%'
+        report['raw_rule'] = 'one reproduced state within 4 ULP; otherwise fallback count and per-channel max difference/four-seed SE <= ordinary pool leave-one-out maxima; image bias <= 3 SE'
     checked_channels = [c for cs in groups.values() for c in cs]
     bias_differences = {c: [] for c in checked_channels}
+    calibration = [dict(reference=str(p), fallback_pixels=0,
+                        max_ratio={c: 0.0 for c in checked_channels},
+                        unmatched_population_pixels=0,
+                        zero_sigma_mismatches={c: 0 for c in checked_channels}) for p in pool]
     output = Path(output) if output else directory / 'cuda_beauty_validation.json'
     output.parent.mkdir(parents=True, exist_ok=True)
     trace = output.with_suffix('.pixels.csv')
@@ -350,12 +355,39 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                                 if changed:
                                     evidence[group] = changed
                         if final_raw_rule:
+                            pool_values = [[float(pool_data[c][r][index]) for c in checked_channels]
+                                           for r in range(len(pool))]
+                            pool_populations = []
+                            for row in pool_values:
+                                n = row[checked_channels.index(counts[0])]*maximum_samples
+                                if (not math.isfinite(n) or abs(n-round(n)) > 1e-4 or
+                                        not 1 <= round(n) <= maximum_samples):
+                                    raise ValueError('Invalid pool accepted sample count')
+                                pool_populations.append(round(n))
+                            # Every control is tested against the rest, never itself.
+                            # Use precisely the deep-on count and whole-state 4-ULP
+                            # match, then the same pixel SE and nearest-channel delta.
+                            for held, row in enumerate(pool_values):
+                                others = [r for r, n in enumerate(pool_populations)
+                                          if r != held and n == pool_populations[held]]
+                                refs = [pool_values[r] for r in others]
+                                reproduced = raw_pass_gate(row, pool_populations[held], refs,
+                                    [pool_populations[held]]*len(refs), envelope=0) if refs else dict(passed=False)
+                                if reproduced['passed']:
+                                    continue
+                                cal = calibration[held]
+                                cal['fallback_pixels'] += 1
+                                cal['unmatched_population_pixels'] += int(not others)
+                                for k, c in enumerate(checked_channels):
+                                    seeds = [float(d[index]) for d in seed_data[c]]
+                                    if not seeds or not others:
+                                        continue
+                                    gate = monte_carlo_gate(row[k], [ref[k] for ref in refs], seeds)
+                                    cal['zero_sigma_mismatches'][c] += int(gate['sigma'] == 0 and gate['difference'] != 0)
+                                    cal['max_ratio'][c] = max(cal['max_ratio'][c], gate['ratio'] or 0.0)
                             same_count = []
                             for r in range(len(pool)):
-                                n = float(pool_data[counts[0]][r][index])*maximum_samples
-                                if not math.isfinite(n) or abs(n-round(n)) > 1e-4:
-                                    raise ValueError('Invalid pool accepted sample count')
-                                if round(n) == populations[0]:
+                                if pool_populations[r] == populations[0]:
                                     same_count.append(r)
                             v = [float(raw_data[c][0][index]) for c in checked_channels]
                             refs = [[float(pool_data[c][r][index]) for c in checked_channels]
@@ -440,8 +472,37 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
         report['bias_passed'] = (all(len(d) == width*height for d in bias_differences.values()) and
                                  all(r['passed'] for r in report['bias'].values()))
         report['statistical_pixel_fraction'] = len(report['statistical_pixels'])/(width*height)
-        report['statistical_fraction_passed'] = len(report['statistical_pixels']) <= 0.001*width*height
-        report['raw_passed'] &= report['bias_passed'] and report['statistical_fraction_passed']
+        def distribution(values):
+            return dict(min=min(values), median=statistics.median(values), max=max(values))
+        count_distribution = distribution([r['fallback_pixels'] for r in calibration])
+        channel_distributions = {c: distribution([r['max_ratio'][c] for r in calibration])
+                                 for c in checked_channels}
+        requires_seeds = bool(report['statistical_pixels'] or count_distribution['max'])
+        report['calibration'] = dict(renders=calibration, fallback_pixels=count_distribution,
+                                    max_ratio=channel_distributions,
+                                    requires_seed_controls=requires_seeds,
+                                    complete=bool(seed_raw) or not requires_seeds)
+        report['statistical_count_limit'] = count_distribution['max']
+        report['statistical_count_passed'] = len(report['statistical_pixels']) <= count_distribution['max']
+        report['max_statistical_ratio'] = {c: 0.0 for c in checked_channels}
+        for pixel in report['statistical_pixels']:
+            failed = []
+            for detail in pixel['channels']:
+                c = detail['channel']
+                detail['calibrated_limit'] = channel_distributions[c]['max']
+                detail['passed'] &= (detail['ratio'] is not None and
+                                     detail['ratio'] <= detail['calibrated_limit'])
+                report['max_statistical_ratio'][c] = max(report['max_statistical_ratio'][c], detail['ratio'] or 0.0)
+                if not detail['passed'] and c.rsplit('.', 1)[0] not in failed:
+                    failed.append(c.rsplit('.', 1)[0])
+            pixel['failed_passes'] = failed
+            pixel['passed'] = not failed
+        for group in groups:
+            stats[group]['violations'] = sum(group in p['failed_passes'] for p in report['statistical_pixels'])
+        report['raw_passed'] = (not report['unmatched_population_pixels'] and
+            all(p['passed'] for p in report['statistical_pixels']) and
+            report['bias_passed'] and report['statistical_count_passed'] and
+            report['calibration']['complete'])
     report['outliers_explained'] = not report['unexplained_outlier_pixels']
     report['passed'] = report['raw_passed'] and report['outliers_explained']
     report['denoised_pixels_csv'] = str(trace)

@@ -4,16 +4,17 @@ The [optimization plan](DEEP_OPTIMIZATION_PLAN.md) is the plan of record;
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–5 accepted; Phase 6 unaccepted.
 
-IDs export (`df3d3d060`): 179.58 -> 3.88 s on 587x250x4 / 1e-3,
-46.3x faster, 1.72x IDs-off. Five existing IDs-on outputs whole-file identical;
-matched IDs-off identical; nine prior CTests pass. Renderer/budgets unchanged.
+IDs export (`df3d3d060`): 179.58 -> 3.88 s, 46.3x faster, 1.72x IDs-off.
+Five existing IDs-on EXRs and matched IDs-off remain whole-file identical;
+nine prior CTests pass. Renderer/deep budgets unchanged. CPU stays exact.
 
-Final CUDA raw policy recorded in plan Section 2 and implemented in validators.
-Existing realistic117 1e-4/all fails: albedo at (99,7) reaches 0.1613 SE (>0.1),
-and 15/5,850 pixels need statistical fallback (0.2564% >0.1%). No thresholds changed.
-Every channel's bias check passes; noisy RGB at (99,7) passes. CPU stays exact.
-Unit checks pass; saved-input full-image policy replay records this failure.
+Final calibrated CUDA policy replaces guesses in plan Section 2 and validators.
+Realistic117 1e-4/all fails at (99,7): albedo ratios 0.153–0.161 exceed
+31-control leave-one-out maxima 0.132–0.140. Fallback count passes (15 <=21);
+all 12 image-bias channels pass. No new renders or policy relaxation.
+Unit checks and complete saved-input calibration replay verify the stop.
 
-Stopped before three remaining realistic pairs, fresh 81+30 identity replay,
-and final full regression replay. No 6a/6b/Phase 9 started.
-Result: `builds/validation/landscape-cloud/optimization-phase6/review/final-raw-policy-existing.json`.
+Stopped as a possible deep-to-beauty effect, without revising the final policy.
+Three remaining realistic pairs, fresh 81+30 identity and final full regression
+replay remain pending. No 6a/6b/Phase 9 started.
+Result: `builds/validation/landscape-cloud/optimization-phase6/review/calibrated-raw-policy-existing.json`.

@@ -73,37 +73,40 @@ Root causes, in code:
 - Never call GPU-thread heap allocation, STL, or files from kernels (existing
   `PEER_DEEP_OUTPUT_REQUIREMENTS.md` still applies).
 
-### Final CUDA raw beauty rule (user decision, 2026-10-07)
+### Final CUDA raw beauty rule (user decision, calibrated revision, 2026-10-07)
 
-This supersedes the historical Phase 0 CUDA raw envelope/search policy below.
-CPU remains exact equality and the primary proof, together with unchanged
+This supersedes the historical Phase 0 CUDA raw envelope/search policy and
+the uncalibrated 0.1-sigma / 0.1% guesses. Do not revise this policy again.
+CPU stays exact equality and the primary proof, together with unchanged
 beauty-source hashes and kernel resource records. No beauty kernel change.
-The original (99,7) discrepancy vanishes in the isolated majorant-snapshot
-diagnostic (6/6 noisy RGB identical), and its red discrepancy is 0.027 of
-the four-seed pixel standard error; other CUDA variation remains at (5,5).
 
 1. A reproduced state passes unchanged: all checked raw passes match ONE
    unchanged-beauty pool render within 4 FLOAT ULP, with the same sample count.
-2. Otherwise, for EACH raw pass/channel, require the absolute difference to
-   the nearest same-count deep-off reference to be <= 0.1 * sigma_pixel.
-   sigma_pixel = sample SD of four distinct-seed deep-off pixel estimates / 2,
-   using the same case/settings and unchanged beauty source. sigma = 0 requires
-   an exact match. Missing same-count references fail; seed-varied counts may
-   differ only for estimating sigma, never for the on/off comparison.
-3. Every pass/channel must also pass an image-wide bias test: absolute mean
-   signed difference <= 3 standard errors. User-confirmed estimator: at each
-   pixel subtract the MEAN of its same-count pool references (not the nearest);
-   compute the signed mean and sample SD / sqrt(image pixel count) of those
-   paired residuals. Missing counts or nonfinite data fail; no ULP bias floor.
-4. Fail if pixels requiring step 2 exceed 0.1% of the image. Count each pixel
-   once, including failed candidates, and report every channel's difference,
-   sigma, ratio and nearest reference for every step-2 pixel.
+2. Calibrate step 2 from compatible deep-off renders, never from deep-on.
+   For every pool render, leave it out and compare it against the rest with
+   precisely the same whole-state/count match. For fallback pixels, measure
+   each pass/channel's absolute nearest same-count difference / sigma_pixel,
+   using the same four distinct-seed deep-off controls. sigma_pixel is their
+   pixel sample SD / 2. Zero sigma requires an exact match; missing same-count
+   references or nonfinite input fail. Seed-varied counts may differ only for
+   estimating sigma. Record each control's fallback count and channel maxima.
+   Deep-on's fallback count and EVERY channel's maximum ratio must be <= the
+   respective maximum observed in leave-one-out deep-off comparisons. Report
+   deep-off min/median/max beside deep-on; report every fallback pixel/channel.
+3. Every pass/channel must also pass the unchanged image-wide bias test:
+   abs(mean signed difference) <= 3 standard errors. User-confirmed estimator:
+   subtract the MEAN of each pixel's same-count pool references (not nearest);
+   compute signed mean and sample SD / sqrt(image pixel count) of those paired
+   residuals. Missing counts/nonfinite data fail; no ULP bias floor.
 
-The historical K=5 controls/envelopes remain recorded diagnostic evidence and
-the denoised explanation rule remains unchanged. Raw acceptance no longer
-uses the image-wide K=5 envelope or an additional 20-control search. Four seed
-controls are required whenever any pixel needs step 2; reproduced images do
-not need a noise allowance. CPU comparison and deep error budgets are unchanged.
+The pool accumulates compatible ordinary controls across phases; verify source
+and executable identities. Calibration uses no new renders where controls and
+the four seed estimates already exist (31 controls for realistic117). Reuse
+those estimates for remaining pairs of the same case/settings. If calibration
+needs four seeds for a new case, create them once, never an open-ended search.
+The historical K=5 envelopes remain diagnostic evidence; the denoised
+explanation rule is unchanged. A deep-on result outside the calibrated range
+stops work as a possible real deep-to-beauty effect. CPU/deep budgets unchanged.
 
 ## 3. Phases
 
@@ -1446,7 +1449,7 @@ regression/81+30 identity replay remain pending. No 6a/6b/Phase 9 work started.
 The original raw beauty gate remains unresolved; user decides policy from this
 diagnostic evidence.
 
-#### Phase 6 final CUDA raw policy application - acceptance stop
+#### Phase 6 uncalibrated policy application - superseded historical stop
 
 Applied the final Section 2 user rule to the existing unmodified-engine
 realistic117 / original max1024 adaptive / GPU OIDN / IDs-on / 1e-4 / cap0.
@@ -1512,3 +1515,48 @@ Report: `builds/validation/landscape-cloud/optimization-phase6/review/final-raw-
 **Stopped under the failed-acceptance rule:** three remaining realistic pairs,
 fresh IDs-off 81/81 + 30/30 replay and final full regression replay are NOT RUN.
 Phase 6 remains unaccepted; no 6a/6b/Phase 9 work started.
+
+#### Phase 6 calibrated CUDA raw policy - final acceptance stop
+
+Rechecked saved realistic117 / original max1024 adaptive / GPU OIDN /
+IDs-on / 1e-4 / cap0. No new renders. Exactly 31 compatible unchanged-beauty
+deep-off controls each compared with the other 30, using the same whole-state
+4-ULP match, exact populations and four independent-seed pixel SE as deep-on.
+All leave-one-out pixels have same-count references; no zero-SE mismatches.
+The majorant-snapshot executable remains excluded.
+
+| Metric | Deep-off min | Deep-off median | Deep-off max / limit | Deep-on | Result |
+| --- | --- | --- | --- | --- | --- |
+| Step-2 fallback pixels | 3 | 13 | 21 | 15 | PASS |
+| ViewLayer.Debug Sample Count.X | 0 | 0 | 0 | 0 | PASS |
+| ViewLayer.Denoising Albedo.R | 0 | 0 | 0.139636357 | 0.152607569 | FAIL |
+| ViewLayer.Denoising Albedo.G | 0 | 0 | 0.132614054 | 0.161283634 | FAIL |
+| ViewLayer.Denoising Albedo.B | 0 | 0 | 0.132372598 | 0.159599209 | FAIL |
+| ViewLayer.Denoising Depth.Z | 0 | 0 | 0.00122305225 | 0 | PASS |
+| ViewLayer.Denoising Normal.X | 1.92252228e-08 | 7.00013995e-07 | 2.42135988e-06 | 2.18037146e-07 | PASS |
+| ViewLayer.Denoising Normal.Y | 8.65560592e-08 | 7.99446967e-07 | 2.36343069e-05 | 5.79094279e-07 | PASS |
+| ViewLayer.Denoising Normal.Z | 0 | 0 | 7.48448884e-05 | 0 | PASS |
+| ViewLayer.Noisy Image.R | 0 | 0 | 0.0961943274 | 0.026550997 | PASS |
+| ViewLayer.Noisy Image.G | 0 | 0 | 0.0371523278 | 0.0104031659 | PASS |
+| ViewLayer.Noisy Image.B | 0 | 0 | 0.0087957657 | 0.00636220051 | PASS |
+| ViewLayer.Noisy Image.A | 0 | 0 | 0 | 0 | PASS |
+
+Only (99,7) is outside the calibrated channel range: denoising albedo R/G/B.
+Their nearest absolute differences are 0.001097053/0.001097083/0.001097083;
+four-seed SE is 0.00718872/0.00680220/0.00687399. Noisy RGB passes.
+The unchanged paired-pixel bias check passes every one of 12 channels;
+largest abs(mean)/SE is 1.712194, below 3. All 15 fallback pixels and their
+channel details/nearest references are recorded in the machine report.
+
+Implemented final calibrated Section 2 policy in host validators, replacing
+the guessed limits. Unit checks exercise held-out ordinary bounds, equality
+at the measured boundary, larger-effect rejection, zero variance/count
+handling and the unchanged signed-bias test. Renderer/CPU comparison unchanged.
+
+Reports: `builds/validation/landscape-cloud/optimization-phase6/review/calibrated-raw-policy-existing.json`;
+calibration holds each of the 31 per-render counts and per-channel maxima.
+Log: `builds/phase6-calibrated-raw-policy.log`.
+**STOP: possible real deep-to-beauty effect under the final policy.** Do not
+revise the policy again. Three remaining realistic pairs, fresh 81/81 + 30/30
+identity replay and final full regression replay NOT RUN. Phase 6 unaccepted;
+no 6a/6b/Phase 9 started.

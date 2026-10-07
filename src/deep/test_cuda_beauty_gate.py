@@ -59,14 +59,17 @@ for invalid in (math.nan, math.inf):
         pass
     else:
         raise AssertionError('Invalid denoiser input accepted')
-# Pixel noise does not waive counts, zero variance, image prevalence, or bias.
-g = monte_carlo_gate(0.000269, [0.0], [-0.02, 0.0, 0.01, 0.02])
-assert g['passed'] and g['ratio'] < 0.1
-assert not monte_carlo_gate(0.1, [0.0], [-0.02, 0.0, 0.01, 0.02])['passed']
+# A measured ordinary maximum accepts its boundary and rejects larger effects.
+seeds = [-0.02, 0.0, 0.01, 0.02]
+controls = [0.0, 0.1, 0.1]
+limit = max(monte_carlo_gate(v, controls[:i]+controls[i+1:], seeds)['ratio']
+            for i, v in enumerate(controls))
+assert monte_carlo_gate(0.1, [0.0], seeds, ratio_limit=limit)['passed']
+assert not monte_carlo_gate(0.11, [0.0], seeds, ratio_limit=limit)['passed']
+assert monte_carlo_gate(0.000269, [0.0], seeds, ratio_limit=limit)['passed']
 assert monte_carlo_gate(1, [1], [1]*4)['passed']
 assert not monte_carlo_gate(1.00000001, [1], [1]*4)['passed']
 assert not monte_carlo_gate(1, [], [1]*4)['passed']
-assert 5 <= 0.001*5850 and not 6 <= 0.001*5850
 assert bias_gate([0]*100)['passed']
 assert bias_gate([-1, 1]*50)['passed']
 assert not bias_gate([0.001]*100)['passed']

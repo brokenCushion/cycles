@@ -112,7 +112,7 @@ def compare(arguments):
         result['max_flatten_error']=max(result['max_flatten_error'],flatten)
         result['before_samples'] += len(curves[0]); result['after_samples'] += len(curves[1])
         result['before_surfaces'] += sum(v[0] == v[1] for v in curves[0])
-        result['after_surfaces'] += sum(v[0] == v[1] for v in curves[1])+groups
+        result['after_surfaces'] += sum(v[0] == v[1] for v in curves[0])-removed
         result['merged_groups'] += groups; result['removed_samples'] += removed
     result['passed'] = result['max_exterior_error'] <= error and result['max_flatten_error'] <= error
     return result

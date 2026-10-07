@@ -80,8 +80,10 @@ volumes contribute `exp(-optical_depth)`. Reconstruction averages transmittance,
 then emits local alpha as `1 - T_after / T_before`. It does not average local
 alphas or accept incomplete batches. Optical depth includes physical ray length.
 
-Surface depths remain distinct until checked FLOAT export. Volumes use fitted
-exponential intervals with bounded whole-curve error. See `volume.h` for numerical
+Numeric same-object surface merging uses `--deep-z-tolerance` (default 1e-4);
+zero disables it and strict forces zero. Combined alpha and curves outside merged
+depth bands retain their checks; the band's interior is a depth approximation.
+Volumes use fitted exponential intervals with bounded error. See `volume.h` for numerical
 allowances and `reconstruction.h` for caller responsibilities. Tests use independent
 raw-event/physical integration oracles; assertions remain active in Release builds.
 

@@ -30,7 +30,8 @@ plus reconstruction scratch; the supplied four-sample fixture accepts 1 GiB and
 rejects 512 MiB. Streaming merges share the 5e-8 reconstruction allowance with
 mixture fitting. Final-build measurements are under `m8-production/final-scale`.
 
-Storage details: [production contract](src/deep/PRODUCTION_VALIDATION.md).
+Current storage contract: [support matrix](src/deep/RELEASE_MATRIX.md).
+Historical production report remains in Git history at `9cad1e861`.
 
 ## Scene coverage (96x96, four samples)
 
@@ -139,7 +140,8 @@ All four million-point previews validate. Gates remain 40 minutes, 4 GB EXR,
 CUDA still reads back 670.103 GB per render. These are fixture qualifications;
 the historical absorption measurements above are not a controlled speedup
 comparison. Evidence: `builds/validation/m8-release-scale/report.json` and
-[final release audit](src/deep/M8_RELEASE_VALIDATION.md).
+the historical `src/deep/M8_RELEASE_VALIDATION.md` at Git commit `9cad1e861`.
+Current qualification follows [the optimization plan](DEEP_OPTIMIZATION_PLAN.md).
 
 ## Reproduce and review
 

@@ -485,6 +485,17 @@ than evidence writing.
   pass/fail table. Target: under 15 minutes on this machine.
 - Gaffer remains optional for interactive review; numerical checks should run
   through the OpenEXR Python bindings without launching Gaffer.
+- Default renders/large outputs and TEMP/TMP are owned by
+  `D:/CyclesDeepScratch/regression/<run-id>/`; only small reports stay under
+  `builds/`. Delete its own intermediates after PASS, unless `--keep`; retain
+  failed evidence. Never delete through historical junction folders.
+- Include strict 81/81, numeric 30/30, CPU beauty equality, source hashes and
+  75 kernel resource records. CUDA beauty is a separate optional stage for
+  GPU-side changes; host-only phases use the Section 2 proof.
+- Inventory historical sample CSVs; retain anything needed uncompressed.
+  User approved replacing unneeded CSVs only after full-byte archive verification,
+  and archiving 14 obsolete validation Markdown reports in Git history.
+
 - Consolidate the many `validate_*_gaffer.py` scripts into that harness where
   they overlap. Archive (Git history) the per-milestone `*_VALIDATION.md`
   evidence files; keep `RELEASE_MATRIX.md`, this plan, and one short status page.
@@ -1687,7 +1698,7 @@ native-case conclusion. No threshold was introduced or changed.
 Report: `builds/validation/landscape-cloud/optimization-phase6a/export-recheck-native/results.json`.
 Large data: `D:/CyclesDeepScratch/optimization-phase6a/export-recheck-native/`.
 
-#### Phase 6b - acceptance checks passed; stop for review
+#### Phase 6b - accepted
 
 Implementation: `24da5f880`; native opacity/selection checks: `4ddb28e64`.
 Host-only: existing camera capture already records holdout opacity. Preflight
@@ -1720,4 +1731,71 @@ counters and full holdout records are in
 Holdout errors compare every boundary and exponential extremum; the existing
 camera oracle and Gaffer depth cuts also pass. Bounds/limits remain unchanged.
 Connected Gaffer review: `D:/CyclesDeepScratch/optimization-phase6b/holdout_review.gfr`.
-Large evidence/TEMP stay on D:. Stop for review before Phase 7.
+Large evidence/TEMP stay on D:. Phase 6b accepted by the user.
+
+#### Phase 7 - qualification passed; stop for review
+
+Implementation: `a7357e66f`, `1bf677565`, `035d84b4e`. Renderer remains `24da5f880`.
+The default command uses OpenEXR/NumPy, one CPU beauty control per fixture,
+shared numerical checks and the original fixture limits. All data error gates
+remain unchanged. SDK/Gaffer policy reports match on the existing 31-control
+realistic117 dataset; only the output trace path differs. No new beauty renders.
+
+| Case | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| 47x20/max16 strict | Render+capture / wait+copy s | 2.899 / 1.788 | 2.856 / 1.755 | `035d84b4e` |
+| 47x20/max16 strict | Lane-written / copied MiB | 25.09 / 344.03 | 25.09 / 344.03 | `035d84b4e` |
+| 47x20/max16 strict | Spill stored/read/write MiB | 12.75 / 12.75 / 13.09 | 12.75 / 12.75 / 13.09 | `035d84b4e` |
+| 47x20/max16 strict | Export / density-fit / mixture-fit / coalesce s | 6.799 / 2.112 / 17.406 / 1.822 | 8.121 / 2.687 / 22.318 / 2.298 | `035d84b4e` |
+| 47x20/max16 strict | EXR bytes / deep samples | 4,445,714 / 561,793 | 4,445,714 / 561,793 | `035d84b4e` |
+| 47x20/max16 strict | Peak host / device MiB | 5326.9 / 5310 | 5312.2 / 5591 | `035d84b4e` |
+| 587x250/4 strict | Render+capture / wait+copy s | 37.156 / 33.717 | 34.423 / 31.427 | `035d84b4e` |
+| 587x250/4 strict | Lane-written / copied MiB | 845.53 / 6833.91 | 845.53 / 6833.91 | `035d84b4e` |
+| 587x250/4 strict | Spill stored/read/write MiB | 498.26 / 572.12 / 549.72 | 498.26 / 572.12 / 549.72 | `035d84b4e` |
+| 587x250/4 strict | Export / density-fit / mixture-fit / coalesce s | 35.580 / 86.397 / 265.314 / 149.423 | 33.530 / 81.835 / 248.957 / 140.131 | `035d84b4e` |
+| 587x250/4 strict | EXR bytes / deep samples | 394,273,944 / 52,189,081 | 394,273,944 / 52,189,081 | `035d84b4e` |
+| 587x250/4 strict | Peak host / device MiB | 5356.4 / 5790 | 5552.7 / 5636 | `035d84b4e` |
+| 47x20/max16 1e-4 | Render+capture / wait+copy s | 1.831 / 0.724 | 1.826 / 0.714 | `035d84b4e` |
+| 47x20/max16 1e-4 | Lane-written / copied MiB | 8.05 / 8.97 | 8.05 / 8.97 | `035d84b4e` |
+| 47x20/max16 1e-4 | Spill stored/read/write MiB | 8.74 / 8.74 / 9.08 | 8.74 / 8.74 / 9.08 | `035d84b4e` |
+| 47x20/max16 1e-4 | Export / density-fit / mixture-fit / coalesce s | 3.700 / 0.275 / 0.998 / 0.124 | 3.654 / 0.272 / 0.993 / 0.119 | `035d84b4e` |
+| 47x20/max16 1e-4 | EXR bytes / deep samples | 609,496 / 88,699 | 609,496 / 88,699 | `035d84b4e` |
+| 47x20/max16 1e-4 | Peak host / device MiB | 5507.3 / 5655 | 5295.8 / 5572 | `035d84b4e` |
+| 587x250/4 1e-4 | Render+capture / wait+copy s | 11.791 / 9.126 | 11.811 / 9.200 | `035d84b4e` |
+| 587x250/4 1e-4 | Lane-written / copied MiB | 314.62 / 350.45 | 314.62 / 350.45 | `035d84b4e` |
+| 587x250/4 1e-4 | Spill stored/read/write MiB | 341.49 / 410.86 / 392.36 | 341.49 / 410.86 / 392.36 | `035d84b4e` |
+| 587x250/4 1e-4 | Export / density-fit / mixture-fit / coalesce s | 3.762 / 5.561 / 17.815 / 6.917 | 3.793 / 5.576 / 17.826 / 6.938 | `035d84b4e` |
+| 587x250/4 1e-4 | EXR bytes / deep samples | 59,210,585 / 6,813,973 | 59,210,585 / 6,813,973 | `035d84b4e` |
+| 587x250/4 1e-4 | Peak host / device MiB | 5322.8 / 5728 | 5370.8 / 5648 | `035d84b4e` |
+| 47x20/max16 1e-3 | Render+capture / wait+copy s | 1.976 / 0.767 | 1.815 / 0.705 | `035d84b4e` |
+| 47x20/max16 1e-3 | Lane-written / copied MiB | 7.12 / 8.03 | 7.12 / 8.03 | `035d84b4e` |
+| 47x20/max16 1e-3 | Spill stored/read/write MiB | 7.80 / 7.80 / 8.15 | 7.80 / 7.80 / 8.15 | `035d84b4e` |
+| 47x20/max16 1e-3 | Export / density-fit / mixture-fit / coalesce s | 3.555 / 0.194 / 0.393 / 0.043 | 3.524 / 0.189 / 0.395 / 0.044 | `035d84b4e` |
+| 47x20/max16 1e-3 | EXR bytes / deep samples | 357,145 / 53,113 | 357,145 / 53,113 | `035d84b4e` |
+| 47x20/max16 1e-3 | Peak host / device MiB | 5308.1 / 5621 | 5381.9 / 5572 | `035d84b4e` |
+| 587x250/4 1e-3 | Render+capture / wait+copy s | 12.790 / 10.088 | 11.779 / 9.236 | `035d84b4e` |
+| 587x250/4 1e-3 | Lane-written / copied MiB | 277.68 / 313.51 | 277.68 / 313.51 | `035d84b4e` |
+| 587x250/4 1e-3 | Spill stored/read/write MiB | 304.56 / 373.96 / 355.48 | 304.56 / 373.96 / 355.48 | `035d84b4e` |
+| 587x250/4 1e-3 | Export / density-fit / mixture-fit / coalesce s | 2.248 / 2.071 / 7.356 / 2.390 | 2.176 / 2.026 / 7.205 / 2.339 | `035d84b4e` |
+| 587x250/4 1e-3 | EXR bytes / deep samples | 22,398,061 / 3,076,802 | 22,398,061 / 3,076,802 | `035d84b4e` |
+| 587x250/4 1e-3 | Peak host / device MiB | 5376.0 / 5762 | 5390.6 / 5647 | `035d84b4e` |
+| Default regression | Wall time (including cleanup) | 996.57 s | 587.66 s | `035d84b4e` |
+| All regressions | Strict / numeric / CTests | 81 / 30 / 9 PASS | 81 / 30 / 9 PASS; exact CPU beauty; 75 unchanged records | `035d84b4e` |
+| Historical sample CSVs | Bytes stored / files | 72,375,108,634 / 1021 raw | 23,873,719,812 / 1021 verified ZIP | `035d84b4e` |
+
+Fit counters are aggregate worker seconds; export is wall time. Single render
+measurements, not renderer speedup claims (renderer unchanged). The baseline
+uses the legacy orchestration plus nine CTests; the new command also includes
+surface/lens/motion and holdout smoke fixtures. Exact outputs and thresholds hold.
+
+All 1021 listed CSVs are historical diagnostics; none requires a raw
+working copy. Identity/beauty checks retain their EXRs, and camera-oracle replays
+stream the archives. Allocated disk saved: 48,501,388,822 bytes.
+Each archive has a decompressed SHA256/size verification record before replacement.
+
+Results and inventory: `builds/validation/landscape-cloud/optimization-phase7/`.
+Passing run intermediates removed from its owned D: directory; `--keep` preserves
+them. Failed harness-development evidence stays on D:. Fourteen validation reports
+archived in Git history (`9cad1e861`); README lists all 53 core files plus Blender
+overlay plumbing. Connected review: `D:/CyclesDeepScratch/regression-tools/phase7_review.gfr`.
+Stop for review before Phase 8. Full-resolution Phase 9 remains unlaunched.

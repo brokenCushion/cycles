@@ -36,11 +36,10 @@ This is the current code map; the superseded patch plan remains in Git history.
 
 ## Release qualification
 
-Native VDB CUDA uses 64 lanes with an explicit staging reservation. Final
-CPU/CUDA scene and failure suites pass; current kernel resource attributes match
-the previous qualified build. The updated exporter's release-scale scattering
-repeats and default-colour native matrix also pass. The user approved the final
-Gaffer scene on 2026-09-29, completing M8 within the qualified support matrix.
-See [final evidence](M8_RELEASE_VALIDATION.md). Other backends belong to M9.
+The [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md) records current device,
+memory, error and publication decisions. The single numerical regression command
+checks CPU/CUDA fixtures, source/kernel resources and output identity; Gaffer is
+optional for review. OptiX/OSL qualification is Phase 8. Historical M8 reports
+remain in Git history at `9cad1e861`.
 
 [Release gates](../../DEEP_MILESTONES.md) | [Status](../../DEEP_IMPLEMENTATION_STATUS.md)

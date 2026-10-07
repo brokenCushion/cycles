@@ -1,103 +1,50 @@
-# M8 deep-alpha support matrix
+# Deep alpha qualification matrix
 
-This is the historical M8 support matrix, with technical qualification and user
-Gaffer approval recorded on 2026-09-29. It does not qualify the current landscape
-development executable or the expanded original-settings production test, which
-remains open. See [current release status](../../DEEP_IMPLEMENTATION_STATUS.md)
-and [landscape evidence](LANDSCAPE_COMPATIBILITY.md).
+Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
+and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-6b are accepted.
+Qualification covers the named fixtures; arbitrary feature combinations and the
+full-resolution landscape are not implied. Phase 9 remains unlaunched.
 
-## Scene and device contract
-
-| Feature | Surface-only capture | Capture with any volume |
-| --- | --- | --- |
-| Device | Single CPU or CUDA, background render | Single CPU or CUDA, background render |
-| Shading | Native SVM; restricted CPU OSL fixtures | Native SVM only |
-| Geometry | Polygon meshes, rigid instances | Static polygon surfaces; closed convex outward-wound homogeneous boundaries; native FLOAT VDB density |
-| Camera | Mono perspective or orthographic | Mono static perspective, positive near clip |
-| Samples | Fixed or native adaptive accepted camera samples | Fixed accepted camera samples |
-| DOF | Accepted lens rays | Explicitly rejected |
-| Motion | Rigid object/camera translation and rotation, uniform shutter | Explicitly rejected, including motion on surfaces in a volume scene |
-| Filters | Box, Gaussian, Blackman-Harris; finite positive width | Same allowlist; release VDB workload uses box width 1 |
-| Denoising | CPU at native resolution; CUDA rejected | Same host preflight; VDB qualification disables denoising |
-| Transparency | Scalar native camera-alpha semantics | Same scalar surfaces, including surfaces inside media |
-| Volume closures | Not enabled | One scalar absorption or Henyey-Greenstein scattering closure; no combined closure graphs |
-| Native grid | Not enabled | FLOAT source, FULL precision, linear interpolation; `density` Fac times nonnegative finite constants |
-| Static volume transforms | Not applicable | Finite nonsingular transforms with positive determinant; qualification includes rotation and nonuniform scale |
-| Occlusion and overlap | Ordered camera surface events | Additive optical depth for overlapping media, surface opacity steps, near/far clipping and camera-inside cases |
-
-The API accepts 1..4096 maximum samples. That is an input/capacity limit, not a
-performance guarantee. Numerical fixtures exercise small images at multiple
-sample counts. Production workload evidence is the supplied static VDB at
-1024x768/four samples and the supplied surface scene at 664x625/128 samples.
-Arbitrary feature combinations are not implied by individual tests.
-
-The surface shader allowlist in `session/deep.cpp` includes diffuse, emission,
-principled, glass, translucent, scalar transparent and mix closures, plus the
-qualified texture/mapping/ramp/bump inputs. Unsupported nodes fail preflight.
-Glass describes camera opacity, not refracted-path deep reconstruction. Background
-shading is constant. Coloured transparency/extinction and holdout/shadow-catcher
-semantics are not supported. Native grids require a pure volume material.
-An identically zero density multiplier may be folded to a constant by native
-shader optimization; it remains an empty medium and performs no density lookup.
-
-Deforming geometry, animated grids, motion scale/reflection, animated FOV,
-rolling shutter, stereo, camera borders, sample subsets, time limits, automatic
-tiling, baking, guiding and unsupported procedural geometry fail explicitly.
-The custom Blender host additionally requires one enabled view layer. OptiX,
-HIP, Metal and oneAPI are outside the CPU/CUDA M8 qualification.
+| Feature | Qualified scope |
+| --- | --- |
+| Devices | Single CPU or CUDA, background render; OptiX/OSL are Phase 8. |
+| Shading | Native SVM scalar camera opacity/extinction, within `session/deep.cpp` preflight. |
+| Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
+| Camera | Surface-only perspective/orthographic, DOF and rigid motion; volumes require static mono perspective without DOF/motion. |
+| Samples | Fixed/native adaptive accepted populations; `--deep-samples 0` uses all, positive N retains the first N without changing beauty. |
+| Denoising | Native OIDN, including GPU OIDN in supplied landscape fixtures; deep remains separate from beauty. |
+| IDs | Optional UINT `id`, raw name hashes and manifest; numeric error required. Strict + IDs fails preflight. |
+| Holdout | Object flags and native Holdout closure preserve camera opacity; checked holdout manifest subset. Shadow catchers/caustics remain rejected. |
+| Surface depth merging | Same object only, checked relative depth span; numeric default `--deep-z-tolerance 1e-4`, zero disables it, strict forces zero. |
+| Output | FLOAT Z/ZBack/A, positive axial depth in scene units. Deep RGB, subpixel masks and other backends are later work. |
 
 ## Numerical and storage contract
 
-Output contains FLOAT Z/ZBack/A; depths are positive camera-axis scene units.
-Beauty and diagnostic CSV are separate outputs. Completed misses count in the
-sample denominator. Reconstruction averages transmittance over accepted rays.
-Scattering contributes its scalar extinction; scattered colour remains M9.
+Strict reproduces legacy payload and deterministic headers under Section 2 of
+the plan. Numeric error splits the user setting across device/host/publication
+allowances; their sum bounds absolute transmittance error. Validators read the
+effective error and sample setting from EXR headers. ID publication sums measured
+per-object errors; independent exact-cubic/camera/depth-cut checks remain mandatory.
+Positive z tolerance approximates the interiors of merged surface depth bands;
+combined alpha and curves outside those bands retain the error checks. Use zero
+for the whole-curve depth contract. Strict always uses zero.
+Completed misses count in normalization; incomplete/overflowing work fails explicitly.
 
-The normal whole-curve transmittance error budget is 1e-6 against each device's
-accepted samples. Optional surface reduction uses a 0.001 budget; native volume
-streaming reduction stays within its existing 5e-8 reconstruction allocation.
-Export can additionally coalesce adjacent intervals using 2.5e-7 of its existing
-FLOAT export allowance. It preserves surface steps and gaps, then checks the
-complete original curve again at boundaries and interior extrema. The overall
-1e-6 budget is unchanged. This lowers storage and FLOAT consumer accumulation
-error without promising exact arithmetic in every compositing application.
-Sampling variance and native CPU/CUDA intersection differences are separate from
-export error. The known moving-cube CPU/CUDA coverage difference remains documented
-in [motion evidence](MOTION_VALIDATION.md); strict backend equality is not promised.
-Adaptive beauty convergence does not ensure depth convergence.
+Device buffers are host-allocated and bounded. Spill and parallel host fitting
+are separate from beauty. No GPU allocation/files/STL/exceptions. Cancellation,
+capacity and I/O failures preserve the previous EXR through atomic local publication;
+network/power-loss/frame-transaction durability is not qualified. Scalar alpha
+does not encode arbitrary subpixel correlations or recover colour from beauty.
 
-Deep working memory is bounded and spill is explicit. It is not a total process
-memory cap. GPU buffers are host-preallocated; GPU threads allocate no memory.
-Capacity, representability, I/O and cancellation failures must preserve an
-existing completed EXR. Local-file atomic replacement is qualified; power-loss
-durability, network shares and a beauty/deep/CSV frame transaction are not.
+CPU beauty remains exact. CUDA beauty policy and its GPU-only phase scope are in
+Section 2; source hashes and 75 kernel resource records provide the host-only proof.
 
-## Reproduction and evidence
+## Reproduction
 
-Fresh standalone suite runs use the installed build and its CUDA wrapper:
-
-```powershell
-& tools/qualify_deep_release.ps1 -Group All -Output builds/validation/m8-release-new
-```
-
-The runner records executable identity, suite exit status, elapsed time and logs.
-Individual validators write numerical reports and Gaffer graphs with actual deep
-readers, cuts and DeepToPointCloud. Numerical tests and kernel/grid oracles remain
-separate from reader interoperability checks.
-
-Native Blender cases are created from the supplied VDB fixture without changing
-the source. `tools/create_vdb_deep_cases.py` generates supported and rejected
-settings; `tools/qualify_native_vdb.py` runs beauty pairs, CUDA beauty repeats,
-accepted-camera curve checks and output-preservation checks. Separate named-grid
-references test the overlap product. These share single-grid capture code and
-do not replace the independent OpenVDB integration oracle.
-
-Final native CPU/CUDA matrix results are recorded under
-`builds/validation/m8-release-qualified/native-default-colour/`; both devices pass 11 accepted scenes
-and nine expected safe rejections. See [final evidence](M8_RELEASE_VALIDATION.md).
-The final standalone audit passes all nine CTests, ten renderer/Gaffer suite
-groups and lifecycle tests. The final supplied host-asset regression passes with
-byte-identical deep output and unchanged beauty. CPU/CUDA production-scale
-scattering repeats pass accuracy, beauty, resource and size gates with
-byte-identical repeats per device. All technical gates pass; the user approved
-the final Gaffer scene on 2026-09-29, completing M8.
+Use [the single regression command](README.md#regression-command): nine CTests,
+CPU/CUDA matrices, boundaries, oracles, CPU beauty, resource/source proof and
+81/81 strict + 30/30 numeric identity. Gaffer is optional for interactive review.
+Large validation output/TEMP lives on D:, with only small reports under `builds/`.
+Verified historical sample ZIPs stream without disk expansion. Historical M8
+reports/support details remain in Git history at `9cad1e861`; current results
+are in Section 6 of the plan.

@@ -44,6 +44,7 @@ def deep_samples(image, beauty_samples):
     value = image['metadata'].getValue().get('cycles:deepSamples')
     if value is None:
         return beauty_samples
+    check(type(value.value) is int, 'EXR deep sample limit must be an integer')
     count = int(value.value)
     check(0 < count <= beauty_samples, 'Invalid EXR deep sample limit')
     return count

@@ -79,8 +79,9 @@ def compare(arguments):
         try: left,right,groups,removed = collapse(*curves,tolerance)
         except ValueError as exc:
             raise ValueError(f'Pixel ({a.x+p%a.width},{a.y+p//a.width}): {exc}') from exc
-        difference = curve_error(left,right)
-        flatten = abs(math.prod(1-v[2] for v in curves[0])-math.prod(1-v[2] for v in curves[1]))
+        difference = 0. if left == right else curve_error(left,right)
+        flatten = (abs(math.prod(1-v[2] for v in curves[0])-math.prod(1-v[2] for v in curves[1]))
+                   if groups else 0.)
         if difference > result['max_exterior_error']:
             result['max_exterior_error']=difference
             result['worst_pixel']=[a.x+p%a.width,a.y+p//a.width]
@@ -109,7 +110,7 @@ def run(before, after, workers):
     result['max_flatten_error']=max(p['max_flatten_error'] for p in parts)
     result['passed']=all(p['passed'] for p in parts)
     result['before_file']=str(Path(before).resolve()); result['after_file']=str(Path(after).resolve())
-    result['oracle']='Unchanged records exact; consecutive same-ID hard surfaces; exterior exponential extrema'
+    result['oracle']='Unchanged records exact; consecutive hard surfaces (UINT IDs when present); exterior exponential extrema'
     return result
 
 

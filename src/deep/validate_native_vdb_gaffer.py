@@ -86,6 +86,16 @@ if settings.get('deep_error', 0):
     check('cycles:deepError' in reader['out']['metadata'].getValue() and
           math.isclose(deep_tolerance, settings['deep_error'], rel_tol=1e-7),
           'EXR bound differs from the requested setting')
+with_ids = bool(settings.get('deep_ids'))
+check(('id' in reader['out']['channelNames'].getValue()) == with_ids,
+      'Missing or unexpected deep ID channel')
+metadata = reader['out']['metadata'].getValue()
+check(('cycles:deepIDManifest' in metadata) == with_ids,
+      'Missing or unexpected deep ID manifest')
+if with_ids:
+    manifest = json.loads(str(metadata['cycles:deepIDManifest']))
+    check(isinstance(manifest, dict) and all(len(k) == 8 for k in manifest),
+          'Invalid deep ID name manifest')
 fmt = reader['out']['format'].getValue()
 width, height = fmt.width(), fmt.height()
 check([width, height] == [v * settings['percentage'] // 100 for v in settings['resolution']],
@@ -283,7 +293,7 @@ for y in sorted(set([i*(height-1)//8 for i in range(9)])):
                   front > 0 and back >= front and front >= previous and 0 < alpha <= 1,
                   'Invalid or unordered deep interval')
             check(back == front or alpha < 1, 'Opaque extended interval')
-            previous = back
+            previous = front if with_ids else back
             low, high = min(low, front), max(high, back)
         pixels[x, y] = samples
 if args.expect_empty:

@@ -16,6 +16,9 @@ blender, manifest_path, output = (Path(v).resolve() for v in sys.argv[1:4])
 device = sys.argv[4] if len(sys.argv) > 4 else 'CPU'
 error = sys.argv[5] if len(sys.argv) > 5 else 'strict'
 deep_samples = int(sys.argv[6]) if len(sys.argv) > 6 else 0
+deep_ids = len(sys.argv) > 7 and sys.argv[7] == "ids"
+if len(sys.argv) > 7 and not deep_ids:
+    raise ValueError("Expected ids as the optional final argument")
 if deep_samples < 0:
     raise ValueError('Deep sample limit must be nonnegative')
 if device not in ('CPU', 'CUDA'):
@@ -85,6 +88,7 @@ for name, case in manifest['cases'].items():
             command[1:1] = ['--log', 'cycles', '--log-level', 'info']
         if kind == 'deep':
             command += ['--deep-samples', str(deep_samples)]
+            if deep_ids: command += ['--deep-ids']
             command += ['--deep-error', error, '--deep', '--deep-volume', '--deep-memory-mb', '1024',
                         '--deep-max-events', str(case.get('deep_max_events', 16))]
         log = directory / (kind + '.log')

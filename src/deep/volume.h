@@ -69,6 +69,7 @@ struct VolumeInterval {
   double front, back;
   /* Integrated scalar extinction sigma_t * physical ray length, NOT axial length. */
   double optical_depth;
+  int object = -1;
 };
 
 struct VolumeCameraSample {
@@ -114,6 +115,7 @@ std::vector<VolumeInterval> integrate_linear_density(
 
 struct IntervalSample {
   double front, back, alpha;
+  int object = -1;
 };
 
 /* Reference only: averages sample transmittance, then fits nonoverlapping
@@ -132,6 +134,16 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
                                               size_t max_intervals = 65536,
                                               double reduction_tolerance = 0,
                                               size_t max_working_bytes = std::numeric_limits<size_t>::max());
+
+/* Object-preserving convex camera average. The same-ID hazard is averaged
+ * with transmission weights, not as independent per-object image averages.
+ * Different IDs remain overlapping intervals; the sum of their hazards is the
+ * ordinary mixture hazard. Fitting shares one absolute T allowance across tree
+ * levels and objects. Capacity/memory exhaustion is an explicit failure. */
+std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSample> samples,
+                                                  double tolerance,
+                                                  size_t max_intervals,
+                                                  size_t max_working_bytes);
 
 /* Exact maximum difference between two ordered, nonoverlapping exponential
  * curves, including surface discontinuities and interior stationary points. */

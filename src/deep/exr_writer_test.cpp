@@ -76,6 +76,38 @@ void volume_projection(const std::filesystem::path &directory)
   std::cout << "PASS cumulative extinction projection below export allowance\n";
 }
 
+
+void id_round_trip(const std::filesystem::path &directory)
+{
+  SurfaceImage image{{0, 0, 0, 0}, {0, 0, 0, 0}};
+  image.ids = true;
+  image.object_manifest = {{0xabcdef01, "cloud\"one\\\n"}, {0x12345678, "cloud two"}};
+  const auto path = directory / "deep_ids.exr";
+  write_volume_exr(path, image, {{{1, 4, -std::expm1(-.9), 0},
+                                {2, 5, -std::expm1(-1.2), 1}}});
+  Imf::DeepScanLineInputFile input(path.string().c_str(), 1);
+  require(input.header().channels()["id"].type == Imf::UINT, "ID channel must be UINT");
+  const auto manifest = input.header().typedAttribute<Imf::StringAttribute>("cycles:deepIDManifest").value();
+  require(manifest.find("abcdef01") != std::string::npos &&
+          manifest.find("\\u000a") != std::string::npos, "ID manifest escaping failed");
+  unsigned int count = 0;
+  Imf::DeepFrameBuffer fb;
+  fb.insertSampleCountSlice(Imf::Slice::Make(Imf::UINT, &count, input.header().dataWindow()));
+  input.setFrameBuffer(fb); input.readPixelSampleCounts(0, 0);
+  require(count == 2, "Overlap IDs were collapsed");
+  std::vector<unsigned int> ids(count); auto *ip = ids.data();
+  std::vector<float> alphas(count); auto *ap = alphas.data();
+  fb.insert("id", Imf::DeepSlice(Imf::UINT, reinterpret_cast<char *>(&ip), sizeof(ip), sizeof(ip), sizeof(unsigned int)));
+  fb.insert("A", Imf::DeepSlice(Imf::FLOAT, reinterpret_cast<char *>(&ap), sizeof(ap), sizeof(ap), sizeof(float)));
+  input.setFrameBuffer(fb); input.readPixelSampleCounts(0, 0); input.readPixels(0, 0);
+  require(ids[0] == 0xabcdef01 && ids[1] == 0x12345678, "UINT IDs lost precision");
+  require(std::abs((1 - alphas[0]) - std::exp(-.9)) < 1e-7 &&
+          std::abs((1 - alphas[1]) - std::exp(-1.2)) < 1e-7, "ID selection alpha changed");
+  image.pixels = {{{2, .2, 0}, {2, .3, 1}}};
+  write_deep_exr(directory / "surface_ids.exr", image);
+  std::cout << "PASS UINT deep ID overlap, selected alpha, surface ties and manifest round-trip\n";
+}
+
 std::vector<PixelLedger> ledgers()
 {
   std::vector<PixelLedger> p = {
@@ -471,6 +503,7 @@ int main(int argc, char **argv)
     }
     failures(base, directory);
     volume_projection(directory);
+    id_round_trip(directory);
     std::ofstream manifest(directory / "expected_pixels.csv");
     manifest.exceptions(std::ios::badbit | std::ios::failbit);
     manifest << "file_x,file_y,samples,flattened_alpha\n" << std::setprecision(17);

@@ -13,6 +13,8 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
+#include <map>
+#include <memory>
 
 namespace ccl::deep {
 std::vector<VolumeInterval> integrate_cubic_density(
@@ -763,4 +765,200 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
   }
   return result;
 }
+
+std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSample> samples,
+                                                  const double tolerance,
+                                                  const size_t max_intervals,
+                                                  const size_t max_working_bytes)
+{
+  if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-2 || !max_intervals)
+    throw std::invalid_argument("Invalid deep ID reconstruction budget");
+  struct TaggedCurve {
+    uint64_t camera;
+    double weight;
+    std::vector<IntervalSample> spans;
+  };
+  size_t levels = 1;
+  for (size_t n = samples.size(); n > 1; n = (n + 1) / 2)
+    ++levels;
+  const double allowance = tolerance / levels;
+  std::vector<TaggedCurve> working;
+  std::unordered_set<uint64_t> cameras;
+  double max_weight = 0;
+  for (const auto &sample : samples) {
+    if (!sample.camera.complete || !cameras.insert(sample.camera.id).second ||
+        !std::isfinite(sample.camera.weight) || sample.camera.weight < 0)
+      throw std::invalid_argument("Invalid deep ID camera ledger");
+    max_weight = std::max(max_weight, sample.camera.weight);
+  }
+  if (max_weight == 0)
+    throw std::invalid_argument("Deep ID pixel requires positive camera weight");
+  auto check_size = [&](const size_t size) {
+    if (size > max_intervals)
+      throw std::runtime_error("Deep ID reconstruction interval budget exceeded");
+  };
+  for (auto &sample : samples) {
+    if (sample.camera.weight == 0) continue;
+    std::map<int, VolumeCameraSample> objects;
+    for (const auto &v : sample.intervals) {
+      if (v.object < 0) throw std::invalid_argument("Deep ID interval lacks object index");
+      objects[v.object].intervals.push_back(v);
+    }
+    for (const auto &v : sample.camera.events) {
+      if (v.object < 0) throw std::invalid_argument("Deep ID surface lacks object index");
+      objects[v.object].camera.events.push_back(v);
+    }
+    TaggedCurve curve{sample.camera.id, sample.camera.weight / max_weight, {}};
+    for (auto &entry : objects) {
+      entry.second.camera.id = sample.camera.id;
+      entry.second.camera.weight = 1;
+      entry.second.camera.complete = true;
+      const auto spans = reconstruct_volume({std::move(entry.second)}, allowance / objects.size(),
+                                            max_intervals, 0);
+      check_size(curve.spans.size() + spans.size());
+      for (const auto &v : spans)
+        curve.spans.push_back({v.front, v.back, v.alpha, entry.first});
+    }
+    working.push_back(std::move(curve));
+  }
+  std::vector<VolumeCameraSample>().swap(samples);
+  auto bytes = [](const TaggedCurve &c) { return c.spans.capacity() * 128; };
+  auto check_memory = [&] {
+    size_t retained = 0;
+    for (const auto &c : working) {
+      if (bytes(c) > max_working_bytes - retained)
+        throw std::runtime_error("Deep ID pixel exceeds reconstruction memory budget");
+      retained += bytes(c);
+    }
+  };
+  check_memory();
+  auto combine = [&](const TaggedCurve &left, const TaggedCurve &right) {
+    std::map<int, size_t> objects;
+    std::vector<double> boundaries;
+    for (const auto *side : {&left, &right})
+      for (const auto &v : side->spans) {
+        objects.emplace(v.object, 0);
+        boundaries.push_back(v.front);
+        boundaries.push_back(v.back);
+      }
+    size_t index = 0;
+    for (auto &entry : objects) entry.second = index++;
+    std::sort(boundaries.begin(), boundaries.end());
+    boundaries.erase(std::unique(boundaries.begin(), boundaries.end()), boundaries.end());
+    std::vector<VolumeCameraSample> ledgers[2];
+    std::vector<OpticalDepthCurve> curves[2];
+    for (int side = 0; side < 2; ++side) {
+      ledgers[side].resize(objects.size());
+      for (const auto &v : (side == 0 ? left : right).spans) {
+        auto &ledger = ledgers[side][objects.at(v.object)];
+        if (v.front == v.back) ledger.camera.events.push_back({v.front, v.alpha});
+        else ledger.intervals.push_back({v.front, v.back, -std::log1p(-v.alpha)});
+      }
+      curves[side].reserve(objects.size());
+      for (auto &ledger : ledgers[side]) {
+        std::sort(ledger.intervals.begin(), ledger.intervals.end(), [](const auto &a, const auto &b) {
+          return a.front < b.front;
+        });
+        curves[side].emplace_back(ledger.intervals, ledger.camera.events);
+      }
+    }
+    auto transmission = [&](int side, double z, bool before) {
+      double tau = 0, t = side == 0 ? left.weight : right.weight;
+      for (const auto &curve : curves[side]) {
+        tau += curve.at(z);
+        t *= curve.transparency(z, before);
+      }
+      return t * std::exp(-tau);
+    };
+    TaggedCurve output{left.camera, left.weight + right.weight, {}};
+    auto emit = [&](double front, double back, double alpha, int object) {
+      if (alpha <= 0) return;
+      if (!std::isfinite(alpha) || alpha > 1 || (front < back && alpha == 1))
+        throw std::runtime_error("Deep ID opacity cannot be represented");
+      check_size(output.spans.size() + 1);
+      output.spans.push_back({front, back, alpha, object});
+    };
+    std::vector<double> rates[2];
+    rates[0].resize(objects.size()); rates[1].resize(objects.size());
+    for (size_t k = 0; k < boundaries.size(); ++k) {
+      const double z = boundaries[k];
+      double t[2] = {transmission(0, z, true), transmission(1, z, true)};
+      /* Deterministic same-depth object order. Each before/after ratio
+       * telescopes to the ordinary camera-average surface opacity. */
+      for (const auto &entry : objects) {
+        const double before = t[0] + t[1];
+        for (int side = 0; side < 2; ++side)
+          for (const auto &event : ledgers[side][entry.second].camera.events)
+            if (event.depth == z) t[side] *= 1 - event.alpha;
+        const double after = t[0] + t[1];
+        if (before > after) emit(z, z, 1 - after / before, entry.first);
+      }
+      if (k + 1 == boundaries.size()) break;
+      const double end = boundaries[k + 1], mid = z + (end - z) / 2;
+      double r[2] = {0, 0};
+      for (int side = 0; side < 2; ++side)
+        for (size_t i = 0; i < objects.size(); ++i) {
+          rates[side][i] = curves[side][i].rate(mid);
+          r[side] += rates[side][i];
+        }
+      auto fit = [&](auto &&self, double a, double b, int level) -> void {
+        const double l = transmission(0, a, false), rr = transmission(1, a, false);
+        if (l + rr == 0) return;
+        const double h = b - a, delta = r[0] - r[1];
+        /* r_id(z)=w0(z)*r0_id+w1(z)*r1_id; w0'=-delta*w0*w1.
+         * Therefore |(log T_id)''| <= |r0_id-r1_id|*|delta|/4.
+         * Chord error <= that*h^2/8. exp(-tau) is 1-Lipschitz for
+         * nonnegative tau. Share allowance across IDs and tree levels;
+         * products and convex averages add their absolute T bounds.
+         * Integral hazards preserve every span endpoint exactly. No
+         * independent per-object image average (E[AB] != E[A]E[B]). */
+        double curvature = 0;
+        for (size_t i = 0; i < objects.size(); ++i)
+          curvature = std::max(curvature, std::abs(rates[0][i] - rates[1][i]) * std::abs(delta));
+        if (curvature * h * h / 32 > allowance / objects.size() ||
+            std::max(r[0], r[1]) * h > max_interval_tau) {
+          const double m = a + h / 2;
+          if (level == 60 || m == a || m == b)
+            throw std::runtime_error("Deep ID fitting precision exhausted");
+          self(self, a, m, level + 1); self(self, m, b, level + 1);
+          return;
+        }
+        const double w = l / (l + rr);
+        double integral;
+        if (w == 0 || w == 1 || delta == 0) integral = w * h;
+        else if (delta > 0) integral = -std::log1p(w * std::expm1(-delta * h)) / delta;
+        else integral = h + std::log1p((1 - w) * std::expm1(delta * h)) / (-delta);
+        integral = std::clamp(integral, 0.0, h);
+        for (const auto &entry : objects) {
+          const size_t i = entry.second;
+          const double tau = rates[0][i] * integral + rates[1][i] * (h - integral);
+          emit(a, b, -std::expm1(-tau), entry.first);
+        }
+      };
+      fit(fit, z, end, 0);
+    }
+    return output;
+  };
+  while (working.size() > 1) {
+    size_t count = 0;
+    for (size_t i = 0; i < working.size(); i += 2) {
+      if (i + 1 == working.size()) working[count++] = std::move(working[i]);
+      else {
+        auto curve = combine(working[i], working[i + 1]);
+        if (bytes(curve) > max_working_bytes)
+          throw std::runtime_error("Deep ID merged curve exceeds memory budget");
+        working[count++] = std::move(curve);
+      }
+    }
+    working.resize(count); check_memory();
+  }
+  auto result = std::move(working.front().spans);
+  std::sort(result.begin(), result.end(), [](const auto &a, const auto &b) {
+    if (a.front != b.front) return a.front < b.front;
+    if (a.back != b.back) return a.back < b.back;
+    return a.object < b.object;
+  });
+  return result;
+}
+
 }  // namespace ccl::deep

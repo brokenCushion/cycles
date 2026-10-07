@@ -26,6 +26,7 @@ parser.add_argument('--deep-volume', action='store_true')
 parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
 parser.add_argument('--deep-max-events', type=int, default=16)
 parser.add_argument('--deep-memory-mb', type=int, default=512)
+parser.add_argument('--deep-ids', action='store_true')
 parser.add_argument('--deep-error', default='0.001')
 parser.add_argument('--deep-samples', type=int, default=0)
 parser.add_argument('--fixed-sampling', action='store_true')
@@ -99,6 +100,7 @@ if args.deep:
     scene.cycles.use_deep_volume = args.deep_volume
     scene.cycles.deep_error = error
     scene.cycles.deep_samples = args.deep_samples
+    scene.cycles.use_deep_ids = args.deep_ids
     scene.cycles.deep_output_path = str(directory / 'scene.deep.exr')
     scene.cycles.deep_max_events = args.deep_max_events
     scene.cycles.deep_memory_mb = args.deep_memory_mb
@@ -139,6 +141,7 @@ report = {
     'deep_volume': args.deep and args.deep_volume,
     'deep_error': error if args.deep else None,
     'deep_samples': args.deep_samples if args.deep else None,
+    'deep_ids': args.deep_ids if args.deep else False,
     'deep_max_events': args.deep_max_events if args.deep else None,
     'deep_memory_mb': args.deep_memory_mb if args.deep else None,
     'view_layers': [layer.name for layer in scene.view_layers if layer.use],

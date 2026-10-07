@@ -119,6 +119,59 @@ int main(int argc, char **argv)
     check(argc == 2 || argc == 3, "Expected output directory and optional captured-curve CSV");
     const std::filesystem::path directory(argv[1]);
     std::filesystem::create_directories(directory);
+
+    {
+      const std::vector<VolumeCameraSample> overlap = {
+          {{0, 1, true, {}}, {{1, 4, .9, 0}, {2, 5, 1.2, 1}}}};
+      const auto isolated = reconstruct_volume_ids(overlap, 1e-7, 65536, SIZE_MAX);
+      for (int object = 0; object < 2; ++object) {
+        std::vector<IntervalSample> selection;
+        for (const auto &v : isolated) if (v.object == object) selection.push_back(v);
+        check(std::abs(interval_transmittance(selection, 6) -
+                       std::exp(object == 0 ? -.9 : -1.2)) < 1e-14,
+              "Deep ID selection changed known object alpha");
+      }
+      /* Correlated camera coverage: independent object averages would give
+       * T=.25 instead of the correct zero for these disjoint opaque rays. */
+      const std::vector<VolumeCameraSample> disjoint = {
+          {{0, 1, true, {{2, 1, 0}}}, {}}, {{1, 1, true, {{2, 1, 1}}}, {}}};
+      const auto surfaces = reconstruct_volume_ids(disjoint, 1e-7, 65536, SIZE_MAX);
+      check(surfaces.size() == 2 && surfaces[0].object != surfaces[1].object &&
+            interval_transmittance(surfaces, 3) == 0,
+            "Deep ID averaging lost disjoint opaque camera coverage");
+      const auto surface_reference = reconstruct({0, 0, {disjoint[0].camera, disjoint[1].camera}}, true);
+      check(surface_reference.size() == 2 && surface_reference[0].object == 0 &&
+            surface_reference[1].object == 1,
+            "Same-depth surface IDs were merged");
+      std::mt19937 rng(601);
+      double maximum = 0;
+      for (int cameras : {1, 2, 4, 16}) {
+        std::vector<VolumeCameraSample> rays;
+        for (int i = 0; i < cameras; ++i) {
+          VolumeCameraSample ray{{uint64_t(i), 1, true, {}}, {}};
+          for (int object = 0; object < 3; ++object) {
+            double front = 1 + (rng() % 100) / 100.0;
+            ray.intervals.push_back({front, 5 + object * .2, (rng() % 200) / 100.0, object});
+          }
+          if (i % 3 == 0) ray.camera.events.push_back({3, .2, 0});
+          rays.push_back(std::move(ray));
+        }
+        const auto curve = reconstruct_volume_ids(rays, 1e-4, 65536, SIZE_MAX);
+        for (int i = 0; i <= 2000; ++i) {
+          const double z = .5 + i * .003;
+          const double error = std::abs(interval_transmittance(curve, z) - oracle(rays, z));
+          maximum = std::max(maximum, error);
+          check(error <= 1e-4, "Deep ID curve exceeded independent mixture oracle bound");
+        }
+        rejects([&] { reconstruct_volume_ids(rays, 1e-4, 1, SIZE_MAX); });
+        rejects([&] { reconstruct_volume_ids(rays, 1e-4, 65536, 1); });
+      }
+      auto invalid = overlap;
+      invalid[0].intervals[0].object = -1;
+      rejects([&] { reconstruct_volume_ids(invalid, 1e-4, 65536, SIZE_MAX); });
+      std::cout << "PASS deep ID mixture oracle, selection and fail-closed budgets; max="
+                << std::setprecision(17) << maximum << '\n';
+    }
     for (float error : {1e-4f, 1e-3f, 1e-2f}) {
       const auto budget = error_budget(error);
       check(std::abs(budget.density + budget.reconstruction + budget.coalescing + 1e-6 - error) < 1e-15,

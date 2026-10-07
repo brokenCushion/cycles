@@ -94,9 +94,32 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
     deep_error: FloatProperty(name="Deep Transmittance Error", default=1e-3, min=0, max=1e-2,
         description="0 selects strict; nonzero must exceed the 1e-6 FLOAT precision floor")
     deep_memory_mb: IntProperty(name="Deep Working Memory MiB", default=512, min=1, max=2147483647)
+    use_deep_ids: BoolProperty(name="Deep Object IDs", default=False,
+        description="Write a per-sample UINT object ID and name manifest")
     deep_samples: IntProperty(name="Deep Samples", default=0, min=0, max=4096,
         description="First N accepted camera samples; 0 uses all beauty samples")
 ''')
+edit('blender/addon/ui.py', 'class CYCLES_RENDER_PT_film_pixel_filter', """class CYCLES_RENDER_PT_deep(CyclesButtonsPanel, Panel):
+    bl_label = "Deep Visibility"
+    bl_parent_id = "CYCLES_RENDER_PT_film"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw_header(self, context):
+        self.layout.prop(context.scene.cycles, "use_deep_output", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        col = layout.column()
+        col.active = context.scene.cycles.use_deep_output
+        for prop in ("deep_output_path", "use_deep_volume", "use_deep_ids",
+                     "deep_error", "deep_samples", "deep_max_events", "deep_memory_mb"):
+            col.prop(context.scene.cycles, prop)
+
+
+class CYCLES_RENDER_PT_film_pixel_filter""")
+edit('blender/addon/ui.py', '    CYCLES_RENDER_PT_film_pixel_filter,',
+     '    CYCLES_RENDER_PT_deep,\n    CYCLES_RENDER_PT_film_pixel_filter,')
 edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_denoise_params', '''#ifdef WITH_CYCLES_DEEP_OPAQUE
   params.deep.enabled = background && !(b_engine.flag & blender::RE_ENGINE_PREVIEW) &&
                         get_boolean(cscene, "use_deep_output");
@@ -105,6 +128,7 @@ edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_
     params.deep.volume = get_boolean(cscene, "use_deep_volume");
     params.deep.error = get_float(cscene, "deep_error");
     params.deep.samples = get_int(cscene, "deep_samples");
+    params.deep.ids = get_boolean(cscene, "use_deep_ids");
     params.deep.max_events = get_int(cscene, "deep_max_events");
     params.deep.memory_bytes = size_t(get_int(cscene, "deep_memory_mb")) * 1024 * 1024;
     /* Deep publication covers a complete frame. Native automatic tiling is not
@@ -157,6 +181,8 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.export_statistics = tile.export_statistics();
   image.error = tile.error();
   image.deep_samples = tile.sample_limit();
+  image.object_manifest = tile.object_manifest();
+  image.ids = tile.ids();
   const auto check_cancel = [&] {
     if (tile.cancelled())
       throw std::runtime_error("Blender deep export cancelled; final file preserved");
@@ -248,7 +274,7 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
     std::vector<std::vector<deep::SurfaceSample>> row(tile.width);
     for (int x = 0; x < tile.width; ++x) {
       for (const auto &sample : tile.get_pixel(x, tile.height - 1 - y))
-        row[x].push_back({sample.front, sample.alpha});
+        row[x].push_back({sample.front, sample.alpha, sample.object});
     }
     check_cancel();
     return row;

@@ -19,6 +19,9 @@
 #include <fstream>
 #include <limits>
 #include <sstream>
+#include <map>
+#include <iomanip>
+#include <numeric>
 #include <stdexcept>
 #include <tbb/parallel_for.h>
 #include <tbb/task_arena.h>
@@ -42,6 +45,7 @@ Imath::Box2i box(const ImageWindow &w)
 
 struct FloatPixel {
   std::vector<float> z, a, back;
+  std::vector<uint32_t> id;
 };
 
 /* Compare every interval of the two step functions, including either side of
@@ -95,7 +99,7 @@ std::vector<FloatPixel> prepare(const SurfaceImage &image)
     }
     double previous = 0.0;
     for (const auto &sample : pixel) {
-      if (!std::isfinite(sample.depth) || sample.depth <= previous ||
+      if (!std::isfinite(sample.depth) || (image.ids ? sample.depth < previous : sample.depth <= previous) ||
           sample.depth > std::numeric_limits<float>::max() || !std::isfinite(sample.alpha) ||
           sample.alpha <= 0.0 || sample.alpha > 1.0)
       {
@@ -105,6 +109,11 @@ std::vector<FloatPixel> prepare(const SurfaceImage &image)
       if (z <= 0.0f || a <= 0.0f) {
         throw std::invalid_argument("Surface sample underflows FLOAT export");
       }
+      if (image.ids) {
+        if (sample.object < 0 || size_t(sample.object) >= image.object_manifest.size())
+          throw std::invalid_argument("Deep surface object outside manifest");
+        result[p].id.push_back(image.object_manifest[sample.object].first);
+      }
       result[p].z.push_back(z);
       result[p].a.push_back(a);
       previous = sample.depth;
@@ -112,6 +121,46 @@ std::vector<FloatPixel> prepare(const SurfaceImage &image)
     check_quantization(pixel, result[p]);
   }
   return result;
+}
+
+/* Manifest keys are the raw MurmurHash3 hex values used by Cycles
+ * Cryptomatte, not the exponent-adjusted FLOAT bit patterns. */
+std::string id_manifest(const SurfaceImage &image)
+{
+  std::map<uint32_t, std::string> names;
+  for (const auto &entry : image.object_manifest) {
+    const auto inserted = names.emplace(entry);
+    if (!inserted.second && inserted.first->second != entry.second)
+      throw std::invalid_argument("Deep ID name hash collision");
+  }
+  std::ostringstream out;
+  out << '{';
+  bool first = true;
+  for (const auto &entry : names) {
+    if (!first) out << ',';
+    first = false;
+    out << '"' << std::hex << std::setfill('0') << std::setw(8) << entry.first << "\":\"";
+    for (const unsigned char c : entry.second) {
+      if (c == '"' || c == '\\') out << '\\' << char(c);
+      else if (c < 32) out << "\\u" << std::setw(4) << unsigned(c);
+      else out << char(c);
+    }
+    out << '"';
+  }
+  out << '}';
+  return out.str();
+}
+
+void insert_ids(Imf::DeepFrameBuffer &fb, std::vector<FloatPixel> &pixels,
+                const Imath::Box2i &bounds, std::vector<uint32_t *> &ids)
+{
+  ids.reserve(pixels.size());
+  for (auto &pixel : pixels) ids.push_back(pixel.id.data());
+  const size_t width = size_t(int64_t(bounds.max.x) - bounds.min.x + 1);
+  const auto slice = Imf::Slice::Make(Imf::UINT, ids.data(), bounds,
+                                     sizeof(uint32_t *), width * sizeof(uint32_t *));
+  fb.insert("id", Imf::DeepSlice(Imf::UINT, slice.base, slice.xStride, slice.yStride,
+                                 sizeof(uint32_t)));
 }
 
 Imf::Header make_header(const SurfaceImage &image)
@@ -135,6 +184,11 @@ Imf::Header make_header(const SurfaceImage &image)
   header.setView(image.view);
   for (const char *name : {"Z", "ZBack", "A"}) {
     header.channels().insert(name, Imf::Channel(Imf::FLOAT));
+  }
+  if (image.ids) {
+    header.channels().insert("id", Imf::Channel(Imf::UINT));
+    header.insert("cycles:deepIDManifest", Imf::StringAttribute(id_manifest(image)));
+    header.insert("cycles:deepIDHash", Imf::StringAttribute("MurmurHash3_32_seed0"));
   }
   header.insert("cycles:frame", Imf::IntAttribute(image.frame));
   header.insert("cycles:depthConvention", Imf::StringAttribute("positive_axial_camera_z"));
@@ -184,6 +238,8 @@ void serialize(Imf::OStream &stream, const Imf::Header &header, std::vector<Floa
   fb.insert("Z", Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
   fb.insert("ZBack", Imf::DeepSlice(Imf::FLOAT, bs.base, bs.xStride, bs.yStride, sizeof(float)));
   fb.insert("A", Imf::DeepSlice(Imf::FLOAT, as.base, as.xStride, as.yStride, sizeof(float)));
+  std::vector<uint32_t *> ids;
+  if (header.channels().findChannel("id")) insert_ids(fb, pixels, dw, ids);
   Imf::DeepScanLineOutputFile file(stream, header, 1);
   file.setFrameBuffer(fb);
   file.writePixels(height);
@@ -275,10 +331,58 @@ static std::vector<IntervalSample> project_volume_depths(const std::vector<Inter
 }
 
 static std::vector<FloatPixel> prepare_volume(
-    const SurfaceImage &image, const std::vector<std::vector<IntervalSample>> &source)
+    const SurfaceImage &image, const std::vector<std::vector<IntervalSample>> &source,
+    const double publication_scale = 1)
 {
   if (!image.pixels.empty() || image.reduction_error != 0)
     throw std::invalid_argument("Volume fixture writer requires empty surface pixels and no reduction");
+  if (image.ids) {
+    std::vector<FloatPixel> output(source.size());
+    for (size_t p = 0; p < source.size(); ++p) {
+      std::map<int, std::vector<IntervalSample>> objects;
+      for (const auto &v : source[p]) {
+        if (v.object < 0 || size_t(v.object) >= image.object_manifest.size())
+          throw std::invalid_argument("Deep interval object outside manifest");
+        objects[v.object].push_back(v);
+      }
+      for (auto &entry : objects) {
+        std::sort(entry.second.begin(), entry.second.end(), [](const auto &a, const auto &b) {
+          if (a.front != b.front) return a.front < b.front;
+          return a.back < b.back;
+        });
+        SurfaceImage metadata = image;
+        metadata.ids = false;
+        metadata.data_window = {0, 0, 0, 0};
+        metadata.display_window = metadata.data_window;
+        const auto converted = prepare_volume(metadata, {entry.second},
+                                              publication_scale / objects.size());
+        auto &pixel = output[p];
+        for (size_t i = 0; i < converted[0].z.size(); ++i) {
+          pixel.z.push_back(converted[0].z[i]);
+          pixel.back.push_back(converted[0].back[i]);
+          pixel.a.push_back(converted[0].a[i]);
+          pixel.id.push_back(image.object_manifest[entry.first].first);
+        }
+      }
+      /* Each object was rounded/coalesced against its own curve. Product
+       * transmittance error is <= sum of the per-object allocations. */
+      auto &pixel = output[p];
+      std::vector<size_t> order(pixel.z.size());
+      std::iota(order.begin(), order.end(), 0);
+      std::sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+        if (pixel.z[a] != pixel.z[b]) return pixel.z[a] < pixel.z[b];
+        if (pixel.back[a] != pixel.back[b]) return pixel.back[a] < pixel.back[b];
+        return pixel.id[a] < pixel.id[b];
+      });
+      FloatPixel sorted;
+      for (const size_t i : order) {
+        sorted.z.push_back(pixel.z[i]); sorted.back.push_back(pixel.back[i]);
+        sorted.a.push_back(pixel.a[i]); sorted.id.push_back(pixel.id[i]);
+      }
+      pixel = std::move(sorted);
+    }
+    return output;
+  }
   SurfaceImage metadata = image;
   metadata.pixels.resize(source.size());
   auto pixels = prepare(metadata);
@@ -296,13 +400,13 @@ static std::vector<FloatPixel> prepare_volume(
      * subnormal contributions from the bounded number of cell records. */
     double error = interval_curve_error(source[p], quantized);
     const auto budget = error_budget(image.error);
-    const double allowance = budget.publication;
+    const double allowance = budget.publication * publication_scale;
     if (quantized.size() > 64) {
       /* Fewer small alpha contributions reduce consumer FLOAT accumulation
        * error as well as storage. Spend part of the existing export allowance;
        * the original source still checks EVERY boundary and interior extremum.
        * Do not merge steps/gaps or weaken the frame's 1e-6 curve budget. */
-      const auto reduced = reduce_interval_curve(quantized, budget.coalescing);
+      const auto reduced = reduce_interval_curve(quantized, budget.coalescing * publication_scale);
       if (reduced.size() < quantized.size()) {
         auto projected = project_volume_depths(reduced);
         const double candidate_error = interval_curve_error(source[p], projected);
@@ -402,7 +506,8 @@ void write_volume_exr_pixels(Imf::OStream &stream,
          * retains only the final FLOAT arrays, including their capacities. */
         const size_t retained = std::max({converted[0].z.capacity(),
                                          converted[0].back.capacity(),
-                                         converted[0].a.capacity()});
+                                         converted[0].a.capacity(),
+                                         converted[0].id.capacity()});
         size_t previous = row_samples.load(std::memory_order_relaxed);
         do {
           const size_t limit = image.volume_row_sample_limit ?
@@ -436,6 +541,8 @@ void write_volume_exr_pixels(Imf::OStream &stream,
                                         sizeof(float *), width * sizeof(float *));
         fb.insert(channel.first, Imf::DeepSlice(Imf::FLOAT, s.base, s.xStride, s.yStride, sizeof(float)));
       }
+      std::vector<uint32_t *> ids;
+      if (image.ids) insert_ids(fb, pixels, bounds, ids);
       file.setFrameBuffer(fb);
       {
         ExportTimer timer{image.export_statistics, ExportStatistics::Serialize};
@@ -510,10 +617,12 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
       scanline.pixel_aspect = image.pixel_aspect;
       scanline.view = image.view;
       scanline.compression = image.compression;
+      scanline.ids = image.ids;
+      scanline.object_manifest = image.object_manifest;
       scanline.data_window = {dw.min.x, int(y), dw.max.x, int(y)};
       scanline.pixels = row(int(y));
       auto pixels = prepare(scanline);
-      if (image.reduction_error > 0) {
+      if (image.reduction_error > 0 && !image.ids) {
         for (size_t x = 0; x < width; ++x) {
           const auto reduced = reduce_surface(scanline.pixels[x],
                                               image.reduction_error - export_error);
@@ -544,6 +653,8 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
       fb.insert("ZBack",
                 Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
       fb.insert("A", Imf::DeepSlice(Imf::FLOAT, as.base, as.xStride, as.yStride, sizeof(float)));
+      std::vector<uint32_t *> ids;
+      if (image.ids) insert_ids(fb, pixels, bounds, ids);
       file.setFrameBuffer(fb);
       {
         ExportTimer timer{image.export_statistics, ExportStatistics::Serialize};

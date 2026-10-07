@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "deep/capture.h"
+#include <map>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -22,13 +23,15 @@ Capture::Capture(const int width,
                  const bool volume_grid,
                  const int export_workers,
                  const float error,
-                 const int sample_limit)
+                 const int sample_limit,
+                 const bool ids)
     : error_setting_(error), width_(width), height_(height), samples_(samples), max_events_(max_events), volume_(volume),
       volume_grid_(volume_grid)
 {
   if (sample_limit < 0 || (sample_limit && sample_limit != samples))
     throw std::invalid_argument("Invalid deep sample limit");
   sample_limit_ = sample_limit;
+  ids_ = ids;
   error_budget(error);
   if (export_workers <= 0)
     throw std::invalid_argument("Deep export requires positive worker count");
@@ -62,7 +65,7 @@ Capture::Capture(const int width,
      * + ZIP scratch + compressed data, plus a transient replacement buffer.
      * 80 bytes/sample covers these copies and compression overhead. Double
      * source/quantization/curve scratch is bounded per pixel, not per row. */
-    const uint64_t row_sample_bytes = volume ? 80 : 128;
+    const uint64_t row_sample_bytes = volume ? (ids ? 128 : 80) : 128;
     rows_per_band_ = (height - 1) / 64 + 1;
     const size_t band_count = (height - 1) / rows_per_band_ + 1;
 #ifdef _WIN32
@@ -77,7 +80,7 @@ Capture::Capture(const int width,
                               uint64_t(height) * 32;
     const uint64_t worker =
                               (volume ? uint64_t(capacity_) * 512 : events * 512) +
-                              (volume ? output_events * 240 : 0) +
+                              (volume ? output_events * (ids ? 512 : 240) : 0) +
                               (volume ? uint64_t(samples) * 256 : 0) +
                               (volume_grid ? uint64_t(2) * reconstruction_limit() * 96 : 0);
     const uint64_t available = max_bytes - population_bytes;
@@ -575,6 +578,7 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
     if (deep_event_type(record[i]) == DEEP_SURFACE && record[i].surface_alpha == 1)
       opaque_depth = std::min(opaque_depth, double(record[i].front));
   std::vector<CubicDensityInterval> cubic;
+  std::map<int, std::vector<CubicDensityInterval>> object_cubic;
   for (unsigned i = 0; i < result.count; ++i) {
     const auto &event = record[i];
     /* A fully opaque surface makes all deeper extinction invisible to every
@@ -583,17 +587,30 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
     if (front > opaque_depth ||
         (deep_event_type(event) != DEEP_SURFACE && front == opaque_depth))
       continue;
+    const int object = ids() ? int(deep_event_object(event)) : -1;
+    if (ids() && size_t(object) >= object_manifest.size())
+      throw std::runtime_error("Deep event object outside manifest");
     if (deep_event_type(event) == DEEP_SURFACE)
-      output.camera.events.push_back({event.front, event.surface_alpha});
+      output.camera.events.push_back({event.front, event.surface_alpha, object});
     else if (deep_event_type(event) == DEEP_VOLUME_CUBIC) {
       const auto &b = density[i].optical_depth;
-      cubic.push_back({density[i].front, density[i].back, {b[0], b[1], b[2], b[3]}});
+      (ids() ? object_cubic[object] : cubic).push_back(
+          {density[i].front, density[i].back, {b[0], b[1], b[2], b[3]}});
     }
     else if (has_density(deep_event_type(event)))
       output.intervals.push_back({density[i].front, density[i].back,
-          double(density[i].optical_depth[0]) + double(density[i].optical_depth[1])});
+          double(density[i].optical_depth[0]) + double(density[i].optical_depth[1]), object});
     else
-      output.intervals.push_back({event.front, event.back, event.optical_depth});
+      output.intervals.push_back({event.front, event.back, event.optical_depth, object});
+  }
+  for (const auto &entry : object_cubic) {
+    ExportTimer timer{&export_statistics, ExportStatistics::DensityFit};
+    const auto fitted = integrate_cubic_density(entry.second,
+        density_tolerance / object_cubic.size(), reconstruction_limit());
+    if (fitted.size() > reconstruction_limit() - output.intervals.size())
+      throw std::runtime_error("Volume integration interval budget exceeded");
+    for (const auto &v : fitted)
+      output.intervals.push_back({v.front, v.back, v.optical_depth, entry.first});
   }
   if (!cubic.empty()) {
     ExportTimer timer{&export_statistics, ExportStatistics::DensityFit};
@@ -906,7 +923,7 @@ std::vector<SurfaceSample> Capture::reconstruct_pixel(const int x, const int y) 
   PixelLedger ledger{x, y, {}};
   for (int sample = 0; sample < population(x, y); ++sample)
     ledger.samples.push_back({uint64_t(sample), 1, true, events(x, y, sample)});
-  return reconstruct(ledger);
+  return reconstruct(ledger, ids());
 }
 std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const int y) const
 {
@@ -914,7 +931,8 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   auto fit = [&](std::vector<VolumeCameraSample> samples, double tolerance, size_t limit,
                  double reduction, size_t bytes = std::numeric_limits<size_t>::max()) {
     ExportTimer timer{&export_statistics, ExportStatistics::MixtureFit};
-    return reconstruct_volume(std::move(samples), tolerance, limit, reduction, bytes);
+    return ids() ? reconstruct_volume_ids(std::move(samples), tolerance + reduction, limit, bytes) :
+                   reconstruct_volume(std::move(samples), tolerance, limit, reduction, bytes);
   };
   if (!volume_ || error_.load() != NONE)
     throw std::runtime_error("Invalid volume capture reconstruction");
@@ -936,9 +954,9 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
     sample.intervals.reserve(curve.size() - surfaces);
     for (const auto &span : curve)
       if (span.front == span.back)
-        sample.camera.events.push_back({span.front, span.alpha});
+        sample.camera.events.push_back({span.front, span.alpha, span.object});
       else
-        sample.intervals.push_back({span.front, span.back, -std::log1p(-span.alpha)});
+        sample.intervals.push_back({span.front, span.back, -std::log1p(-span.alpha), span.object});
     return sample;
   };
   auto bytes = [](const VolumeCameraSample &sample) {

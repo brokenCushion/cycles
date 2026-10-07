@@ -35,11 +35,12 @@ struct Boundary {
   double depth;
   double alpha;
   size_t sample;
+  int object;
 };
 
 }  // namespace
 
-std::vector<SurfaceSample> reconstruct(const PixelLedger &pixel)
+std::vector<SurfaceSample> reconstruct(const PixelLedger &pixel, const bool with_ids)
 {
   std::unordered_set<uint64_t> ids;
   std::vector<const CameraSample *> samples;
@@ -84,14 +85,16 @@ std::vector<SurfaceSample> reconstruct(const PixelLedger &pixel)
     }
     for (const SurfaceEvent &event : samples[i]->events) {
       if (event.alpha > 0.0) {
-        boundaries.push_back({event.depth, event.alpha, i});
+        boundaries.push_back({event.depth, event.alpha, i, event.object});
       }
     }
   }
-  std::sort(boundaries.begin(), boundaries.end(), [](const Boundary &a, const Boundary &b) {
+  std::sort(boundaries.begin(), boundaries.end(), [with_ids](const Boundary &a, const Boundary &b) {
     if (a.depth != b.depth) {
       return a.depth < b.depth;
     }
+    if (with_ids && a.object != b.object)
+      return a.object < b.object;
     if (a.sample != b.sample) {
       return a.sample < b.sample;
     }
@@ -102,10 +105,14 @@ std::vector<SurfaceSample> reconstruct(const PixelLedger &pixel)
   double before = total.value();
   for (size_t i = 0; i < boundaries.size() && before > 0.0;) {
     const double depth = boundaries[i].depth;
+    const int object = boundaries[i].object;
+    if (with_ids && object < 0)
+      throw std::invalid_argument("Deep ID surface lacks an object index");
     do {
       const Boundary &event = boundaries[i++];
       transmittance[event.sample] *= 1.0 - event.alpha;
-    } while (i < boundaries.size() && boundaries[i].depth == depth);
+    } while (i < boundaries.size() && boundaries[i].depth == depth &&
+             (!with_ids || boundaries[i].object == object));
 
     Sum remaining;
     for (size_t j = 0; j < samples.size(); ++j) {
@@ -120,7 +127,7 @@ std::vector<SurfaceSample> reconstruct(const PixelLedger &pixel)
       after = before;
     }
     if (after < before) {
-      result.push_back({depth, 1.0 - after / before});
+      result.push_back({depth, 1.0 - after / before, with_ids ? object : -1});
     }
     before = after;
   }

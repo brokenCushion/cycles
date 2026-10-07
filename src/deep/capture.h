@@ -12,6 +12,8 @@
 #include <mutex>
 #include <memory>
 #include <vector>
+#include <string>
+#include <utility>
 
 namespace ccl::deep {
 /* Unit-weight camera capture with fixed or independently counted populations.
@@ -34,7 +36,8 @@ class Capture {
           bool volume_grid = false,
           int export_workers = 1,
           float error = 0,
-          int sample_limit = 0);
+          int sample_limit = 0,
+          bool ids = false);
   ~Capture();
   void record(int x, int y, uint32_t sample, float depth, int object = -1);
   /* Only complete records count as accepted camera samples. */
@@ -50,6 +53,10 @@ class Capture {
   VolumeCameraSample volume_sample(int x, int y, int sample,
                                    double density_tolerance = volume_density_error) const;
   std::vector<IntervalSample> reconstruct_volume_pixel(int x, int y) const;
+  std::vector<std::pair<uint32_t, std::string>> object_manifest;
+  void set_object_manifest(std::vector<std::pair<uint32_t, std::string>> manifest)
+  { object_manifest = std::move(manifest); ids_ = true; }
+  bool ids() const { return ids_; }
   float error() const { return error_setting_; }
   bool volume() const
   {
@@ -115,6 +122,7 @@ class Capture {
   void end_export_row(int y) const;
 
  private:
+  bool ids_ = false;
   float error_setting_ = 0;
   size_t volume_row_sample_limit_ = 0;
   size_t volume_pixel_bytes_ = 0;

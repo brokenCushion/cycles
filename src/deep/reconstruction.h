@@ -11,6 +11,7 @@ struct SurfaceEvent {
   double depth;
   /* Local opacity, before attenuation by earlier events. */
   double alpha;
+  int object = -1;
 };
 
 struct CameraSample {
@@ -34,6 +35,7 @@ struct SurfaceSample {
   double depth;
   /* Effective pixel opacity, not intrinsic material opacity. ZBack equals depth. */
   double alpha;
+  int object = -1;
 };
 
 /* Double-precision surface reference. Input order is immaterial; depths must be
@@ -42,6 +44,6 @@ struct SurfaceSample {
  * Invalid input throws std::invalid_argument. No quantization or reduction.
  * Deliberately recomputes weighted transmittance at each boundary: this is an
  * understandable oracle, not a production memory/performance implementation. */
-std::vector<SurfaceSample> reconstruct(const PixelLedger &pixel);
+std::vector<SurfaceSample> reconstruct(const PixelLedger &pixel, bool ids = false);
 
 }  // namespace ccl::deep

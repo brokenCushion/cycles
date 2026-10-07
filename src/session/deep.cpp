@@ -13,6 +13,7 @@
 #include "scene/shader_nodes.h"
 #include "session/session.h"
 #include "util/math.h"
+#include "util/murmurhash.h"
 #include "kernel/deep/types.h"
 
 #include <cmath>
@@ -382,6 +383,18 @@ static void validate_shader(Scene *scene, Shader *shader,
 
 void validate_deep_scene(Scene *scene, SessionParams &params)
 {
+  params.deep.object_manifest.clear();
+  if (params.deep.ids) {
+    std::map<uint32_t, std::string> names;
+    for (const Object *object : scene->objects) {
+      const std::string name = object->name.c_str();
+      const uint32_t id = util_murmur_hash3(name.data(), name.size(), 0);
+      const auto inserted = names.emplace(id, name);
+      require_deep(inserted.second || inserted.first->second == name,
+                   "object-name hash collision in deep ID manifest");
+      params.deep.object_manifest.emplace_back(id, name);
+    }
+  }
   deep::error_budget(params.deep.error);
   require_deep(params.deep.samples >= 0, "deep sample limit must be nonnegative");
   require_deep(deep_object_count_valid(scene->objects.size()),

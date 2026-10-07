@@ -754,7 +754,9 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
       params.width, params.height, capture_samples, capture_bytes,
       (settings.transparent || settings.volume) ? event_capacity : 0,
       true, adaptive, settings.volume, settings.volume_grid, TaskScheduler::max_concurrency(),
-      settings.error, settings.samples ? capture_samples : 0);
+      settings.error, settings.samples ? capture_samples : 0, settings.ids);
+  if (settings.ids)
+    deep_capture_->set_object_manifest(settings.object_manifest);
   for (auto &work : path_trace_works_) {
     work->set_deep_capture(deep_capture_.get());
   }

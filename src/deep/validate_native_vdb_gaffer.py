@@ -38,6 +38,10 @@ parser.add_argument('--beauty-repeat', type=Path, action='append',
                     help='Supply four times: five independent CUDA deep-off references including baseline')
 parser.add_argument('--beauty-seed', type=Path, action='append', default=[],
                     help='Supply four distinct-seed deep-off controls for the pixel standard error')
+parser.add_argument('--beauty-snapshot-off', type=Path, action='append', default=[])
+parser.add_argument('--beauty-snapshot-on', type=Path, action='append', default=[])
+parser.add_argument('--beauty-snapshot-build', type=Path,
+                    help='Isolated diagnostic build manifest; resolves only matching-case flagged pixels')
 parser.add_argument('--oracle-python', type=Path,
                     help='Existing NumPy Python environment for bounded, large camera-CSV checks')
 parser.add_argument('--beauty-pool', type=Path, action='append', default=[],
@@ -61,9 +65,12 @@ for key in ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
 for key in ('denoiser', 'denoising_use_gpu', 'save_render_passes'):
     check(settings.get(key) == reference.get(key), 'Beauty baseline differs: ' + key)
 if not args.reader_only:
-    check(settings.get('renderer_sha256') is not None and
-          settings['renderer_sha256'] == reference.get('renderer_sha256'),
-          'Beauty baseline must use the same executable')
+    check(settings.get('renderer_sha256') is not None, 'Missing renderer identity')
+    if settings['device'] != 'CUDA':
+        check(settings['renderer_sha256'] == reference.get('renderer_sha256'),
+              'CPU beauty baseline must use the same executable')
+    # CUDA checks every control's matching executable or recorded unchanged
+    # beauty-source identity below, as required by the compatible-pool policy.
 script = Gaffer.ScriptNode()
 
 
@@ -124,7 +131,9 @@ if settings['device'] == 'CUDA' and not args.reader_only:
         args.beauty_pool += reference_pool(directory, args.beauty_pool_root, args.beauty_builds)
     cuda_report = validate_cuda_beauty(directory, [baseline] + (args.beauty_repeat or []),
                                     pool=args.beauty_pool, builds=args.beauty_builds,
-                                    seed_references=args.beauty_seed)
+                                    seed_references=args.beauty_seed,
+                                    snapshot_off=args.beauty_snapshot_off, snapshot_on=args.beauty_snapshot_on,
+                                    snapshot_build=args.beauty_snapshot_build)
     # The final user rule replaces open-ended repeated-state searches. Estimate
     # noise once with four seeds only if a pixel is not already reproduced.
     if cuda_report['calibration']['requires_seed_controls'] and not args.beauty_seed and args.beauty_builds:
@@ -151,7 +160,9 @@ if settings['device'] == 'CUDA' and not args.reader_only:
             args.beauty_seed.append(control)
         cuda_report = validate_cuda_beauty(directory, [baseline] + (args.beauty_repeat or []),
                                          pool=args.beauty_pool, builds=args.beauty_builds,
-                                         seed_references=args.beauty_seed)
+                                         seed_references=args.beauty_seed,
+                                         snapshot_off=args.beauty_snapshot_off, snapshot_on=args.beauty_snapshot_on,
+                                         snapshot_build=args.beauty_snapshot_build)
     beauty_error = cuda_report['max_deep_on_off']
     repeat_error = cuda_report['max_ordinary_repeat']
     beauty_peak = cuda_report['peak_absolute_value']

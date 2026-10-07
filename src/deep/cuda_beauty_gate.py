@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 import struct
 import statistics
+import hashlib
 
 SETTINGS_KEYS = ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
     'camera_world_matrix', 'camera_frame', 'frame', 'adaptive', 'adaptive_threshold',
@@ -98,8 +99,67 @@ def bias_gate(differences):
                 standard_error=se, limit=3*se, pixels=len(differences))
 
 
+def snapshot_raw_agreement(directory, off, on, manifest, pixels, channels):
+    """Resolve only an identical case in the isolated majorant diagnostic build."""
+    import GafferImage
+    import imath
+    settings = json.loads((Path(directory)/'render.json').read_text())
+    build = json.loads(Path(manifest).read_text())
+    if not build.get('diagnostic_only') or build.get('snapshot_commit') != '9a017f055':
+        raise ValueError('Need the isolated majorant-snapshot diagnostic build')
+    sha = hashlib.sha256()
+    with Path(build['executable']).open('rb') as stream:
+        for block in iter(lambda: stream.read(1024*1024), b''):
+            sha.update(block)
+    if sha.hexdigest() != build['executable_sha256'] or sha.hexdigest() == settings['renderer_sha256']:
+        raise ValueError('Snapshot executable identity mismatch')
+    off, on = [Path(p).resolve() for p in off], [Path(p).resolve() for p in on]
+    if len(off) != 3 or len(on) != 3 or len(set(off+on)) != 6:
+        raise ValueError('Need three independent snapshot deep-off and three deep-on renders')
+    nodes, counts = [], []
+    for p in off+on:
+        s = json.loads((p/'render.json').read_text())
+        if s['renderer_sha256'] != build['executable_sha256'] or any(s.get(k) != settings.get(k) for k in SETTINGS_KEYS):
+            raise ValueError('Snapshot case/beauty settings mismatch: '+str(p))
+        if s['deep'] != (p in on):
+            raise ValueError('Snapshot on/off role mismatch')
+        if p in on and any(s.get(k) != settings.get(k) for k in
+                ('deep_error','deep_samples','deep_ids','deep_volume','deep_max_events','deep_memory_mb')):
+            raise ValueError('Snapshot deep capture settings mismatch: '+str(p))
+        node = GafferImage.ImageReader()
+        node['fileName'].setValue((p/'render-passes.exr').as_posix())
+        nodes.append(node)
+        counts.append(s['samples'])
+    fmt = nodes[0]['out']['format'].getValue()
+    if any(n['out']['format'].getValue() != fmt or
+           any(c not in n['out']['channelNames'].getValue() for c in channels) for n in nodes):
+        raise ValueError('Snapshot raw image/channel mismatch')
+    count_index = next(i for i, c in enumerate(channels) if 'Debug Sample Count' in c)
+    tile = GafferImage.ImagePlug.tileSize()
+    results = []
+    for x, file_y in pixels:
+        y = fmt.height()-1-file_y
+        if not (0 <= x < fmt.width() and 0 <= y < fmt.height()):
+            raise ValueError('Snapshot pixel outside image')
+        origin = imath.V2i((x//tile)*tile, (y//tile)*tile)
+        index = (y-origin.y)*tile+x-origin.x
+        values = [[float(n['out'].channelData(c,origin)[index]) for c in channels] for n in nodes]
+        populations = [v[count_index]*maximum for v, maximum in zip(values, counts)]
+        if any(not math.isfinite(n) or abs(n-round(n)) > 1e-4 or n < 1 for n in populations):
+            raise ValueError('Invalid snapshot accepted sample count')
+        populations = [round(n) for n in populations]
+        checks = [raw_pass_gate(v, population, values[:3], populations[:3], envelope=0)
+                  for v, population in zip(values[3:], populations[3:])]
+        results.append(dict(file_pixel=[x,file_y], passed=all(c['passed'] for c in checks),
+            bit_identical=all(v == values[0] for v in values), channels=channels,
+            runs=[str(p) for p in off+on], values=values, sample_counts=populations,
+            checks=checks, snapshot_executable_sha256=build['executable_sha256'],
+            diagnostic_only=True, rule='Each deep-on matches ONE snapshot deep-off across ALL raw channels within unchanged 4 FLOAT ULP and exact counts'))
+    return results
+
+
 def validate_cuda_beauty(directory, references, qualification=True, output=None, pool=(), builds=None,
-                         seed_references=()):
+                         seed_references=(), snapshot_off=(), snapshot_on=(), snapshot_build=None):
     """Check all stored denoiser inputs; trace every denoised outlier at its pixel."""
     import GafferImage
     import imath
@@ -118,13 +178,17 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     def executable(p, s):
         return s.get('renderer_sha256') or json.loads((p / 'measurement.json').read_text())['executable_sha256']
     digest = executable(directory, settings[0])
+    identities = json.loads(Path(builds).read_text())['builds'] if builds else {}
     for p, s in zip(paths, settings):
-        if executable(p, s) != digest or any(s.get(k) != settings[0].get(k) for k in keys):
+        other = executable(p, s)
+        same_beauty = (other == digest or
+            (digest in identities and other in identities and
+             identities[digest]['beauty_source_sha256'] == identities[other]['beauty_source_sha256']))
+        if not same_beauty or any(s.get(k) != settings[0].get(k) for k in keys):
             raise ValueError('Reference executable/settings mismatch: ' + str(p))
         if not s.get('save_render_passes') or not s.get('diagnostic_sample_count_pass'):
             raise ValueError('CUDA gate needs saved denoiser inputs and accepted sample counts')
     pool = list(dict.fromkeys(Path(p).resolve() for p in list(references) + list(pool)))
-    identities = json.loads(Path(builds).read_text())['builds'] if builds else {}
     for p in pool:
         s = json.loads((p / 'render.json').read_text())
         other = executable(p, s)
@@ -503,6 +567,27 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
             all(p['passed'] for p in report['statistical_pixels']) and
             report['bias_passed'] and report['statistical_count_passed'] and
             report['calibration']['complete'])
+        report['calibrated_raw_passed'] = report['raw_passed']
+        report['root_cause_resolutions'] = []
+        if any((snapshot_off, snapshot_on, snapshot_build)):
+            if not all((snapshot_off, snapshot_on, snapshot_build)):
+                raise ValueError('Need complete snapshot on/off/build evidence')
+            flagged = [p['file_pixel'] for p in report['statistical_pixels']
+                       if not p['passed'] or not report['statistical_count_passed']]
+            if flagged:
+                report['root_cause_resolutions'] = snapshot_raw_agreement(directory,
+                    snapshot_off, snapshot_on, snapshot_build, flagged, checked_channels)
+                resolved = {tuple(p['file_pixel']) for p in report['root_cause_resolutions'] if p['passed']}
+                for pixel in report['statistical_pixels']:
+                    pixel['resolved_by_majorant_snapshot'] = tuple(pixel['file_pixel']) in resolved
+                unresolved = [p for p in report['statistical_pixels'] if tuple(p['file_pixel']) not in resolved]
+                report['unresolved_statistical_pixels'] = len(unresolved)
+                for group in groups:
+                    stats[group]['violations'] = sum(group in p['failed_passes'] for p in unresolved)
+                report['raw_passed'] = (not report['unmatched_population_pixels'] and
+                    report['bias_passed'] and report['calibration']['complete'] and
+                    len(unresolved) <= report['statistical_count_limit'] and
+                    all(p['passed'] for p in unresolved))
     report['outliers_explained'] = not report['unexplained_outlier_pixels']
     report['passed'] = report['raw_passed'] and report['outliers_explained']
     report['denoised_pixels_csv'] = str(trace)

@@ -37,6 +37,14 @@ assert not raw_pass_gate([3e-7],16,[[0]]*5,[16]*5,envelope=1e-7)['passed']
 assert raw_pass_gate([.74,891.6,2.59],4,[[.74,891.6,2.59]],[4],envelope=0)['passed']
 assert not raw_pass_gate([.74,891.6,2.59],4,[[.74,891.7,2.59],[.73,891.6,2.59]],
                          [4,4],envelope=0)['passed']
+# Root-cause evidence must check auxiliary inputs too, not just identical RGB.
+snapshot = [.13, .10, .10, 1, .39, .37, .38, -.006, -.019, -.62, 992.4]
+assert raw_pass_gate(snapshot,416,[snapshot],[416],envelope=0)['passed']
+for channel in (4,8,10):
+    changed = list(snapshot)
+    changed[channel] += 8*float32_ulp(snapshot[channel])
+    assert not raw_pass_gate(changed,416,[snapshot],[416],envelope=0)['passed']
+assert not raw_pass_gate(snapshot,944,[snapshot],[416],envelope=0)['passed']
 with TemporaryDirectory() as temporary:
     root = Path(temporary)
     builds = root / 'builds.json'

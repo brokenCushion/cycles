@@ -99,6 +99,24 @@ beauty-source hashes and kernel resource records. No beauty kernel change.
    compute signed mean and sample SD / sqrt(image pixel count) of those paired
    residuals. Missing counts/nonfinite data fail; no ULP bias floor.
 
+4. Root-cause resolution (user decision, 2026-10-07): a pixel flagged by the
+   calibrated rule is resolved if deep-on and deep-off in the separate
+   majorant-snapshot diagnostic build agree on ALL checked raw passes there.
+   Agreement uses the unchanged reproduced-state rule: each diagnostic deep-on
+   matches ONE diagnostic deep-off across all channels within 4 FLOAT ULP and
+   identical accepted counts. Report bit identity separately, never claim it
+   when only this existing agreement rule passes. Verify six independent
+   renders, diagnostic executable and matching case/capture settings. Keep the
+   patch diagnostic-only and out of both the deep branch and ordinary pool.
+   Preserve the original calibrated flags/results and record each resolution.
+   Unresolved pixels or any unchanged bias/count gate failure stop work for
+   investigation; this adds no numerical threshold or renderer change.
+
+User's statistical note: under exchangeability, exceeding 31 leave-one-out
+maxima occurs roughly 1/32 per independent measure. Twelve channels plus a
+count give multiple opportunities; albedo R/G/B describe one correlated
+event. A single flag is therefore not itself proof of a deep-to-beauty effect.
+
 The pool accumulates compatible ordinary controls across phases; verify source
 and executable identities. Calibration uses no new renders where controls and
 the four seed estimates already exist (31 controls for realistic117). Reuse
@@ -106,7 +124,8 @@ those estimates for remaining pairs of the same case/settings. If calibration
 needs four seeds for a new case, create them once, never an open-ended search.
 The historical K=5 envelopes remain diagnostic evidence; the denoised
 explanation rule is unchanged. A deep-on result outside the calibrated range
-stops work as a possible real deep-to-beauty effect. CPU/deep budgets unchanged.
+first uses the diagnostic root-cause step, then stops if unresolved.
+CPU/deep budgets unchanged.
 
 ## 3. Phases
 
@@ -1516,7 +1535,7 @@ Report: `builds/validation/landscape-cloud/optimization-phase6/review/final-raw-
 fresh IDs-off 81/81 + 30/30 replay and final full regression replay are NOT RUN.
 Phase 6 remains unaccepted; no 6a/6b/Phase 9 work started.
 
-#### Phase 6 calibrated CUDA raw policy - final acceptance stop
+#### Phase 6 calibrated CUDA raw policy - historical flag before root-cause resolution
 
 Rechecked saved realistic117 / original max1024 adaptive / GPU OIDN /
 IDs-on / 1e-4 / cap0. No new renders. Exactly 31 compatible unchanged-beauty
@@ -1560,3 +1579,38 @@ Log: `builds/phase6-calibrated-raw-policy.log`.
 revise the policy again. Three remaining realistic pairs, fresh 81/81 + 30/30
 identity replay and final full regression replay NOT RUN. Phase 6 unaccepted;
 no 6a/6b/Phase 9 started.
+
+#### Phase 6 root-cause review - realistic117 1e-4 resolved
+
+Read all six saved raw EXRs at (99,7), not only the previous RGB summary.
+Three deep-off and three deep-on/IDs-on snapshot runs have 416 samples each.
+Each deep-on matches off-1 across ALL 12 checked channels within the existing
+4-ULP rule. RGB/A and populations are bit-identical; albedo/normal/depth are
+not bit-identical, with at most 1/2/3 ULP respectively against off-1.
+
+| Raw channel at (99,7) | Off 1 | Off 2 | Off 3 | On 1 | On 2 | On 3 | Max on vs off-1 ULP |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| ViewLayer.Debug Sample Count.X | 0.40625 | 0.40625 | 0.40625 | 0.40625 | 0.40625 | 0.40625 | 0 |
+| ViewLayer.Denoising Albedo.R | 0.3936423659324646 | 0.3936423659324646 | 0.3936423659324646 | 0.3936423659324646 | 0.39364239573478699 | 0.3936423659324646 | 1 |
+| ViewLayer.Denoising Albedo.G | 0.36854931712150574 | 0.36854934692382812 | 0.36854934692382812 | 0.36854928731918335 | 0.36854931712150574 | 0.36854931712150574 | 1 |
+| ViewLayer.Denoising Albedo.B | 0.38054010272026062 | 0.38054004311561584 | 0.38054010272026062 | 0.38054010272026062 | 0.38054004311561584 | 0.38054010272026062 | 2 |
+| ViewLayer.Denoising Depth.Z | 992.44610595703125 | 992.44610595703125 | 992.446044921875 | 992.4459228515625 | 992.446044921875 | 992.446044921875 | 3 |
+| ViewLayer.Denoising Normal.X | -0.0061283782124519348 | -0.0061283777467906475 | -0.0061283777467906475 | -0.0061283791437745094 | -0.0061283777467906475 | -0.0061283777467906475 | 2 |
+| ViewLayer.Denoising Normal.Y | -0.019438771530985832 | -0.01943877711892128 | -0.019438762217760086 | -0.019438769668340683 | -0.019438767805695534 | -0.019438771530985832 | 2 |
+| ViewLayer.Denoising Normal.Z | -0.62305563688278198 | -0.62305557727813721 | -0.62305563688278198 | -0.62305563688278198 | -0.62305563688278198 | -0.62305557727813721 | 1 |
+| ViewLayer.Noisy Image.R | 0.13867595791816711 | 0.13867595791816711 | 0.13867595791816711 | 0.13867595791816711 | 0.13867595791816711 | 0.13867595791816711 | 0 |
+| ViewLayer.Noisy Image.G | 0.10783448815345764 | 0.10783448815345764 | 0.10783448815345764 | 0.10783448815345764 | 0.10783448815345764 | 0.10783448815345764 | 0 |
+| ViewLayer.Noisy Image.B | 0.10268621891736984 | 0.10268621891736984 | 0.10268621891736984 | 0.10268621891736984 | 0.10268621891736984 | 0.10268621891736984 | 0 |
+| ViewLayer.Noisy Image.A | 1 | 1 | 1 | 1 | 1 | 1 | 0 |
+
+The normalized debug count 0.40625 is 416/1024. Snapshot patch `9a017f055`
+remains isolated; the diagnostic executable is never an ordinary reference.
+No new diagnostic renders or gate thresholds were introduced. The original
+calibrated albedo flag is retained but resolved by the user-approved root-cause
+step; every original image-wide bias channel still passes. CPU remains exact.
+
+Raw policy application: PASS for existing IDs-on realistic117 1e-4/all. Deep
+publication/oracle qualification is being completed, followed by three pending
+realistic pairs and fresh identity/full regression replay before Phase 6 review.
+Evidence: `builds/validation/landscape-cloud/optimization-phase6/review/snapshot-all-raw-pixel99-7.json`
+and `root-cause-raw-policy-existing.json`.

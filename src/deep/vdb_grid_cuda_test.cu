@@ -86,6 +86,15 @@ __global__ void integrate_grid(const nanovdb::NanoGrid<float> *grid,
           accessor, ray.origin, ray.direction, 0.0, 1.0, .02, ray.length, 1.0, 100.0,
           events + extra + i, density + extra + i, count, DEEP_MAX_VOLUME_EVENTS, 0, 16384, eps,
           DEEP_MAX_MEDIA, nullptr, i + 7);
+      KernelDeepWriteState count_only;
+      count_only.count_only = true;
+      const auto counted = deep_volume_grid_capture(
+          accessor, ray.origin, ray.direction, 0.0, 1.0, .02, ray.length, 1.0, 100.0,
+          nullptr, density + extra + i, count, DEEP_MAX_VOLUME_EVENTS, 0, 16384, eps,
+          DEEP_MAX_MEDIA, nullptr, i + 7, &count_only);
+      if (counted.status != reduced.status || counted.count != reduced.count ||
+          counted.error != reduced.error || count_only.written_bytes)
+        result.error = DEEP_ERROR_STATE;
       if (reduced.status != DEEP_COMPLETE || reduced.count > captured.count) {
         result.error = reduced.error;
         break;

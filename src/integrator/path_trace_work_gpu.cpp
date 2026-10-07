@@ -997,8 +997,22 @@ PathTraceWorkGPU::DeepBatch::DeepBatch(Device *device)
       ranges(device, "deep flat ranges", MEM_READ_WRITE),
       events(device, "deep flat events", MEM_READ_WRITE),
       density(device, "deep flat density", MEM_READ_WRITE),
-      media(device, "deep flat media")
+      media(device, "deep flat media"),
+      host_buffers{&records, &ranges, &events, &density}
 {
+}
+
+PathTraceWorkGPU::DeepBatch::~DeepBatch()
+{
+  if (pending)
+    queue->synchronize();
+  unpin();
+}
+
+void PathTraceWorkGPU::DeepBatch::unpin()
+{
+  while (pinned)
+    queue->unpin_host_memory(*host_buffers[--pinned]);
 }
 
 void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
@@ -1016,7 +1030,8 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
       4 * (sizeof(KernelDeepRecord) + sizeof(KernelDeepRange)) +
       2 * media_count * sizeof(KernelDeepMedium);
   const int batch_size = int(min(size_t(32768), deep_grid_staging_bytes / (2 * lane_bytes)));
-  const size_t event_slots = (deep_grid_staging_bytes - size_t(batch_size) * lane_bytes) /
+  /* Leave 64 KiB for pinned-page rounding of the eight host allocations. */
+  const size_t event_slots = (deep_grid_staging_bytes - 64 * 1024 - size_t(batch_size) * lane_bytes) /
       (4 * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)));
   if (event_slots < size_t(capacity)) {
     capture->fail(DEEP_ERROR_CAPACITY);
@@ -1032,20 +1047,28 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
   for (auto &buffer : deep_batches_) {
     if (!buffer)
       buffer = make_unique<DeepBatch>(device_);
+    if (buffer->records.data_size != size_t(batch_size) ||
+        buffer->events.data_size != event_slots)
+      buffer->unpin();
     buffer->records.alloc(batch_size);
     buffer->ranges.alloc(batch_size);
     buffer->events.alloc(event_slots);
     buffer->density.alloc(event_slots);
     buffer->media.alloc_to_device(size_t(batch_size) * media_count);
-    for (device_memory *mem : {static_cast<device_memory *>(&buffer->records),
-                              static_cast<device_memory *>(&buffer->ranges),
-                              static_cast<device_memory *>(&buffer->events),
-                              static_cast<device_memory *>(&buffer->density)}) {
-      if (!mem->device_pointer)
-        buffer->queue->zero_to_device(*mem);
-    }
-    buffer->pending = true;
     buffer->count = 0;
+    for (device_memory *mem : buffer->host_buffers) {
+      if (!mem->device_pointer) {
+        buffer->pending = true;
+        buffer->queue->zero_to_device(*mem);
+      }
+    }
+    while (buffer->pinned < 4 && !device_->have_error()) {
+      if (!buffer->queue->pin_host_memory(*buffer->host_buffers[buffer->pinned])) {
+        device_->set_error("Unable to pin bounded deep readback buffers");
+        break;
+      }
+      ++buffer->pinned;
+    }
   }
   /* Every return drains pending copies before host buffers can be changed or
    * freed. Beauty does not resume until both visibility queues are idle. */

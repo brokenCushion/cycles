@@ -39,6 +39,8 @@ class CUDADeviceQueue : public DeviceQueue {
   void copy_from_device(device_memory &mem) override;
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   void copy_from_device_prefix(device_memory &mem, size_t bytes) override;
+  bool pin_host_memory(device_memory &mem) override;
+  void unpin_host_memory(device_memory &mem) override;
 #endif
   void *copy_from_device_synchronized(device_memory &mem, vector<uint8_t> &storage) override;
 

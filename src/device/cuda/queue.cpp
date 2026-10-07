@@ -232,6 +232,19 @@ void CUDADeviceQueue::copy_from_device(device_memory &mem)
       "copy_from_device");
 }
 #ifdef WITH_CYCLES_DEEP_OPAQUE
+bool CUDADeviceQueue::pin_host_memory(device_memory &mem)
+{
+  const CUDAContextScope scope(cuda_device_);
+  assert_success(cuMemHostRegister(mem.host_pointer, mem.memory_size(), 0), "pin deep host buffer");
+  return !cuda_device_->have_error();
+}
+
+void CUDADeviceQueue::unpin_host_memory(device_memory &mem)
+{
+  const CUDAContextScope scope(cuda_device_);
+  assert_success(cuMemHostUnregister(mem.host_pointer), "unpin deep host buffer");
+}
+
 void CUDADeviceQueue::copy_from_device_prefix(device_memory &mem, const size_t bytes)
 {
   if (bytes > mem.memory_size()) {

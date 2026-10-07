@@ -180,12 +180,16 @@ class PathTraceWorkGPU : public PathTraceWork {
   device_vector<KernelDeepDensity> deep_density_;
   struct DeepBatch {
     explicit DeepBatch(Device *device);
+    ~DeepBatch();
+    void unpin();
     unique_ptr<DeviceQueue> queue;
     device_vector<KernelDeepRecord> records;
     device_vector<KernelDeepRange> ranges;
     device_vector<KernelDeepEvent> events;
     device_vector<KernelDeepDensity> density;
     device_only_memory<KernelDeepMedium> media;
+    device_memory *host_buffers[4];
+    int pinned = 0;
     int count = 0;
     size_t slots = 0;
     bool pending = false;

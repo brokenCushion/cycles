@@ -3,6 +3,7 @@
 import csv
 import json
 import math
+import re
 from pathlib import Path
 import struct
 
@@ -11,6 +12,14 @@ SETTINGS_KEYS = ('source_sha256', 'samples', 'resolution', 'percentage', 'device
     'adaptive_min_samples', 'seed', 'use_animated_seed', 'denoising', 'denoiser',
     'denoising_use_gpu', 'pixel_filter', 'threads', 'save_render_passes',
     'diagnostic_sample_count_pass')
+
+
+def completed_sample_count(log, maximum):
+    """Single-tile PassAccessor normalization, from final scheduler statistics."""
+    counts = re.findall(r'Rendered (\d+) samples in [0-9.e+-]+ seconds\s*\n', log)
+    if len(counts) != 1 or not 0 < int(counts[0]) <= maximum:
+        raise ValueError('Need one valid completed tile for sample-count normalization')
+    return int(counts[0])
 
 
 def reference_pool(directory, root, builds):

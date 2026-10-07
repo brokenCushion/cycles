@@ -81,6 +81,8 @@ for name, case in manifest['cases'].items():
             command += ['--save-render-passes', '--diagnostic-sample-count']
         elif name in ('denoised_volume', 'adaptive_denoised_volume'):
             command += ['--save-render-passes']
+        if deep_samples:
+            command[1:1] = ['--log', 'cycles', '--log-level', 'info']
         if kind == 'deep':
             command += ['--deep-samples', str(deep_samples)]
             command += ['--deep-error', error, '--deep', '--deep-volume', '--deep-memory-mb', '1024',

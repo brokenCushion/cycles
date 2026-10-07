@@ -24,6 +24,7 @@ import imath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from validate_gaffer import deep_error, deep_samples, check, deep_pixel, tile_index, population_reference_error, beauty_repeat_gate
+from cuda_beauty_gate import completed_sample_count
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('directory', type=Path)
@@ -478,6 +479,7 @@ elif diagnostic.exists():
     check(raw_error <= deep_tolerance, 'EXR differs from accepted camera transmittance')
 
 
+native_sample_count_divisor = None
 if requested_samples and not args.reader_only:
     check(settings.get('diagnostic_sample_count_pass'),
           'Sample-limited qualification requires native accepted-count diagnostics')
@@ -485,9 +487,29 @@ if requested_samples and not args.reader_only:
     counts['fileName'].setValue((directory / 'render-passes.exr').as_posix())
     names = [c for c in counts['out']['channelNames'].getValue() if 'Debug Sample Count' in c]
     check(len(names) == 1 and bool(camera_populations), 'Missing native accepted-count pass/populations')
+    # PassAccessor divides this pass by the completed render-tile samples,
+    # which can be below the configured maximum after adaptive convergence.
+    log = directory / 'process.log'
+    if not log.is_file():
+        log = directory.parent / (directory.name + '.log')
+    divisor = settings['samples']
+    if settings['adaptive']:
+        # A one-ray prefix only needs proof that the native count is positive.
+        # Larger adaptive prefixes require recorded final scheduler statistics.
+        if capture_samples == 1:
+            divisor = None
+        else:
+            check(log.is_file(), 'Adaptive sample-limit qualification requires completed-tile statistics')
+            divisor = completed_sample_count(log.read_text(errors='replace'), settings['samples'])
+    native_sample_count_divisor = divisor
     for (x, y), population in camera_populations.items():
         origin, index = tile_index(imath.V2i(x, height-1-y))
-        value = float(counts['out'].channelData(names[0], origin)[index]) * settings['samples']
+        value = float(counts['out'].channelData(names[0], origin)[index])
+        if divisor is None:
+            check(math.isfinite(value) and 0 < value <= 1 and population == 1,
+                  'One-ray prefix requires a positive native accepted population')
+            continue
+        value *= divisor
         check(math.isfinite(value) and abs(value-round(value)) <= 1e-4 and
               1 <= round(value) <= settings['samples'], 'Invalid native accepted population')
         check(population == min(round(value), capture_samples),
@@ -571,6 +593,7 @@ loaded['fileName'].setValue(review.as_posix())
 loaded.load()
 check(loaded.getFocus().isSame(loaded['VDBDeepPoints']), 'Review focus did not reload')
 report = {'deep_error': deep_tolerance, 'passed': beauty_passed and slice_error <= deep_tolerance,
+          'native_sample_count_divisor': native_sample_count_divisor,
           'beauty_passed': beauty_passed, 'depth_cuts_passed': slice_error <= deep_tolerance,
           'scope': 'Gaffer EXR interoperability and beauty isolation',
           'expected_empty': args.expect_empty,

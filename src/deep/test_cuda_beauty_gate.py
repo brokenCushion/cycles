@@ -3,7 +3,19 @@ import math
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from cuda_beauty_gate import float32_ulp, raw_pass_gate, reference_pool
+from cuda_beauty_gate import float32_ulp, raw_pass_gate, reference_pool, completed_sample_count
+
+assert completed_sample_count('Rendered 8 samples in 0.2 seconds (0.025 seconds per sample)\n'
+                              '| Rendered 16 samples in 0.4 seconds\n', 64) == 16
+assert completed_sample_count('| Rendered 128 samples in 1.4 seconds\n', 128) == 128
+for log in ('', 'Rendered 0 samples in 1 seconds\n', 'Rendered 65 samples in 1 seconds\n',
+            'Rendered 16 samples in 1 seconds\nRendered 16 samples in 2 seconds\n'):
+    try:
+        completed_sample_count(log, 64)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('Ambiguous/invalid sample-count normalization accepted')
 
 assert float32_ulp(0) == 2**-149
 assert float32_ulp(-1) == 2**-23

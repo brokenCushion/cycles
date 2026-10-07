@@ -23,15 +23,20 @@ def allocated(path):
     return (high.value<<32)|low
 
 
-def archive(row,publish):
+def physical_source(row):
     # Use the resolved physical path, never unlink through a junction folder.
-    source=Path(row['physical_path']);target=Path(str(source)+'.zip')
+    source=Path(row['physical_path'])
     allowed=[Path('D:/CyclesDeepArchive').resolve(),Path('D:/CyclesDeepScratch').resolve(),
              (Path(__file__).resolve().parents[1]/'builds').resolve()]
     if source.resolve()!=source or not any(source.is_relative_to(root) for root in allowed):
         raise ValueError('Archive source outside approved storage: '+str(source))
     if row['required_uncompressed'] or not source.name.endswith('.samples.csv'):
         raise ValueError('Archive source must be an unneeded sample CSV')
+    return source
+
+
+def archive(row,publish):
+    source=physical_source(row);target=Path(str(source)+'.zip')
     if target.exists():raise FileExistsError('Existing archive needs manual verification: '+str(target))
     before=source.stat();before_allocated=allocated(source);digest=hashlib.sha256()
     if 'mtime_ns' in row and (before.st_size,before.st_mtime_ns)!=(row['bytes'],row['mtime_ns']):
@@ -75,8 +80,10 @@ def main():
     rows=[r for r in inventory['files'] if 'alias_of' not in r and not r['required_uncompressed']]
     events=args.inventory.with_name('samples-archives.jsonl');done=[]
     if events.exists():done=[json.loads(line) for line in events.read_text().splitlines()]
+    approved={row['physical_path']:row for row in rows}
     for record in done:
-        source=Path(record['physical_path']);target=Path(record['archive'])
+        source=physical_source(approved[record['physical_path']]);target=Path(str(source)+'.zip')
+        if target.resolve()!=target:raise ValueError('Published archive became a reparse point')
         restored=hashlib.sha256()
         with zipfile.ZipFile(target) as zipped,zipped.open(source.name) as stream:
             for chunk in iter(lambda:stream.read(1024*1024),b''):restored.update(chunk)

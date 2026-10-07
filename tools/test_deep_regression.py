@@ -7,7 +7,7 @@ import zipfile
 from archive_deep_samples import archive
 from run_deep_regression import SCRATCH, cleanup
 from sample_csv import open_samples
-from deep_exr import image_tile,image_tile_size
+from deep_exr import image_tile,image_tile_size,image_channels
 
 
 def main():
@@ -39,6 +39,7 @@ def main():
     tile=image_tile({'channels':{'R':np.arange(6,dtype=np.float32).reshape(2,3)}},'R',(0,0))
     size=image_tile_size()
     assert len(tile)==size*size and list(tile[:3])==[0,1,2] and list(tile[size:size+3])==[3,4,5]
+    assert image_channels({'channels':dict.fromkeys(('Layer.B','Layer.A','Layer.R','Layer.G'))})==['Layer.R','Layer.G','Layer.B','Layer.A']
     print('PASS: verified archive, streaming reader, owned cleanup and padded tiles')
 
 

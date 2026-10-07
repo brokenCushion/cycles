@@ -29,7 +29,11 @@ def image_format(node):
 
 
 def image_channels(node):
-    return sorted(node['channels']) if isinstance(node,dict) else list(node['out']['channelNames'].getValue())
+    if not isinstance(node,dict):return list(node['out']['channelNames'].getValue())
+    def order(name):
+        layer,_,channel=name.rpartition('.')
+        return layer,'RGBAXYZ'.index(channel) if channel in tuple('RGBAXYZ') else 7,channel
+    return sorted(node['channels'],key=order)
 
 
 def image_tile_size(backend='openexr'):

@@ -987,7 +987,7 @@ Evidence: `builds/validation/landscape-cloud/optimization-phase4/after/phase-res
 | 587x250 / max4 / 1e-3 | Peak host bytes / device-wide MiB | 5,792,567,296 / 6310 | 5,699,452,928 / 6337 | `405df643b` |
 | 587x250 / max4 / 1e-3 | Max accepted-camera oracle error | unchanged payload | 0.00031719342 | `405df643b` |
 
-### Phase 5 - checks pass; review stop
+### Phase 5 - implementation accepted; realistic case review
 
 Implementation: `6a9d4831d`; standalone checks: `2a1a0bebb`.
 Native-prefix checks: `747c054e4`; adaptive count decoding: `2fde67322`.
@@ -1063,3 +1063,82 @@ Evidence: `builds/validation/landscape-cloud/optimization-phase5/after/phase-res
 | CPU / CUDA adaptive64 | Native accepted / deep retained cameras | configured maximum 64 | 16 / 16 on both devices | `2fde67322` |
 
 Phase 6 has not started. No full-resolution production render was launched.
+
+#### Phase 5 realistic landscape - review stop
+
+Implementation accepted; requested realistic case now measured. Engine
+`6a9d4831d`; validator `2fde67322`. Unchanged
+prepared landscape, 117x50, original max1024 adaptive / threshold0.03 / min8,
+GPU OIDN, CUDA, 24 threads, `deep-error=1e-3`, 8192 MiB deep host budget.
+Five ordinary controls provide the unchanged CUDA beauty gate and timing median.
+Capture overhead is a paired subtraction; the scheduler timer includes beauty,
+capture and denoising. Reported render-call time additionally includes scene
+synchronization and beauty/pass saving; process startup and external validation
+are excluded. Render+capture is render-call time minus measured export.
+Fit timers sum worker time and are not additive frame wall times. Bytes are exact.
+
+| Measured metric | Deep samples 0 (all accepted) | Deep samples 64 |
+| --- | --- | --- |
+| Beauty-only render-call time (median five controls) | 31.354 s | 31.354 s |
+| Render + capture (render-call time minus export) | 114.103 s | 40.952 s |
+| Incremental capture overhead (deep-on minus beauty median) | 82.750 s | 9.598 s |
+| Capture wait/copy timer | 79.043 s | 9.588 s |
+| Export wall time | 111.980 s | 14.816 s |
+| Density / mixture fit (aggregate worker s) | 13.620 / 98.336 | 1.666 / 9.886 |
+| GPU copied bytes | 1,873,948,088 | 388,440,124 |
+| GPU lane-written bytes | 1,599,948,216 | 185,147,964 |
+| Spill stored / read / written bytes | 1,805,448,120 / 2,053,690,632 / 1,879,310,592 | 202,833,084 / 221,652,924 / 211,783,020 |
+| EXR bytes | 43,733,868 | 7,312,462 |
+| Deep output samples | 6,498,864 | 972,866 |
+| Accepted beauty samples/pixel, min / median / max | 16 / 384.0 / 1024 | 16 / 384.0 / 1024 |
+| Retained deep cameras/pixel, min / median / max | 16 / 384.0 / 1024 | 16 / 64.0 / 64 |
+| Accepted-camera oracle maximum absolute error (81 pixels) | 0.00021626982 | 0.00022625082 |
+| Measured peak host working set | 5.26 GiB | 5.35 GiB |
+| Measured device-wide GPU peak | 5357 MiB | 5342 MiB |
+
+Oracle: 81 diagnostic pixels, output versus accepted captured camera curves.
+Device compression is covered by Phase 3b exact-cubic bounds/tests; this case
+does not repeat a strict-device reference. Parallel checks cover the original
+probes: a complete pixel and the 35-pixel serial prefix reproduce exact results.
+The reported reconstruction error is distinct from the sampling difference
+between all cameras and the first64. Native accepted-count distributions cover
+all 5,850 pixels; retained deep cameras use min(native count, header limit).
+
+| Sampling difference (information; alpha absolute) | Max / mean, all pixels | Fractional-edge max / mean |
+| --- | --- | --- |
+| Full flatten | 5.9604645e-08 / 1.2399804e-08 | n/a (no fractional-edge pixels) |
+| Far cut z=489.182 | 0.0020380393 / 4.2245124e-05 | 0.0020380393 / 7.845523e-05 (3150 pixels) |
+| Far cut z=625.614 | 1.5646219e-07 / 3.3117512e-08 | 1.5646219e-07 / 3.3117512e-08 (5850 pixels) |
+| Far cut z=762.046 | 0.022850156 / 0.00024028422 | 0.022850156 / 0.00024424934 (5755 pixels) |
+| Far cut z=898.478 | 0.064085126 / 0.00098350451 | 0.064085126 / 0.0017128516 (3359 pixels) |
+| Far cut z=1034.91 | 0.056493849 / 0.00059562561 | 0.056493849 / 0.0042388654 (822 pixels) |
+
+**1175x500 projection: ESTIMATE, not a render.** Exact pixel ratio
+100.427350 (~100x); same hardware/settings and accepted-sample
+distribution assumed. Render+capture, export and disk bytes scale linearly by
+that ratio. This also scales fixed kernel/denoising overhead, so timing is a
+simple extrapolation; improved occupancy can make it faster. Export includes
+81 fixed diagnostic pixels; scaling that overhead by100 is conservative.
+Full-resolution adaptive convergence, geometry coverage and compression may change these costs.
+
+| Estimated metric | Deep samples 0 | Deep samples 64 |
+| --- | --- | --- |
+| Render + capture | 190.98 min | 68.55 min |
+| Export | 187.43 min | 24.80 min |
+| Combined render + capture + export | 378.42 min | 93.34 min |
+| Spill disk stored | 181.316 GB | 20.370 GB |
+| EXR size | 4.392 GB | 0.734 GB |
+| Peak host: conservative budget envelope | 13.93 GiB | 13.93 GiB |
+| Peak device-wide GPU estimate | 5925 MiB | 5910 MiB |
+
+Memory is not multiplied by100: scene/path state and deep GPU batches are
+fixed; host deep working storage stays bounded by the same 8 GiB budget.
+Host envelope = measured beauty-only process peak + full 8 GiB deep budget
++ 1 KiB per added pixel for native buffers/denoising. GPU estimate = each
+measured device-wide peak + that pixel allowance; other applications assumed
+unchanged. The 1 KiB/pixel allowance is conservative modelling, not a measured
+allocation bound. OS disk cache and other applications are excluded from host
+working-set estimates. These memory projections do not qualify the full run.
+
+Evidence: `builds/validation/landscape-cloud/optimization-phase5/realistic117/results.json`.
+No Phase 6 or full-resolution run was launched. Stop for user review.

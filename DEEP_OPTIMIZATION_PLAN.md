@@ -1687,17 +1687,37 @@ native-case conclusion. No threshold was introduced or changed.
 Report: `builds/validation/landscape-cloud/optimization-phase6a/export-recheck-native/results.json`.
 Large data: `D:/CyclesDeepScratch/optimization-phase6a/export-recheck-native/`.
 
-#### Phase 6b - implementation scope and before baseline
+#### Phase 6b - acceptance checks passed; stop for review
 
-Host-only: admit native object/material holdout in preflight and carry a
-holdout-name manifest through the existing output-driver API. Existing capture
-already records their ordinary camera opacity. No GPU capture, scheduling,
-buffer or beauty-code change is planned; the host-only proof applies.
-Before: fixed cases from accepted 6a and the controlled native export check,
+Implementation: `24da5f880`; native opacity/selection checks: `4ddb28e64`.
+Host-only: existing camera capture already records holdout opacity. Preflight
+now admits object flags and reachable Holdout surface closures. No beauty,
+GPU capture, scheduling or buffer changes; the CUDA pixel gate is not required.
+Beauty/GPU source hashes and all 75 kernel resource records are unchanged;
+all 30 new CPU fixtures have exact beauty and raw-pass equality to deep-off.
+
+IDs-on `cycles:deepIDHoldoutManifest` is a checked hash/name subset of the
+unchanged ID manifest, omitted when empty. Exact UINT selection preserves only
+the selected marker. Shadow-catcher/caustics retain their legacy diagnostic;
+strict+IDs stays rejected. All six rejection tests preserve the final EXR.
+Before: six holdout cases rejected; accepted 6a fixed-case metrics recorded in
 `builds/validation/landscape-cloud/optimization-phase6b/before.json`.
 
-6b IDs metadata: `cycles:deepIDHoldoutManifest` maps raw UINT hashes to names
-for object holdout flags or reachable Holdout surface closures. It is a checked
-subset of the unchanged `cycles:deepIDManifest`, omitted when empty. This keeps
-legacy IDs and all non-holdout output headers intact. Shadow-catcher/caustics
-rejections retain their exact legacy diagnostic. No beauty/capture source change.
+| Case | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| Object/material holdout, front/inside volume; two transparent cutouts | Native CPU/CUDA qualification | Six cases rejected | 60/60 PASS, strict and numeric with/without IDs | `24da5f880` |
+| Holdout fixtures, strict | Max all-depth error vs ordinary opacity / header bound | Ordinary reference | 0 / 1e-06 PASS | `24da5f880` |
+| Holdout fixtures, 1e-4 | Max all-depth error vs ordinary opacity / header bound | Ordinary reference | 2.59013751e-05 / 9.99999975e-05 PASS | `24da5f880` |
+| Holdout fixtures, 1e-3 | Max all-depth error vs ordinary opacity / header bound | Ordinary reference | 7.13876313e-05 / 0.00100000005 PASS | `24da5f880` |
+| IDs-on holdout selection | Max isolated opacity error | Known opacity 1.0 / 0.6 | 5.0127592e-08 PASS; marked plane/fog subset checked | `4ddb28e64` |
+| CPU beauty/raw passes | Deep-on vs deep-off | Exact equality required | 30/30 exact | `24da5f880` |
+| Existing deep output | Strict / numeric payload and deterministic headers | 81 / 30 references | 81/81 + 30/30 identical | `24da5f880` |
+| Full regression | CTests, legacy/IDs matrices, boundaries, CUDA lifecycle, fixed landscapes | Accepted 6a suite | All PASS; 32 combined-alpha/known-ID comparisons | `24da5f880` |
+
+Fresh fixed-case capture/readback/lane-write/spill/export/EXR/sample/memory
+counters and full holdout records are in
+`builds/validation/landscape-cloud/optimization-phase6b/phase-results.json`.
+Holdout errors compare every boundary and exponential extremum; the existing
+camera oracle and Gaffer depth cuts also pass. Bounds/limits remain unchanged.
+Connected Gaffer review: `D:/CyclesDeepScratch/optimization-phase6b/holdout_review.gfr`.
+Large evidence/TEMP stay on D:. Stop for review before Phase 7.

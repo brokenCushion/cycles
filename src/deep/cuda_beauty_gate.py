@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
-"""K=5 CUDA beauty isolation. No renderer or alpha tolerances are changed."""
+"""CUDA beauty isolation: reproduced states, bounded Monte Carlo noise, and bias."""
 import csv
 import json
 import math
 import re
 from pathlib import Path
 import struct
+import statistics
 
 SETTINGS_KEYS = ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
     'camera_world_matrix', 'camera_frame', 'frame', 'adaptive', 'adaptive_threshold',
@@ -71,7 +72,32 @@ def raw_pass_gate(values, population, references, populations, envelope=None):
                 envelope=[envelope]*len(values), limits=limits)
 
 
-def validate_cuda_beauty(directory, references, qualification=True, output=None, pool=(), builds=None):
+def monte_carlo_gate(value, references, seeds):
+    """Four independent pixel estimates; SE = sample SD / sqrt(4)."""
+    if len(seeds) != 4 or not all(math.isfinite(v) for v in [value] + references + seeds):
+        raise ValueError('Need four finite seed-varied pixel estimates')
+    sigma = statistics.stdev(seeds) / 2
+    if not references:
+        return dict(passed=False, difference=None, sigma=sigma, ratio=None)
+    nearest = min(range(len(references)), key=lambda i: abs(value-references[i]))
+    delta = value-references[nearest]
+    return dict(passed=abs(delta) <= 0.1*sigma, difference=delta, sigma=sigma,
+                ratio=abs(delta)/sigma if sigma else (0.0 if delta == 0 else None),
+                nearest=nearest)
+
+
+def bias_gate(differences):
+    """Paired-pixel signed mean against mean same-count controls; no ULP floor."""
+    if not differences or not all(math.isfinite(v) for v in differences):
+        raise ValueError('Need finite paired-pixel differences')
+    mean = statistics.mean(differences)
+    se = statistics.stdev(differences)/math.sqrt(len(differences)) if len(differences) > 1 else 0.0
+    return dict(passed=abs(mean) <= 3*se, mean_signed_difference=mean,
+                standard_error=se, limit=3*se, pixels=len(differences))
+
+
+def validate_cuda_beauty(directory, references, qualification=True, output=None, pool=(), builds=None,
+                         seed_references=()):
     """Check all stored denoiser inputs; trace every denoised outlier at its pixel."""
     import GafferImage
     import imath
@@ -106,6 +132,26 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
         if not same_beauty or s['deep'] or any(s.get(k) != settings[0].get(k) for k in keys):
             raise ValueError('Pool beauty source/settings mismatch: ' + str(p))
 
+    seed_references = [Path(p).resolve() for p in seed_references]
+    if seed_references and (len(seed_references) != 4 or len(set(seed_references)) != 4):
+        raise ValueError('Need exactly four independent seed-varied deep-off renders')
+    seed_settings = []
+    for p in seed_references:
+        s = json.loads((p / 'render.json').read_text())
+        other = executable(p, s)
+        same_beauty = (other == digest or
+            (digest in identities and other in identities and
+             identities[digest]['beauty_source_sha256'] == identities[other]['beauty_source_sha256']))
+        if (not same_beauty or s['deep'] or
+                any(s.get(k) != settings[0].get(k) for k in keys if k != 'seed')):
+            raise ValueError('Seed control beauty source/settings mismatch: ' + str(p))
+        seed_settings.append(s)
+    if len({s['seed'] for s in seed_settings}) != len(seed_settings):
+        raise ValueError('Seed controls must use four distinct seeds')
+    # Keep old K=3 diagnostic evidence reproducible. Qualification uses the final
+    # user rule; seed controls are needed only when a state is not reproduced.
+    final_raw_rule = qualification or bool(seed_references)
+
     def readers(filename):
         result = []
         for p in paths:
@@ -134,6 +180,11 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
         node = GafferImage.ImageReader()
         node['fileName'].setValue((p / 'render-passes.exr').as_posix())
         pool_raw.append(node)
+    seed_raw = []
+    for p in seed_references:
+        node = GafferImage.ImageReader()
+        node['fileName'].setValue((p / 'render-passes.exr').as_posix())
+        seed_raw.append(node)
     fmt = raw[0]['out']['format'].getValue()
     if any(n['out']['format'].getValue() != fmt for n in raw + beauty):
         raise ValueError('Reference image size mismatch')
@@ -141,7 +192,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     if any(list(n['out']['channelNames'].getValue()) != names for n in raw):
         raise ValueError('Denoiser input channel mismatch')
     if any(n['out']['format'].getValue() != fmt or
-           list(n['out']['channelNames'].getValue()) != names for n in pool_raw):
+           list(n['out']['channelNames'].getValue()) != names for n in pool_raw + seed_raw):
         raise ValueError('Pool image/channel mismatch')
     counts = [c for c in names if 'Debug Sample Count' in c]
     if len(counts) != 1:
@@ -172,6 +223,13 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                   unexplained_outlier_pixels=0, worst_denoised_pixels=[])
     report['pool'] = [str(p) for p in pool]
     report['reproduced_pixels'] = []
+    report['seed_references'] = [str(p) for p in seed_references]
+    report['statistical_pixels'] = []
+    report['statistical_fraction_limit'] = 0.001
+    if final_raw_rule:
+        report['raw_rule'] = 'one reproduced state within 4 ULP; otherwise same-count nearest <= 0.1 four-seed pixel SE; image bias <= 3 SE; statistical pixels <= 0.1%'
+    checked_channels = [c for cs in groups.values() for c in cs]
+    bias_differences = {c: [] for c in checked_channels}
     output = Path(output) if output else directory / 'cuda_beauty_validation.json'
     output.parent.mkdir(parents=True, exist_ok=True)
     trace = output.with_suffix('.pixels.csv')
@@ -228,6 +286,11 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                 raw_data = {c: [r['out'].channelData(c, origin) for r in raw]
                             for cs in groups.values() for c in cs}
                 color_data = {c: [r['out'].channelData(c, origin) for r in beauty] for c in channels}
+                if final_raw_rule:
+                    pool_data = {c: [r['out'].channelData(c, origin) for r in pool_raw]
+                                 for c in checked_channels}
+                    seed_data = {c: [r['out'].channelData(c, origin) for r in seed_raw]
+                                 for c in checked_channels}
                 for j in range(min(tile_size, height-y)):
                     for i in range(min(tile_size, width-x)):
                         index = j * tile_size + i
@@ -286,7 +349,54 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                                         changes.append(detail)
                                 if changed:
                                     evidence[group] = changed
-                        if failed_groups or not matched:
+                        if final_raw_rule:
+                            same_count = []
+                            for r in range(len(pool)):
+                                n = float(pool_data[counts[0]][r][index])*maximum_samples
+                                if not math.isfinite(n) or abs(n-round(n)) > 1e-4:
+                                    raise ValueError('Invalid pool accepted sample count')
+                                if round(n) == populations[0]:
+                                    same_count.append(r)
+                            v = [float(raw_data[c][0][index]) for c in checked_channels]
+                            refs = [[float(pool_data[c][r][index]) for c in checked_channels]
+                                    for r in same_count]
+                            reproduced = raw_pass_gate(v, populations[0], refs,
+                                [populations[0]]*len(refs), envelope=0) if refs else dict(passed=False)
+                            final_failed = []
+                            if reproduced['passed']:
+                                if failed_groups or not matched:
+                                    r = same_count[reproduced['passing'][0]]
+                                    report['reproduced_pixels'].append(dict(file_pixel=[x+i,height-1-(y+j)],
+                                        sample_count=populations[0], checked_passes=list(groups),
+                                        k5_failed_passes=failed_groups, matching_pool_run=str(pool[r])))
+                            else:
+                                details = []
+                                for group, cs in groups.items():
+                                    for c in cs:
+                                        a = float(raw_data[c][0][index])
+                                        ref = [float(pool_data[c][r][index]) for r in same_count]
+                                        seeds = [float(d[index]) for d in seed_data[c]]
+                                        gate = monte_carlo_gate(a, ref, seeds) if seeds else dict(
+                                            passed=False, difference=None, sigma=None, ratio=None,
+                                            reason='Missing four seed-varied controls')
+                                        details.append(dict(channel=c, **gate,
+                                            nearest_reference=str(pool[same_count[gate['nearest']]])
+                                            if 'nearest' in gate else None))
+                                        if not gate['passed'] and group not in final_failed:
+                                            final_failed.append(group)
+                                report['statistical_pixels'].append(dict(file_pixel=[x+i,height-1-(y+j)],
+                                    sample_count=populations[0], passed=not final_failed,
+                                    failed_passes=final_failed, channels=details))
+                            for group in groups:
+                                stats[group]['violations'] += int(group in final_failed)-int(group in failed_groups)
+                            # Counts remain exact, even when the statistical rule is used.
+                            report['unmatched_population_pixels'] -= int(not matched)
+                            report['unmatched_population_pixels'] += int(not same_count)
+                            if same_count:
+                                for c in checked_channels:
+                                    ref_mean = statistics.mean(float(pool_data[c][r][index]) for r in same_count)
+                                    bias_differences[c].append(float(raw_data[c][0][index])-ref_mean)
+                        elif failed_groups or not matched:
                             cs = [c for group in groups for c in groups[group]]
                             v = [float(raw_data[c][0][index]) for c in cs]
                             for p, node in zip(pool, pool_raw):
@@ -324,6 +434,14 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                             report['worst_denoised_pixels'].sort(key=lambda p:max(p['differences']), reverse=True)
                             del report['worst_denoised_pixels'][20:]
     report['raw_passed'] = not report['unmatched_population_pixels'] and all(not s['violations'] for s in stats.values())
+    if final_raw_rule:
+        report['bias_estimator'] = 'mean paired-pixel residual to mean same-count pool references; sample SD / sqrt(pixel count)'
+        report['bias'] = {c: bias_gate(d) for c, d in bias_differences.items() if d}
+        report['bias_passed'] = (all(len(d) == width*height for d in bias_differences.values()) and
+                                 all(r['passed'] for r in report['bias'].values()))
+        report['statistical_pixel_fraction'] = len(report['statistical_pixels'])/(width*height)
+        report['statistical_fraction_passed'] = len(report['statistical_pixels']) <= 0.001*width*height
+        report['raw_passed'] &= report['bias_passed'] and report['statistical_fraction_passed']
     report['outliers_explained'] = not report['unexplained_outlier_pixels']
     report['passed'] = report['raw_passed'] and report['outliers_explained']
     report['denoised_pixels_csv'] = str(trace)

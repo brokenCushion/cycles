@@ -3,7 +3,8 @@ import math
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from cuda_beauty_gate import float32_ulp, raw_pass_gate, reference_pool, completed_sample_count
+from cuda_beauty_gate import (float32_ulp, raw_pass_gate, reference_pool,
+                             completed_sample_count, monte_carlo_gate, bias_gate)
 
 assert completed_sample_count('Rendered 8 samples in 0.2 seconds (0.025 seconds per sample)\n'
                               '| Rendered 16 samples in 0.4 seconds\n', 64) == 16
@@ -58,4 +59,23 @@ for invalid in (math.nan, math.inf):
         pass
     else:
         raise AssertionError('Invalid denoiser input accepted')
-print('PASS FLOAT ULP, five-reference envelope, count matching and leak rejection')
+# Pixel noise does not waive counts, zero variance, image prevalence, or bias.
+g = monte_carlo_gate(0.000269, [0.0], [-0.02, 0.0, 0.01, 0.02])
+assert g['passed'] and g['ratio'] < 0.1
+assert not monte_carlo_gate(0.1, [0.0], [-0.02, 0.0, 0.01, 0.02])['passed']
+assert monte_carlo_gate(1, [1], [1]*4)['passed']
+assert not monte_carlo_gate(1.00000001, [1], [1]*4)['passed']
+assert not monte_carlo_gate(1, [], [1]*4)['passed']
+assert 5 <= 0.001*5850 and not 6 <= 0.001*5850
+assert bias_gate([0]*100)['passed']
+assert bias_gate([-1, 1]*50)['passed']
+assert not bias_gate([0.001]*100)['passed']
+assert not bias_gate([0.1 + v for v in [-0.01, 0.01]*50])['passed']
+for seeds in ([1]*3, [1, 2, 3, math.inf]):
+    try:
+        monte_carlo_gate(1, [1], seeds)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('Invalid Monte Carlo controls accepted')
+print('PASS FLOAT ULP, count/reproduced states, four-seed SE, zero variance and bias rejection')

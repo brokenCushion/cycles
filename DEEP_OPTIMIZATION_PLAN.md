@@ -73,6 +73,38 @@ Root causes, in code:
 - Never call GPU-thread heap allocation, STL, or files from kernels (existing
   `PEER_DEEP_OUTPUT_REQUIREMENTS.md` still applies).
 
+### Final CUDA raw beauty rule (user decision, 2026-10-07)
+
+This supersedes the historical Phase 0 CUDA raw envelope/search policy below.
+CPU remains exact equality and the primary proof, together with unchanged
+beauty-source hashes and kernel resource records. No beauty kernel change.
+The original (99,7) discrepancy vanishes in the isolated majorant-snapshot
+diagnostic (6/6 noisy RGB identical), and its red discrepancy is 0.027 of
+the four-seed pixel standard error; other CUDA variation remains at (5,5).
+
+1. A reproduced state passes unchanged: all checked raw passes match ONE
+   unchanged-beauty pool render within 4 FLOAT ULP, with the same sample count.
+2. Otherwise, for EACH raw pass/channel, require the absolute difference to
+   the nearest same-count deep-off reference to be <= 0.1 * sigma_pixel.
+   sigma_pixel = sample SD of four distinct-seed deep-off pixel estimates / 2,
+   using the same case/settings and unchanged beauty source. sigma = 0 requires
+   an exact match. Missing same-count references fail; seed-varied counts may
+   differ only for estimating sigma, never for the on/off comparison.
+3. Every pass/channel must also pass an image-wide bias test: absolute mean
+   signed difference <= 3 standard errors. User-confirmed estimator: at each
+   pixel subtract the MEAN of its same-count pool references (not the nearest);
+   compute the signed mean and sample SD / sqrt(image pixel count) of those
+   paired residuals. Missing counts or nonfinite data fail; no ULP bias floor.
+4. Fail if pixels requiring step 2 exceed 0.1% of the image. Count each pixel
+   once, including failed candidates, and report every channel's difference,
+   sigma, ratio and nearest reference for every step-2 pixel.
+
+The historical K=5 controls/envelopes remain recorded diagnostic evidence and
+the denoised explanation rule remains unchanged. Raw acceptance no longer
+uses the image-wide K=5 envelope or an additional 20-control search. Four seed
+controls are required whenever any pixel needs step 2; reproduced images do
+not need a noise allowance. CPU comparison and deep error budgets are unchanged.
+
 ## 3. Phases
 
 ### Phase 0 - Checkpoint and scope cleanup
@@ -93,8 +125,8 @@ Root causes, in code:
    The one-pixel 448 vs 464 adaptive-sample difference was reproduced with deep
    disabled; it is Cycles GPU nondeterminism, not a deep defect.
 
-   Exact CUDA gate definition (user decision, 2026-10-06; supersedes any
-   single-repeat envelope):
+   Historical CUDA gate definition (user decision, 2026-10-06; superseded
+   for raw passes by the final Section 2 rule; denoised policy unchanged):
    - Envelope: render K = 5 ordinary deep-off runs. For each pass, the envelope
      is the maximum per-pixel absolute difference over all pairs of those runs.
      A single pair underestimates GPU run-to-run variation.
@@ -1413,3 +1445,70 @@ Reports and reproducible local profiling helpers:
 regression/81+30 identity replay remain pending. No 6a/6b/Phase 9 work started.
 The original raw beauty gate remains unresolved; user decides policy from this
 diagnostic evidence.
+
+#### Phase 6 final CUDA raw policy application - acceptance stop
+
+Applied the final Section 2 user rule to the existing unmodified-engine
+realistic117 / original max1024 adaptive / GPU OIDN / IDs-on / 1e-4 / cap0.
+Reused the four independent seeds and the 31 eligible ordinary controls;
+the majorant-snapshot executable is excluded. No new renders or changed gates.
+
+| Check | Measured | Required | Result |
+| --- | --- | --- | --- |
+| Same-count reference coverage | 5,850/5,850 | Every pixel | PASS |
+| Per-channel image bias | All 12 checked channels pass | abs(mean) <= 3 SE | PASS |
+| Step-2 pixels | 15/5,850 = 0.256410% | <= 0.1% (at most 5 pixels) | FAIL |
+| (99,7) raw noisy RGB | max ratio 0.026551 | <= 0.1 | PASS |
+| (99,7) raw denoising albedo | max ratio 0.161284 | <= 0.1 | FAIL |
+
+At (99,7), sample count 944 has matching ordinary references.
+The earlier 0.027 statement concerned noisy red only; the per-pass/channel
+policy also checks albedo, whose four-seed SE is smaller:
+
+| (99,7) channel | Absolute nearest difference | Four-seed SE | Difference/SE | Result |
+| --- | --- | --- | --- | --- |
+| ViewLayer.Denoising Albedo.R | 0.00109705329 | 0.00718872133 | 0.152607569 | FAIL |
+| ViewLayer.Denoising Albedo.G | 0.00109708309 | 0.00680219724 | 0.161283634 | FAIL |
+| ViewLayer.Denoising Albedo.B | 0.00109708309 | 0.0068739883 | 0.159599209 | FAIL |
+| ViewLayer.Noisy Image.R | 0.000268995762 | 0.0101312867 | 0.026550997 | PASS |
+| ViewLayer.Noisy Image.G | 0.000202275813 | 0.0194436784 | 0.0104031659 | PASS |
+| ViewLayer.Noisy Image.B | 0.00014089793 | 0.0221461001 | 0.00636220051 | PASS |
+| ViewLayer.Noisy Image.A | 0 | 0 | 0 | PASS |
+
+Every step-2 pixel (max ratio over its checked channels; full channel details
+and nearest references are in the machine report):
+
+| File pixel | Max difference/SE | Channel bounds |
+| --- | --- | --- |
+| (57,41) | 2.2381929e-05 | PASS |
+| (95,36) | 3.8709293e-08 | PASS |
+| (66,31) | 1.70307132e-07 | PASS |
+| (101,30) | 7.65698793e-08 | PASS |
+| (60,29) | 8.75922272e-09 | PASS |
+| (93,29) | 2.22087425e-08 | PASS |
+| (46,24) | 2.18037146e-07 | PASS |
+| (11,23) | 2.39943925e-06 | PASS |
+| (11,15) | 6.47424984e-08 | PASS |
+| (55,13) | 3.87819947e-08 | PASS |
+| (88,13) | 4.73450073e-08 | PASS |
+| (99,7) | 0.161283634 | FAIL |
+| (60,6) | 5.79094279e-07 | PASS |
+| (77,6) | 4.67900582e-08 | PASS |
+| (27,4) | 5.48884645e-08 | PASS |
+
+The other 14 pixels pass their channel noise bounds; most are tiny normal
+component differences near zero. They previously passed the image-wide K=5
+envelope but do not reproduce all checked passes together within 4 ULP.
+The final rule gives that historical envelope no independent acceptance path,
+so these pixels correctly count toward the 0.1% limit. Every bias channel
+passes with the user-confirmed paired-pixel estimator.
+
+Validator changes are host tooling only. Runnable unit checks cover count/state
+matching, four-seed SE, zero variance and detection of constant signed bias.
+The real saved-input replay checks all channels/pixels and fails explicitly.
+CPU exact comparison code, renderer source, EXR publication and budgets unchanged.
+
+Report: `builds/validation/landscape-cloud/optimization-phase6/review/final-raw-policy-existing.json`.
+**Stopped under the failed-acceptance rule:** three remaining realistic pairs,
+fresh IDs-off 81/81 + 30/30 replay and final full regression replay are NOT RUN.
+Phase 6 remains unaccepted; no 6a/6b/Phase 9 work started.

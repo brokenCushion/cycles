@@ -30,6 +30,7 @@ parser.add_argument('--deep-ids', action='store_true')
 parser.add_argument('--deep-error', default='0.001')
 parser.add_argument('--deep-samples', type=int, default=0)
 parser.add_argument('--fixed-sampling', action='store_true')
+parser.add_argument('--seed', type=int, help='Independent deep-off Monte Carlo control seed')
 parser.add_argument('--save-render-passes', action='store_true',
                     help='Save native noisy/denoising passes for beauty isolation checks')
 parser.add_argument('--diagnostic-sample-count', action='store_true',
@@ -63,6 +64,8 @@ directory.mkdir(parents=True, exist_ok=True)
 if args.capture_only and (directory / 'scene.deep.exr').exists():
     raise ValueError('Capture-only requires a directory without previous deep output')
 scene = bpy.context.scene
+if args.seed is not None:
+    scene.cycles.seed = args.seed
 source_hash = hashlib.sha256(Path(bpy.data.filepath).read_bytes()).hexdigest()
 scene.render.engine = 'CYCLES'
 scene.cycles.device = 'CPU'

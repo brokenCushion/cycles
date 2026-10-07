@@ -36,6 +36,8 @@ parser.add_argument('--overlap-reference', nargs=2, type=Path,
                     help='Single-grid renders with matching cameras; check combined extinction')
 parser.add_argument('--beauty-repeat', type=Path, action='append',
                     help='Supply four times: five independent CUDA deep-off references including baseline')
+parser.add_argument('--beauty-seed', type=Path, action='append', default=[],
+                    help='Supply four distinct-seed deep-off controls for the pixel standard error')
 parser.add_argument('--oracle-python', type=Path,
                     help='Existing NumPy Python environment for bounded, large camera-CSV checks')
 parser.add_argument('--beauty-pool', type=Path, action='append', default=[],
@@ -121,40 +123,41 @@ if settings['device'] == 'CUDA' and not args.reader_only:
     if args.beauty_builds:
         args.beauty_pool += reference_pool(directory, args.beauty_pool_root, args.beauty_builds)
     cuda_report = validate_cuda_beauty(directory, [baseline] + (args.beauty_repeat or []),
-                                    pool=args.beauty_pool, builds=args.beauty_builds)
-    # Extend only when raw states remain unmatched. Controls preserve the source
-    # scene/settings and never enable deep; the checker verifies every setting.
-    for attempt in range(1, 21):
-        if cuda_report['raw_passed'] or not args.beauty_builds:
-            break
+                                    pool=args.beauty_pool, builds=args.beauty_builds,
+                                    seed_references=args.beauty_seed)
+    # The final user rule replaces open-ended repeated-state searches. Estimate
+    # noise once with four seeds only if a pixel is not already reproduced.
+    if cuda_report['statistical_pixels'] and not args.beauty_seed and args.beauty_builds:
         registry = json.loads(args.beauty_builds.read_text())['builds']
         blender = Path(registry[settings['renderer_sha256']]['executable'])
-        control = directory / ('beauty-control-%02d' % attempt)
-        if not control.exists():
-            control.mkdir()
-            command = [str(blender), '--factory-startup', '--background', '--disable-autoexec',
-                settings['source_file'], '--python-exit-code', '1', '--python',
-                str(Path(__file__).resolve().parents[2] / 'tools/render_blender_deep_scene.py'),
-                '--', '--output', str(control), '--samples', str(settings['samples']),
-                '--percentage', str(settings['percentage']), '--device', 'CUDA',
-                '--threads', str(settings['threads']), '--save-render-passes',
-                '--diagnostic-sample-count']
-            if not settings['adaptive']:
-                command += ['--fixed-sampling']
-            env = dict(os.environ)
-            for key in ('OCIO', 'CYCLES_KERNEL_PATH', 'CYCLES_DEEP_VALIDATE_CAPTURE_ONLY'):
-                env.pop(key, None)
-            with (control / 'process.log').open('w') as log:
-                subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
-        args.beauty_pool.append(control)
+        for attempt in range(1, 5):
+            control = directory / ('beauty-seed-%02d' % attempt)
+            if not (control / 'render.json').exists():
+                control.mkdir(exist_ok=True)
+                command = [str(blender), '--factory-startup', '--background', '--disable-autoexec',
+                    settings['source_file'], '--python-exit-code', '1', '--python',
+                    str(Path(__file__).resolve().parents[2] / 'tools/render_blender_deep_scene.py'),
+                    '--', '--output', str(control), '--samples', str(settings['samples']),
+                    '--percentage', str(settings['percentage']), '--device', 'CUDA',
+                    '--threads', str(settings['threads']), '--save-render-passes',
+                    '--diagnostic-sample-count', '--seed', str(settings['seed'] + attempt)]
+                if not settings['adaptive']:
+                    command += ['--fixed-sampling']
+                env = dict(os.environ)
+                for key in ('OCIO', 'CYCLES_KERNEL_PATH', 'CYCLES_DEEP_VALIDATE_CAPTURE_ONLY'):
+                    env.pop(key, None)
+                with (control / 'process.log').open('w') as log:
+                    subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+            args.beauty_seed.append(control)
         cuda_report = validate_cuda_beauty(directory, [baseline] + (args.beauty_repeat or []),
-                                         pool=args.beauty_pool, builds=args.beauty_builds)
+                                         pool=args.beauty_pool, builds=args.beauty_builds,
+                                         seed_references=args.beauty_seed)
     beauty_error = cuda_report['max_deep_on_off']
     repeat_error = cuda_report['max_ordinary_repeat']
     beauty_peak = cuda_report['peak_absolute_value']
     beauty_tolerance = repeat_error
     beauty_passed = cuda_report['passed']
-    beauty_report = dict(cuda_report, comparison='K=5 count-matched denoiser inputs; four FLOAT ULP floor',
+    beauty_report = dict(cuda_report, comparison=cuda_report['raw_rule'],
                          tolerance=beauty_tolerance)
     (directory / 'beauty_validation.json').write_text(json.dumps(beauty_report, indent=2)+'\n')
     print('CUDA beauty isolation:', json.dumps(dict(passed=beauty_passed,

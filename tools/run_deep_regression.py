@@ -74,13 +74,13 @@ def main():
         value=compare(reference,target)
         result['identity'].setdefault(mode,{})[label]=value;save()
         if not value['passed']:raise RuntimeError('Deep identity failed: '+label)
-    def native(d,scene,samples,percentage,device,mode='strict',ids=False,deep=True,measure=False):
+    def native(d,scene,samples,percentage,device,mode='strict',ids=False,deep=True,measure=False,max_events=16):
         d.mkdir(parents=True)
         c=[config['blender'],'--factory-startup','--background','--disable-autoexec','--log','cycles','--log-level','info',
            scene,'--python-exit-code',1,'--python',REPO/'tools/render_blender_deep_scene.py','--','--output',d,
            '--samples',samples,'--percentage',percentage,'--device',device,'--threads',24,'--save-render-passes','--diagnostic-sample-count']
         if deep:
-            c+=['--deep','--deep-volume','--deep-error',mode,'--deep-z-tolerance',0,'--deep-memory-mb',8192,'--deep-max-events',8192]
+            c+=['--deep','--deep-volume','--deep-error',mode,'--deep-z-tolerance',0,'--deep-memory-mb',8192,'--deep-max-events',max_events]
             if ids:c+=['--deep-ids']
         if measure:c=[sys.executable,REPO/'tools/measure_deep_render.py',d,'--']+c
         run(d.relative_to(root).as_posix().replace('/','-'),c)
@@ -153,12 +153,12 @@ def main():
                          '--python',REPO/'tools/render_blender_deep_scene.py','--','--output',d,'--samples',case['samples'],
                          '--percentage',100,'--device',device,'--deep','--deep-volume','--deep-error','strict','--deep-max-events',case.get('deep_max_events',16)]
                     with (d/'rejection.log').open('w') as log:p=subprocess.run(list(map(str,cmd)),env=env,stdout=log,stderr=subprocess.STDOUT)
-                    if not p.returncode or target.read_bytes()!=b'preserve' or list(d.glob('*.cycles-deep-*')) or rejected[name] not in (d/'rejection.log').read_text(errors='replace'):
+                    if not p.returncode or target.read_bytes()!=b'preserve' or any('.partial-' in f.name for f in d.iterdir()) or rejected[name] not in (d/'rejection.log').read_text(errors='replace'):
                         raise ValueError('Native atomic rejection failed: '+name)
                     result['cases'][f'matrix/{device}/{name}']=dict(passed=True,rejection=True);continue
                 off=native(base/'beauty',case['scene'],case['samples'],100,device,deep=False) if device=='CPU' else None
                 for mode,ids in [('strict',False),('1e-4',False),('1e-3',False),('1e-4',True),('1e-3',True)]:
-                    d=native(base/(mode+('-ids' if ids else '')),case['scene'],case['samples'],100,device,mode,ids)
+                    d=native(base/(mode+('-ids' if ids else '')),case['scene'],case['samples'],100,device,mode,ids,max_events=case.get('deep_max_events',16))
                     v=verify(d,off)
                     if name=='adaptive_volume' and not min(v['oracle']['accepted_populations'])<case['samples']:
                         raise ValueError('Adaptive case did not converge early')
@@ -177,7 +177,7 @@ def main():
                 if case['rejection']:
                     (d/'scene.deep.exr').write_bytes(b'preserve')
                     with (d/'rejection.log').open('w') as log:p=subprocess.run(list(map(str,c)),env=env,stdout=log,stderr=subprocess.STDOUT)
-                    if not p.returncode or (d/'scene.deep.exr').read_bytes()!=b'preserve' or list(d.glob('*.cycles-deep-*')):raise ValueError('Boundary atomic rejection failed')
+                    if not p.returncode or (d/'scene.deep.exr').read_bytes()!=b'preserve' or any('.partial-' in f.name for f in d.iterdir()):raise ValueError('Boundary atomic rejection failed')
                     result['cases'][label]=dict(passed=True,rejection=True);continue
                 run(label,c)
                 if device=='CPU':run(label+'-off',base+['--output',d/'off.beauty.exr',source])
@@ -187,7 +187,7 @@ def main():
                 identity(label,config['golden']/('boundary-'+device)/(case['name']+'.deep.exr'),d/'scene.deep.exr','strict')
         for name,samples,percentage in [('small',16,2),('performance',4,25)]:
             for mode in ('strict','1e-4','1e-3'):
-                d=native(root/'landscape'/name/mode,config['landscape'],samples,percentage,'CUDA',mode,measure=True)
+                d=native(root/'landscape'/name/mode,config['landscape'],samples,percentage,'CUDA',mode,measure=True,max_events=8192)
                 verify(d)
                 identity(name+'-'+mode,config['golden']/name/('noids-'+mode+'-cap0')/'scene.deep.exr',d/'scene.deep.exr',mode)
         counts={m:len(v) for m,v in result['identity'].items()}

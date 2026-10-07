@@ -93,12 +93,12 @@ are not promised.
 
 ## Core footprint for rebases
 
-All 52 source files outside `src/deep/` and `src/kernel/deep/`, relative to
+All 53 Cycles source/build files outside `src/deep/` and `src/kernel/deep/`, relative to
 local `origin/main` (`a456b7610`). Shared deep headers remain in `src/kernel/deep/`.
 
 | Files | Reason |
 | --- | --- |
-| `src/CMakeLists.txt`<br>`src/app/CMakeLists.txt`<br>`src/integrator/CMakeLists.txt`<br>`src/kernel/CMakeLists.txt`<br>`src/kernel/device/cuda/CMakeLists.txt`<br>`src/session/CMakeLists.txt` | Guarded build flags, source lists, CUDA deep entry point and nine CTests. |
+| `CMakeLists.txt`<br>`src/CMakeLists.txt`<br>`src/app/CMakeLists.txt`<br>`src/integrator/CMakeLists.txt`<br>`src/kernel/CMakeLists.txt`<br>`src/kernel/device/cuda/CMakeLists.txt`<br>`src/session/CMakeLists.txt` | Guarded build flags, source lists, CUDA deep entry point and nine CTests. |
 | `src/app/cycles_standalone.cpp`<br>`src/app/cycles_xml.cpp` | CLI/preflight configuration and standalone fixture scene inputs. |
 | `src/app/deep_output.cpp`<br>`src/app/deep_output.h`<br>`src/app/oiio_output_driver.cpp`<br>`src/app/oiio_output_driver.h` | Output-driver deep callback, diagnostic ledger and atomic EXR publication. |
 | `src/app/deep_output_driver_test.cpp`<br>`src/app/deep_output_driver_test.xml`<br>`src/app/deep_output_driver_transparent_test.xml`<br>`src/app/deep_output_driver_volume_test.xml` | Host API/lifecycle/overflow fixtures, independent of Blender. |
@@ -111,3 +111,6 @@ local `origin/main` (`a456b7610`). Shared deep headers remain in `src/kernel/dee
 | `src/kernel/util/nanovdb.h` | Optional uniform-tile dimension accessor for deep grid traversal; ordinary reads preserve defaults. |
 | `src/scene/object.cpp`<br>`src/scene/shader.cpp`<br>`src/scene/shader.h` | Object primitive ranges and preflight extinction constants uploaded for separate capture. |
 | `src/session/deep.cpp`<br>`src/session/deep.h`<br>`src/session/output_driver.h`<br>`src/session/session.cpp`<br>`src/session/session.h` | Public settings/preflight, camera/data contract and deep output-driver callback lifecycle. |
+
+Blender-specific properties, synchronization, sample-count pass and output-driver
+plumbing live in `tools/prepare_blender_deep.py`, outside the standalone renderer.

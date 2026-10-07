@@ -89,6 +89,7 @@ def check_deep(image):
     tolerance = bound(image)
     total = 0
     channels = image.channels()
+    known_ids=np.array([int(key,16) for key in json.loads(image.header()['cycles:deepIDManifest'])],dtype=np.uint32) if 'id' in channels else None
     h, w = channels['A'].pixels.shape
     # Vectorize each pixel's records: no per-record Python objects for large goldens.
     for y in range(h):
@@ -100,8 +101,10 @@ def check_deep(image):
                     np.all(np.isfinite(back)) and np.all(np.isfinite(alpha)) and
                     np.all(z > 0) and np.all(back >= z) and np.all((alpha >= 0) & (alpha <= 1))):
                 raise ValueError(f'Invalid deep pixel ({x},{y})')
-            if 'id' in channels and channels['id'].pixels[y,x].dtype != np.uint32:
-                raise ValueError('Deep IDs are not UINT')
+            if 'id' in channels:
+                ids=channels['id'].pixels[y,x]
+                if ids is None or ids.dtype!=np.uint32 or len(ids)!=len(z) or not np.all(np.isin(ids,known_ids)):
+                    raise ValueError('Deep IDs must be UINT, match sample counts and belong to the manifest')
             total += len(z)
     header = image.header()
     if 'cycles:deepIDHoldoutManifest' in header:

@@ -4,10 +4,11 @@ import hashlib
 from pathlib import Path
 import tempfile
 import zipfile
+from types import SimpleNamespace
 from archive_deep_samples import archive
 from run_deep_regression import SCRATCH, cleanup
 from sample_csv import open_samples
-from deep_exr import image_tile,image_tile_size,image_channels
+from deep_exr import image_tile,image_tile_size,image_channels,check_deep
 
 
 def main():
@@ -40,6 +41,18 @@ def main():
     size=image_tile_size()
     assert len(tile)==size*size and list(tile[:3])==[0,1,2] and list(tile[size:size+3])==[3,4,5]
     assert image_channels({'channels':dict.fromkeys(('Layer.B','Layer.A','Layer.R','Layer.G'))})==['Layer.R','Layer.G','Layer.B','Layer.A']
+    import OpenEXR
+    channels={}
+    for name,value,dtype in [('Z',1,np.float32),('ZBack',1,np.float32),('A',1,np.float32),('id',7,np.uint32)]:
+        values=np.empty((1,1),dtype=object);values[0,0]=np.array([value],dtype=dtype)
+        channels[name]=SimpleNamespace(pixels=values)
+    image=SimpleNamespace(channels=lambda:channels,header=lambda:{'type':OpenEXR.deepscanline,
+        'cycles:maxTransmittanceError':1e-3,'cycles:deepIDManifest':'{"00000007":"plane"}'})
+    assert check_deep(image)['passed']
+    channels['id'].pixels[0,0][0]=8
+    try:check_deep(image)
+    except ValueError:pass
+    else:raise AssertionError('An ID missing from the manifest was accepted')
     print('PASS: verified archive, streaming reader, owned cleanup and padded tiles')
 
 

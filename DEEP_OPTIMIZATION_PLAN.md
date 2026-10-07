@@ -494,7 +494,8 @@ than evidence writing.
   GPU-side changes; host-only phases use the Section 2 proof.
 - Inventory historical sample CSVs; retain anything needed uncompressed.
   User approved replacing unneeded CSVs only after full-byte archive verification,
-  and archiving 14 obsolete validation Markdown reports in Git history.
+  and archiving 13 historical validation Markdown reports in Git history;
+  retain the approved [M8 release record](src/deep/M8_RELEASE_VALIDATION.md).
 
 - Consolidate the many `validate_*_gaffer.py` scripts into that harness where
   they overlap. Archive (Git history) the per-milestone `*_VALIDATION.md`
@@ -1796,6 +1797,7 @@ Each archive has a decompressed SHA256/size verification record before replaceme
 Results and inventory: `builds/validation/landscape-cloud/optimization-phase7/`.
 Passing run intermediates removed from its owned D: directory; `--keep` preserves
 them. Failed harness-development evidence stays on D:. Fourteen validation reports
-archived in Git history (`9cad1e861`); README lists all 53 core files plus Blender
+listed in [the archive index](src/deep/ARCHIVED_REPORTS.md); the approved
+[M8 record](src/deep/M8_RELEASE_VALIDATION.md) is retained. README lists all 53 core files plus Blender
 overlay plumbing. Connected review: `D:/CyclesDeepScratch/regression-tools/phase7_review.gfr`.
-Stop for review before Phase 8. Full-resolution Phase 9 remains unlaunched.
+Phase 7 accepted; proceed to Phase 8a. Full-resolution Phase 9 remains unlaunched.

@@ -1,7 +1,7 @@
 # Deep alpha qualification matrix
 
 Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
-and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-6b are accepted.
+and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-7 are accepted.
 Qualification covers the named fixtures; arbitrary feature combinations and the
 full-resolution landscape are not implied. Phase 9 remains unlaunched.
 
@@ -45,6 +45,7 @@ Use [the single regression command](README.md#regression-command): nine CTests,
 CPU/CUDA matrices, boundaries, oracles, CPU beauty, resource/source proof and
 81/81 strict + 30/30 numeric identity. Gaffer is optional for interactive review.
 Large validation output/TEMP lives on D:, with only small reports under `builds/`.
-Verified historical sample ZIPs stream without disk expansion. Historical M8
-reports/support details remain in Git history at `9cad1e861`; current results
-are in Section 6 of the plan.
+Verified historical sample ZIPs stream without disk expansion. The approved
+[M8 release record](M8_RELEASE_VALIDATION.md) is retained; other historical
+reports have an [archive index](ARCHIVED_REPORTS.md). Current results are in
+Section 6 of the plan.

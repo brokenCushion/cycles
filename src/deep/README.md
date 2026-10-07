@@ -6,7 +6,8 @@ and [current status](../../DEEP_IMPLEMENTATION_STATUS.md). Deep RGB remains defe
 
 - [Support matrix](RELEASE_MATRIX.md), [Blender usage](../../BLENDER_DEEP_INTEGRATION.md)
   and [Gaffer node](gaffer/README.md).
-- Historical milestone reports are archived at commit `9cad1e861`.
+- [Approved M8 release record](M8_RELEASE_VALIDATION.md) and
+  [13 archived historical reports](ARCHIVED_REPORTS.md).
 
 ## Code map
 

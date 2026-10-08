@@ -322,12 +322,13 @@ static void validate_shader(Scene *scene, Shader *shader,
       continue;
     }
     if (transparent && !background) {
-      if (type == "ambient_occlusion") {
-        /* The deep shader runs without ray-traced shading. AO defaults to one
-         * there and is safe only when it cannot influence transparency. Native
-         * beauty retains its full AO evaluation and unchanged RNG state. */
+      if (type == "ambient_occlusion" || type == "bevel") {
+        /* Without ray-traced shading, AO returns one and Bevel returns sd->N.
+         * These fallbacks are safe only outside opacity dependencies. Native
+         * beauty retains its full evaluation and unchanged RNG state. */
         require_deep(!opacity_dependencies.contains(node),
-                     "ray-traced ambient occlusion cannot drive deep opacity");
+                     type == "bevel" ? "ray-traced bevel cannot drive deep opacity" :
+                                       "ray-traced ambient occlusion cannot drive deep opacity");
         continue;
       }
       if (type == "light_path") {

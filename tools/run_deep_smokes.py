@@ -2,6 +2,7 @@
 """Small surface/lens/motion and exact-UINT overlap checks for the shared runner."""
 import json
 import math
+import subprocess
 from pathlib import Path
 from deep_exr import read, exact_flat, pixel, bound
 from compare_deep_ids import name_hash, flattened_transmittance
@@ -21,7 +22,7 @@ def run_smokes(root,config,env,run,verify,native,numerical,ids_compare,backend_c
                   dof=base.replace('fov=".9"','fov=".9" aperturesize=".35" focaldistance="5"'),motion=motion)
     for device in ('CPU','CUDA'):
         for name,xml in fixtures.items():
-            d=root/'surface'/device/name;d.mkdir(parents=True);source=d/'scene.xml';source.write_text(xml)
+            d=root/'surface'/device/name;d.mkdir(parents=True,exist_ok=True);source=d/'scene.xml';source.write_text(xml)
             samples=128 if name=='adaptive' else 16
             c=[config['cycles'],'--background','--quiet','--device',device,'--shadingsys','svm','--threads',8,
                '--width',16,'--height',12,'--samples',samples]
@@ -74,6 +75,19 @@ def run_smokes(root,config,env,run,verify,native,numerical,ids_compare,backend_c
         for device in ('CPU','CUDA','OPTIX'):
             for name,case in json.loads(config['raytrace_cases'].read_text())['cases'].items():
                 base=root/'raytrace'/device/name
+                if name == 'reject_bevel_opacity':
+                    base.mkdir(parents=True,exist_ok=True)
+                    target=base/'scene.deep.exr';target.write_bytes(b'preserve')
+                    command=[config['blender'],'--factory-startup','--background','--disable-autoexec',case['scene'],
+                             '--python-exit-code',1,'--python',repo/'tools/render_blender_deep_scene.py','--',
+                             '--output',base,'--device',device,'--samples',case['samples'],'--percentage',100,
+                             '--deep','--deep-volume','--deep-error','strict','--deep-max-events',16]
+                    with (base/'rejection.log').open('w') as log:
+                        p=subprocess.run(list(map(str,command)),env=env,stdout=log,stderr=subprocess.STDOUT)
+                    if not p.returncode or target.read_bytes()!=b'preserve' or any('.partial-' in f.name for f in base.iterdir()) or 'ray-traced bevel cannot drive deep opacity' not in (base/'rejection.log').read_text(errors='replace'):
+                        raise ValueError('Bevel opacity atomic rejection failed: '+device)
+                    result['cases'][f'raytrace/{device}/{name}']=dict(passed=True,rejection=True)
+                    continue
                 off=native(base/'beauty',case['scene'],case['samples'],100,device,deep=False) if device=='CPU' else None
                 for mode,ids in [('strict',False),('1e-3',False),('1e-3',True)]:
                     d=native(base/(mode+('-ids' if ids else '')),case['scene'],case['samples'],100,device,mode,ids)

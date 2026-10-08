@@ -27,7 +27,7 @@ parser.add_argument('--cases', nargs='+',
                              'combined_boundary', 'split_boundary_reference',
                              'surface_ao', 'surface_bevel', 'opaque_mix_ao', 'mirrored_surface', 'expanded_capacity',
                              'denoised_volume', 'adaptive_denoised_volume', 'opaque_foreground',
-                             'reject_ao_opacity',
+                             'reject_ao_opacity', 'reject_bevel_opacity',
                              'reject_dof', 'reject_motion',
                              'reject_orthographic', 'reject_cubic', 'half_precision',
                              'reject_color', 'reject_nonlinear', 'reject_reflection'),
@@ -54,7 +54,7 @@ for case in args.cases:
     extent = max((p-center).length for p in corners)
     camera = scene.camera
     right = camera.rotation_euler.to_matrix() @ Vector((1, 0, 0))
-    if case in ('mixed_surface', 'surface_ao', 'surface_bevel', 'opaque_mix_ao', 'mirrored_surface', 'reject_ao_opacity'):
+    if case in ('mixed_surface', 'surface_ao', 'surface_bevel', 'opaque_mix_ao', 'mirrored_surface', 'reject_ao_opacity', 'reject_bevel_opacity'):
         bpy.ops.mesh.primitive_cube_add(size=1, location=center)
         surface = bpy.context.object
         surface.name = 'HalfTransparentOccluder'
@@ -76,10 +76,12 @@ for case in args.cases:
         links.new(diffuse.outputs[0], mix.inputs[2])
         links.new(mix.outputs[0], output.inputs['Surface'])
         surface.data.materials.append(material)
-        if case == 'surface_bevel':
+        if case in ('surface_bevel', 'reject_bevel_opacity'):
             bevel = nodes.new('ShaderNodeBevel')
             bevel.inputs['Radius'].default_value = extent*.02
             links.new(bevel.outputs['Normal'], diffuse.inputs['Normal'])
+            if case == 'reject_bevel_opacity':
+                links.new(bevel.outputs['Normal'], mix.inputs[0])
         if case in ('surface_ao', 'opaque_mix_ao', 'reject_ao_opacity'):
             ao = nodes.new('ShaderNodeAmbientOcclusion')
             links.new(ao.outputs['Color'], diffuse.inputs['Color'])

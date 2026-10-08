@@ -72,6 +72,18 @@ def beauty_identity(commit):
                       'src/kernel/svm/svm.h'):
             source = without_deep_blocks(git('show', commit + ':' + path))
             files[path] = hashlib.sha1(b'blob '+str(len(source)).encode()+b'\0'+source).hexdigest()
+        elif path in ('src/kernel/util/image_2d.h', 'src/kernel/device/gpu/image.h'):
+            source = without_deep_blocks(git('show', commit + ':' + path))
+            # Exact formatting joins caused solely by guarded template arguments.
+            # Keep every original native expression; do not normalize general code.
+            source = source.replace(b'ccl_private float2 &xy\n                      )',
+                                    b'ccl_private float2 &xy)')
+            source = source.replace(b'dual2 uv\n                                      )',
+                                    b'dual2 uv)')
+            source = source.replace(b'const int level =\n      clamp', b'const int level = clamp')
+            source = source.replace(b'kernel_image_tile_map\n        (\n', b'kernel_image_tile_map(\n')
+            source = source.replace(b'uv, xy\n        );', b'uv, xy);')
+            files[path] = hashlib.sha1(b'blob '+str(len(source)).encode()+b'\0'+source).hexdigest()
         elif path.startswith('src/device/optix/'):
             source = without_deep_blocks(git('show', commit + ':' + path))
             # Preserve the original Git blob identity when a deep-only block is added.

@@ -33,3 +33,7 @@ for name in ('src/kernel/svm/svm.h', 'src/kernel/osl/services.cpp',
     after = without_deep_blocks(git('show', 'HEAD:' + name))
     assert before == after, name
 print('PASS native evaluator and CPU dispatch byte equality outside deep guards')
+
+for name in ('src/kernel/util/image_2d.h', 'src/kernel/device/gpu/image.h'):
+    assert beauty_identity('d11b601b9')[1][name] == beauty_identity('HEAD')[1][name], name
+print('PASS native image filters outside guarded deep mip specialization')

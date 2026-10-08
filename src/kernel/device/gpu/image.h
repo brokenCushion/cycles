@@ -85,10 +85,17 @@ ccl_device_noinline T kernel_image_interp_bicubic(const ccl_global KernelImageIn
                          g1x * ccl_gpu_image_object_read_2D<T>(tex, x1, y1));
 }
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+template<bool deep_mip = false>
+#endif
 ccl_device float4 kernel_image_interp(KernelGlobals kg,
                                       ccl_private ShaderData *sd,
                                       const int image_texture_id,
-                                      dual2 uv)
+                                      dual2 uv
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+                                      , const int deep_level = 0
+#endif
+                                      )
 {
   if (image_texture_id == KERNEL_IMAGE_NONE) {
     return IMAGE_MISSING_RGBA;
@@ -106,8 +113,16 @@ ccl_device float4 kernel_image_interp(KernelGlobals kg,
 
     /* Tile mapping */
     float2 xy = zero_float2();
-    const KernelTileDescriptor tile_descriptor = kernel_image_tile_map(
-        kg, sd, tex, image_texture_id, uv, xy);
+    const KernelTileDescriptor tile_descriptor = kernel_image_tile_map
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+        <deep_mip>
+#endif
+        (
+        kg, sd, tex, image_texture_id, uv, xy
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+        , deep_level
+#endif
+        );
 
     if (!kernel_tile_descriptor_loaded(tile_descriptor)) {
       return (tile_descriptor == KERNEL_TILE_LOAD_FAILED) ? IMAGE_MISSING_RGBA : tex.average_color;

@@ -6,6 +6,7 @@
 #include "kernel/deep/density.h"
 #include "kernel/deep/grid.h"
 #include "kernel/deep/volume_boundary.h"
+#include "kernel/deep/mip.h"
 #include "deep/volume.h"
 
 #include <algorithm>
@@ -21,6 +22,34 @@ void check(const bool condition, const char *message)
 {
   if (!condition)
     throw std::runtime_error(message);
+}
+
+void mip_tests()
+{
+  /* Independent native selector quadrature, including transitions and endpoint
+   * clamping. Distinct mip values expose an incorrect floor-only lookup. */
+  for (int levels : {1, 2, 8, 20}) {
+    for (int position = -400; position <= levels * 400; ++position) {
+      const float f = position / 400.0f;
+      const auto mip = ccl::deep_mip_filter(f, levels);
+      check(mip.low >= 0 && mip.high < levels && mip.high_weight >= 0 &&
+            mip.high_weight <= 1, "Invalid deterministic mip mixture");
+      double expected = 0;
+      constexpr int probes = 1000;
+      for (int i = 0; i < probes; ++i) {
+        const double native_level = double(f) + .5 + ((i + .5) / probes - .5) * .5;
+        const int level = std::clamp(int(native_level), 0, levels - 1);
+        expected += double(level * level + 1) / probes;
+      }
+      const double actual = (1 - double(mip.high_weight)) * (mip.low * mip.low + 1) +
+                            double(mip.high_weight) * (mip.high * mip.high + 1);
+      check(std::abs(expected - actual) <= (2 * levels + 1) / double(probes),
+            "Deep mip filter differs from native stochastic expectation");
+      const auto repeated = ccl::deep_mip_filter(f, levels);
+      check(mip.low == repeated.low && mip.high == repeated.high &&
+            mip.high_weight == repeated.high_weight, "Mip filter is not deterministic");
+    }
+  }
 }
 
 /* Independent corner evaluation and two-point Gaussian quadrature. A
@@ -286,6 +315,7 @@ int main()
             "Empty cubic cell produced intervals");
     }
     using namespace ccl;
+    mip_tests();
     grid_tests();
     const double start[] = {0, 0, 0}, end[] = {1, 1, 1};
     const double feature[] = {0, 6, 0, 0, 0, 0, 0, 0};

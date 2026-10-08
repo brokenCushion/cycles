@@ -279,7 +279,10 @@ static void validate_volume_evaluation(Scene *scene, Shader *shader)
   ShaderNodeSet nodes;
   deep_shader_dependencies(nodes, shader->graph->output()->input("Volume"));
   for (ShaderNode *node : nodes) {
-    require_deep(!(node->get_feature() & KERNEL_FEATURE_NODE_RAYTRACE) &&
+    /* Script nodes conservatively advertise ray tracing even without trace().
+     * Their actual optimized group/loaded bytecode is checked below for OSL. */
+    require_deep((scene->params.shadingsystem == SHADINGSYSTEM_OSL ||
+                  !(node->get_feature() & KERNEL_FEATURE_NODE_RAYTRACE)) &&
                      node->type->name != ustring("aov_output"),
                  "ray-traced shaders and AOV writes cannot drive deep volume extinction");
     if (scene->params.shadingsystem == SHADINGSYSTEM_SVM && node->type->name == ustring("light_path"))

@@ -54,6 +54,9 @@ Root causes, in code:
   side-channel. (See Phase 0 for the existing violation.)
 - Keep the numerical contract explicit: every approximation has a stated
   absolute transmittance bound, and the bounds sum to the user-visible setting.
+  Shader-evaluated volumes (8c) explicitly state, rather than prove, E/2 for
+  midpoint stepping; E/2 bounds representation/fitting/publication. EXR headers
+  identify this distinction, actual world-unit steps and the selection rule.
 - Strict mode must reproduce today's behaviour (`--deep-error strict`). Strict
   identity means bit-identical deep payload (sample counts, Z, ZBack, A and any
   other data channels) and deterministic headers. Exclude only run metadata:
@@ -1931,7 +1934,7 @@ old references remain unchanged. [Promotion](builds/validation/landscape-cloud/o
 [compiler audit](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json),
 [raw diagnostic](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json).
 Connected review: `D:/CyclesDeepScratch/regression-tools/phase8a_review.gfr`.
-Phase 8a accepted by the user on 2026-10-09. Phase 8b qualification is complete; 8c/9 remain unlaunched.
+Phases 8a and 8b accepted by the user on 2026-10-09. Phase 8c results follow; Phase 9 remains unlaunched.
 
 ### Phase 8b results (complete; awaiting acceptance review)
 
@@ -2012,4 +2015,63 @@ claim. After peaks: host working set <=5.38 GiB; device-wide GPU <=6750 MiB
 | performance / OPTIX / 1e-4 | 10.889 -> 10.961 | 3.684 -> 3.838 | 4.716/17.358 -> 4.764/17.374 | 6,823,509 -> 6,823,509 | 59.304 -> 59.304 | `21149fed7` |
 | performance / OPTIX / 1e-3 | 10.093 -> 10.136 | 2.085 -> 2.103 | 1.707/6.970 -> 1.703/6.921 | 3,086,077 -> 3,086,077 | 22.521 -> 22.521 | `21149fed7` |
 
-Stop for Phase 8b review. Phase 8c/9 remain unlaunched.
+Phase 8b accepted. Phase 8c results follow; Phase 9 remains unlaunched.
+
+### Phase 8c - shader-evaluated volumes: stopped on acceptance failure
+
+Renderer `793cc18f7` (Blender SHA `bce7489b322d9e5efe7d726e42e325e96ed314b6a61362a641d1537f8f433b1e`), fixture/check commit `1d3c710d1`.
+Only OSL volumes or explicit SVM opt-in select the new method. Headers record
+method, actual step range/rule and stated stepping versus proven reconstruction
+allowances. The queue stopped at the textured CPU 1e-4 finer-step gate; no
+threshold changed. Remaining fixtures, 81/81 + 30/30 + OptiX 65/65 native replay,
+landscape replay, GPU beauty replay and nine CTests are pending, not qualified.
+
+[Fresh before baseline](builds/validation/landscape-cloud/optimization-phase8c/baseline.json),
+[partial qualification](builds/validation/landscape-cloud/optimization-phase8c/shader-volumes.json),
+[failure diagnosis](builds/validation/landscape-cloud/optimization-phase8c/finer-step-failure.json),
+[current result](builds/validation/landscape-cloud/optimization-phase8c/phase-results.json).
+Large evidence is `D:/CyclesDeepScratch/optimization-phase8c/`; the connected
+`D:/CyclesDeepScratch/regression-tools/phase8c_failure_review.gfr` shows actual
+constant and failing textured outputs, with a declared/finer-step switch and
+DeepSlice -> DeepToPointCloud. Native shader and beauty sources remain unchanged;
+source-boundary checks and the direct EXR-header unit check pass.
+
+| Case | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| performance/CUDA/strict | render+capture / export wall s | 34.169 / 33.244 | Pending: queue stopped | 793cc18f7 |
+| performance/CUDA/1e-4 | render+capture / export wall s | 11.548 / 3.844 | Pending: queue stopped | 793cc18f7 |
+| performance/CUDA/1e-3 | render+capture / export wall s | 11.603 / 2.412 | Pending: queue stopped | 793cc18f7 |
+| performance/OPTIX/strict | render+capture / export wall s | 54.220 / 33.190 | Pending: queue stopped | 793cc18f7 |
+| performance/OPTIX/1e-4 | render+capture / export wall s | 10.908 / 3.755 | Pending: queue stopped | 793cc18f7 |
+| performance/OPTIX/1e-3 | render+capture / export wall s | 10.102 / 2.102 | Pending: queue stopped | 793cc18f7 |
+| CPU/constant/1e-4 | render+capture s | analytic 0.003921 s | 0.015275 | 793cc18f7 |
+| CPU/constant/1e-4 | max curve error vs 4x-finer | header 0.0001 | 0 (PASS) | 793cc18f7 |
+| CPU/constant/1e-4 | deep samples / EXR bytes / export wall s | New evaluated path | 153 / 2903 / 0.335711 | 793cc18f7 |
+| CPU/constant/1e-4 | aggregate CPU density / mixture fitting s | New evaluated path | 0.000000 / 0.085259 | 793cc18f7 |
+| CPU/constant/1e-3 | render+capture s | analytic 0.003986 s | 0.014386 | 793cc18f7 |
+| CPU/constant/1e-3 | max curve error vs 4x-finer | header 0.001 | 0 (PASS) | 793cc18f7 |
+| CPU/constant/1e-3 | deep samples / EXR bytes / export wall s | New evaluated path | 153 / 2903 / 0.352122 | 793cc18f7 |
+| CPU/constant/1e-3 | aggregate CPU density / mixture fitting s | New evaluated path | 0.000000 / 0.085120 | 793cc18f7 |
+| OPTIX/constant/1e-4 | render+capture s | analytic 0.029766 s | 0.094984 | 793cc18f7 |
+| OPTIX/constant/1e-4 | max curve error vs 4x-finer | header 0.0001 | 0 (PASS) | 793cc18f7 |
+| OPTIX/constant/1e-4 | deep samples / EXR bytes / export wall s | New evaluated path | 153 / 2903 / 0.339177 | 793cc18f7 |
+| OPTIX/constant/1e-4 | aggregate CPU density / mixture fitting s | New evaluated path | 0.000000 / 0.084531 | 793cc18f7 |
+| OPTIX/constant/1e-3 | render+capture s | analytic 0.029275 s | 0.091493 | 793cc18f7 |
+| OPTIX/constant/1e-3 | max curve error vs 4x-finer | header 0.001 | 0 (PASS) | 793cc18f7 |
+| OPTIX/constant/1e-3 | deep samples / EXR bytes / export wall s | New evaluated path | 153 / 2903 / 0.338661 | 793cc18f7 |
+| OPTIX/constant/1e-3 | aggregate CPU density / mixture fitting s | New evaluated path | 0.000000 / 0.081228 | 793cc18f7 |
+| CPU/texture/1e-4 | render+capture s | Analytic equivalent not run | 0.017322 | 793cc18f7 |
+| CPU/texture/1e-4 | max curve error vs 4x-finer | header 0.0001 | 0.0037129469 (FAIL) | 793cc18f7 |
+| CPU/texture/1e-4 | deep samples / EXR bytes / export wall s | New evaluated path | 10316 / 91860 / 0.375564 | 793cc18f7 |
+| CPU/texture/1e-4 | aggregate CPU density / mixture fitting s | New evaluated path | 0.000000 / 0.116435 | 793cc18f7 |
+
+Failure: CPU texture at step 0.005 versus 0.00125 has maximum curve difference
+0.00371294690 (pixel 5,1), flattened-alpha difference 0.00359431859, versus
+header 0.0001. Own fitting/depth-cut oracles pass (coarse 1.59967e-5, fine
+1.67460e-5, each inside the proven 5e-5 reconstruction allowance). A selected
+raw camera ray already differs by 0.00579149 before fitting, pointing to
+shader sampling/capture rather than publication; root cause is not established.
+CPU saved raw passes and beauty are exact against deep-off for both steps.
+Four constant CPU/OptiX mode cases pass finer reference, identity and beauty;
+eight strict/step/capacity atomic rejections pass. No full Phase 8c acceptance
+is claimed. Phase 9 remains held for user confirmation after 8c.

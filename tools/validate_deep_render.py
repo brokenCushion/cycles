@@ -6,6 +6,7 @@ import math
 from pathlib import Path
 import struct
 import sys
+import numpy as np
 from deep_exr import bound, check_deep, pixel, read
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src/deep'))
@@ -34,9 +35,9 @@ def validate(directory, samples=None, adaptive=None, ledger=None, output=None):
         raise ValueError('Deep error header mismatch')
     reconstruction_bound = result['deep_error']
     if header.get('cycles:deepVolumeMethod') == 'shader-eval':
-        step, minimum = [header[name] for name in ('cycles:deepVolumeStep', 'cycles:deepVolumeStepMin')]
-        reconstruction_bound = header['cycles:deepReconstructionError']
-        stepping_bound = header['cycles:deepVolumeStepError']
+        step, minimum, reconstruction_bound, stepping_bound = [float(np.asarray(header[name]).item())
+            for name in ('cycles:deepVolumeStep', 'cycles:deepVolumeStepMin',
+                         'cycles:deepReconstructionError', 'cycles:deepVolumeStepError')]
         if (not 0 < minimum <= step or not math.isfinite(step)
                 or 'midpoint' not in header['cycles:deepVolumeStepRule']
                 or 'stated, not proven' not in header['cycles:deepVolumeErrorProof']

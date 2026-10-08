@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import time
+import numpy as np
 from compare_deep_identity import compare
 from compare_deep_ids import curve_error, flattened_transmittance
 from deep_exr import read, bound, pixel, exact_flat
@@ -40,8 +41,8 @@ def difference(left, right):
             p, q = pixel(a, x, y), pixel(b, x, y)
             maximum = max(maximum, curve_error(p, q))
             flat = max(flat, abs(flattened_transmittance(p)-flattened_transmittance(q)))
-    return dict(max_curve_error=maximum, max_flattened_alpha_error=flat,
-                bound=bound(a), passed=maximum <= bound(a))
+    return dict(max_curve_error=float(maximum), max_flattened_alpha_error=float(flat),
+                bound=bound(a), passed=bool(maximum <= bound(a)))
 
 
 def main():
@@ -91,8 +92,9 @@ def main():
                    '--device', device, '--samples', '4', '--percentage', '100', '--threads', '24',
                    '--fixed-sampling', '--seed', str(seed), '--save-render-passes', '--diagnostic-sample-count']
         if mode:
+            capacity = 16 if analytic and case['name'] == 'constant' else 8192
             command += ['--deep', '--deep-volume', '--deep-error', mode, '--deep-z-tolerance', '0',
-                        '--deep-volume-step', str(step), '--deep-max-events', '8192', '--deep-memory-mb', '512']
+                        '--deep-volume-step', str(step), '--deep-max-events', str(capacity), '--deep-memory-mb', '512']
             if case['optin'] and not analytic:
                 command += ['--deep-volume-shader-eval']
         command += list(extra)
@@ -124,14 +126,14 @@ def main():
                     render(case, device, 'seed-'+str(i), seed=100+i) for i in range(1, 5)]
                 for mode in (('1e-3',) if args.smoke else ('1e-4', '1e-3')):
                     directory = render(case, device, mode, mode, step=case['step'])
-                    step = read(directory/'scene.deep.exr').header()['cycles:deepVolumeStepMin']
+                    step = float(np.asarray(read(directory/'scene.deep.exr').header()['cycles:deepVolumeStepMin']).item())
                     fine = render(case, device, mode+'-fine', mode, step=step/4)
                     with (directory/'checks.log').open('w') as log, redirect_stdout(log):
                         value = validate(directory)
                         value['fine_oracle'] = validate(fine)
                     value.update(metrics=metrics(directory), fine_metrics=metrics(fine),
                                  finer_reference=difference(directory, fine), step=step,
-                                 fine_step=read(fine/'scene.deep.exr').header()['cycles:deepVolumeStep'])
+                                 fine_step=float(np.asarray(read(fine/'scene.deep.exr').header()['cycles:deepVolumeStep']).item()))
                     result['cases'][device+'/'+case['name']+'/'+mode] = value
                     save()
                     if not value['finer_reference']['passed'] or value['fine_step'] != step/4:

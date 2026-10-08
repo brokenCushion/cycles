@@ -102,11 +102,12 @@ def compare(before, after):
                 changed_run_metadata=[k for k in changed if k in RUN_METADATA])
 
 
-def toolchain_difference(before, after):
+def toolchain_difference(before, after, mode='strict'):
     """Audit physical curves rather than pairing differently partitioned records.
 
-    The user-approved compiler re-baseline has a 1e-6 difference ceiling, even
-    for numeric modes. It never replaces an independent oracle check.
+    Strict has a 1e-6 cross-build ceiling. Numeric approximations are checked
+    against their own oracles; their cross-build difference is informational.
+    This comparison never replaces an independent oracle check.
     """
     import numpy as np
     from deep_exr import read, pixel, bound
@@ -139,8 +140,10 @@ def toolchain_difference(before, after):
                   changed_pixels=changed, count_changed_pixels=count_changed,
                   count_delta_min=min(deltas), count_delta_max=max(deltas),
                   max_transmittance_difference=maximum, max_flattened_alpha_difference=flat,
-                  worst_pixel=worst, header_bound=bound(b), difference_limit=1e-6,
-                  audit_passed=not result['changed_deterministic_attributes'] and maximum<=1e-6)
+                  worst_pixel=worst, header_bound=bound(b),
+                  difference_limit=1e-6 if mode=='strict' else None,
+                  triangle_inequality_bound=bound(a)+bound(b),
+                  audit_passed=not result['changed_deterministic_attributes'] and (mode!='strict' or maximum<=1e-6))
     return result
 
 

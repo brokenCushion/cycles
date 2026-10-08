@@ -96,8 +96,13 @@ First compare raw GPU spill records before fitting for the 33x17 volume case.
 Audit all 81 strict + 30 numeric cases against their retained references:
 report differing cases, maximum transmittance difference and sample-count changes.
 Each must pass its independent oracle/depth cuts within its EXR header bound;
-strict uses the legacy 1e-6 budget. Differences must be rounding-sized; any
-transmittance difference larger than 1e-6 stops work, including numeric cases.
+Strict cases alone have the 1e-6 cross-build ceiling; larger differences stop.
+For numeric 1e-4 / 1e-3 cases, each build must pass its own independent oracle
+and depth cuts within its own header bound. Cross-build differences are
+informational: 1-ULP input changes can flip compression/merge decisions and
+produce different valid approximations (up to the sum of both header bounds by
+the triangle inequality). This supersedes the earlier numeric 1e-6 ceiling;
+CPU adaptive_volume 1e-4 passes under this rule (user correction, 2026-10-08).
 Only after all pass, save separate clang-cl/NVCC-12.8.61 references and replay
 81/81 + 30/30 byte identity, CPU exact beauty and the full regression command.
 Same-build CPU deep-on/off beauty remains exact. No beauty or error gate changes.

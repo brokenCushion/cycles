@@ -45,27 +45,40 @@ def main():
     parser.add_argument('--keep',action='store_true',help='Keep the owned D: run folder after PASS')
     parser.add_argument('--optix',action='store_true',help='Also qualify OptiX SVM matrices and boundaries')
     parser.add_argument('--toolchain-audit',action='store_true',help='Audit the approved one-time compiler change; stage new references only, not GPU qualification')
+    parser.add_argument('--resume-audit',type=Path,help='Resume a retained compiler audit results.json without repeating completed renders')
     parser.add_argument('--cuda-beauty',type=Path,help='Optional separate calibrated CUDA beauty stage configuration')
     args=parser.parse_args();os.chdir(REPO)
     if args.toolchain_audit and (args.optix or args.cuda_beauty):
         parser.error('Toolchain audit is separate from OptiX/GPU beauty qualification')
+    if args.resume_audit and not args.toolchain_audit:parser.error('--resume-audit requires --toolchain-audit')
     if args.toolchain_audit:args.keep=True
     settings=json.loads(args.config.read_text());source_baseline=settings.pop('source_baseline')
     config={k:Path(v).resolve() for k,v in settings.items()}
     for path in config.values():
         if not path.exists():raise FileNotFoundError(path)
     run_id=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex[:8]
-    root=SCRATCH/run_id;root.mkdir(parents=True,exist_ok=False)
-    report_dir=REPO/'builds/validation/deep-regression'/run_id;report_dir.mkdir(parents=True)
+    previous=json.loads(args.resume_audit.read_text()) if args.resume_audit else None
+    if previous:
+        if not previous.get('toolchain_audit'):raise ValueError('Not a retained compiler audit')
+        root=Path(previous['root']);run_id=previous['run_id']
+        if root.resolve().parent!=SCRATCH.resolve() or root.is_junction():raise ValueError('Foreign audit workspace')
+        report_dir=args.resume_audit.resolve().parent
+        (report_dir/'results-before-resume.json').write_text(json.dumps(previous,indent=2)+'\n')
+    else:
+        root=SCRATCH/run_id;root.mkdir(parents=True,exist_ok=False)
+        report_dir=REPO/'builds/validation/deep-regression'/run_id;report_dir.mkdir(parents=True)
     env=dict(os.environ,TEMP=str(root/'temp'),TMP=str(root/'temp'),
              BLENDER_USER_RESOURCES=str(SCRATCH.parent/'regression-cache'))
-    (root/'temp').mkdir()
+    (root/'temp').mkdir(exist_ok=bool(previous))
     for key in ('OCIO','CYCLES_KERNEL_PATH','CYCLES_DEEP_Z_BASELINE','CYCLES_DEEP_VALIDATE_CAPTURE_ONLY','CYCLES_DEEP_HOST_ONLY_BEAUTY_PROOF'):
         env.pop(key,None)
     started=time.monotonic();result=dict(passed=False,run_id=run_id,root=str(root),keep=args.keep,
                                        toolchain_audit=args.toolchain_audit,stages=[],cases={},identity={})
+    cached={s['name'] for s in previous['stages'] if not s['exit_code']} if previous else set()
+    if previous:result['stages']=previous['stages'];result['resumed']=True
     def save():(report_dir/'results.json').write_text(json.dumps(result,indent=2)+'\n')
     def run(label,command):
+        if label in cached:return
         t=time.monotonic()
         with (root/(label+'.log')).open('w') as log:
             p=subprocess.run(list(map(str,command)),env=env,cwd=REPO,stdout=log,stderr=subprocess.STDOUT)
@@ -77,7 +90,19 @@ def main():
         result['stages'].append(dict(name=label,seconds=time.monotonic()-t,exit_code=0));save()
         return value
     def identity(label,reference,target,mode):
-        value=toolchain_difference(reference,target) if args.toolchain_audit else compare(reference,target)
+        value=toolchain_difference(reference,target,mode) if args.toolchain_audit else compare(reference,target)
+        if args.toolchain_audit:
+            evidence=root/'oracle-before'/reference.relative_to(config['golden']).parent
+            evidence.mkdir(parents=True,exist_ok=True)
+            if reference.name=='scene.deep.exr':
+                old=numerical(label.replace('/','-')+'-old-oracle',lambda:validate(reference.parent,output=evidence))
+            else:
+                # Standalone references retain their all-pixel ledgers beside named EXRs.
+                shutil.copy2(reference,evidence/'scene.deep.exr')
+                name=reference.name.removesuffix('.deep.exr')
+                case=next(c for c in json.loads((REPO/'tools/deep_boundary_cases.json').read_text())['cases'] if c['name']==name)
+                old=numerical(label+'-old-oracle',lambda:validate(evidence,samples=case['samples'],adaptive=False,ledger=reference.parent/(name+'.csv')))
+            value['before_oracle']=old['oracle']
         result['identity'].setdefault(mode,{})[label]=value;save()
         if args.toolchain_audit:
             if not value['audit_passed']:raise RuntimeError('Toolchain rounding/header gate failed: '+label+'; '+str(value))
@@ -86,7 +111,13 @@ def main():
             return
         if not value['passed']:raise RuntimeError('Deep identity failed: '+label)
     def native(d,scene,samples,percentage,device,mode='strict',ids=False,deep=True,measure=False,max_events=16):
-        d.mkdir(parents=True)
+        d.mkdir(parents=True,exist_ok=bool(previous))
+        if previous and (d/'render.json').exists():
+            recorded=json.loads((d/'render.json').read_text())
+            expected=dict(renderer_sha256=digest,source_sha256=hashlib.sha256(Path(scene).read_bytes()).hexdigest(),
+                          samples=samples,percentage=percentage,device=device,deep=deep)
+            if deep:expected.update(deep_error=0. if mode=='strict' else float(mode),deep_ids=ids,deep_z_tolerance=0)
+            if any(recorded.get(k)!=v for k,v in expected.items()):raise ValueError('Retained render settings differ: '+str(d))
         c=[config['blender'],'--factory-startup','--background','--disable-autoexec','--log','cycles','--log-level','info',
            scene,'--python-exit-code',1,'--python',REPO/'tools/render_blender_deep_scene.py','--','--output',d,
            '--samples',samples,'--percentage',percentage,'--device',device,'--threads',24,'--save-render-passes','--diagnostic-sample-count']
@@ -131,6 +162,7 @@ def main():
     try:
         # Source/build provenance is explicit: an executable cannot infer its Git revision.
         digest=hashlib.sha256(config['blender'].read_bytes()).hexdigest()
+        if previous and previous['beauty_sources']['renderer_sha256']!=digest:raise ValueError('Retained audit uses a different executable')
         build=json.loads(config['beauty_builds'].read_text())['builds'][digest]
         source_commit=build['source_commit'];head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
         old_hash=beauty_identity(source_baseline)[0];new_hash=beauty_identity(head)[0]
@@ -155,7 +187,7 @@ def main():
         # Run precisely the nine configured CTests, redirecting fixture outputs to D:.
         tests=json.loads(subprocess.check_output(['ctest','--test-dir',str(config['ctest_build']),'-C','Release','--show-only=json-v1']))['tests']
         if len(tests)!=9:raise ValueError('Expected nine CTests')
-        ctest=root/'ctest';ctest.mkdir();lines=[]
+        ctest=root/'ctest';ctest.mkdir(exist_ok=bool(previous));lines=[]
         for test in tests:
             c=list(test['command'])
             if test['name'] in ('cycles_deep_production','cycles_deep_volume','cycles_deep_density','cycles_deep_exr'):
@@ -175,7 +207,7 @@ def main():
             for name,case in cases.items():
                 base=root/'matrix'/device/name
                 if name.startswith('reject_'):
-                    d=base/'rejection';d.mkdir(parents=True);target=d/'scene.deep.exr';target.write_bytes(b'preserve')
+                    d=base/'rejection';d.mkdir(parents=True,exist_ok=bool(previous));target=d/'scene.deep.exr';target.write_bytes(b'preserve')
                     cmd=[config['blender'],'--factory-startup','--background','--disable-autoexec',case['scene'],'--python-exit-code',1,
                          '--python',REPO/'tools/render_blender_deep_scene.py','--','--output',d,'--samples',case['samples'],
                          '--percentage',100,'--device',device,'--deep','--deep-volume','--deep-error','strict','--deep-max-events',case.get('deep_max_events',16)]
@@ -196,7 +228,7 @@ def main():
         # Strict boundary cases retain their original XML, flags and analytic gates.
         for device in (('CPU','CUDA','OPTIX') if args.optix else ('CPU','CUDA')):
             for case in json.loads((REPO/'tools/deep_boundary_cases.json').read_text())['cases']:
-                d=root/'boundary'/device/case['name'];d.mkdir(parents=True);source=d/'scene.xml';source.write_text(case['xml'])
+                d=root/'boundary'/device/case['name'];d.mkdir(parents=True,exist_ok=bool(previous));source=d/'scene.xml';source.write_text(case['xml'])
                 base=[config['cycles'],'--background','--quiet','--device',device,'--shadingsys','svm','--threads',8,
                       '--samples',case['samples'],'--width',case['width'],'--height',case['height']]
                 c=base+['--output',d/'beauty.exr','--deep-volume','--deep-error','strict','--deep-output',d/'scene.deep.exr',

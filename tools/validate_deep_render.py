@@ -13,8 +13,10 @@ from sample_csv import open_samples
 from validate_volume_camera_curves import validate as camera_oracle
 
 
-def validate(directory, samples=None, adaptive=None, ledger=None):
+def validate(directory, samples=None, adaptive=None, ledger=None, output=None):
     directory=Path(directory)
+    output=Path(output) if output is not None else directory
+    output.mkdir(parents=True,exist_ok=True)
     image=read(directory/'scene.deep.exr')
     result=check_deep(image)
     settings=json.loads((directory/'render.json').read_text()) if (directory/'render.json').exists() else {}
@@ -36,7 +38,7 @@ def validate(directory, samples=None, adaptive=None, ledger=None):
     with open_samples(source) as stream:
         fields=csv.DictReader(stream).fieldnames
     if ledger is not None:
-        normalized=directory/'normalized.samples.csv'
+        normalized=output/'normalized.samples.csv'
         with open_samples(source) as stream, normalized.open('w',newline='') as target:
             writer=csv.writer(target);writer.writerow(('file_x','file_y','sample','event','front','back','value','kind'))
             for row in csv.DictReader(stream):
@@ -55,10 +57,10 @@ def validate(directory, samples=None, adaptive=None, ledger=None):
         coordinates={(i*(w-1)//8,j*(h-1)//8) for i in range(9) for j in range(9)}
     else:
         coordinates={(x,y) for y in range(h) for x in range(w)}
-    stored=directory/'stored_diagnostic_curves.json'
+    stored=output/'stored_diagnostic_curves.json'
     stored.write_text(json.dumps(dict(samples=effective,adaptive=adaptive,deep_error=result['deep_error'],
         pixels=[dict(x=x,y=y,samples=pixel(image,x,y)) for x,y in sorted(coordinates)])))
-    oracle=directory/'accepted_camera_oracle.json'
+    oracle=output/'accepted_camera_oracle.json'
     camera_oracle(source,stored,oracle)
     result['oracle']=json.loads(oracle.read_text())
     if settings and (settings['resolution'][0]*settings['percentage']//100,
@@ -67,7 +69,7 @@ def validate(directory, samples=None, adaptive=None, ledger=None):
     if settings.get('adaptive') and not all(0<count<=effective for count in result['oracle']['accepted_populations']):
         raise ValueError('Invalid adaptive population')
     # The camera oracle checks boundaries and midpoint cuts on both sides of steps.
-    (directory/'validation.json').write_text(json.dumps(result,indent=2)+'\n')
+    (output/'validation.json').write_text(json.dumps(result,indent=2)+'\n')
     return result
 
 

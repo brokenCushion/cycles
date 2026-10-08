@@ -43,6 +43,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config',type=Path,default=REPO/'tools/deep_regression_config.json')
     parser.add_argument('--keep',action='store_true',help='Keep the owned D: run folder after PASS')
+    parser.add_argument('--optix',action='store_true',help='Also qualify OptiX SVM matrices and boundaries')
     parser.add_argument('--cuda-beauty',type=Path,help='Optional separate calibrated CUDA beauty stage configuration')
     args=parser.parse_args();os.chdir(REPO)
     settings=json.loads(args.config.read_text());source_baseline=settings.pop('source_baseline')
@@ -101,6 +102,22 @@ def main():
         maximum=max(curve_error(pixel(a,x,y),pixel(b,x,y)) for y in range(h) for x in range(w))
         if maximum>bound(b):raise ValueError('Combined ID alpha exceeds header bound')
         return dict(passed=True,max_error=maximum,bound=bound(b))
+    def backend_compare(cuda,optix):
+        a,b=read(cuda/'scene.deep.exr'),read(optix/'scene.deep.exr')
+        h,w=b.channels()['A'].pixels.shape
+        maximum=0.;combined=0.;worst=None
+        from compare_deep_ids import flattened_transmittance
+        for y in range(h):
+            for x in range(w):
+                left,right=pixel(a,x,y),pixel(b,x,y)
+                error=curve_error(left,right)
+                if error>maximum:maximum,worst=error,[x,y]
+                combined=max(combined,abs(flattened_transmittance(left)-flattened_transmittance(right)))
+        value=dict(passed=maximum<=bound(b),max_curve_error=maximum,
+                   max_combined_alpha_error=combined,bound=bound(b),worst_pixel=worst)
+        (optix/'backend-comparison.json').write_text(json.dumps(value,indent=2))
+        if not value['passed']:raise ValueError('OptiX/CUDA alpha exceeds header bound: '+str(value))
+        return value
     try:
         # Source/build provenance is explicit: an executable cannot infer its Git revision.
         digest=hashlib.sha256(config['blender'].read_bytes()).hexdigest()
@@ -143,7 +160,7 @@ def main():
         rejected={'reject_ao_opacity':'ray-traced ambient occlusion cannot drive deep opacity','reject_dof':'static pinhole camera',
                   'reject_motion':'static pinhole camera','reject_orthographic':'requires mono perspective','reject_cubic':'require linear interpolation',
                   'reject_color':'requires scalar extinction','reject_nonlinear':'nonlinear products of density','reject_reflection':'unreflected volumes'}
-        for device in ('CPU','CUDA'):
+        for device in (('CPU','CUDA','OPTIX') if args.optix else ('CPU','CUDA')):
             cases=json.loads(config['cpu_cases' if device=='CPU' else 'cuda_cases'].read_text())['cases']
             for name,case in cases.items():
                 base=root/'matrix'/device/name
@@ -164,9 +181,10 @@ def main():
                         raise ValueError('Adaptive case did not converge early')
                     if name=='zero_extinction' and v['total_deep_samples']!=0:raise ValueError('Zero extinction was not empty')
                     if ids:v['combined_alpha']=numerical(f'ids-{device}-{name}-{mode}',lambda:ids_compare(base/mode,d))
-                    else:identity(f'matrix-{device}-{mode}/{name}',config['golden']/f'matrix-{device}-{mode}'/name/'deep/scene.deep.exr',d/'scene.deep.exr',mode)
+                    elif device!='OPTIX':identity(f'matrix-{device}-{mode}/{name}',config['golden']/f'matrix-{device}-{mode}'/name/'deep/scene.deep.exr',d/'scene.deep.exr',mode)
+                    if device=='OPTIX':v['cuda_alpha']=numerical(f'optix-alpha-{name}-{mode}-{ids}',lambda:backend_compare(root/'matrix/CUDA'/name/(mode+('-ids' if ids else '')),d))
         # Strict boundary cases retain their original XML, flags and analytic gates.
-        for device in ('CPU','CUDA'):
+        for device in (('CPU','CUDA','OPTIX') if args.optix else ('CPU','CUDA')):
             for case in json.loads((REPO/'tools/deep_boundary_cases.json').read_text())['cases']:
                 d=root/'boundary'/device/case['name'];d.mkdir(parents=True);source=d/'scene.xml';source.write_text(case['xml'])
                 base=[config['cycles'],'--background','--quiet','--device',device,'--shadingsys','svm','--threads',8,
@@ -184,7 +202,8 @@ def main():
                 v=verify(d,samples=case['samples'],adaptive=False,ledger=d/'scene.csv')
                 v['max_analytic_error']=boundary_analytic(d,case)
                 if device=='CPU':v['cpu_beauty']=exact_flat(d/'beauty.exr',d/'off.beauty.exr')
-                identity(label,config['golden']/('boundary-'+device)/(case['name']+'.deep.exr'),d/'scene.deep.exr','strict')
+                if device!='OPTIX':identity(label,config['golden']/('boundary-'+device)/(case['name']+'.deep.exr'),d/'scene.deep.exr','strict')
+                else:v['cuda_alpha']=numerical(label+'-cuda-alpha',lambda:backend_compare(root/'boundary/CUDA'/case['name'],d))
         for name,samples,percentage in [('small',16,2),('performance',4,25)]:
             for mode in ('strict','1e-4','1e-3'):
                 d=native(root/'landscape'/name/mode,config['landscape'],samples,percentage,'CUDA',mode,measure=True,max_events=8192)

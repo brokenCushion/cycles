@@ -30,6 +30,12 @@ file with `--config` when qualifying another build; register its provenance with
 fails explicitly. GPU-side changes require the separate `--cuda-beauty FILE`
 stage (JSON `targets`: run-relative case, references, pool, seed_references,
 snapshot_off/on/build). It applies the unchanged policy in the plan.
+`--optix` adds native SVM OptiX matrices, boundaries and fixed landscapes;
+the beauty stage accepts independently matched controls for each GPU backend.
+OptiX capture uses its own module, pipeline, shader table and queue arguments.
+It shares capture/reconstruction with CUDA; beauty's shaders and launch layout
+remain unchanged. Native grids retain double integration; volume bounds use
+the exact triangle scan because OptiX has no CUDA BVH2 nodes.
 
 The default checks nine CTests, CPU/CUDA matrices, boundaries, exact CPU beauty,
 75 kernel resources, strict 81/81 and numeric 30/30 identity, plus surface,
@@ -96,7 +102,7 @@ are not promised.
 
 ## Core footprint for rebases
 
-All 53 Cycles source/build files outside `src/deep/` and `src/kernel/deep/`, relative to
+All 59 Cycles source/build files outside `src/deep/` and `src/kernel/deep/`, relative to
 local `origin/main` (`a456b7610`). Shared deep headers remain in `src/kernel/deep/`.
 
 | Files | Reason |
@@ -106,6 +112,7 @@ local `origin/main` (`a456b7610`). Shared deep headers remain in `src/kernel/dee
 | `src/app/deep_output.cpp`<br>`src/app/deep_output.h`<br>`src/app/oiio_output_driver.cpp`<br>`src/app/oiio_output_driver.h` | Output-driver deep callback, diagnostic ledger and atomic EXR publication. |
 | `src/app/deep_output_driver_test.cpp`<br>`src/app/deep_output_driver_test.xml`<br>`src/app/deep_output_driver_transparent_test.xml`<br>`src/app/deep_output_driver_volume_test.xml` | Host API/lifecycle/overflow fixtures, independent of Blender. |
 | `src/device/cpu/kernel.cpp`<br>`src/device/cpu/kernel.h`<br>`src/device/cuda/device_impl.cpp`<br>`src/device/cuda/kernel.cpp`<br>`src/device/cuda/queue.cpp`<br>`src/device/cuda/queue.h`<br>`src/device/kernel.cpp`<br>`src/device/queue.cpp`<br>`src/device/queue.h` | CPU/CUDA entry dispatch, queue arguments, async transfers and kernel naming. |
+| `src/device/optix/device_impl.cpp`<br>`src/device/optix/device_impl.h`<br>`src/device/optix/queue.cpp`<br>`src/device/optix/queue.h`<br>`src/kernel/device/optix/CMakeLists.txt`<br>`src/kernel/device/optix/kernel_deep.cu` | Isolated native SVM deep module/pipeline, bounded all-hit traversal and queue-owned launch snapshot. |
 | `src/integrator/path_trace.cpp`<br>`src/integrator/path_trace.h`<br>`src/integrator/path_trace_deep_tile.h`<br>`src/integrator/path_trace_work.h`<br>`src/integrator/path_trace_work_cpu.cpp`<br>`src/integrator/path_trace_work_cpu.h`<br>`src/integrator/path_trace_work_gpu.cpp`<br>`src/integrator/path_trace_work_gpu.h` | Separate capture scheduling, bounded GPU batches/host spill and output-driver tile adapter. |
 | `src/kernel/bvh/bvh.h`<br>`src/kernel/bvh/intersect_filter.h`<br>`src/kernel/bvh/volume_all.h`<br>`src/kernel/device/cpu/bvh.h` | Bounded deep intersection batches using existing BVH; default beauty traversal unchanged. |
 | `src/kernel/device/cpu/kernel.h`<br>`src/kernel/device/cpu/kernel_arch.h`<br>`src/kernel/device/cpu/kernel_arch_impl.h`<br>`src/kernel/device/gpu/kernel.h` | Guarded CPU architecture dispatch and GPU deep kernel entry. |

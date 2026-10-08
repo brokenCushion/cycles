@@ -259,6 +259,8 @@ set(SRC_KERNEL_TYPES_HEADERS
 )
 
 set(SRC_KERNEL_DEEP_HEADERS
+  deep/shader_eval.h
+  deep/osl_attribute.h
   deep/camera_depth.h
   deep/volume_cpu.h
   deep/volume.h

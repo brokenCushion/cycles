@@ -52,6 +52,15 @@ Root causes, in code:
 
 - Do not change beauty kernels or beauty sampling. Deep must remain a
   side-channel. (See Phase 0 for the existing violation.)
+Phase 8c user decisions: initialize all deep shader inputs on every device.
+Deep grid/texture evaluation uses the native deterministic interpolation
+whose expectation beauty samples stochastically; beauty evaluation is unchanged.
+Same-step CPU/OptiX curves must repeat byte-identically. Before adaptive
+control, demonstrate deterministic midpoint convergence against an independent
+CPU integral of the same shader on selected captured rays at h/64 or finer,
+with no event cap. If convergence fails, stop. Adaptive step doubling remains
+stated, not proven: unresolved features narrower than evaluated steps can be missed.
+
 - Keep the numerical contract explicit: every approximation has a stated
   absolute transmittance bound, and the bounds sum to the user-visible setting.
   Shader-evaluated volumes (8c) explicitly state, rather than prove, E/2 for

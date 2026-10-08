@@ -3,6 +3,7 @@
 #include "kernel/deep/write.h"
 #include "kernel/deep/volume_boundary.h"
 #include "kernel/deep/volume_native.h"
+#include "kernel/deep/shader_eval.h"
 #ifdef __KERNEL_OPTIX__
 #  include "kernel/deep/volume_optix.h"
 #endif
@@ -41,20 +42,11 @@ ccl_device KernelDeepResult deep_volume_shader(
     const double back = i + 1 == int(required) ? end : start + double(i + 1) * dt;
     if (!(back > front && back <= end))
       return {DEEP_FAILED, 0, DEEP_ERROR_PROGRESS};
-    shader_setup_from_volume(sd, &ray, entry.object);
     const double midpoint = (front + back) * .5;
-    sd->P = make_float3(float(double(ray.P.x) + double(ray.D.x) * midpoint),
-                        float(double(ray.P.y) + double(ray.D.y) * midpoint),
-                        float(double(ray.P.z) + double(ray.D.z) * midpoint));
-    sd->num_closure = sd->num_closure_left = 0;
-    sd->runtime_flag = SR_IS_VOLUME_SHADER_EVAL;
-    volume_shader_eval_entry<false, KERNEL_FEATURE_NODE_MASK_VOLUME>(
-        kg, state, sd, entry, PATH_RAY_VISIBILITY_CAMERA,
-        INTEGRATOR_STATE(state, path, flag) | PATH_RAY_EXTINCTION);
-    if (sd->runtime_flag & SR_CACHE_MISS)
+    bool cache_miss = false;
+    const float3 sigma = deep_volume_sigma(kg, state, ray, entry, midpoint, &cache_miss);
+    if (cache_miss)
       return {DEEP_FAILED, 0, DEEP_ERROR_CACHE_MISS};
-    const float3 sigma = spectrum_to_rgb((sd->runtime_flag & SR_EXTINCTION) ?
-                                           sd->closure_transparent_extinction : zero_spectrum());
     if (!isfinite(sigma.x) || sigma.x < 0 || sigma.x != sigma.y || sigma.x != sigma.z)
       return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
     if (sigma.x == 0) continue;
@@ -438,7 +430,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
     if (initial_objects_count == DEEP_MAX_MEDIA)
       return {DEEP_FAILED, 0, DEEP_ERROR_MEDIA_CAPACITY};
     initial_objects[initial_objects_count++] = hit.object;
-    ShaderDataTinyStorage storage;
+    ShaderDataTinyStorage storage{};
     ShaderData &sd = *AS_SHADER_DATA(&storage);
     shader_setup_from_ray(kg, &sd, &initial_ray, &hit);
     if (!(sd.runtime_flag & SR_BACKFACING))
@@ -492,7 +484,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
         return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
       if (hit.type != PRIMITIVE_TRIANGLE)
         return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
-      ShaderDataTinyStorage storage;
+      ShaderDataTinyStorage storage{};
       ShaderData &sd = *AS_SHADER_DATA(&storage);
       shader_setup_from_ray(kg, &sd, &ray, &hit);
       const bool back = (sd.runtime_flag & SR_BACKFACING) != 0;

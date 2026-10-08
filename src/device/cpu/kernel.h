@@ -37,6 +37,8 @@ class CPUKernels {
       const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *, KernelDeepEvent *, int, bool,
       KernelDeepDensity *, double)>
       deep_surface;
+  CPUKernelFunction<bool (*)(const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *,
+      int, double, double, int, double *)> deep_volume_oracle;
 #endif
   IntegratorShadeFunction integrator_megakernel;
 

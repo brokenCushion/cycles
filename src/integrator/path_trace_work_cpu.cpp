@@ -16,6 +16,9 @@
 #  include "deep/capture.h"
 #  include "kernel/deep/camera_depth.h"
 #  include "util/transform.h"
+#  include <cstdlib>
+#  include <fstream>
+#  include <iomanip>
 #endif
 
 #include "integrator/pass_accessor_cpu.h"
@@ -198,6 +201,45 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
             capture->volume_grid() ? (.5 * deep::error_budget(capture->error()).density) *
                                         (capture->error() > 0) : 0);
         capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, events, density);
+        /* Opt-in diagnostic oracle: selected actual accepted CPU camera rays.
+         * All allocation/file access is host-side. One file per ray avoids a
+         * global lock and retains exact FLOAT shader samples for audit. */
+        const char *oracle_dir = std::getenv("CYCLES_DEEP_VOLUME_ORACLE_DIR");
+        const char *oracle_pixels = std::getenv("CYCLES_DEEP_VOLUME_ORACLE_PIXELS");
+        const string pixel = ";" + std::to_string(work_tile.x) + "," +
+                             std::to_string(work_tile.y) + ";";
+        if (oracle_dir && oracle_pixels && density && result.status == DEEP_COMPLETE &&
+            string(oracle_pixels).find(pixel) != string::npos && result.count) {
+          const int object = int(deep_event_object(events[0]));
+          double front = density[0].front, back = density[0].back;
+          for (unsigned i = 0; i < result.count; ++i) {
+            if (int(deep_event_object(events[i])) != object) {
+              throw std::runtime_error("CPU shader oracle requires a single volume object");
+            }
+            front = std::min(front, density[i].front);
+            back = std::max(back, density[i].back);
+          }
+          const char *step_text = std::getenv("CYCLES_DEEP_VOLUME_ORACLE_STEP");
+          const double step = step_text ? std::stod(step_text) : 0;
+          const float4 z = kernel_globals->data.cam.worldtocamera.z;
+          const auto direction = state->ray.D;
+          const double dz = double(z.x)*direction.x + double(z.y)*direction.y + double(z.z)*direction.z;
+          const double requested = std::ceil((back-front)*double(len(direction))/(step*dz));
+          if (!(step > 0 && requested > 0 && requested <= INT_MAX))
+            throw std::runtime_error("Invalid independent CPU shader oracle step");
+          const int steps = int(requested);
+          vector<double> sigma(steps);
+          if (!kernels_.deep_volume_oracle(kernel_globals, state, object, front, back, steps, sigma.data()))
+            throw std::runtime_error("Independent CPU shader oracle evaluation failed");
+          const string filename = string(oracle_dir) + "/" + std::to_string(work_tile.x) + "-" +
+              std::to_string(work_tile.y) + "-" + std::to_string(state->path.sample) + ".csv";
+          std::ofstream out(filename);
+          out.exceptions(std::ios::badbit | std::ios::failbit);
+          out << std::setprecision(17) << "front,back,sigma_per_z\n";
+          for (int i = 0; i < steps; ++i)
+            out << front+(back-front)*i/steps << ',' << front+(back-front)*(i+1)/steps
+                << ',' << sigma[i] << '\n';
+        }
       }
       else {
         /* Independent opaque traversal also records surface facing. Beauty

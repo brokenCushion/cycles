@@ -39,7 +39,7 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
         kernel_data.cam, kernel_data_array(camera_motion), ray.time, ray.P + ray.D * isect.t);
     if (!isfinite(depth) || depth <= 0)
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_DEPTH};
-    ShaderDataTinyStorage storage;
+    ShaderDataTinyStorage storage{};
     ShaderData &sd = *AS_SHADER_DATA(&storage);
     shader_setup_from_ray(kg, &sd, &ray, &isect);
     const bool backfacing = (sd.runtime_flag & SR_BACKFACING) != 0;

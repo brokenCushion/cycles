@@ -245,6 +245,14 @@ ccl_device void svm_eval_nodes(KernelGlobals kg,
       IF_KERNEL_NODES_FEATURE(VOLUME)
       {
 #ifdef __VOLUME__
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+        if constexpr (node_feature_mask & (1u << 31)) {
+          SVMNodeAttr node = svm_node_get<SVMNodeAttr>(kg, &offset);
+          node.bump_filter_width = __uint_as_float(0);
+          svm_node_attr_volume(kg, sd, stack, node);
+          break;
+        }
+#endif
         svm_node_attr_volume(kg, sd, stack, svm_node_get<SVMNodeAttr>(kg, &offset));
 #endif
       }

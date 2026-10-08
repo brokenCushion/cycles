@@ -87,6 +87,47 @@ DEFINE_INTEGRATOR_INIT_KERNEL(init_from_bake)
 #ifdef WITH_CYCLES_DEEP_OPAQUE
 DEFINE_INTEGRATOR_SHADE_KERNEL(intersect_closest)
 
+/* Independent CPU shader oracle. Host supplies scratch sized to the requested
+ * fine step. No event construction, compression, fitting, or 8192-event cap. */
+bool KERNEL_FUNCTION_FULL_NAME(deep_volume_oracle)(const ThreadKernelGlobalsCPU *kg,
+    const IntegratorStateCPU *camera, int object, double front, double back,
+    int steps, double *sigma)
+{
+#  ifdef KERNEL_STUB
+  STUB_ASSERT(KERNEL_ARCH, deep_volume_oracle);
+  return false;
+#  else
+  IntegratorStateCPU private_state = *camera;
+  Ray ray{};
+  integrator_state_read_ray(&private_state, &ray);
+  Intersection hits[DEEP_MAX_MEDIA]{};
+  const int count = scene_intersect_volume(kg, &ray, hits, DEEP_MAX_MEDIA,
+                                           PATH_RAY_VISIBILITY_CAMERA, false);
+  if (count == DEEP_MAX_MEDIA || steps < 1) return false;
+  int hit = 0;
+  while (hit < count && hits[hit].object != object) ++hit;
+  if (hit == count) return false;
+  ShaderData sd{};
+  shader_setup_from_ray(kg, &sd, &ray, &hits[hit]);
+  const VolumeStack entry = {object, sd.shader};
+  const float4 z = kernel_data.cam.worldtocamera.z;
+  const double origin = double(z.x)*double(ray.P.x) + double(z.y)*double(ray.P.y) +
+                        double(z.z)*double(ray.P.z) + double(z.w);
+  const double dz = double(z.x)*double(ray.D.x) + double(z.y)*double(ray.D.y) + double(z.z)*double(ray.D.z);
+  if (!(dz > 0 && back > front)) return false;
+  const double dt = (back-front) / dz / steps;
+  const double start = (front-origin) / dz;
+  for (int i = 0; i < steps; ++i) {
+    bool miss = false;
+    const float3 s = deep_volume_sigma(kg, &private_state, ray, entry,
+                                      start + (double(i)+.5)*dt, &miss);
+    if (miss || !isfinite(s.x) || s.x < 0 || s.x != s.y || s.x != s.z) return false;
+    sigma[i] = double(s.x) * double(len(ray.D)) / dz;
+  }
+  return true;
+#  endif
+}
+
 /* Independent straight visibility traversal. The accepted camera ray, differentials,
  * time and
  * RNG identity are copied; beauty path state and buffers are never mutated.
@@ -128,7 +169,7 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
       return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
     integrator_state_write_isect(state, &isect);
     integrator_state_write_ray(state, &ray);
-    ShaderData sd;
+    ShaderData sd{};
     shader_setup_from_ray(kg, &sd, &ray, &isect);
     const bool backfacing = (sd.runtime_flag & SR_BACKFACING) != 0;
     if (count && deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing)) {

@@ -129,6 +129,9 @@ class OptiXDevice : public CUDADevice {
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   OptixModule deep_module = nullptr;
   OptixPipeline deep_pipeline = nullptr;
+  OptixModule deep_osl_services_module = nullptr;
+  OptixProgramGroup deep_osl_services_group = nullptr;
+  unique_ptr<device_vector<SbtRecord>> deep_osl_sbt_data;
   void load_deep_pipeline(bool use_osl);
   unique_ptr<device_vector<SbtRecord>> deep_sbt_data;
 #endif

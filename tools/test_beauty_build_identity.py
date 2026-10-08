@@ -24,3 +24,12 @@ session = git('show', 'HEAD:src/session/session.cpp')
 assert b'validate_deep_osl(scene.get());' in session
 assert b'scene->update(progress)' in session
 print('PASS OSL metadata and exact Session validation boundary')
+
+# The deterministic deep evaluator is explicitly guarded. Stripping only those
+# blocks must recover every byte of the accepted native evaluators/registration.
+for name in ('src/kernel/svm/svm.h', 'src/kernel/osl/services.cpp',
+             'src/kernel/osl/closures.cpp', 'src/device/cpu/kernel.cpp'):
+    before = without_deep_blocks(git('show', '6f9eabcc4:' + name))
+    after = without_deep_blocks(git('show', 'HEAD:' + name))
+    assert before == after, name
+print('PASS native evaluator and CPU dispatch byte equality outside deep guards')

@@ -16,7 +16,8 @@ DEEP_HOST = {'src/app/deep_output.cpp', 'src/app/deep_output.h',
              'src/integrator/path_trace_deep_tile.h', 'src/session/output_driver.h',
              'src/session/deep.h', 'src/session/deep.cpp', 'src/app/deep_output_driver_test.cpp'}
 DEEP_DEVICE = {'src/kernel/device/optix/kernel_deep.cu',
-               'src/kernel/device/optix/kernel_deep_osl.cu'}
+               'src/kernel/device/optix/kernel_deep_osl.cu',
+               'src/kernel/device/optix/kernel_deep_osl_services.cu'}
 
 
 def git(*args):
@@ -52,6 +53,7 @@ def beauty_identity(commit):
                             git('show', commit + ':' + path))
             files[path] = hashlib.sha256(source).hexdigest()
         elif path in ('src/integrator/path_trace.cpp', 'src/app/cycles_standalone.cpp',
+                    'src/device/cpu/kernel.cpp',
                     'src/integrator/path_trace_work_cpu.cpp', 'src/integrator/path_trace_work_gpu.cpp',
                     'src/integrator/path_trace_work_gpu.h',
                     'src/device/queue.h', 'src/device/queue.cpp',
@@ -65,7 +67,9 @@ def beauty_identity(commit):
             # code and any change to its beauty/sampling body retain their hash.
             source = source.replace(b"#ifdef WITH_CYCLES_DEEP_OPAQUE\n  if (params.deep.enabled && scene->params.shadingsystem == SHADINGSYSTEM_OSL) {\n    validate_deep_osl(scene.get());\n  }\n#endif\n", b'')
             files[path] = hashlib.sha1(b'blob '+str(len(source)).encode()+b'\0'+source).hexdigest()
-        elif path in ('src/scene/osl.cpp', 'src/scene/osl.h', 'src/scene/shader.h'):
+        elif path in ('src/scene/osl.cpp', 'src/scene/osl.h', 'src/scene/shader.h',
+                      'src/kernel/osl/services.cpp', 'src/kernel/osl/closures.cpp',
+                      'src/kernel/svm/svm.h'):
             source = without_deep_blocks(git('show', commit + ':' + path))
             files[path] = hashlib.sha1(b'blob '+str(len(source)).encode()+b'\0'+source).hexdigest()
         elif path.startswith('src/device/optix/'):

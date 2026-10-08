@@ -168,6 +168,9 @@ def main():
                             raise ValueError('CPU/GPU flattened alpha exceeds cross-backend bound: '+str(directory))
                     save()
                 if not args.smoke:
+                    if case['optin']:
+                        render(dict(case, optin=False), device, 'reject-without-optin', '1e-3',
+                               rejection='nonlinear products of density')
                     render(case, device, 'reject-strict', 'strict', step=case['step'], rejection='require numeric')
                     render(case, device, 'reject-step-limit', '1e-3', step=1e-8, rejection='traversal step limit')
                     if case['name'] == 'constant':

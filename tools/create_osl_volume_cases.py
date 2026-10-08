@@ -56,14 +56,19 @@ for name in ('constant', 'texture', 'grid', 'svm_optin'):
             source = root/(name+'.osl')
             expression = 'float d = 0.35;'
             if name != 'constant':
-                expression = 'float d = 0; getattribute("geom:density", d);'
+                expression = 'float d = Density; float grid = 0; if (getattribute("geom:density", grid)) d = grid;'
             if name == 'texture':
                 expression += ' d *= texture("'+(root/'density.exr').as_posix()+'", (P[0]+2)/4, 0.5, "interp", "bilinear", "wrap", "clamp");'
-            source.write_text('shader fixture(output closure color Volume = 0) { '+expression+' Volume = d*absorption(); }\n')
+            source.write_text('shader fixture(float Density = 0, output closure color Volume = 0) { '+expression+' Volume = d*absorption(); }\n')
             script = nodes.new('ShaderNodeScript')
             script.mode, script.filepath = 'EXTERNAL', str(source)
             if 'Volume' not in script.outputs:
                 raise RuntimeError('OSL volume compilation failed: '+name)
+            if name != 'constant':
+                # Native Attribute nodes request the grid during Blender volume sync.
+                attr = nodes.new('ShaderNodeAttribute')
+                attr.attribute_name = 'density'
+                links.new(attr.outputs['Fac'], script.inputs['Density'])
             links.new(script.outputs['Volume'], out.inputs['Volume'])
         else:
             absorption = nodes.new('ShaderNodeVolumeAbsorption')

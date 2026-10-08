@@ -73,6 +73,16 @@ Root causes, in code:
 - Never call GPU-thread heap allocation, STL, or files from kernels (existing
   `PEER_DEEP_OUTPUT_REQUIREMENTS.md` still applies).
 
+### OptiX shader-raytrace fallback (user decision, 2026-10-08)
+
+Pristine Blender at the pinned revision fails native shader-raytrace linking
+with both CUDA 12.8 / OptiX 9.0 and the buildbot's OptiX 8.0.0 headers. Do not
+change beauty sources or Cycles compiler flags to work around this failure.
+OptiX deep qualification is limited to scenes without a shader-raytrace module
+(AO/Bevel); require an explicit preflight rejection directing other scenes to
+CUDA. Phase 9 runs on CUDA. The restricted preflight and qualification remain
+pending beyond the requested toolchain-review stop; this is not 8a acceptance.
+
 ### Final CUDA/OptiX raw beauty rule (user decisions, 2026-10-08)
 
 This supersedes the historical Phase 0 CUDA raw envelope/search policy and
@@ -578,7 +588,7 @@ analysed that way, so OSL volumes need the general shader-evaluation path
 ### Phase 9 - Landscape production run (last)
 
 Run only after Phases 0-8 pass and the user confirms. One run validates the
-final pipeline. Use OptiX if Phase 8 passed (CUDA otherwise; record which).
+final pipeline. Use CUDA under the approved shader-raytrace fallback above.
 
 Run the full landscape (1175x500, max 1024 adaptive, GPU OIDN) with
 `--deep-error 1e-3 --deep-samples 0 --deep-ids` first, then
@@ -1824,19 +1834,28 @@ fitting breakdown and sampled memory: [baseline](builds/validation/landscape-clo
 | 33x17/4 volume, 1e-3 | OptiX vs CUDA whole-curve error; oracle error | CUDA reference | 0; 0.000159669 <= header 0.0010000000475 | `0b55e8567` |
 | Same probe | Render+capture / export s; samples; EXR bytes | Not timed as a before case | 0.236609 / 0.095553; 3,452; 32,845 (startup/JIT excluded) | `0b55e8567` |
 | Nine CTests / common CUDA resources / beauty sources | Proof | 9 / 75 / source hash PASS | 9 PASS (16.13 s); 75 unchanged; same source hash | `0b55e8567` |
-| Landscape OptiX deep-off | Native shader-raytrace pipeline | No qualified OptiX baseline | Link failure also with all deep OptiX host blocks disabled | `0b55e8567` |
+| Landscape 47x20/16, pristine / OptiX 9.0 | Native shader-raytrace link | No pristine comparison | FAIL: 11 duplicate symbols, no deep patches; 405.94 s including cold JIT | Blender `749518deb2f0` |
+| Same landscape, pristine / OptiX 8.0.0 | Same; official SDK version | 9.0 failed | FAIL: same 11 symbols; 403.95 s including cold JIT | Blender `749518deb2f0` |
+| 33x17/4 probe, 1e-3 | Saved parts / visible channels; deep identity | 10 parts / reader sees 4 channels | 1 part / 26 channels; all 12 required raw channels identical; deep payload + deterministic headers identical | `181a382cb` |
 
-Native OptiX linking fails with duplicate visible functions (`sqrtf`, RGBE,
-packed-normal and state constructors) on Windows/CUDA 12.8/OptiX 9.0. The
-diagnostic-only executable removes all four OptiX host deep blocks; the same
-native beauty shader pipeline fails. Generated files were restored byte-for-byte;
-no diagnostic change entered Git or the ordinary reference pool. No beauty
-source, compiler flag or acceptance threshold changed to bypass this failure.
+Both pristine builds are clean at `749518deb2f0735a22361a07488b35f7ea5c2fdf`,
+with no deep overlay. Both compile the shader-raytrace module and fail linking
+native `PIP_SHADE`: `sqrtf`, RGBE, packed-normal and state/initializer constructors.
+The exact revision's [buildbot config](https://github.com/blender/blender/blob/749518deb2f0735a22361a07488b35f7ea5c2fdf/build_files/config/pipeline_config.yaml)
+specifies OptiX 8.0.0 and CUDA 12.8.0. Installed the official NVIDIA 8.0.0 API
+headers/licences on D: (15 files, 486,728 bytes, every Git blob verified), after
+the required download notice. Separate fresh OptiX caches; no beauty-source,
+compiler-flag workaround or threshold change. Pristine diagnostics stay outside
+the ordinary beauty reference pool. [9.0 report](builds/validation/landscape-cloud/optimization-phase8a/pristine-optix9.json),
+[8.0 report](builds/validation/landscape-cloud/optimization-phase8a/pristine-optix8.json).
 
-The probe's saved raw EXR contains Combined RGBA only, so the beauty validator
-correctly rejects missing counts/denoiser inputs. An explicit pass-registration
-refresh did not restore them and was reverted; it preserved deep byte identity.
-Full matrices, boundaries, fresh identity, GPU beauty, after measurements and
-Gaffer qualification remain pending. No speedup or Phase 8a acceptance claimed.
+Raw inputs were present in the previous multipart EXR; the reader only saw its
+first part. The harness now saves interleaved passes: all required inputs/counts
+are visible, with zero raw difference and unchanged deep payload/deterministic
+headers. [Harness proof](builds/validation/landscape-cloud/optimization-phase8a/raw-passes-fix.json).
+
+Stopped after requested pristine/toolchain steps 1-2. Restricted-scene preflight,
+full matrices/boundaries, fresh identity, GPU beauty, after measurements and
+Gaffer qualification remain pending. No Phase 8a acceptance or speedup claimed.
 [Measured evidence](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json);
 large evidence and TEMP: `D:/CyclesDeepScratch/optimization-phase8a/`.

@@ -32,6 +32,19 @@ def validate(directory, samples=None, adaptive=None, ledger=None, output=None):
     requested=settings.get('deep_error',0)
     if bool(requested)!=('cycles:deepError' in header) or (requested and not math.isclose(result['deep_error'],requested,rel_tol=1e-7)):
         raise ValueError('Deep error header mismatch')
+    reconstruction_bound = result['deep_error']
+    if header.get('cycles:deepVolumeMethod') == 'shader-eval':
+        step, minimum = [header[name] for name in ('cycles:deepVolumeStep', 'cycles:deepVolumeStepMin')]
+        reconstruction_bound = header['cycles:deepReconstructionError']
+        stepping_bound = header['cycles:deepVolumeStepError']
+        if (not 0 < minimum <= step or not math.isfinite(step)
+                or 'midpoint' not in header['cycles:deepVolumeStepRule']
+                or 'stated, not proven' not in header['cycles:deepVolumeErrorProof']
+                or not 0 < reconstruction_bound == stepping_bound
+                or reconstruction_bound + stepping_bound != result['deep_error']):
+            raise ValueError('Shader volume method/step/error metadata mismatch')
+        result['shader_volume'] = dict(step=step, minimum_step=minimum,
+            stated_step_error=stepping_bound, proven_reconstruction_error=reconstruction_bound)
     source=Path(ledger) if ledger is not None else directory/'scene.deep.exr.samples.csv'
     normalized=None
     # Standalone surface ledgers encode FLOAT depths/alphas with max_digits10.
@@ -58,7 +71,7 @@ def validate(directory, samples=None, adaptive=None, ledger=None, output=None):
     else:
         coordinates={(x,y) for y in range(h) for x in range(w)}
     stored=output/'stored_diagnostic_curves.json'
-    stored.write_text(json.dumps(dict(samples=effective,adaptive=adaptive,deep_error=result['deep_error'],
+    stored.write_text(json.dumps(dict(samples=effective,adaptive=adaptive,deep_error=reconstruction_bound,
         pixels=[dict(x=x,y=y,samples=pixel(image,x,y)) for x,y in sorted(coordinates)])))
     oracle=output/'accepted_camera_oracle.json'
     camera_oracle(source,stored,oracle)

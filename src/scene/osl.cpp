@@ -1122,7 +1122,7 @@ void OSLCompiler::add(ShaderNode *node, const char *name, bool isfilepath)
   OSLShaderInfo *info = scene->osl_manager->shader_loaded_info(name);
 
 #ifdef WITH_CYCLES_DEEP_OPAQUE
-  if (current_type == SHADER_TYPE_SURFACE) {
+  if (current_type == SHADER_TYPE_SURFACE || current_type == SHADER_TYPE_VOLUME) {
     if (info) {
       current_shader->deep_osl_features.merge(info->deep_features);
     }

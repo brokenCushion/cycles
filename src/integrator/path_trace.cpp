@@ -754,7 +754,13 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
       params.width, params.height, capture_samples, capture_bytes,
       (settings.transparent || settings.volume) ? event_capacity : 0,
       true, adaptive, settings.volume, settings.volume_grid, TaskScheduler::max_concurrency(),
-      settings.error, settings.samples ? capture_samples : 0, settings.ids);
+      settings.volume_shader_evaluation ? settings.error / 2 : settings.error,
+      settings.samples ? capture_samples : 0, settings.ids);
+  if (settings.volume_shader_evaluation) {
+    deep_capture_->volume_shader_error = settings.error;
+    deep_capture_->volume_step_min = settings.volume_step_min;
+    deep_capture_->volume_step_max = settings.volume_step_max;
+  }
   deep_capture_->z_tolerance = settings.error ? settings.z_tolerance : 0;
   const char *baseline = std::getenv("CYCLES_DEEP_Z_BASELINE");
   deep_capture_->retain_for_validation = deep_capture_->z_tolerance > 0 && baseline && baseline[0];

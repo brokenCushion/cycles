@@ -91,6 +91,10 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
         name="Deep Volume Visibility", default=False,
         description="Capture scalar absorption through supported volume density grids",
     )
+    use_deep_volume_shader_eval: BoolProperty(name="Deep Volume Shader Evaluation", default=False,
+        description="Opt in to fixed-step extinction evaluation; OSL volumes use it automatically")
+    deep_volume_step: FloatProperty(name="Deep Volume Step", default=0, min=0,
+        description="World-unit step cap; 0 derives from grid voxels, nongrid volumes require an explicit step")
     deep_z_tolerance: FloatProperty(name="Deep Surface Depth Tolerance", default=1e-4, min=0,
         description="Relative same-object surface depth span; 0 disables; strict forces 0")
     deep_error: FloatProperty(name="Deep Transmittance Error", default=1e-3, min=0, max=1e-2,
@@ -114,7 +118,8 @@ edit('blender/addon/ui.py', 'class CYCLES_RENDER_PT_film_pixel_filter', """class
         layout.use_property_split = True
         col = layout.column()
         col.active = context.scene.cycles.use_deep_output
-        for prop in ("deep_output_path", "use_deep_volume", "use_deep_ids",
+        for prop in ("deep_output_path", "use_deep_volume", "use_deep_volume_shader_eval",
+                     "deep_volume_step", "use_deep_ids",
                      "deep_error", "deep_z_tolerance", "deep_samples", "deep_max_events", "deep_memory_mb"):
             col.prop(context.scene.cycles, prop)
 
@@ -128,6 +133,8 @@ edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_
   if (params.deep.enabled) {
     params.deep.transparent = true;
     params.deep.volume = get_boolean(cscene, "use_deep_volume");
+    params.deep.volume_shader_eval = get_boolean(cscene, "use_deep_volume_shader_eval");
+    params.deep.volume_step = get_float(cscene, "deep_volume_step");
     params.deep.error = get_float(cscene, "deep_error");
     params.deep.z_tolerance = get_float(cscene, "deep_z_tolerance");
     params.deep.samples = get_int(cscene, "deep_samples");
@@ -183,6 +190,9 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.volume_export_workers = tile.volume_export_workers();
   image.export_statistics = tile.export_statistics();
   image.error = tile.error();
+  image.volume_shader_error = tile.volume_shader_error();
+  image.volume_step_min = tile.volume_step_min();
+  image.volume_step_max = tile.volume_step_max();
   image.z_tolerance = tile.z_tolerance();
   image.deep_samples = tile.sample_limit();
   image.object_manifest = tile.object_manifest();

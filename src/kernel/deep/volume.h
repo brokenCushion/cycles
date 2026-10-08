@@ -10,6 +10,67 @@
 CCL_NAMESPACE_BEGIN
 
 #ifdef __VOLUME__
+/* Midpoint sampling has no uniform error bound for arbitrary shader functions.
+ * The host declares half the requested absolute transmittance allowance for
+ * this quadrature (stated, not proven), checked against a 4x-finer reference.
+ * The other half bounds capture representation, fitting and FLOAT publication.
+ * Use the native extinction evaluator, tiny ShaderData and fixed loop/event
+ * limits; never change the accepted beauty ray, RNG or integrator state. */
+ccl_device KernelDeepResult deep_volume_shader(
+    KernelGlobals kg, IntegratorState state, ShaderData *sd, const Ray &ray,
+    const VolumeStack &entry, const double start, const double end, const float step,
+    ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
+    const int stride, const int capacity, int count, const double eps_ray,
+    ccl_private KernelDeepWriteState *write)
+{
+#if defined(WITH_NANOVDB) && (!defined(__KERNEL_GPU__) || defined(__KERNEL_CUDA__))
+  const double physical_length = double(len(ray.D));
+  const double dt = double(step) / physical_length;
+  const double required = ::ceil((end - start) / dt);
+  if (!(step > 0 && dt > 0 && required >= 1 && required <= 16384 && density && eps_ray > 0))
+    return {DEEP_FAILED, 0, DEEP_ERROR_GRID_STEPS};
+  const float4 camera_z = kernel_data.cam.worldtocamera.z;
+  const double depth_origin = double(camera_z.x) * double(ray.P.x) +
+                              double(camera_z.y) * double(ray.P.y) +
+                              double(camera_z.z) * double(ray.P.z) + double(camera_z.w);
+  const double depth_per_t = double(camera_z.x) * double(ray.D.x) +
+                             double(camera_z.y) * double(ray.D.y) +
+                             double(camera_z.z) * double(ray.D.z);
+  for (int i = 0; i < int(required); ++i) {
+    const double front = start + double(i) * dt;
+    const double back = i + 1 == int(required) ? end : start + double(i + 1) * dt;
+    if (!(back > front && back <= end))
+      return {DEEP_FAILED, 0, DEEP_ERROR_PROGRESS};
+    shader_setup_from_volume(sd, &ray, entry.object);
+    const double midpoint = (front + back) * .5;
+    sd->P = make_float3(float(double(ray.P.x) + double(ray.D.x) * midpoint),
+                        float(double(ray.P.y) + double(ray.D.y) * midpoint),
+                        float(double(ray.P.z) + double(ray.D.z) * midpoint));
+    sd->num_closure = sd->num_closure_left = 0;
+    sd->runtime_flag = SR_IS_VOLUME_SHADER_EVAL;
+    volume_shader_eval_entry<false, KERNEL_FEATURE_NODE_MASK_VOLUME>(
+        kg, state, sd, entry, PATH_RAY_VISIBILITY_CAMERA,
+        INTEGRATOR_STATE(state, path, flag) | PATH_RAY_EXTINCTION);
+    if (sd->runtime_flag & SR_CACHE_MISS)
+      return {DEEP_FAILED, 0, DEEP_ERROR_CACHE_MISS};
+    const float3 sigma = spectrum_to_rgb((sd->runtime_flag & SR_EXTINCTION) ?
+                                           sd->closure_transparent_extinction : zero_spectrum());
+    if (!isfinite(sigma.x) || sigma.x < 0 || sigma.x != sigma.y || sigma.x != sigma.z)
+      return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
+    if (sigma.x == 0) continue;
+    const auto error = deep_volume_constant(
+        depth_origin + front * depth_per_t, depth_origin + back * depth_per_t,
+        double(sigma.x) * (back - front) * physical_length, .25 * eps_ray / capacity,
+        events, density, stride, capacity, &count, entry.object, write);
+    if (error != DEEP_ERROR_NONE)
+      return {DEEP_FAILED, 0, error};
+  }
+  return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
+#else
+  return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
+#endif
+}
+
 /* Capture one exact interval without changing beauty state. */
 ccl_device KernelDeepResult deep_volume_interval(
     KernelGlobals kg, IntegratorState state, ShaderData *sd, const Ray &ray,
@@ -21,6 +82,10 @@ ccl_device KernelDeepResult deep_volume_interval(
 {
   const VolumeStack entry = {sd->object, sd->shader};
   const float grid_scale = kernel_data_fetch(shaders, sd->shader & SHADER_MASK).deep_density_scale;
+  if (grid_scale == -2)
+    return deep_volume_shader(kg, state, sd, ray, entry, start, end,
+        -kernel_data_fetch(shaders, entry.shader & SHADER_MASK).deep_homogeneous_extinction,
+        events, density, stride, capacity, count, eps_ray, write);
   /* A zero multiplier may eliminate the density attribute during native shader
    * compilation. It contributes no extinction and needs no voxel lookup. */
   if (grid_scale == 0)

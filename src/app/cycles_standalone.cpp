@@ -64,6 +64,8 @@ struct Options {
   int deep_samples = 0;
   bool deep_transparent = false;
   bool deep_volume = false;
+  bool deep_volume_shader_eval = false;
+  string deep_volume_step = "0";
   int deep_max_events = 16;
   bool deep_reduce = false;
 #endif
@@ -199,6 +201,11 @@ static void session_init()
     deep.ids = options.deep_ids;
     deep.transparent = options.deep_transparent;
     deep.volume = options.deep_volume;
+    deep.volume_shader_eval = options.deep_volume_shader_eval;
+    size_t step_consumed = 0;
+    deep.volume_step = std::stof(options.deep_volume_step, &step_consumed);
+    if (step_consumed != options.deep_volume_step.size())
+      throw std::invalid_argument("Invalid --deep-volume-step");
     if (options.deep_error == "strict")
       deep.error = 0;
     else {
@@ -510,6 +517,11 @@ static void options_parse(const int argc, const char **argv)
       .action([&](auto argv) { parse_int(argv, &options.deep_samples); });
   ap.arg("--deep-transparent", &options.deep_transparent)
       .help("Enable experimental M4 scalar transparent visibility traversal (CPU SVM/OSL)");
+  ap.arg("--deep-volume-shader-eval", &options.deep_volume_shader_eval)
+      .help("Opt in to stated-error fixed-step volume extinction evaluation");
+  ap.arg("--deep-volume-step %s:STEP")
+      .help("World-unit shader step cap; 0 uses grid voxels, required without a grid")
+      .action([&](auto argv) { parse_string(argv, &options.deep_volume_step); });
   ap.arg("--deep-volume", &options.deep_volume)
       .help("Experimental CPU/CUDA homogeneous scalar absorption intervals");
   ap.arg("--deep-max-events %d:EVENTS")

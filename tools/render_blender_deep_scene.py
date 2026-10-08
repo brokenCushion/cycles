@@ -23,6 +23,8 @@ parser.add_argument('--percentage', type=int, default=25)
 parser.add_argument('--threads', type=int, default=8)
 parser.add_argument('--deep', action='store_true')
 parser.add_argument('--deep-volume', action='store_true')
+parser.add_argument('--deep-volume-shader-eval', action='store_true')
+parser.add_argument('--deep-volume-step', type=float, default=0)
 parser.add_argument('--device', choices=('CPU', 'CUDA', 'OPTIX'), default='CPU')
 parser.add_argument('--deep-max-events', type=int, default=16)
 parser.add_argument('--deep-memory-mb', type=int, default=512)
@@ -104,6 +106,11 @@ if args.deep:
         raise RuntimeError('This Blender does not include the custom deep adapter')
     scene.cycles.use_deep_output = True
     scene.cycles.use_deep_volume = args.deep_volume
+    if hasattr(scene.cycles, "deep_volume_step"):
+        scene.cycles.use_deep_volume_shader_eval = args.deep_volume_shader_eval
+        scene.cycles.deep_volume_step = args.deep_volume_step
+    elif args.deep_volume_shader_eval or args.deep_volume_step:
+        raise RuntimeError("This Blender does not include volume shader evaluation")
     scene.cycles.deep_error = error
     scene.cycles.deep_z_tolerance = args.deep_z_tolerance
     scene.cycles.deep_samples = args.deep_samples
@@ -149,6 +156,8 @@ report = {
     'deep': args.deep,
     'device': args.device,
     'deep_volume': args.deep and args.deep_volume,
+    'deep_volume_shader_eval': args.deep and args.deep_volume_shader_eval,
+    'deep_volume_step': args.deep_volume_step if args.deep else 0,
     'deep_error': error if args.deep else None,
     'deep_z_tolerance': args.deep_z_tolerance if args.deep and error else 0,
     'deep_samples': args.deep_samples if args.deep else None,

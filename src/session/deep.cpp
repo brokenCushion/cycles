@@ -12,6 +12,9 @@
 #include "scene/scene.h"
 #include "scene/shader.h"
 #include "scene/shader_nodes.h"
+#include "scene/volume.h"
+#include "scene/image.h"
+#include "util/progress.h"
 #include "session/session.h"
 #include "util/math.h"
 #include "util/murmurhash.h"
@@ -264,10 +267,33 @@ static bool deep_shader_has_holdout(Shader *shader)
   return false;
 }
 
+static bool shader_evaluated_volume(const Scene *scene, const DeepSettings &settings,
+                                     const Shader *shader)
+{
+  return settings.volume && shader->graph->output()->input("Volume")->link &&
+         (scene->params.shadingsystem == SHADINGSYSTEM_OSL || settings.volume_shader_eval);
+}
+
+static void validate_volume_evaluation(Scene *scene, Shader *shader)
+{
+  ShaderNodeSet nodes;
+  deep_shader_dependencies(nodes, shader->graph->output()->input("Volume"));
+  for (ShaderNode *node : nodes) {
+    require_deep(!(node->get_feature() & KERNEL_FEATURE_NODE_RAYTRACE) &&
+                     node->type->name != ustring("aov_output"),
+                 "ray-traced shaders and AOV writes cannot drive deep volume extinction");
+    if (scene->params.shadingsystem == SHADINGSYSTEM_SVM && node->type->name == ustring("light_path"))
+      for (ShaderOutput *output : node->outputs)
+        require_deep(output->links.empty() || output->name() == ustring("Is Camera Ray"),
+                     "shader-evaluated volumes only support camera ray-type queries");
+  }
+}
+
 static void validate_shader(Scene *scene, Shader *shader,
                             const bool background,
                             const bool transparent = false,
-                            const bool volume = false)
+                            const bool volume = false,
+                            const bool volume_eval = false)
 {
   require_deep(shader && shader->graph, "missing shader graph");
   ShaderGraph *graph = shader->graph.get();
@@ -275,12 +301,18 @@ static void validate_shader(Scene *scene, Shader *shader,
   ShaderNodeSet volume_nodes;
   if (volume && !background && output->input("Volume")->link) {
     require_deep(!output->input("Displacement")->link, "deep volume displacement is unsupported");
+    if (volume_eval) {
+      validate_volume_evaluation(scene, shader);
+      deep_shader_dependencies(volume_nodes, output->input("Volume"));
+    }
+    else {
     const float3 sigma = homogeneous_extinction(output->input("Volume")->link->parent, volume_nodes);
     require_deep(isfinite_safe(sigma) && sigma.x >= 0 && sigma.x == sigma.y && sigma.x == sigma.z,
                  "deep volume requires scalar total extinction");
     if (shader->deep_homogeneous_extinction != sigma.x) {
       shader->deep_homogeneous_extinction = sigma.x;
       shader->tag_update(scene);
+    }
     }
     if (!output->input("Surface")->link)
       return;
@@ -441,17 +473,33 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
   const bool transparent = params.deep.transparent;
   const bool volume = params.deep.volume;
   params.deep.volume_grid = false;
+  params.deep.volume_shader_evaluation = false;
+  params.deep.volume_step_min = params.deep.volume_step_max = 0;
+  require_deep(std::isfinite(params.deep.volume_step) && params.deep.volume_step >= 0,
+               "deep volume step must be finite and nonnegative");
+  require_deep(!params.deep.volume_shader_eval || volume,
+               "--deep-volume-shader-eval requires --deep-volume");
   for (Geometry *geometry : scene->geometry)
     params.deep.volume_grid |= volume && geometry->geometry_type == Geometry::VOLUME;
+  for (Geometry *geometry : scene->geometry)
+    for (Node *node : geometry->get_used_shaders())
+      params.deep.volume_shader_evaluation |= shader_evaluated_volume(
+          scene, params.deep, static_cast<Shader *>(node));
+  params.deep.volume_grid |= params.deep.volume_shader_evaluation;
+#ifndef WITH_NANOVDB
+  require_deep(!params.deep.volume_shader_evaluation, "shader-evaluated volumes require NanoVDB capture buffers");
+#endif
+  require_deep(!params.deep.volume_shader_evaluation || params.deep.error > 2e-6f,
+               "shader-evaluated volumes require numeric --deep-error greater than 2e-6; strict reproduces legacy analytic output");
   require_deep(params.deep.max_events >= 1 &&
                    params.deep.max_events <= int(params.deep.volume_grid ? DEEP_MAX_VOLUME_EVENTS : DEEP_MAX_EVENTS),
                "invalid deep traversal limit");
   for (Shader *shader : scene->shaders) {
-    if (shader->deep_homogeneous_extinction >= 0) {
+    if (shader->deep_homogeneous_extinction != -1) {
       shader->deep_homogeneous_extinction = -1;
       shader->tag_update(scene);
     }
-    if (shader->deep_density_scale >= 0) {
+    if (shader->deep_density_scale != -1) {
       shader->deep_density_scale = -1;
       shader->tag_update(scene);
     }
@@ -459,9 +507,8 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
   require_deep(params.deep.memory_bytes > 0, "working memory budget must be positive");
   if (volume) {
     require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA ||
-                  params.device.type == DEVICE_OPTIX) &&
-                     scene->params.shadingsystem == SHADINGSYSTEM_SVM,
-                 "deep volumes require CPU, CUDA or OptiX native SVM");
+                  params.device.type == DEVICE_OPTIX),
+                 "deep volumes require CPU, CUDA or OptiX");
     require_deep(!scene->integrator->get_motion_blur() &&
                      scene->camera->get_aperturesize() == 0 && scene->camera->get_nearclip() > 0,
                  "deep volumes require static pinhole camera and positive near clip");
@@ -566,7 +613,11 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
     if (volume && geometry->geometry_type == Geometry::VOLUME) {
       require_deep(!geometry->get_use_motion_blur() && geometry->get_used_shaders().size() == 1,
                    "native deep grids require static geometry with one material");
-      validate_grid_shader(scene, static_cast<Shader *>(geometry->get_used_shaders()[0]));
+      auto *shader = static_cast<Shader *>(geometry->get_used_shaders()[0]);
+      if (shader_evaluated_volume(scene, params.deep, shader))
+        validate_shader(scene, shader, false, transparent || volume, volume, true);
+      else
+        validate_grid_shader(scene, shader);
       continue;
     }
     require_deep(geometry->geometry_type == Geometry::MESH && !geometry->get_use_motion_blur(),
@@ -576,7 +627,8 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
     if (geometry->get_used_shaders().empty())
       validate_shader(scene, scene->default_surface, false, transparent);
     for (Node *shader : geometry->get_used_shaders())
-      validate_shader(scene, static_cast<Shader *>(shader), false, transparent || volume, volume);
+      validate_shader(scene, static_cast<Shader *>(shader), false, transparent || volume, volume,
+                      shader_evaluated_volume(scene, params.deep, static_cast<Shader *>(shader)));
     if (volume) {
       bool has_volume = false;
       for (Node *shader : geometry->get_used_shaders())
@@ -622,6 +674,46 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
           break;
         }
   scene->dscene.data.film.pad1 = std::max(1, std::min(volume_objects, int(DEEP_MAX_MEDIA)));
+  /* Store deep-only selection and step in existing shader slots, preserving
+   * KernelShader size/beauty constant offsets. Shared materials take the finest
+   * step of their objects. Metadata states the actual material-step range. */
+  std::map<Shader *, float> volume_steps;
+  Progress metadata_progress;
+  for (Object *object : scene->objects) {
+    Geometry *geometry = object->get_geometry();
+    if (!geometry) continue;
+    for (Node *node : geometry->get_used_shaders()) {
+      auto *shader = static_cast<Shader *>(node);
+      if (!shader_evaluated_volume(scene, params.deep, shader)) continue;
+      float step = params.deep.volume_step > 0 ? params.deep.volume_step : FLT_MAX;
+      if (geometry->is_volume()) {
+        for (Attribute &attr : static_cast<Volume *>(geometry)->attributes.attributes) {
+          if (attr.element != ATTR_ELEMENT_VOXEL) continue;
+          const ImageMetaData metadata = attr.data_voxel_for_write().metadata(metadata_progress);
+          if (!metadata.nanovdb_byte_size) continue;
+          const Transform voxel = metadata.use_transform_3d ?
+              object->get_tfm() * transform_inverse(metadata.transform_3d) : object->get_tfm();
+          const float edge = std::min({len(transform_direction(&voxel, make_float3(1, 0, 0))),
+                                      len(transform_direction(&voxel, make_float3(0, 1, 0))),
+                                      len(transform_direction(&voxel, make_float3(0, 0, 1)))});
+          require_deep(std::isfinite(edge) && edge > 0, "invalid deep grid voxel step");
+          step = std::min(step, edge);
+        }
+      }
+      require_deep(step > 0 && step < FLT_MAX && std::isfinite(step),
+                   "shader-evaluated volume without a grid requires --deep-volume-step in world units");
+      auto [entry, inserted] = volume_steps.emplace(shader, step);
+      if (!inserted) entry->second = std::min(entry->second, step);
+    }
+  }
+  for (const auto &[shader, step] : volume_steps) {
+    shader->deep_density_scale = -2;
+    shader->deep_homogeneous_extinction = -step;
+    shader->tag_update(scene);
+    params.deep.volume_step_min = params.deep.volume_step_min ?
+                                     std::min(params.deep.volume_step_min, step) : step;
+    params.deep.volume_step_max = std::max(params.deep.volume_step_max, step);
+  }
   for (Object *object : scene->objects) {
     if (volume) {
       const auto &tfm = object->get_tfm();
@@ -672,12 +764,15 @@ void validate_deep_osl(Scene *scene)
         require_deep(ok, (prefix + reason).c_str());
       };
       const auto found = shader->osl_cache.find(device);
-      require(found != shader->osl_cache.end() && found->second.surface, "missing compiled surface group");
-        OSL::ShaderGroup *group = found->second.surface.get();
+      require(found != shader->osl_cache.end(), "missing compiled shader groups");
+      require(!shader->has_surface || found->second.surface, "missing compiled surface group");
+      require(!shader->has_volume || found->second.volume, "missing compiled volume group");
+      for (OSL::ShaderGroup *group : {found->second.surface.get(), found->second.volume.get()}) {
+        if (!group) continue;
         if (device->info.type == DEVICE_OPTIX) {
           string ptx;
           require(ss->getattribute(group, "ptx_compiled_version", OSL::TypeDesc::PTR, &ptx) && !ptx.empty(),
-                  "compiled OptiX surface group has no PTX; native OSL cannot evaluate this shader");
+                  "compiled OptiX shader group has no PTX; native OSL cannot evaluate this shader");
         }
       const auto integer = [&](const char *name) {
         int value = 0;
@@ -708,7 +803,7 @@ void validate_deep_osl(Scene *scene)
         if (known.count(name)) return true;
         bool present = false;
         for (Geometry *geometry : scene->geometry) {
-          if (geometry->geometry_type != Geometry::MESH) continue;
+          if (!geometry->is_mesh() && !geometry->is_volume()) continue;
           const auto &shaders = geometry->get_used_shaders();
           if (std::find(shaders.begin(), shaders.end(), shader) == shaders.end()) continue;
           if (!static_cast<Mesh *>(geometry)->attributes.find(ustring(name))) return false;
@@ -757,6 +852,7 @@ void validate_deep_osl(Scene *scene)
       alignment = std::max(alignment, std::max(alignof(OSLClosureMul), alignof(OSLClosureAdd)));
       const size_t bytes = (f.components + f.muls + f.adds) * (component_size + alignment - 1);
       require(bytes <= 1024, "closure allocation bound " + std::to_string(bytes) + " exceeds the existing 1024-byte GPU arena");
+      }
     }
   });
 #else

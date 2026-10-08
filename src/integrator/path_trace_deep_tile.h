@@ -41,6 +41,9 @@ class PathTraceDeepTile final : public OutputDriver::DeepTile {
     return capture_.volume_row_sample_limit();
   }
   float error() const override { return capture_.error(); }
+  float volume_shader_error() const override { return capture_.volume_shader_error; }
+  float volume_step_min() const override { return capture_.volume_step_min; }
+  float volume_step_max() const override { return capture_.volume_step_max; }
   float z_tolerance() const override { return capture_.z_tolerance; }
   std::vector<std::pair<uint32_t, std::string>> object_manifest() const override
   { return capture_.object_manifest; }

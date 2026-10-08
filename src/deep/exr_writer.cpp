@@ -191,6 +191,8 @@ Imf::Header make_header(const SurfaceImage &image)
   if (!image.ids && !image.holdout_manifest.empty())
     throw std::invalid_argument("Deep holdout manifest requires IDs");
   const auto budget = error_budget(image.error);
+  const double declared_error = image.volume_shader_error ?
+                                   double(image.volume_shader_error) : budget.effective;
   if (image.error && image.reduction_error && image.reduction_error != budget.effective)
     throw std::invalid_argument("Surface reduction must use the shared deep error setting");
   const auto dw = box(image.data_window);
@@ -204,6 +206,23 @@ Imf::Header make_header(const SurfaceImage &image)
                                                                   Imf::ZIPS_COMPRESSION);
   header.setType(Imf::DEEPSCANLINE);
   header.setVersion(1);
+  if (image.volume_shader_error) {
+    if (!(image.error > 0 && declared_error == 2 * budget.effective &&
+          image.volume_step_min > 0 && std::isfinite(image.volume_step_min) &&
+          image.volume_step_max >= image.volume_step_min && std::isfinite(image.volume_step_max)))
+      throw std::invalid_argument("Invalid shader-evaluated volume metadata/error split");
+    header.insert("cycles:deepVolumeMethod", Imf::StringAttribute("shader-eval"));
+    header.insert("cycles:deepVolumeStep", Imf::DoubleAttribute(image.volume_step_max));
+    header.insert("cycles:deepVolumeStepMin", Imf::DoubleAttribute(image.volume_step_min));
+    header.insert("cycles:deepVolumeStepRule", Imf::StringAttribute(
+        "fixed midpoint integration; per-material minimum world-space voxel edge across its objects; "
+        "explicit world-unit step caps grids and is required without a grid; final segment is clipped"));
+    header.insert("cycles:deepVolumeErrorProof", Imf::StringAttribute(
+        "stated, not proven: stepping error depends on step size versus shader variation; "
+        "validate against a 4x-finer step; reconstruction/publication bound is proven"));
+    header.insert("cycles:deepVolumeStepError", Imf::DoubleAttribute(declared_error - budget.effective));
+    header.insert("cycles:deepReconstructionError", Imf::DoubleAttribute(budget.effective));
+  }
   header.setView(image.view);
   for (const char *name : {"Z", "ZBack", "A"}) {
     header.channels().insert(name, Imf::Channel(Imf::FLOAT));
@@ -226,10 +245,10 @@ Imf::Header make_header(const SurfaceImage &image)
   header.insert("cycles:beautyIdentity", Imf::StringAttribute(image.beauty_identity));
   header.insert(
       "cycles:maxTransmittanceError",
-      Imf::DoubleAttribute(image.error ? budget.effective :
+      Imf::DoubleAttribute(image.error ? declared_error :
                           (image.reduction_error ? image.reduction_error : export_error)));
   if (image.error)
-    header.insert("cycles:deepError", Imf::DoubleAttribute(budget.effective));
+    header.insert("cycles:deepError", Imf::DoubleAttribute(declared_error));
   if (image.error && image.z_tolerance)
     header.insert("cycles:deepZTolerance", Imf::DoubleAttribute(image.z_tolerance));
   if (image.deep_samples)
@@ -590,7 +609,8 @@ void write_volume_exr_pixels(Imf::OStream &stream,
   if (image.volume_export_workers <= 0)
     throw std::invalid_argument("Deep export requires positive worker count");
   auto header = make_header(image);
-  header.insert("cycles:deepScope", Imf::StringAttribute("native_scalar_extinction"));
+  header.insert("cycles:deepScope", Imf::StringAttribute(image.volume_shader_error ?
+      "shader_evaluated_scalar_extinction" : "native_scalar_extinction"));
   const auto dw = header.dataWindow();
   const size_t width = size_t(int64_t(dw.max.x) - dw.min.x + 1);
   tbb::task_arena arena(image.volume_export_workers);

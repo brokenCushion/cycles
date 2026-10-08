@@ -641,6 +641,31 @@ int main(int argc, char **argv)
       const auto *attribute = input.header().findTypedAttribute<Imf::DoubleAttribute>("cycles:deepError");
       require(error ? attribute && attribute->value() == double(error) : attribute == nullptr,
               "Effective error header/strict header preservation mismatch");
+      require(!input.header().findTypedAttribute<Imf::StringAttribute>("cycles:deepVolumeMethod"),
+              "Analytic header must not gain shader-evaluation metadata");
+    }
+    {
+      auto image = base;
+      image.error = 5e-5f;
+      image.volume_shader_error = 1e-4f;
+      image.volume_step_min = .01f;
+      image.volume_step_max = .025f;
+      const auto path = directory / "settings" / "shader-eval.exr";
+      write_deep_exr(path, image);
+      Imf::DeepScanLineInputFile input(path.string().c_str());
+      const auto &header = input.header();
+      require(header.typedAttribute<Imf::StringAttribute>("cycles:deepVolumeMethod").value() == "shader-eval" &&
+                  header.typedAttribute<Imf::StringAttribute>("cycles:deepVolumeErrorProof").value().find(
+                      "stated, not proven") != std::string::npos,
+              "Shader-evaluation method/proof header mismatch");
+      const double step = header.typedAttribute<Imf::DoubleAttribute>("cycles:deepVolumeStep").value();
+      const double integration = header.typedAttribute<Imf::DoubleAttribute>("cycles:deepVolumeStepError").value();
+      const double reconstruction = header.typedAttribute<Imf::DoubleAttribute>("cycles:deepReconstructionError").value();
+      require(step == double(image.volume_step_max) && integration == reconstruction &&
+                  integration + reconstruction == header.typedAttribute<Imf::DoubleAttribute>("cycles:deepError").value(),
+              "Stated shader integration and proven reconstruction must sum to requested error");
+      image.volume_shader_error = 2e-4f;
+      expect_invalid(image);
     }
     for (int count : {0, 1, 64}) {
       auto image = base;

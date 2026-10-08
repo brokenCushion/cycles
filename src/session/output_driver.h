@@ -74,6 +74,9 @@ class OutputDriver {
      * Streaming file hosts must enforce it before allocating a converted pixel. */
     virtual size_t volume_row_sample_limit() const = 0;
     virtual float error() const { return 0; }
+    virtual float volume_shader_error() const { return 0; }
+    virtual float volume_step_min() const { return 0; }
+    virtual float volume_step_max() const { return 0; }
     virtual float z_tolerance() const { return 0; }
     virtual bool ids() const { return false; }
     virtual int sample_limit() const { return 0; }

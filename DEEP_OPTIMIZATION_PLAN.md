@@ -604,6 +604,17 @@ Stop after 8b before starting 8c.
 
 #### 8c - OSL volume shaders
 
+Phase 8b accepted. 8c preserves analytic/SVM payloads and deterministic headers
+(81 strict + 30 numeric, OptiX 65, landscape fixtures). Only OSL volumes or
+`--deep-volume-shader-eval` select evaluation; no implicit SVM fallback.
+Numeric error is required: E/2 is the stated (not proven) midpoint-stepping
+allowance, E/2 bounds capture representation, fitting and publication. Header
+method, actual minimum/maximum step, step rule and both allocations are explicit.
+The world-unit step is the minimum voxel edge across objects sharing a material;
+an explicit `--deep-volume-step` caps it and is required without a grid.
+Qualification measures each fixture against a 4x-finer step without loosening E.
+
+
 The analytic VDB path reads the density grid directly and needs a node graph
 that `deep.cpp` can prove is "density x constant". An OSL volume shader cannot be
 analysed that way, so OSL volumes need the general shader-evaluation path

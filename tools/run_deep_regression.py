@@ -62,7 +62,8 @@ def main():
     (root/'temp').mkdir()
     for key in ('OCIO','CYCLES_KERNEL_PATH','CYCLES_DEEP_Z_BASELINE','CYCLES_DEEP_VALIDATE_CAPTURE_ONLY','CYCLES_DEEP_HOST_ONLY_BEAUTY_PROOF'):
         env.pop(key,None)
-    started=time.monotonic();result=dict(passed=False,run_id=run_id,root=str(root),keep=args.keep,stages=[],cases={},identity={})
+    started=time.monotonic();result=dict(passed=False,run_id=run_id,root=str(root),keep=args.keep,
+                                       toolchain_audit=args.toolchain_audit,stages=[],cases={},identity={})
     def save():(report_dir/'results.json').write_text(json.dumps(result,indent=2)+'\n')
     def run(label,command):
         t=time.monotonic()

@@ -83,7 +83,7 @@ matching release-style toolchain, then qualify Phase 8a before dropping the
 restriction. If no supported deep toolchain works, retain the agreed fallback:
 OptiX excludes shader-raytrace (AO/Bevel), rejects explicitly and directs to
 CUDA; Phase 9 uses CUDA. Deep builds are switched; qualification is stopped
-at the mandatory CUDA payload identity gate.
+at the one-time toolchain audit: a numeric CPU curve difference exceeds 1e-6.
 
 ### Recorded toolchain re-baseline (user decision, 2026-10-08)
 
@@ -1831,7 +1831,7 @@ them. Failed harness-development evidence stays on D:. Thirteen archived validat
 listed in [the archive index](src/deep/ARCHIVED_REPORTS.md); the approved
 [M8 record](src/deep/M8_RELEASE_VALIDATION.md) is retained. README lists all 59 current core files plus Blender
 overlay plumbing. Connected review: `D:/CyclesDeepScratch/regression-tools/phase7_review.gfr`.
-Phase 7 accepted. Phase 8a stopped at CUDA identity after the clang-cl switch.
+Phase 7 accepted. Phase 8a stopped at the toolchain rounding audit after the clang-cl switch.
 Full-resolution Phase 9 remains unlaunched.
 
 
@@ -1865,6 +1865,10 @@ fitting breakdown and sampled memory: [baseline](builds/validation/landscape-clo
 | Same CPU case | Informational max transmittance / combined-alpha difference | Legacy output; header bound 1e-6 | 6.86099e-7 / 4.75196e-7; strict byte identity still fails | `786b9387b` |
 | CUDA denoised_volume 33x17/4 strict, clang-cl toolchain | Legacy payload / deterministic headers | 114,297 samples; hash `924c8fe5...` | FAIL: 114,304 samples; 14 pixels change count; A/Z/ZBack differ at 96 pixels; all headers identical | `786b9387b` |
 | Same CUDA case | Informational max transmittance / flattened-alpha difference | Header bound 1e-6; byte identity mandatory | 2.16944e-7 / 8.81517e-14; still FAIL under mandatory byte identity | `786b9387b` |
+| CUDA 33x17/4 raw spill, before fitting | Rays / events; raw difference | 2,244 / 70,201 | Same counts; 338 changed rays; event FLOAT max 1 ULP (0.0001220703); cubic coefficients identical; companion depth max 3.31379e-5 | `786b9387b` |
+| CPU adaptive_volume strict | Samples; max curve difference; independent oracle | 102,429 samples | 102,415; 5.10897e-7 <= 1e-6; oracle 1.97456e-7 <= header 1e-6; exact same-build CPU beauty/raw | `786b9387b` |
+| CPU adaptive_volume 1e-4 | Samples; max curve difference; independent oracle | 9,700 samples | 9,699; FAIL: 1.96236e-5 > compiler ceiling 1e-6; oracle 2.25958e-5 <= header 1e-4; exact same-build CPU beauty/raw | `786b9387b` |
+| Toolchain audit (2/111 cases before stop) | CTests / beauty sources / resources | 9 / source hash / 75 records | PASS: 9 tests, 12.75 s; sources and 75 records unchanged | `469b4d90b` |
 
 The earlier clean MSVC builds used CUDA 12.8.1 / NVCC 12.8.93 and runtime
 PTX; OptiX 9.0 and 8.0 both failed native `PIP_SHADE` with 11 duplicate
@@ -1911,19 +1915,29 @@ differences are not physical curve errors when the interval partition changes.
 [Strict comparison](builds/validation/landscape-cloud/optimization-phase8a/clangcl-strict-difference.json),
 [CPU/source/resource precheck](builds/validation/landscape-cloud/optimization-phase8a/clangcl-step2.json).
 
-The user authorized separate CPU compiler references subject to oracle/depth-cut
-and rounding checks. CUDA was checked first and fails on the first strict case;
-qualification stops before CPU re-baselining or further rendering. The capture
-CSV also differs (92,050 of 92,335 lines), so the change is not confined to EXR
-encoding. First differing volume front: 1445.792555090432 -> 1445.7925712114532.
-This does not isolate the cause. NVCC also changed from the earlier 12.8.93 to
-12.8.61, and host C++ changed to clang-cl; NVCC is not actually unchanged.
-Neither fact permits changing the CUDA reference or its gate.
-[CUDA identity evidence](builds/validation/landscape-cloud/optimization-phase8a/clangcl-cuda-identity-precheck.json).
+The initial CUDA byte-identity stop is superseded by the user-approved one-time
+toolchain re-baseline policy in Section 2. The pairing remains clang-cl 20.1.8 /
+NVCC 12.8.61. Raw diagnostic renders use the actual legacy executable SHA
+`4c9a3e7d...` and new SHA `966041b0...`. Read handles preserved the original
+sample-major spill streams without instrumenting either renderer. Parsing
+verified every ray, excluding index offsets and padding. Payloads differ before
+fitting: fitting/export alone cannot explain them. NVCC versus host-generated
+GPU scene/camera inputs is not isolated by this two-build comparison.
+[Raw capture report](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json).
 
-The full identity/regression replay, CPU reference qualification, CUDA/OptiX
-beauty, fixed after measurements and qualified Gaffer presentation remain
-pending. No Phase 8a acceptance or speedup claimed. Existing CPU/CUDA references
-and the accepted regression config/Gaffer scene remain unchanged.
+The audit stops after 2/111 cases at CPU adaptive_volume 1e-4, worst pixel
+(13,22): maximum old/new transmittance difference 1.96236e-5 exceeds the user's
+1e-6 compiler ceiling. Strict passes that ceiling; both cases pass independent
+camera oracle/depth cuts (81 diagnostic pixels each) and exact CPU beauty/raw.
+Strict counts change at 56 pixels (delta -4..4); numeric counts at four (-2..1).
+Deterministic headers match in both. Nine CTests and source/resource proof pass.
+[Audit report](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json).
+
+No new baseline was promoted; one partial candidate reference is retained only
+in the failed audit's owned D: run directory. All legacy references remain.
+The remaining audit cases, identity replay, full regression, OptiX AO/Bevel,
+GPU beauty and speed comparisons remain pending. No Phase 8a acceptance or
+speedup claimed. The accepted regression config/Gaffer scene remain unchanged.
 [Measured evidence](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json);
-large evidence and TEMP: `D:/CyclesDeepScratch/optimization-phase8a/`.
+large evidence and TEMP: `D:/CyclesDeepScratch/optimization-phase8a/` and the
+owned D: regression directory named in the audit report.

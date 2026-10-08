@@ -110,8 +110,9 @@ and OptiX modules. Keep builds, validation images and TEMP/TMP on D:.
 See [Blender deep build commands](BLENDER_DEEP_INTEGRATION.md) and the
 [qualification plan](DEEP_OPTIMIZATION_PLAN.md). A recorded compiler change
 uses its own CPU/CUDA references after the one-time qualification in Section 2;
-retain the cl.exe/NVCC references for history. Within a fixed toolchain, payload
-and deterministic-header byte identity remains mandatory.
+retain the cl.exe/NVCC references for history. Within the same build and backend,
+payload and deterministic-header byte identity remains mandatory. Across builds,
+toolchains or backends, use the unified cross-comparison rule in Section 2.
 
 Cycles uses the CMake build system. As an alternative to the `make` wrapper, CMake can be manually configured.
 

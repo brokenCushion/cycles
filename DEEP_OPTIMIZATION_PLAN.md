@@ -559,8 +559,8 @@ RT cores should also speed up capture itself.
   exist in Cycles.
 - Run the native VDB grid code under OptiX with the same CUDA double-precision
   qualification (`volume_grid.h` currently gates on `__KERNEL_CUDA__`).
-- Acceptance: CPU/CUDA/OptiX matrices; OptiX deep alpha within header tolerance
-  of CUDA; beauty gate vs. OptiX deep-off.
+- Acceptance: CPU/CUDA/OptiX matrices; each backend passes its own header
+  oracle/depth cuts and beauty gate. Cross flattened alpha <=1e-4 under Section 2.
 
 Stop after 8a (OptiX with SVM shaders, as above) before starting 8b/8c.
 
@@ -1841,66 +1841,78 @@ them. Failed harness-development evidence stays on D:. Thirteen archived validat
 listed in [the archive index](src/deep/ARCHIVED_REPORTS.md); the approved
 [M8 record](src/deep/M8_RELEASE_VALIDATION.md) is retained. README lists all 59 current core files plus Blender
 overlay plumbing. Connected review: `D:/CyclesDeepScratch/regression-tools/phase7_review.gfr`.
-Phase 7 accepted. Phase 8a stopped at the OptiX/CUDA strict depth gate.
+Phase 7 accepted. Phase 8a stopped at the OptiX small-landscape beauty bias gate.
 Full-resolution Phase 9 remains unlaunched.
 
 
-### Phase 8a results (stopped for acceptance review)
+### Phase 8a results (stopped at OptiX beauty bias gate)
 
-Separate OptiX SVM module/pipeline/SBT and per-queue launch snapshot share
-capture and exact double grid integration; beauty sources and flags unchanged.
-Pristine Blender 749518deb2f0 links/renders the AO landscape with clang-cl,
-native modules, CUDA 12.8.0 / NVCC 12.8.61 and OptiX 8.0.0.
-[Toolchain](BUILDING.md), [pristine evidence](builds/validation/landscape-cloud/optimization-phase8a/pristine-clangcl-precompiled.json).
+Native OptiX SVM deep capture, separate pipeline/SBT and launch state share
+reconstruction with CUDA. The pinned clang-cl/NVCC/OptiX toolchain links
+AO/Bevel shader-raytrace modules. Beauty sources/flags are unchanged.
+Bevel is admitted only outside opacity dependencies; its opacity use rejects
+atomically on CPU/CUDA/OptiX. Fixture creation now preserves logical .blend
+paths through archive junctions and rejects empty VDB bounds.
 
 | Case | Metric | Before | After | Commit |
 | --- | --- | --- | --- | --- |
-| Toolchain audit | Coverage / independent oracle and depth cuts | Retained cl.exe/NVCC references | 111/111 PASS (81 strict, 30 numeric); new same-build CPU beauty/raw exact | `673775bb6` |
-| All 111 cross-build cases | Maximum flattened-alpha difference | Sanity limit 1e-4 | 4.75347219e-07; PASS; 104 cases differ in bytes | `673775bb6` |
-| Small landscape 47x20/16 strict | Samples; informational curve difference | 561,793 | 561,860; max curve difference 0.057613866; flattened-alpha difference 0 | `786b9387b` |
-| Same landscape | Independent oracle max / header bound | 2.20131377e-7 / 1e-6 | 2.18971653e-7 / 1e-6; PASS | `786b9387b` |
-| CUDA 33x17/4 raw capture before fitting | Rays/events; changes | 2,244 / 70,201 | Same counts; 338 changed rays; FLOAT event max 1 ULP; cubic coefficients identical | `786b9387b` |
-| Beauty sources / common CUDA resources / CTests | Proof | Accepted source hash / 75 records / 9 tests | Unchanged / unchanged / 9 PASS (audit 12.75 s; qualification replay 12.187 s) | `786b9387b` |
-| Same-toolchain matrix replay | Byte identity | New staged references | 13/13 strict + 26/26 numeric PASS before stop; remaining 72 pending | `7fca7208f` |
-| OptiX native volume matrices | Whole curve vs CUDA / own oracle | Header bounds unchanged | 15 mode/ID pairs PASS with curve difference 0 | `0b55e8567` |
-| Opaque foreground 33x17/4 strict | OptiX/CUDA whole curve vs header | Limit 1e-6 | FAIL: 0.750000015 at (22,6); 486/561 pixels fail; flattened-alpha difference 0 | `0b55e8567` |
-| Same foreground | Own oracle / informational depth window | Independent header bound 1e-6 | Both own maxima 1.49011612e-8; all 486 flagged pixels fit a window <=3 FLOAT ULP (not the acceptance gate) | `0b55e8567` |
-| CUDA/OptiX beauty controls | Fixed finite pool | Matching backend and toolchain required | 384 renders complete, 1,928.703 s; 20 ordinary + four seeds for each of eight fixtures/backend; raw-policy stage not reached | `7fca7208f` |
-| 33x17/4 volume strict | Render+capture / capture wait+copy / export s (single run; setup excluded) | CUDA 0.544394 / 0.493819 / 0.439195 | OptiX 0.443143 / 0.366162 / 0.433644 | `0b55e8567` |
-| Same strict | Aggregate worker s: density / mixture / publication fit | CUDA 0.155745 / 0.321544 / 0.211846 | OptiX 0.155502 / 0.318202 / 0.206975 | `0b55e8567` |
-| 33x17/4 volume 1e-4 | Render+capture / capture wait+copy / export s (single run; setup excluded) | CUDA 0.341632 / 0.292201 / 0.218987 | OptiX 0.241901 / 0.165319 / 0.218794 | `0b55e8567` |
-| Same 1e-4 | Aggregate worker s: density / mixture / publication fit | CUDA 0.018764 / 0.037527 / 0.012909 | OptiX 0.018620 / 0.037816 / 0.013196 | `0b55e8567` |
-| 33x17/4 volume 1e-3 | Render+capture / capture wait+copy / export s (single run; setup excluded) | CUDA 0.334824 / 0.284752 / 0.088036 | OptiX 0.229452 / 0.155604 / 0.087359 | `0b55e8567` |
-| Same 1e-3 | Aggregate worker s: density / mixture / publication fit | CUDA 0.004812 / 0.013111 / 0.002418 | OptiX 0.004621 / 0.012927 / 0.002378 | `0b55e8567` |
+| Compiler audit | Own oracles/depth cuts; cross flattened alpha | Retained cl.exe/NVCC references | 111/111 PASS; 104 byte-different; max flat 4.75347219e-07 < 1e-4 | `c88897ac0` |
+| CUDA 33x17/4 raw capture | Before host fitting | 2,244 rays / 70,201 events | Counts equal; 338 changed rays; FLOAT max 1 ULP; cubic coefficients identical | `c88897ac0` |
+| CPU/CUDA reference matches | Payload + deterministic headers | Staged clang-cl references | 81/81 strict + 30/30 numeric byte matches; new-executable/backend reruns still pending | `c88897ac0` |
+| Oracles/depth cuts / CPU beauty / resources | Completed checks | Unchanged gates | All completed alpha cases PASS; CPU exact; beauty sources and 75 records unchanged; nine CTests PASS | `c88897ac0` |
+| CUDA/OptiX cross pairs | Flattened alpha / own bounds | Unified limit 1e-4 | 65 PASS; max flat 1.39451287e-08; curves/depths/counts informational | `c88897ac0` |
+| CUDA beauty / OptiX beauty | Full approved policy | 32 targets/backend | CUDA 32 PASS; OptiX 20 PASS, 1 FAIL, 11 pending | `c88897ac0` |
+| Opaque foreground (0,5), OptiX 1e-3 | Denoising Normal X calibrated flag | Difference 2.22044605e-16; allowed 1.39863599e-16 | Resolved by six snapshot diagnostic runs: all checked raw passes bit-identical | `c88897ac0` |
+| Small landscape 47x20/16, OptiX strict | Noisy green paired-pixel bias | 3 SE limit 1.0618765144530342e-9 | FAIL: signed mean 1.0698072689532338e-9; SE 3.5395883815101144e-10 (3.022406 SE) | `c88897ac0` |
+| Same landscape | Raw states / count / denoising | Unchanged pixel gates | All 940 pixels reproduced within 4 ULP/count; zero fallback; count and denoising PASS; bias still FAIL | `c88897ac0` |
+| Same fixture, deep-off leave-one-out | Informational green bias | 20 ordinary controls | 0/20 fail 3 SE; absolute bias ratios 0.01216 to 2.02966 SE; no acceptance waiver | `c88897ac0` |
+| volume33 strict | Render+capture / wait+copy / export s | CUDA 0.5155 / 0.4683 / 0.4315 | OptiX 0.4255 / 0.3520 / 0.4306 | `c88897ac0` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.1523 / 0.3158 / 0.2065 | OptiX 0.1530 / 0.3133 / 0.2047 | `c88897ac0` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 7,551,024 / 115,818,976 / 3,758,164 | OptiX 7,551,024 / 115,818,976 / 3,758,164 | `c88897ac0` |
+| volume33 1e-4 | Render+capture / wait+copy / export s | CUDA 0.3254 / 0.2765 / 0.2145 | OptiX 0.2306 / 0.1550 / 0.2160 | `c88897ac0` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.0181 / 0.0380 / 0.0129 | OptiX 0.0182 / 0.0375 / 0.0129 | `c88897ac0` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 2,332,408 / 2,415,032 / 2,440,120 | OptiX 2,332,408 / 2,415,032 / 2,440,120 | `c88897ac0` |
+| volume33 1e-3 | Render+capture / wait+copy / export s | CUDA 0.3291 / 0.2803 / 0.0869 | OptiX 0.2221 / 0.1501 / 0.0871 | `c88897ac0` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.0048 / 0.0131 / 0.0024 | OptiX 0.0048 / 0.0133 / 0.0024 | `c88897ac0` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 953,108 / 1,035,732 / 1,060,820 | OptiX 953,108 / 1,035,732 / 1,060,820 | `c88897ac0` |
+| small strict | Render+capture / wait+copy / export s | CUDA 2.8568 / 1.7533 / 7.9137 | OptiX 4.6664 / 3.6808 / 7.9922 | `c88897ac0` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 2.3169 / 22.5614 / 2.4189 | OptiX 2.3237 / 22.5969 / 2.3434 | `c88897ac0` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 26,307,972 / 360,742,784 / 13,367,672 | OptiX 26,308,472 / 360,742,784 / 13,367,732 | `c88897ac0` |
+| small 1e-4 | Render+capture / wait+copy / export s | CUDA 1.7829 / 0.6951 / 3.5972 | OptiX 1.6921 / 0.7275 / 3.6707 | `c88897ac0` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.2526 / 0.9845 / 0.1159 | OptiX 0.2517 / 0.9684 / 0.1125 | `c88897ac0` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 8,441,980 / 9,404,540 / 9,163,900 | OptiX 8,442,060 / 9,404,620 / 9,163,980 | `c88897ac0` |
+| small 1e-3 | Render+capture / wait+copy / export s | CUDA 1.7585 / 0.6816 / 3.4207 | OptiX 1.6929 / 0.7373 / 3.5299 | `c88897ac0` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.1802 / 0.3823 / 0.0417 | OptiX 0.1813 / 0.3826 / 0.0417 | `c88897ac0` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 7,462,316 / 8,424,876 / 8,184,236 | OptiX 7,462,396 / 8,424,956 / 8,184,316 | `c88897ac0` |
+| performance strict | Render+capture / wait+copy / export s | CUDA 33.7385 / 30.8840 / 32.6980 | OptiX 54.1163 / 51.4686 / 32.7222 | `c88897ac0` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 70.0270 / 246.3750 / 140.9640 | OptiX 69.8806 / 245.2360 / 140.9930 | `c88897ac0` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 886,601,284 / 7,165,515,584 / 522,461,344 | OptiX 886,600,804 / 7,164,432,320 / 522,461,184 | `c88897ac0` |
+| performance 1e-4 | Render+capture / wait+copy / export s | CUDA 11.4912 / 8.9838 / 3.6599 | OptiX 10.8676 / 8.5926 / 3.6468 | `c88897ac0` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 4.6722 / 17.2369 / 6.7716 | OptiX 4.6806 / 17.2769 / 6.7814 | `c88897ac0` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 329,903,372 / 367,471,372 / 358,079,372 | OptiX 329,903,788 / 367,471,788 / 358,079,788 | `c88897ac0` |
+| performance 1e-3 | Render+capture / wait+copy / export s | CUDA 11.5487 / 9.0912 / 2.2239 | OptiX 10.1119 / 7.8752 / 2.1389 | `c88897ac0` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 1.6966 / 6.9553 / 2.2453 | OptiX 1.7002 / 6.9828 / 2.2437 | `c88897ac0` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 291,168,564 / 328,736,564 / 319,344,564 | OptiX 291,168,560 / 328,736,560 / 319,344,560 | `c88897ac0` |
 
-Cross-build curve/sample/ULP differences are informational under the final
-Section 2 user decision; the previous small-strict stop is superseded.
-Near-coincident hits can change discrete outcomes across compilers. Old and new
-own oracles/depth cuts pass; every per-case count, curve difference and oracle
-maximum is in the [audit](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json).
-Raw differences precede fitting, but NVCC vs host-generated GPU inputs is not
-isolated. [Raw diagnostic](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json),
-[informational depth windows](builds/validation/landscape-cloud/optimization-phase8a/strict-landscape-depth-window.json).
+Times are single sequential RTX 3080 / Ryzen 5900X runs, setup excluded;
+wait+copy includes kernel wait and transfer. They are measurements of candidates,
+not completed backend qualification. Beauty-only medians (20 controls), sample
+counts, EXR sizes, all fitting stages and sampled memory are in the report.
 
-Stopped at the unchanged OptiX/CUDA whole-curve gate, not the compiler
-cross-build sanity gate. At (22,6), CUDA publishes opaque coverage at two depths
-849.180114746 and 849.180175781; OptiX at three depths 849.179992676,
-849.180053711 and 849.180175781. The earlier OptiX depths lie two FLOAT ULP below the two CUDA depths;
-per-ray depth rounding changes coverage clusters. Terminal alpha is
-identical. Every flagged pixel fits an informational three-ULP window and both
-own oracles/depth cuts pass. This diagnoses backend depth quantization; it does
-not waive the approved unshifted OptiX/CUDA gate or prove a beauty effect.
-[Diagnostic](builds/validation/landscape-cloud/optimization-phase8a/optix-depth-diagnostic.json).
+The opaque-foreground cross comparison passes Section 2 (flat alpha equal;
+both own oracle maxima 1.49e-8). Its separate normal flag resolves under the
+approved snapshot rule. The small-landscape image-wide bias failure does not:
+root-cause pixel resolution cannot waive the unchanged 3-SE bias test. The
+excess is 7.9307545e-12, about 0.75% beyond the limit. This is a gate failure,
+not established evidence of a visible or causal renderer defect. No thresholds,
+policies or beauty code were changed. Diagnostic overlay sources/resources and
+the qualified candidate executable are restored/preserved byte-for-byte.
 
-Candidates are staged on D:, not promoted: full regression/GPU beauty policy
-and all 81/30 same-toolchain identity checks are prerequisites. The recorded
-compiler change passed all 111 cross-build sanity/oracle checks. Fifteen OptiX
-volume pairs match CUDA exactly; opaque foreground strict stops qualification.
-AO/Bevel deep-off controls render successfully with native shader-raytrace,
-but deep AO/Bevel, OptiX boundaries, landscapes, full beauty policy and complete
-identity replay remain pending. Timing rows above are single tested volume
-runs, not landscape/backend qualification claims; all counters, CPU fitting and
-beauty-only medians are in the report. No beauty source/flag workaround, new
-threshold, Phase 8b/8c/9, or deletion of old references.
+Stopped before the remaining 11 OptiX beauty targets, same-build/backend identity
+reruns and promotion. Old references/default configuration remain unchanged;
+new compiler candidates are still staged on D:. Phase 8b/8c/9 remain unlaunched.
+Connected candidate review: `D:/CyclesDeepScratch/regression-tools/phase8a_candidate_review.gfr`.
 [Results](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json),
-[before measurements](builds/validation/landscape-cloud/optimization-phase8a/before.json).
+[bias evidence](builds/validation/landscape-cloud/optimization-phase8a/bias-stop-diagnostic.json),
+[compiler audit](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json),
+[raw capture](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json).

@@ -673,7 +673,12 @@ void validate_deep_osl(Scene *scene)
       };
       const auto found = shader->osl_cache.find(device);
       require(found != shader->osl_cache.end() && found->second.surface, "missing compiled surface group");
-      OSL::ShaderGroup *group = found->second.surface.get();
+        OSL::ShaderGroup *group = found->second.surface.get();
+        if (device->info.type == DEVICE_OPTIX) {
+          string ptx;
+          require(ss->getattribute(group, "ptx_compiled_version", OSL::TypeDesc::PTR, &ptx) && !ptx.empty(),
+                  "compiled OptiX surface group has no PTX; native OSL cannot evaluate this shader");
+        }
       const auto integer = [&](const char *name) {
         int value = 0;
         require(ss->getattribute(group, name, value), string("unavailable OSL query ") + name);

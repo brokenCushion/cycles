@@ -27,6 +27,7 @@ def main():
     parser.add_argument('--cases', type=Path, required=True)
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
+    parser.add_argument('--device', choices=('CPU', 'OPTIX'), nargs='+', default=('CPU', 'OPTIX'))
     parser.add_argument('--smoke', action='store_true', help='One CPU/OptiX constant pair only')
     args = parser.parse_args()
     root = args.root.resolve()
@@ -41,7 +42,7 @@ def main():
     digest = hashlib.sha256(args.blender.read_bytes()).hexdigest()
     cases = json.loads(args.cases.read_text())
     result = dict(passed=False, renderer_sha256=digest, cases={}, rejections={},
-                  scope='smoke' if args.smoke else 'full')
+                  scope='smoke' if args.smoke else 'full', devices=args.device)
     start = time.monotonic()
 
     def save():
@@ -90,7 +91,7 @@ def main():
         for case in cases:
             if args.smoke and case['name'] != 'constant':
                 continue
-            for device in ('CPU', 'OPTIX'):
+            for device in args.device:
                 if case['rejection']:
                     render(case, device, 'reject', '1e-3', rejection=case['rejection'])
                     continue

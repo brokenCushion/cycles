@@ -17,12 +17,14 @@ Cross build/backend flattened alpha <=1e-4; other cross differences informationa
 Connected Gaffer review: `D:/CyclesDeepScratch/regression-tools/phase8a_review.gfr`.
 Large evidence/TEMP stay on D:.
 
-**Phase 8b implemented, qualification stopped at an acceptance failure.**
-The texture fixture differs between CPU/OptiX by 9.01609e-4, exceeding the
-1e-4 cross-backend gate. Pristine Blender reproduces it; each backend's deep
-alpha matches its own native alpha within 9.8e-8. No gates were changed.
-[Measured blocker](builds/validation/landscape-cloud/optimization-phase8b/blocker.json).
-Remaining shader/rejection checks, identity/regression replay, performance
-measurements and Gaffer review are pending. Phase 8c/9 remain unlaunched.
+**Phase 8b qualification is in progress.** CPU/OptiX OSL surface fixtures:
+30/30 mode/backend checks and 26/26 atomic rejection checks pass, including
+native alpha/oracles, CPU exact beauty, calibrated OptiX beauty and rerun identity.
+The user-approved texture waiver records pristine difference 9.01580e-4 beside
+deep difference 9.01609e-4; own native-alpha errors stay below 9.8e-8.
+[OSL results](builds/validation/landscape-cloud/optimization-phase8b/osl-surfaces-qualified.json).
+Final SVM identity/regression, GPU beauty and fixed-case measurements are running.
+Connected OSL review: `D:/CyclesDeepScratch/regression-tools/phase8b_review.gfr`.
+Phase 8c/9 remain unlaunched.
 [M8 release](src/deep/M8_RELEASE_VALIDATION.md),
 [archived reports](src/deep/ARCHIVED_REPORTS.md), [regression](src/deep/README.md).

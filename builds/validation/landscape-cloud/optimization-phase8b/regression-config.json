@@ -1,0 +1,16 @@
+{
+  "source_baseline": "67faae68c",
+  "blender": "D:/CyclesDeepScratch/optimization-phase8b/blender/blender.exe",
+  "cycles": "D:/CyclesDeepScratch/optimization-phase8b/standalone/cycles.exe",
+  "ctest_build": "D:/CyclesDeepScratch/optimization-phase8a/clangcl-deep/standalone-build",
+  "golden": "D:/CyclesDeepArchive/deep-references/clang-cl-20.1.8-nvcc-12.8.61-20261008",
+  "landscape": "builds/validation/landscape-cloud/scene-paths-fixed.blend",
+  "cpu_cases": "builds/validation/landscape-cloud/final-fixtures/cases.json",
+  "cuda_cases": "builds/validation/landscape-cloud/retained-final-cases.json",
+  "known_cases": "builds/validation/landscape-cloud/optimization-phase6/known-overlap/cases.json",
+  "beauty_builds": "builds/validation/beauty-builds.json",
+  "resource_baseline": "builds/validation/landscape-cloud/optimization-phase6a/kernel-resources.json",
+  "on_cubin": "D:/CyclesDeepScratch/optimization-phase8a/clangcl-deep/build/intern/cycles/kernel/device/cuda/kernel_sm_86.cubin",
+  "off_cubin": "C:/Users/jun/Documents/ChatGPT/cycles_deep/builds/blender/user-resources/cache/kernels/cycles_kernel_sm_86_3C839A13F9A178EFA959FBC03A96FC0F.cubin",
+  "raytrace_cases": "D:/CyclesDeepScratch/optimization-phase8a/clangcl-deep/raytrace-fixtures/cases.json"
+}

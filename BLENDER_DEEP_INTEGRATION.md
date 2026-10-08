@@ -130,3 +130,14 @@ it failed the observed GPU-memory and raw-beauty gates. Full-scene production
 qualification remains open; small-fixture speedup does not establish readiness.
 The earlier ten-worker full run failed its per-pixel memory gate; it did not
 publish an EXR or qualify the scene. See the compatibility evidence for details.
+
+## OSL surface capture
+
+Use CPU or OptiX with `scene.cycles.shading_system = True`. Deep evaluates the
+native compiled OSL surface group for scalar camera transparency. Preflight
+rejects trace/ray-dependent/path-dependent or unknown queries, dynamic textures,
+closure-building loops and unprovable closure capacity; runtime rejects coloured
+or invalid extinction and cache misses. The material and reason appear in the
+error. Native shader nodes and Script nodes can coexist in OSL mode; Cycles uses
+one scene-wide shading system. CUDA OSL and OSL volumes are not qualified.
+See [support and native texture differences](src/deep/RELEASE_MATRIX.md).

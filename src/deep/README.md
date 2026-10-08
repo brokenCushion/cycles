@@ -30,7 +30,8 @@ file with `--config` when qualifying another build; register its provenance with
 fails explicitly. GPU-side changes require the separate `--cuda-beauty FILE`
 stage (JSON `targets`: run-relative case, references, pool, seed_references,
 snapshot_off/on/build). It applies the unchanged policy in the plan.
-`--optix` adds native SVM OptiX matrices, boundaries and fixed landscapes;
+`--optix` adds native SVM OptiX matrices, boundaries, fixed landscapes and
+the accepted 65-case SVM identity replay;
 the beauty stage accepts independently matched controls for each GPU backend.
 The qualified Phase 8a OptiX SVM implementation uses its own module, pipeline,
 shader table and queue arguments.
@@ -125,3 +126,12 @@ local `origin/main` (`a456b7610`). Shared deep headers remain in `src/kernel/dee
 
 Blender-specific properties, synchronization, sample-count pass and output-driver
 plumbing live in `tools/prepare_blender_deep.py`, outside the standalone renderer.
+
+## OSL surface checks
+
+Create fixtures with `tools/create_osl_deep_cases.py` in Blender background mode,
+then run `tools/run_osl_deep_checks.py --blender EXE --cases CASES.json --root D:/OUTPUT --report REPORT.json`.
+Checks include native-alpha/oracle/depth cuts, CPU exact beauty, OptiX's 20-control
+beauty policy, and same-build identity. `--pristine FILE` supplies hash-checked
+native Blender evidence for the case-specific cross-backend waiver in the plan;
+it never bypasses either backend's own bound. OSL volumes remain Phase 8c.

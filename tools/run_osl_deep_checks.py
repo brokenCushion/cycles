@@ -24,7 +24,7 @@ from cuda_beauty_gate import validate_cuda_beauty
 
 def native_alpha_waiver(cross, pristine, errors, bounds):
     """Same native difference, with each deep side inside its existing bound."""
-    return (all(math.isfinite(v) for v in (cross, pristine, *errors, *bounds))
+    return bool(all(math.isfinite(v) for v in (cross, pristine, *errors, *bounds))
             and pristine > 1e-4 and all(0 <= e <= b for e, b in zip(errors, bounds))
             and abs(cross-pristine) <= sum(bounds))
 

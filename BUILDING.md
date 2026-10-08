@@ -107,6 +107,11 @@ compiler remains MSVC 19.44 (14.44.35207), explicitly selected with
 `CUDA_HOST_COMPILER` for the standalone build. Enable native precompiled CUDA
 and OptiX modules. Keep builds, validation images and TEMP/TMP on D:.
 
+OSL surface capture uses the bundled OSL 1.15.3.0 on CPU/OptiX. Its separate
+`kernel_optix_deep_osl` module uses native compiled OSL callables; optimized
+group `ShadingSystem::getattribute` queries and cached loaded OSO metadata
+provide preflight. CUDA OSL and OSL volumes are not qualified.
+
 See [Blender deep build commands](BLENDER_DEEP_INTEGRATION.md) and the
 [qualification plan](DEEP_OPTIMIZATION_PLAN.md). A recorded compiler change
 uses its own CPU/CUDA references after the one-time qualification in Section 2;

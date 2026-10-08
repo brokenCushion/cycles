@@ -73,14 +73,16 @@ Root causes, in code:
 - Never call GPU-thread heap allocation, STL, or files from kernels (existing
   `PEER_DEEP_OUTPUT_REQUIREMENTS.md` still applies).
 
-### Final CUDA raw beauty rule (user decisions, 2026-10-08)
+### Final CUDA/OptiX raw beauty rule (user decisions, 2026-10-08)
 
 This supersedes the historical Phase 0 CUDA raw envelope/search policy and
 the uncalibrated 0.1-sigma / 0.1% guesses. Do not revise this policy again.
 CPU stays exact equality and the primary proof, together with unchanged
 beauty-source hashes and kernel resource records. No beauty kernel change.
-CUDA pixel beauty qualification is required only for GPU-side changes
+CUDA/OptiX pixel beauty qualification is required only for GPU-side changes
 (kernels, GPU scheduling or buffers): Phase 6b if capture changes, 8 and 9.
+Phase 8a applies this same policy independently to CUDA and OptiX, with
+controls from the matching backend; never use CUDA controls for OptiX.
 For host-only phases 1, 3a, 6, 6a, 6b (when capture is unchanged) and 7,
 unchanged beauty-source hashes,
 all 75 common CUDA kernel resource records and CPU exact equality are the

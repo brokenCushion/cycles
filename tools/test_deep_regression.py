@@ -75,11 +75,13 @@ def main():
         d=write('d.exr',[(2,2,1)])
         v=toolchain_difference(c,d)
         json.dumps(v)
-        assert not v['audit_passed'] and v['max_transmittance_difference']==1
+        assert v['audit_passed'] and v['max_transmittance_difference']==1
         # Numeric differences are informational; a separate oracle remains mandatory.
         v=toolchain_difference(c,d,'1e-4')
         json.dumps(v)
         assert v['audit_passed'] and v['difference_limit'] is None and v['max_transmittance_difference']==1
+        e=write('e.exr',[(2,2,.99)])
+        assert not toolchain_difference(c,e)['audit_passed']
     channels={}
     for name,value,dtype in [('Z',1,np.float32),('ZBack',1,np.float32),('A',1,np.float32),('id',7,np.uint32)]:
         values=np.empty((1,1),dtype=object);values[0,0]=np.array([value],dtype=dtype)

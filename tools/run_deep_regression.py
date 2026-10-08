@@ -105,7 +105,7 @@ def main():
             value['before_oracle']=old['oracle']
         result['identity'].setdefault(mode,{})[label]=value;save()
         if args.toolchain_audit:
-            if not value['audit_passed']:raise RuntimeError('Toolchain rounding/header gate failed: '+label+'; '+str(value))
+            if not value['audit_passed']:raise RuntimeError('Toolchain flattened-alpha sanity gate failed: '+label+'; '+str(value))
             staged=root/'references'/reference.relative_to(config['golden'])
             staged.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(target,staged)
             return

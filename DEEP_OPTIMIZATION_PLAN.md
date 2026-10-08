@@ -82,36 +82,33 @@ Do not change beauty sources or Cycles flags. Switch the deep builds to the
 matching release-style toolchain, then qualify Phase 8a before dropping the
 restriction. If no supported deep toolchain works, retain the agreed fallback:
 OptiX excludes shader-raytrace (AO/Bevel), rejects explicitly and directs to
-CUDA; Phase 9 uses CUDA. Deep builds are switched; qualification is stopped
-at the one-time toolchain audit: strict small landscape exceeds the four-ULP envelope.
+CUDA; Phase 9 uses CUDA. Deep builds are switched; qualification continues under the final recorded
+toolchain re-baseline policy below.
 
 ### Recorded toolchain re-baseline (user decision, 2026-10-08)
 
 Byte identity detects code changes under a fixed toolchain. The recorded switch
 to clang-cl 20.1.8 / NVCC 12.8.61 (CUDA 12.8.0), matching the buildbot, triggers
-one one-time CPU/CUDA re-baseline. Keep this pairing and retain the cl.exe /
-previous NVCC references for history. This supersedes the earlier CUDA identity
-stop and CPU-only exception: CUDA capture also passes through host fitting/export.
-First compare raw GPU spill records before fitting for the 33x17 volume case.
-Audit all 81 strict + 30 numeric cases against their retained references:
-report differing cases, maximum transmittance difference and sample-count changes.
-Each must pass its independent oracle/depth cuts within its EXR header bound;
-Strict comparison uses a depth window (user decision, 2026-10-08): at each z,
-new T must lie in the old curve's [min,max] over [z-d,z+d], d=4 FLOAT ULP(z),
-plus the unchanged 1e-6 ceiling. Check both sides of steps and smooth-interval
-extrema; report the maximum minimum integer-ULP window required. A step moved
-more than four ULP or a changed step size still fails. This supersedes the
-unshifted strict comparison: surface_ao (14,12)'s one-ULP shift passes.
-Both builds must still pass their own oracle/depth cuts within the 1e-6 header.
-For numeric 1e-4 / 1e-3 cases, each build must pass its own independent oracle
-and depth cuts within its own header bound. Cross-build differences are
-informational: 1-ULP input changes can flip compression/merge decisions and
-produce different valid approximations (up to the sum of both header bounds by
-the triangle inequality). This supersedes the earlier numeric 1e-6 ceiling;
-CPU adaptive_volume 1e-4 passes under this rule (user correction, 2026-10-08).
-Only after all pass, save separate clang-cl/NVCC-12.8.61 references and replay
-81/81 + 30/30 byte identity, CPU exact beauty and the full regression command.
-Same-build CPU deep-on/off beauty remains exact. No beauty or error gate changes.
+a one-time CPU/CUDA re-baseline. Keep this pairing and retain the cl.exe /
+previous NVCC references for history. This final decision replaces all previous
+cross-build curve ceilings and depth-window acceptance rules.
+
+A compiler change can change discrete ray outcomes, including near-coincident
+surfaces closer than intersection_t_offset: at (39,8), one hit becomes two.
+Cross-build curves, sample counts and required ULP shifts are informational.
+The only cross-build sanity gate is maximum flattened-alpha difference <= 1e-4
+per case (small-strict: 0). Report all other differences without qualifying them.
+
+The new build must independently pass every existing gate: oracle/depth cuts
+within its EXR header bound; CPU same-build beauty exactness; the unchanged
+CUDA/OptiX beauty policy; strict-versus-strict rerun identity within this build;
+nine CTests and the regression command. Compare the 33x17 raw GPU spill before
+fitting for diagnosis, and report all 81 strict + 30 numeric cross-build cases.
+Both builds' own oracle/depth-cut evidence remains recorded. No beauty or error
+gate changes. Only after the sanity check and new-build gates pass, promote the
+separate clang-cl/NVCC-12.8.61 references and replay 81/81 + 30/30 byte identity.
+Candidate references may be staged for replay before promotion; do not replace
+the accepted default configuration until all qualification checks pass.
 
 ### Final CUDA/OptiX raw beauty rule (user decisions, 2026-10-08)
 

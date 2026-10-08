@@ -43,7 +43,18 @@ def main():
     assert len(tile)==size*size and list(tile[:3])==[0,1,2] and list(tile[size:size+3])==[3,4,5]
     assert image_channels({'channels':dict.fromkeys(('Layer.B','Layer.A','Layer.R','Layer.G'))})==['Layer.R','Layer.G','Layer.B','Layer.A']
     import OpenEXR
-    from compare_deep_identity import toolchain_difference
+    from compare_deep_identity import toolchain_difference, depth_window_error
+    z=np.float32(1436);one=float(np.spacing(z))
+    for amount in (1,4):
+        assert depth_window_error([(float(z),float(z),.5)],[(float(z)+amount*one,float(z)+amount*one,.5)],4)<1e-14
+    assert depth_window_error([(float(z),float(z),.5)],[(float(z)+5*one,float(z)+5*one,.5)],4)>.49
+    assert depth_window_error([(float(z),float(z),.5)],[(float(z)+one,float(z)+one,.6)],4)>.09
+    # Continuous curves are included; changed extinction must fail too.
+    assert depth_window_error([(1,3,.5)],[(1,3,.6)],4)>.09
+    # FLOAT spacing changes at powers of two, including the lower-side spacing.
+    two=float(np.float32(2));down=float(two-np.nextafter(np.float32(2),np.float32(0)))
+    assert depth_window_error([(two,two,.5)],[(two-4*down,two-4*down,.5)],4)<1e-14
+    assert depth_window_error([(two,two,.5)],[(two-5*down,two-5*down,.5)],4)>.49
     with tempfile.TemporaryDirectory(dir=SCRATCH,prefix='selfcheck-') as directory:
         def write(name, samples):
             channels={}

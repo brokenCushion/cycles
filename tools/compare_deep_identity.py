@@ -7,6 +7,7 @@ Unknown attributes remain deterministic until explicitly classified otherwise.
 """
 import hashlib
 import json
+import math
 from pathlib import Path
 import struct
 import sys
@@ -102,10 +103,67 @@ def compare(before, after):
                 changed_run_metadata=[k for k in changed if k in RUN_METADATA])
 
 
+def depth_window_error(old, new, ulps):
+    """Maximum violation of the monotone old-curve depth envelope.
+
+    FLOAT spacing is constant between binade rounding boundaries. Within each
+    region, split at new knots and old knots shifted by +/- d. Both one-sided
+    limits and the analytic stationary points of exponential differences cover
+    the entire interval, rather than only a sampled set of cuts.
+    """
+    import numpy as np
+    source=str(Path(__file__).resolve().parents[1]/'src/deep')
+    if source not in sys.path:sys.path.insert(0,source)
+    from validate_volume_camera_curves import curve
+    def make(samples):
+        return curve([(a,b,-math.log1p(-v)) for a,b,v in samples if a<b],
+                     [(a,v) for a,b,v in samples if a==b])
+    before, ends, steps=make(old);after, new_ends, new_steps=make(new)
+    old_knots=np.unique(np.concatenate((ends,steps)))
+    new_knots=np.unique(np.concatenate((new_ends,new_steps)))
+    knots=np.union1d(old_knots,new_knots)
+    if not len(knots):return 0.
+    def spacing(z):
+        z=float(np.float32(z))
+        return math.ldexp(1.,max(-149,math.frexp(z)[1]-24))
+    lo=max(0.,float(knots[0])-ulps*spacing(knots[0]))
+    hi=float(knots[-1])+ulps*spacing(knots[-1])
+    # Nearest-FLOAT binade changes occur half a previous ULP below powers of two.
+    bins=[lo,hi]
+    for exponent in range(-126,128):
+        boundary=math.ldexp(1.,exponent)-math.ldexp(1.,max(-149,exponent-24))/2
+        if lo<boundary<hi:bins.append(boundary)
+    bins.sort();maximum=0.
+    for lo,hi in zip(bins,bins[1:]):
+        d=ulps*spacing((lo+hi)/2)
+        points=np.unique(np.concatenate(([lo,hi],new_knots,old_knots-d,old_knots+d)))
+        points=points[(points>=lo)&(points<=hi)]
+        lower,upper=before(points+d),before(points-d,True)
+        for left_limit in (False,True):
+            values=after(points,left_limit)
+            maximum=max(maximum,float(np.max(values-upper)),float(np.max(lower-values)))
+        width=np.diff(points)
+        n0,n1=after(points[:-1]),after(points[1:],True)
+        for offset,sign in ((-d,1),(d,-1)):
+            o0,o1=before(points[:-1]+offset),before(points[1:]+offset,True)
+            active=(n0>0)&(n1>0)&(o0>0)&(o1>0)&(width>0)
+            rn=np.zeros_like(width);ro=np.zeros_like(width)
+            rn[active]=np.log(n0[active]/n1[active])/width[active]
+            ro[active]=np.log(o0[active]/o1[active])/width[active]
+            active&=(rn>0)&(ro>0)&(rn!=ro)
+            root=np.zeros_like(width)
+            root[active]=(np.log(rn[active])+np.log(n0[active])-np.log(ro[active])-np.log(o0[active]))/(rn[active]-ro[active])
+            active&=(root>0)&(root<width)
+            if np.any(active):
+                violation=sign*(n0[active]*np.exp(-rn[active]*root[active])-o0[active]*np.exp(-ro[active]*root[active]))
+                maximum=max(maximum,float(np.max(violation)))
+    return maximum
+
+
 def toolchain_difference(before, after, mode='strict'):
     """Audit physical curves rather than pairing differently partitioned records.
 
-    Strict has a 1e-6 cross-build ceiling. Numeric approximations are checked
+    Strict has a four-FLOAT-ULP depth window plus a 1e-6 ceiling. Numeric approximations are checked
     against their own oracles; their cross-build difference is informational.
     This comparison never replaces an independent oracle check.
     """
@@ -119,7 +177,7 @@ def toolchain_difference(before, after, mode='strict'):
         raise ValueError('Toolchain audit channel/image layout differs')
     h, w = cb['A'].pixels.shape
     totals = [0, 0]; changed = 0; count_changed = 0; deltas = []
-    maximum = 0.; flat = 0.; worst = None
+    maximum = 0.; flat = 0.; worst = None;window_maximum=0.;shift=0;shift_failed=False
     for y in range(h):
         for x in range(w):
             lengths = [0 if c['A'].pixels[y,x] is None else len(c['A'].pixels[y,x]) for c in (ca, cb)]
@@ -135,6 +193,15 @@ def toolchain_difference(before, after, mode='strict'):
             left, right = pixel(a,x,y), pixel(b,x,y)
             error = curve_error(left, right)
             if error > maximum: maximum, worst = error, [x,y]
+            if mode=='strict':
+                window=error
+                if error>1e-6:
+                    for needed in range(1,5):
+                        window=depth_window_error(left,right,needed)
+                        if window<=1e-6:
+                            shift=max(shift,needed);break
+                    else:shift_failed=True
+                window_maximum=max(window_maximum,float(window))
             flat = max(flat, abs(flattened_transmittance(left)-flattened_transmittance(right)))
     result.update(samples_before=totals[0], samples_after=totals[1],
                   changed_pixels=changed, count_changed_pixels=count_changed,
@@ -143,7 +210,10 @@ def toolchain_difference(before, after, mode='strict'):
                   worst_pixel=worst, header_bound=bound(b),
                   difference_limit=1e-6 if mode=='strict' else None,
                   triangle_inequality_bound=bound(a)+bound(b),
-                  audit_passed=bool(not result['changed_deterministic_attributes'] and (mode!='strict' or maximum<=1e-6)))
+                  max_depth_window_violation=window_maximum if mode=='strict' else None,
+                  max_required_shift_ulps=None if shift_failed else shift,
+                  required_shift_exceeds_four=shift_failed,shift_report='Minimum integer ULP window; 0 when the unshifted error passes',
+                  audit_passed=bool(not result['changed_deterministic_attributes'] and (mode!='strict' or window_maximum<=1e-6)))
     return result
 
 

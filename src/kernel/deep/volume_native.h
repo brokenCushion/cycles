@@ -42,8 +42,8 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
        info.data_type != IMAGE_DATA_TYPE_NANOVDB_FP16) || !info.data)
     return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
 
-  double origin[3] = {ray->P.x, ray->P.y, ray->P.z};
-  double direction[3] = {ray->D.x, ray->D.y, ray->D.z};
+  double origin[3] = {double(ray->P.x), double(ray->P.y), double(ray->P.z)};
+  double direction[3] = {double(ray->D.x), double(ray->D.y), double(ray->D.z)};
   const double physical_length = sqrt(direction[0] * direction[0] +
                                       direction[1] * direction[1] +
                                       direction[2] * direction[2]);
@@ -56,8 +56,10 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
     double p[3], d[3];
     for (int axis = 0; axis < 3; ++axis) {
       const float4 row = rows[axis];
-      p[axis] = row.x * origin[0] + row.y * origin[1] + row.z * origin[2] + row.w;
-      d[axis] = row.x * direction[0] + row.y * direction[1] + row.z * direction[2];
+      p[axis] = double(row.x) * origin[0] + double(row.y) * origin[1] +
+                double(row.z) * origin[2] + double(row.w);
+      d[axis] = double(row.x) * direction[0] + double(row.y) * direction[1] +
+                double(row.z) * direction[2];
     }
     for (int axis = 0; axis < 3; ++axis) {
       origin[axis] = p[axis];
@@ -65,20 +67,22 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
     }
   }
   const float4 camera_z = kernel_data.cam.worldtocamera.z;
-  const double depth_origin = double(camera_z.x) * ray->P.x + double(camera_z.y) * ray->P.y +
-                              double(camera_z.z) * ray->P.z + camera_z.w;
-  const double depth_per_t = double(camera_z.x) * ray->D.x + double(camera_z.y) * ray->D.y +
-                             double(camera_z.z) * ray->D.z;
+  const double depth_origin = double(camera_z.x) * double(ray->P.x) +
+                              double(camera_z.y) * double(ray->P.y) +
+                              double(camera_z.z) * double(ray->P.z) + double(camera_z.w);
+  const double depth_per_t = double(camera_z.x) * double(ray->D.x) +
+                             double(camera_z.y) * double(ray->D.y) +
+                             double(camera_z.z) * double(ray->D.z);
   if (info.data_type == IMAGE_DATA_TYPE_NANOVDB_FP16) {
     const auto *grid = (ccl_global nanovdb::NanoGrid<nanovdb::Fp16> *)info.data;
     const nanovdb::CachedReadAccessor<nanovdb::Fp16> accessor(grid->tree().root());
-    return deep_volume_grid_capture(accessor, origin, direction, start, end, scale,
+    return deep_volume_grid_capture(accessor, origin, direction, start, end, double(scale),
                                     physical_length, depth_origin, depth_per_t,
                                     events, density, stride, capacity, first, 16384, eps_ray, kernel_data.film.pad1, object_stream, sd->object, write);
   }
   const auto *grid = (ccl_global nanovdb::NanoGrid<float> *)info.data;
   const nanovdb::CachedReadAccessor<float> accessor(grid->tree().root());
-  return deep_volume_grid_capture(accessor, origin, direction, start, end, scale,
+  return deep_volume_grid_capture(accessor, origin, direction, start, end, double(scale),
                                   physical_length, depth_origin, depth_per_t,
                                   events, density, stride, capacity, first, 16384, eps_ray, kernel_data.film.pad1, object_stream, sd->object, write);
 #else

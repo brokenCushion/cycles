@@ -62,10 +62,12 @@ ccl_device KernelDeepResult deep_volume_interval(
       if (count == capacity)
         return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
       const float4 camera_z = kernel_data.cam.worldtocamera.z;
-      const double depth_origin = double(camera_z.x) * ray.P.x + double(camera_z.y) * ray.P.y +
-                                  double(camera_z.z) * ray.P.z + camera_z.w;
-      const double depth_per_t = double(camera_z.x) * ray.D.x + double(camera_z.y) * ray.D.y +
-                                 double(camera_z.z) * ray.D.z;
+      const double depth_origin = double(camera_z.x) * double(ray.P.x) +
+                                  double(camera_z.y) * double(ray.P.y) +
+                                  double(camera_z.z) * double(ray.P.z) + double(camera_z.w);
+      const double depth_per_t = double(camera_z.x) * double(ray.D.x) +
+                                 double(camera_z.y) * double(ray.D.y) +
+                                 double(camera_z.z) * double(ray.D.z);
 #if defined(WITH_NANOVDB) && (!defined(__KERNEL_GPU__) || defined(__KERNEL_CUDA__))
       if (eps_ray > 0 && density) {
         const double front = depth_origin + start * depth_per_t;
@@ -77,10 +79,10 @@ ccl_device KernelDeepResult deep_volume_interval(
           deep_write_event(events, density, count * stride,
               {deep_event_pack(DEEP_SURFACE, object), z, z, 1, 0}, nullptr, write);
           object_stream->terminated = true;
-          object_stream->cutoff = z;
+          object_stream->cutoff = double(z);
           return {DEEP_COMPLETE, unsigned(count + 1), DEEP_ERROR_NONE};
         }
-        const double tau = double(sigma.x) * (end - start) * len(ray.D);
+        const double tau = double(sigma.x) * (end - start) * double(len(ray.D));
         const auto error = deep_volume_constant(
             depth_origin + start * depth_per_t, depth_origin + end * depth_per_t,
             tau, .25 * eps_ray / capacity,
@@ -98,7 +100,7 @@ ccl_device KernelDeepResult deep_volume_interval(
         return {DEEP_FAILED, 0, DEEP_ERROR_DEPTH};
       deep_write_event(events, density, count * stride,
           {deep_event_pack(DEEP_VOLUME, object), front, rear, 0,
-           float(double(sigma.x) * (end - start) * len(ray.D))}, nullptr, write);
+           float(double(sigma.x) * (end - start) * double(len(ray.D)))}, nullptr, write);
       ++count;
     }
   }
@@ -113,9 +115,9 @@ ccl_device_inline void deep_volume_candidate(
 {
   float3 vertices[3];
   triangle_vertices(kg, object, prim, vertices);
-  const double points[3][3] = {{vertices[0].x, vertices[0].y, vertices[0].z},
-                               {vertices[1].x, vertices[1].y, vertices[1].z},
-                               {vertices[2].x, vertices[2].y, vertices[2].z}};
+  const double points[3][3] = {{double(vertices[0].x), double(vertices[0].y), double(vertices[0].z)},
+                               {double(vertices[1].x), double(vertices[1].y), double(vertices[1].z)},
+                               {double(vertices[2].x), double(vertices[2].y), double(vertices[2].z)}};
   double t, u, v;
   bool candidate_back;
   if (!deep_volume_triangle(origin, direction, points, t, u, v, candidate_back) ||
@@ -190,8 +192,10 @@ ccl_device void deep_volume_clamp(KernelGlobals kg, const Ray &ray,
                                   const double depth, double &clip_end)
 {
   const float4 z = kernel_data.cam.worldtocamera.z;
-  const double origin = double(z.x)*ray.P.x + double(z.y)*ray.P.y + double(z.z)*ray.P.z + z.w;
-  const double direction = double(z.x)*ray.D.x + double(z.y)*ray.D.y + double(z.z)*ray.D.z;
+  const double origin = double(z.x)*double(ray.P.x) + double(z.y)*double(ray.P.y) +
+                         double(z.z)*double(ray.P.z) + double(z.w);
+  const double direction = double(z.x)*double(ray.D.x) + double(z.y)*double(ray.D.y) +
+                            double(z.z)*double(ray.D.z);
   const double end = (depth - origin) / direction;
   clip_end = clip_end < end ? clip_end : end;
 }
@@ -208,16 +212,18 @@ ccl_device KernelDeepResult deep_volume_object(
     const bool initially_inside = false,
     ccl_private KernelDeepWriteState *write = nullptr)
 {
-  double origin[3] = {ray.P.x, ray.P.y, ray.P.z};
-  double direction[3] = {ray.D.x, ray.D.y, ray.D.z};
+  double origin[3] = {double(ray.P.x), double(ray.P.y), double(ray.P.z)};
+  double direction[3] = {double(ray.D.x), double(ray.D.y), double(ray.D.z)};
   if (!(kernel_data_fetch(object_flag, object) & SD_OBJECT_TRANSFORM_APPLIED)) {
     const Transform tfm = object_fetch_transform(kg, object, OBJECT_INVERSE_TRANSFORM);
     const float4 rows[3] = {tfm.x, tfm.y, tfm.z};
     double p[3], d[3];
     for (int axis = 0; axis < 3; ++axis) {
       const float4 r = rows[axis];
-      p[axis] = r.x * origin[0] + r.y * origin[1] + r.z * origin[2] + r.w;
-      d[axis] = r.x * direction[0] + r.y * direction[1] + r.z * direction[2];
+      p[axis] = double(r.x) * origin[0] + double(r.y) * origin[1] +
+                double(r.z) * origin[2] + double(r.w);
+      d[axis] = double(r.x) * direction[0] + double(r.y) * direction[1] +
+                double(r.z) * direction[2];
     }
     for (int axis = 0; axis < 3; ++axis) {
       origin[axis] = p[axis];
@@ -323,7 +329,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
   Ray ray;
   integrator_state_read_ray(state, &ray);
   const float clip_start = ray.tmin;
-  double clip_end = ray.tmax;
+  double clip_end = double(ray.tmax);
   ray.tmax = FLT_MAX;
   ray.self.object = ray.self.light_object = OBJECT_NONE;
   ray.self.prim = ray.self.light_prim = PRIM_NONE;
@@ -377,7 +383,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
     media[object_count * medium_stride] = {hit.object, -1.0f};
     ++object_count;
     const KernelDeepResult result = deep_volume_object(
-        kg, state, &sd, ray, hit.object, clip_start, clip_end,
+        kg, state, &sd, ray, hit.object, double(clip_start), clip_end,
         events, density, stride, capacity, count, eps_ray, true, write);
     if (result.status != DEEP_COMPLETE)
       return result;
@@ -385,7 +391,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
   }
   int steps = 0;
   while (steps < (density ? 16384 : 128)) {
-    if (eps_ray > 0 && ray.tmin >= clip_end)
+    if (eps_ray > 0 && double(ray.tmin) >= clip_end)
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
     uint boundary_count = scene_intersect_volume(
         kg, &ray, boundaries, boundary_capacity, PATH_RAY_VISIBILITY_CAMERA, false);
@@ -417,7 +423,7 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
       if (++steps > (density ? 16384 : 128))
         return {DEEP_FAILED, 0, DEEP_ERROR_CAPACITY};
       const Intersection hit = boundaries[boundary];
-      if (eps_ray > 0 && hit.t > clip_end)
+      if (eps_ray > 0 && double(hit.t) > clip_end)
         return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
       if (hit.type != PRIMITIVE_TRIANGLE)
         return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
@@ -449,14 +455,14 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
             media[index * medium_stride] = {hit.object, -1.0f};
             ++object_count;
             const KernelDeepResult result = deep_volume_object(
-                kg, state, &sd, ray, hit.object, clip_start, clip_end,
+                kg, state, &sd, ray, hit.object, double(clip_start), clip_end,
                 events, density, stride, capacity, count, eps_ray, false, write);
             if (result.status != DEEP_COMPLETE)
               return result;
             count = int(result.count);
           }
         }
-        if (has_surface && hit.t <= clip_end) {
+        if (has_surface && double(hit.t) <= clip_end) {
           /* Volume integration reuses sd. Restore this boundary's native
            * surface state before capturing a material with both outputs. */
           shader_setup_from_ray(kg, &sd, &ray, &hit);

@@ -128,12 +128,12 @@ ccl_device KernelDeepError deep_volume_compression_cell(
     deep_write_event(events, density, *count * stride,
         {deep_event_pack(DEEP_SURFACE, stream->object), z, z, 1, 0}, nullptr, write);
     ++*count;
-    stream->cutoff = z;
+    stream->cutoff = double(z);
     stream->terminated = true;
     return DEEP_ERROR_NONE;
   }
-  const DeepCubicDensity<double> original = {{cell.optical_depth[0], cell.optical_depth[1],
-                                             cell.optical_depth[2], cell.optical_depth[3]}};
+  const DeepCubicDensity<double> original = {{double(cell.optical_depth[0]), double(cell.optical_depth[1]),
+                                             double(cell.optical_depth[2]), double(cell.optical_depth[3])}};
   const double increment = deep_density_integral(original, 1.0);
   for (int attempt = 0; attempt < 2; ++attempt) {
     if (!stream->active) {
@@ -216,9 +216,9 @@ ccl_device KernelDeepError deep_volume_grid_cell(
     /* Nonnegative scalar density is part of the allowlisted contract. A
      * negative corner cannot be replaced by a clamped cubic without changing
      * the native shader's density function inside this cell. */
-    if (!(value >= 0 && value <= 3.4028234663852886e38))
+    if (!(value >= 0 && double(value) <= 3.4028234663852886e38))
       return DEEP_ERROR_EXTINCTION;
-    corners[corner] = value;
+    corners[corner] = double(value);
   }
   const double length = (segment.back - segment.front) * physical_length_per_t;
   if (!(segment.back > segment.front && physical_length_per_t > 0 && length > 0 &&

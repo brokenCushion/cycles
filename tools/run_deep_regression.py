@@ -54,7 +54,7 @@ def main():
     root=SCRATCH/run_id;root.mkdir(parents=True,exist_ok=False)
     report_dir=REPO/'builds/validation/deep-regression'/run_id;report_dir.mkdir(parents=True)
     env=dict(os.environ,TEMP=str(root/'temp'),TMP=str(root/'temp'),
-             BLENDER_USER_RESOURCES=str(REPO/'builds/blender/user-resources'))
+             BLENDER_USER_RESOURCES=str(SCRATCH.parent/'regression-cache'))
     (root/'temp').mkdir()
     for key in ('OCIO','CYCLES_KERNEL_PATH','CYCLES_DEEP_Z_BASELINE','CYCLES_DEEP_VALIDATE_CAPTURE_ONLY','CYCLES_DEEP_HOST_ONLY_BEAUTY_PROOF'):
         env.pop(key,None)

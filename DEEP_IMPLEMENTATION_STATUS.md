@@ -4,25 +4,24 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0-7 accepted.
 
-**Phase 8a is stopped, unqualified: strict CPU legacy identity failed.**
-Both deep builds now use clang-cl 20.1.8, CUDA 12.8.0 and OptiX 8.0.0 with
-native precompiled modules. Pristine AO rendering passes; deep qualification
-stopped before CUDA/OptiX controls and full regression. Three deep headers now
-spell their FLOAT-to-double conversions explicitly for Clang's existing checks.
-Beauty sources/flags and every gate remain unchanged.
+**Phase 8a is stopped, unqualified: mandatory CUDA identity failed.**
+Deep Blender and standalone use clang-cl 20.1.8, CUDA 12.8.0 / NVCC 12.8.61
+and OptiX 8.0.0 with native precompiled modules; see [toolchain](BUILDING.md).
+The first CUDA strict case (denoised_volume, 33x17/four samples) changes
+114,297 -> 114,304 deep samples. Counts differ at 14 pixels; A/Z/ZBack differ
+at 96 pixels. All deterministic headers match. Whole-curve difference
+2.16944e-7 is informational: CUDA byte identity remains mandatory.
+[CUDA evidence](builds/validation/landscape-cloud/optimization-phase8a/clangcl-cuda-identity-precheck.json).
 
-CPU half_precision (32x32/four samples): deep-on/off beauty and all stored
-passes are exact; beauty-source hash and all 75 resource records match the
-accepted baseline. Legacy strict samples change 118,775 -> 118,777, with count
-changes at 44 pixels; deterministic headers match. Whole-curve transmittance
-difference is 6.86099e-7, but this does not satisfy strict byte identity.
-[Evidence and pending checks](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json).
-Full 81/81 + 30/30 replay, nine CTests, matrices/boundaries, GPU beauty and
-after measurements remain pending. The raw-pass harness fix is retained.
-No Phase 8b/8c or full-resolution Phase 9 run started.
+CPU deep-on/off beauty and stored passes are exact in the initial precheck;
+beauty sources and all 75 accepted CUDA resource records match. The user
+permits separate CPU compiler references only after oracle/depth-cut and
+rounding checks. No references were changed. Full replay, CPU re-baselining,
+OptiX AO/Bevel and GPU beauty qualification remain pending; no further renders
+were launched after the CUDA failure. No Phase 8b/8c or Phase 9 run started.
 
-The approved [M8 release record](src/deep/M8_RELEASE_VALIDATION.md) is restored
-verbatim; [13 archived reports](src/deep/ARCHIVED_REPORTS.md) remain indexed.
+The approved [M8 release record](src/deep/M8_RELEASE_VALIDATION.md) is retained;
+[13 archived reports](src/deep/ARCHIVED_REPORTS.md) remain indexed.
 [Core map and regression command](src/deep/README.md).
 Latest qualified Gaffer review: `D:/CyclesDeepScratch/regression-tools/phase7_review.gfr`.
 Large evidence/TEMP stay on D:.

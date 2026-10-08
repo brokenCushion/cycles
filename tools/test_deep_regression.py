@@ -42,6 +42,27 @@ def main():
     assert len(tile)==size*size and list(tile[:3])==[0,1,2] and list(tile[size:size+3])==[3,4,5]
     assert image_channels({'channels':dict.fromkeys(('Layer.B','Layer.A','Layer.R','Layer.G'))})==['Layer.R','Layer.G','Layer.B','Layer.A']
     import OpenEXR
+    from compare_deep_identity import toolchain_difference
+    with tempfile.TemporaryDirectory(dir=SCRATCH,prefix='selfcheck-') as directory:
+        def write(name, samples):
+            channels={}
+            for index, channel in enumerate(('Z','ZBack','A')):
+                values=np.empty((1,1),dtype=object)
+                values[0,0]=np.array([s[index] for s in samples],dtype=np.float32)
+                channels[channel]=values
+            path=Path(directory)/name
+            OpenEXR.File({'type':OpenEXR.deepscanline,'compression':OpenEXR.ZIPS_COMPRESSION,
+                          'cycles:maxTransmittanceError':1e-6},channels).write(str(path))
+            return path
+        a=write('a.exr',[(1,3,.75)])
+        b=write('b.exr',[(1,2,.5),(2,3,.5)])
+        v=toolchain_difference(a,b)
+        assert not v['passed'] and v['audit_passed'] and v['count_changed_pixels']==1
+        assert v['max_transmittance_difference']<1e-14
+        c=write('c.exr',[(1,1,1)])
+        d=write('d.exr',[(2,2,1)])
+        v=toolchain_difference(c,d)
+        assert not v['audit_passed'] and v['max_transmittance_difference']==1
     channels={}
     for name,value,dtype in [('Z',1,np.float32),('ZBack',1,np.float32),('A',1,np.float32),('id',7,np.uint32)]:
         values=np.empty((1,1),dtype=object);values[0,0]=np.array([value],dtype=dtype)

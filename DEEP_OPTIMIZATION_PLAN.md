@@ -85,16 +85,22 @@ OptiX excludes shader-raytrace (AO/Bevel), rejects explicitly and directs to
 CUDA; Phase 9 uses CUDA. Deep builds are switched; qualification is stopped
 at the mandatory CUDA payload identity gate.
 
-### Compiler-specific CPU references (user decision, 2026-10-08)
+### Recorded toolchain re-baseline (user decision, 2026-10-08)
 
-CUDA deep payload and deterministic headers must remain byte-identical to the
-accepted references. Any difference stops qualification; do not re-baseline CUDA.
-For CPU, enumerate all differing cases in the 81 strict / 30 numeric replay.
-Each must pass the independent camera oracle and depth cuts within its header
-bound, with rounding-sized differences and reported maxima. Only then record
-separate clang-cl CPU references, retaining cl.exe references unchanged.
-Deep-on/off CPU beauty within the same build remains exactly equal. These
-compiler-specific references do not change any error bound or GPU beauty gate.
+Byte identity detects code changes under a fixed toolchain. The recorded switch
+to clang-cl 20.1.8 / NVCC 12.8.61 (CUDA 12.8.0), matching the buildbot, triggers
+one one-time CPU/CUDA re-baseline. Keep this pairing and retain the cl.exe /
+previous NVCC references for history. This supersedes the earlier CUDA identity
+stop and CPU-only exception: CUDA capture also passes through host fitting/export.
+First compare raw GPU spill records before fitting for the 33x17 volume case.
+Audit all 81 strict + 30 numeric cases against their retained references:
+report differing cases, maximum transmittance difference and sample-count changes.
+Each must pass its independent oracle/depth cuts within its EXR header bound;
+strict uses the legacy 1e-6 budget. Differences must be rounding-sized; any
+transmittance difference larger than 1e-6 stops work, including numeric cases.
+Only after all pass, save separate clang-cl/NVCC-12.8.61 references and replay
+81/81 + 30/30 byte identity, CPU exact beauty and the full regression command.
+Same-build CPU deep-on/off beauty remains exact. No beauty or error gate changes.
 
 ### Final CUDA/OptiX raw beauty rule (user decisions, 2026-10-08)
 

@@ -102,6 +102,48 @@ def compare(before, after):
                 changed_run_metadata=[k for k in changed if k in RUN_METADATA])
 
 
+def toolchain_difference(before, after):
+    """Audit physical curves rather than pairing differently partitioned records.
+
+    The user-approved compiler re-baseline has a 1e-6 difference ceiling, even
+    for numeric modes. It never replaces an independent oracle check.
+    """
+    import numpy as np
+    from deep_exr import read, pixel, bound
+    from compare_deep_ids import curve_error, flattened_transmittance
+    result = compare(before, after)
+    a, b = read(before), read(after)
+    ca, cb = a.channels(), b.channels()
+    if ca.keys() != cb.keys() or ca['A'].pixels.shape != cb['A'].pixels.shape:
+        raise ValueError('Toolchain audit channel/image layout differs')
+    h, w = cb['A'].pixels.shape
+    totals = [0, 0]; changed = 0; count_changed = 0; deltas = []
+    maximum = 0.; flat = 0.; worst = None
+    for y in range(h):
+        for x in range(w):
+            lengths = [0 if c['A'].pixels[y,x] is None else len(c['A'].pixels[y,x]) for c in (ca, cb)]
+            for i in (0, 1): totals[i] += lengths[i]
+            delta = lengths[1]-lengths[0]; deltas.append(delta)
+            count_changed += delta != 0
+            def values(c, name):
+                v = c[name].pixels[y,x]
+                return np.empty(0, dtype=np.uint32) if v is None else v.view(np.uint32)
+            if all(np.array_equal(values(ca, n), values(cb, n)) for n in ca):
+                continue
+            changed += 1
+            left, right = pixel(a,x,y), pixel(b,x,y)
+            error = curve_error(left, right)
+            if error > maximum: maximum, worst = error, [x,y]
+            flat = max(flat, abs(flattened_transmittance(left)-flattened_transmittance(right)))
+    result.update(samples_before=totals[0], samples_after=totals[1],
+                  changed_pixels=changed, count_changed_pixels=count_changed,
+                  count_delta_min=min(deltas), count_delta_max=max(deltas),
+                  max_transmittance_difference=maximum, max_flattened_alpha_difference=flat,
+                  worst_pixel=worst, header_bound=bound(b), difference_limit=1e-6,
+                  audit_passed=not result['changed_deterministic_attributes'] and maximum<=1e-6)
+    return result
+
+
 if __name__ == '__main__':
     result = compare(*sys.argv[1:3])
     print(json.dumps(result, indent=2))

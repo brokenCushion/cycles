@@ -15,7 +15,7 @@ import sys
 import time
 import uuid
 import numpy as np
-from compare_deep_identity import compare
+from compare_deep_identity import compare, toolchain_difference
 from compare_deep_ids import curve_error, name_hash
 from deep_exr import read, bound, pixel, exact_flat
 from validate_deep_render import validate, boundary_analytic
@@ -44,8 +44,12 @@ def main():
     parser.add_argument('--config',type=Path,default=REPO/'tools/deep_regression_config.json')
     parser.add_argument('--keep',action='store_true',help='Keep the owned D: run folder after PASS')
     parser.add_argument('--optix',action='store_true',help='Also qualify OptiX SVM matrices and boundaries')
+    parser.add_argument('--toolchain-audit',action='store_true',help='Audit the approved one-time compiler change; stage new references only, not GPU qualification')
     parser.add_argument('--cuda-beauty',type=Path,help='Optional separate calibrated CUDA beauty stage configuration')
     args=parser.parse_args();os.chdir(REPO)
+    if args.toolchain_audit and (args.optix or args.cuda_beauty):
+        parser.error('Toolchain audit is separate from OptiX/GPU beauty qualification')
+    if args.toolchain_audit:args.keep=True
     settings=json.loads(args.config.read_text());source_baseline=settings.pop('source_baseline')
     config={k:Path(v).resolve() for k,v in settings.items()}
     for path in config.values():
@@ -72,8 +76,13 @@ def main():
         result['stages'].append(dict(name=label,seconds=time.monotonic()-t,exit_code=0));save()
         return value
     def identity(label,reference,target,mode):
-        value=compare(reference,target)
+        value=toolchain_difference(reference,target) if args.toolchain_audit else compare(reference,target)
         result['identity'].setdefault(mode,{})[label]=value;save()
+        if args.toolchain_audit:
+            if not value['audit_passed']:raise RuntimeError('Toolchain rounding/header gate failed: '+label+'; '+str(value))
+            staged=root/'references'/reference.relative_to(config['golden'])
+            staged.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(target,staged)
+            return
         if not value['passed']:raise RuntimeError('Deep identity failed: '+label)
     def native(d,scene,samples,percentage,device,mode='strict',ids=False,deep=True,measure=False,max_events=16):
         d.mkdir(parents=True)
@@ -132,7 +141,7 @@ def main():
         gpu_changed=gpu_hash(source_baseline)!=gpu_hash(head)
         if subprocess.run(['git','diff','--quiet','HEAD','--']+GPU_PATHS).returncode:
             raise ValueError('Commit GPU changes and record the corresponding build before qualification')
-        if gpu_changed and not args.cuda_beauty:raise ValueError('GPU-side changes require --cuda-beauty')
+        if gpu_changed and not args.cuda_beauty and not args.toolchain_audit:raise ValueError('GPU-side changes require --cuda-beauty')
         result['beauty_sources']=dict(passed=True,before=old_hash,after=new_hash,renderer_sha256=digest,renderer_commit=source_commit,baseline_commit=source_baseline,head=head)
         result['gpu_sources']=dict(changed=gpu_changed,paths=GPU_PATHS)
         run('kernel-resources',[sys.executable,REPO/'src/deep/measure_cuda_resources.py',config['on_cubin'],config['off_cubin'],config['resource_baseline'],root/'resources.json'])
@@ -215,6 +224,11 @@ def main():
         counts={m:len(v) for m,v in result['identity'].items()}
         if counts!={'strict':81,'1e-4':15,'1e-3':15}:raise ValueError('Identity coverage changed: '+str(counts))
         result['identity_counts']=counts
+        if args.toolchain_audit:
+            result.update(passed=True,toolchain_audit=True,gpu_qualification=False,
+                          staged_references=str(root/'references'),total_seconds=time.monotonic()-started)
+            save();print('Compiler audit PASS; staged references '+str(root/'references'))
+            return
         # Additional surface/adaptive/lens/motion and exact-ID fixtures are shared below.
         from run_deep_smokes import run_smokes
         run_smokes(root,config,env,run,verify,native,numerical,ids_compare,result)

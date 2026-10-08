@@ -92,6 +92,14 @@ Every comparison across different builds, toolchains or backends uses one rule:
    EXR header bounds, same-build/backend beauty policy and rerun identity.
    CPU deep-on/off beauty remains exact; CUDA/OptiX use the policy below.
 2. Maximum cross-side flattened-alpha difference must be <= 1e-4 per case.
+   Native-backend waiver (user decision, 2026-10-09): waive this bound only
+   when pristine Blender without deep reproduces a beauty-alpha difference
+   of the same size between those backends AND each backend's deep flattened
+   alpha matches its own beauty alpha within the existing header bound.
+   Report pristine beauty and deep differences together. All other cases
+   retain 1e-4. Known case: OSL texture-driven opacity can differ between CPU
+   and OptiX by up to ~1e-3, as in native Blender (CPU OpenImageIO textures
+   versus OptiX Cycles images). Own oracles, beauty and identity stay mandatory.
 3. Cross-side curves, depth shifts and deep sample counts are informational.
    Byte/curve identity applies only within the same build and backend.
 
@@ -1914,7 +1922,7 @@ old references remain unchanged. [Promotion](builds/validation/landscape-cloud/o
 Connected review: `D:/CyclesDeepScratch/regression-tools/phase8a_review.gfr`.
 Phase 8a accepted by the user on 2026-10-09. Phase 8b is in progress; 8c/9 remain unlaunched.
 
-### Phase 8b: stopped at texture cross-backend acceptance
+### Phase 8b qualification (native texture waiver accepted)
 
 [Fixed-case before measurements](builds/validation/landscape-cloud/optimization-phase8b/baseline.json)
 cover 18 CUDA/OptiX case/mode combinations using the accepted 8a executable.
@@ -1933,7 +1941,8 @@ program-group gap before OSL callables without changing beauty shader sources.
 and [blocker evidence](builds/validation/landscape-cloud/optimization-phase8b/blocker.json).
 Constant transparency passes both devices in all three modes; CPU texture
 passes all three. OptiX strict texture passes its own oracle, native alpha,
-20-control beauty policy and same-build identity, but fails cross-backend alpha.
+20-control beauty policy and same-build identity. The native texture waiver
+above resolves this cross-backend failure; remaining qualification resumes.
 
 | Case | Metric | Before (pristine Blender) | After (8b) | Commit |
 | --- | --- | --- | --- | --- |

@@ -10,9 +10,14 @@ from archive_deep_samples import archive
 from run_deep_regression import SCRATCH, cleanup
 from sample_csv import open_samples
 from deep_exr import image_tile,image_tile_size,image_channels,check_deep
+from run_osl_deep_checks import native_alpha_waiver
 
 
 def main():
+    assert native_alpha_waiver(9.01609e-4,9.01580e-4,(9.75e-8,9.44e-8),(1e-6,1e-6))
+    assert not native_alpha_waiver(9.01609e-4,0,(9.75e-8,9.44e-8),(1e-6,1e-6))
+    assert not native_alpha_waiver(9.01609e-4,9.01580e-4,(2e-6,9.44e-8),(1e-6,1e-6))
+    assert not native_alpha_waiver(2e-3,9.01580e-4,(9.75e-8,9.44e-8),(1e-6,1e-6))
     SCRATCH.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(dir=SCRATCH,prefix='selfcheck-') as directory:
         root=Path(directory).resolve();source=root/'camera.samples.csv'

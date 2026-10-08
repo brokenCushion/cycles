@@ -6,6 +6,7 @@ must match the executable and source hashes. This is separate from SVM replay.
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -21,6 +22,13 @@ sys.path.insert(0, str(REPO/'src/deep'))
 from cuda_beauty_gate import validate_cuda_beauty
 
 
+def native_alpha_waiver(cross, pristine, errors, bounds):
+    """Same native difference, with each deep side inside its existing bound."""
+    return (all(math.isfinite(v) for v in (cross, pristine, *errors, *bounds))
+            and pristine > 1e-4 and all(0 <= e <= b for e, b in zip(errors, bounds))
+            and abs(cross-pristine) <= sum(bounds))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--blender', type=Path, required=True)
@@ -29,6 +37,8 @@ def main():
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--device', choices=('CPU', 'OPTIX'), nargs='+', default=('CPU', 'OPTIX'))
     parser.add_argument('--smoke', action='store_true', help='One CPU/OptiX constant pair only')
+    parser.add_argument('--pristine', type=Path,
+                        help='JSON: pristine executable and per-case CPU/OptiX deep-off directories')
     args = parser.parse_args()
     root = args.root.resolve()
     if root.drive.upper() != 'D:':
@@ -43,6 +53,7 @@ def main():
         env.pop(name, None)
     digest = hashlib.sha256(args.blender.read_bytes()).hexdigest()
     cases = json.loads(args.cases.read_text())
+    pristine = json.loads(args.pristine.read_text()) if args.pristine else None
     result = dict(passed=False, renderer_sha256=digest, cases={}, rejections={},
                   scope='smoke' if args.smoke else 'full', devices=args.device)
     start = time.monotonic()
@@ -131,10 +142,33 @@ def main():
                                         flattened_transmittance(pixel(cpu,x,y)))
                                     for y in range(alpha.shape[0]) for x in range(alpha.shape[1]))
                         value['cpu_flattened_alpha_difference'] = cross
+                        if cross > 1e-4 and pristine and case['name'] in pristine['cases']:
+                            executable = Path(pristine['executable'])
+                            pristine_hash = hashlib.sha256(executable.read_bytes()).hexdigest()
+                            if pristine_hash != pristine['sha256']:
+                                raise ValueError('Pristine executable hash differs from recorded evidence')
+                            images = []
+                            for backend in ('CPU', 'OPTIX'):
+                                evidence = Path(pristine['cases'][case['name']][backend])
+                                settings = json.loads((evidence/'render.json').read_text())
+                                current = json.loads((root/backend/case['name']/mode/'render.json').read_text())
+                                keys = ('source_sha256', 'device', 'samples', 'resolution', 'percentage', 'seed', 'adaptive')
+                                if (settings['deep'] or settings['renderer_sha256'] != pristine_hash
+                                        or any(settings[k] != current[k] for k in keys)):
+                                    raise ValueError('Incompatible pristine evidence: '+str(evidence))
+                                images.append(read(evidence/'beauty.exr').channels()['A'].pixels)
+                            native = float(abs(images[0]-images[1]).max())
+                            cpu_value = result['cases']['CPU/'+case['name']+'/'+mode]
+                            waived = native_alpha_waiver(cross, native,
+                                (cpu_value['native_alpha_error'], maximum), (bound(cpu), bound(image)))
+                            value['native_backend_waiver'] = dict(passed=waived,
+                                pristine_beauty_difference=native, deep_difference=cross,
+                                pristine_sha256=pristine_hash, evidence=pristine['cases'][case['name']])
                     value['exr_bytes'] = (directory/'scene.deep.exr').stat().st_size
                     result['cases'][device+'/'+case['name']+'/'+mode] = value
                     save()
-                    if device == 'OPTIX' and cross > 1e-4:
+                    if (device == 'OPTIX' and cross > 1e-4
+                            and not value.get('native_backend_waiver', {}).get('passed')):
                         raise ValueError('OSL cross-backend flattened alpha gate failed: '+str(cross))
         result['passed'] = True
     except Exception as error:

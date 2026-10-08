@@ -46,6 +46,7 @@ expressions = {
     'trace': 'float a = trace(P, I) ? 0.35 : 0.9;',
     'shadow': 'float a = raytype("shadow") ? 0.35 : 0.9;',
     'bevel': 'float a = texture("@bevel", 4, 0.05);',
+    'ao': 'float a = texture("@ao", 4, 0.05);',
     'ray_depth': 'float a = 0; getattribute("path:ray_depth", a); a = 0.35 + a * 0.01;',
     'ray_length': 'float a = 0; getattribute("path:ray_length", a); a = 0.35 + a * 0.01;',
     'unknown_attribute': 'float a = 0; getattribute("missing_attribute", a); a = 0.35 + a * 0.01;',
@@ -57,7 +58,7 @@ expressions = {
     'arena_overflow': 'float a = 0.35;',
 }
 reject = {
-    'trace': 'trace', 'shadow': 'ray-type queries', 'bevel': '@bevel', 'ray_depth': 'path:ray_depth',
+    'trace': 'trace', 'shadow': 'ray-type queries', 'bevel': '@bevel', 'ao': '@ao', 'ray_depth': 'path:ray_depth',
     'ray_length': 'path:ray_length', 'unknown_attribute': 'missing_attribute',
     'dynamic_attribute': 'dynamic/unknown', 'unknown_userdata': 'unknown userdata',
     'non_grey': 'extinction', 'non_finite': 'extinction', 'closure_loop': 'closure-building loops',

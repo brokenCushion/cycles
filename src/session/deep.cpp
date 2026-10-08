@@ -697,7 +697,8 @@ void validate_deep_osl(Scene *scene)
         require(!integer("unknown_attributes_needed"), "dynamic/unknown attribute queries are unsupported");
         require(!integer("unknown_textures_needed"), "dynamic/unknown texture queries are unsupported");
         for (const auto &name : names("num_textures_needed", "textures_needed"))
-          require(name != ustring("@bevel"), "ray-traced @bevel texture is unsupported");
+          require(name != ustring("@bevel") && name != ustring("@ao"),
+                  "ray-traced " + name.string() + " texture is unsupported");
       const auto stable_attribute = [&](const string &name) {
         if (name.rfind("geom:", 0) == 0 && Attribute::name_standard(name.c_str()+5) != ATTR_STD_NONE)
           return true;

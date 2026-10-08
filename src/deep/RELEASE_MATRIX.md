@@ -2,7 +2,7 @@
 
 Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
 and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-7 are accepted.
-Phase 8a qualification is complete, awaiting review.
+Phase 8a is accepted; Phase 8b qualification is in progress.
 Qualification covers the named fixtures; arbitrary feature combinations and the
 full-resolution landscape are not implied. Phase 9 remains unlaunched.
 
@@ -42,6 +42,12 @@ Section 2; source hashes and 75 kernel resource records provide the host-only pr
 Strict backend equality is not promised: OptiX hardware intersections compute
 surface t differently from CUDA BVH2. Across builds/toolchains/backends, both
 sides qualify independently and flattened alpha differs by at most 1e-4;
+A case-specific waiver applies only when pristine Blender without deep
+reproduces a beauty-alpha difference of the same size AND each backend's deep
+flattened alpha matches its own beauty alpha within its existing header bound.
+Report both differences. Known native difference: **OSL texture-driven opacity
+can differ between CPU and OptiX by up to ~1e-3, as in native Blender** (CPU
+OpenImageIO textures versus OptiX Cycles images). All other cases retain 1e-4;
 curves, depth shifts and counts are informational. Byte/curve identity applies
 only within the same build and backend. See Section 2 of the plan.
 

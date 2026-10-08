@@ -99,6 +99,10 @@ if args.save_render_passes:
 if args.capture_only or args.diagnostic_sample_count:
     for layer in scene.view_layers:
         layer.cycles.pass_debug_sample_count = True
+if args.save_render_passes:
+    # Loaded fixtures may already have True flags; refresh their registered passes.
+    for layer in scene.view_layers:
+        layer.update_render_passes()
 if args.deep:
     if not hasattr(scene.cycles, 'use_deep_output'):
         raise RuntimeError('This Blender does not include the custom deep adapter')

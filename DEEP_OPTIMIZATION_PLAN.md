@@ -2070,8 +2070,47 @@ Failure: CPU texture at step 0.005 versus 0.00125 has maximum curve difference
 header 0.0001. Own fitting/depth-cut oracles pass (coarse 1.59967e-5, fine
 1.67460e-5, each inside the proven 5e-5 reconstruction allowance). A selected
 raw camera ray already differs by 0.00579149 before fitting, pointing to
-shader sampling/capture rather than publication; root cause is not established.
+shader sampling/capture rather than publication; the convergence diagnosis below identifies stochastic grid lookup and uninitialized local texture RNG.
 CPU saved raw passes and beauty are exact against deep-off for both steps.
 Four constant CPU/OptiX mode cases pass finer reference, identity and beauty;
 eight strict/step/capacity atomic rejections pass. No full Phase 8c acceptance
 is claimed. Phase 9 remains held for user confirmation after 8c.
+
+#### Phase 8c convergence diagnosis (before renderer changes)
+
+[Study](builds/validation/landscape-cloud/optimization-phase8c/convergence.json):
+unchanged Blender SHA `bce7489b322d9e5efe7d726e42e325e96ed314b6a61362a641d1537f8f433b1e`,
+same CPU texture fixture, 4 samples, error 1e-4. Requested h/32 failed the existing
+8192-event limit and preserved the previous file. The table uses h/16 as a
+**provisional** reference; no h/32 difference or completed reference is claimed.
+
+| Step (world units) | Max curve difference vs h/16 | Render+capture s | Successive-halving order |
+| --- | --- | --- | --- |
+| 0.005 | 0.0035991973 | 0.017322 | 0.615 |
+| 0.0025 | 0.00199930169 | 0.027273 | 0.340 |
+| 0.00125 | 0.00189634477 | 0.038573 | 0.643 |
+| 0.000625 | 0.001248244 | 0.069326 | - |
+| 0.0003125 | 0 | 0.139336 | - |
+| 0.00015625 (h/32) | Not produced: event-capacity failure | - | - |
+
+Order = log2(max difference(h,h/2) / max difference(h/2,h/4)); expected
+midpoint order is 2 (4x reduction), measured 0.615, 0.340 and 0.643. Repeating
+exactly h=0.005 differs by 0.00383629120 with identical deterministic headers
+and exact raw beauty, confirming that this is not simply fixed-step quadrature
+of a deterministic field. Own fitting/depth-cut oracles pass for all five
+completed steps; their CPU raw beauty remains exact.
+
+Filter inspection: `shader_setup_from_volume` zeroes dP/dI/du/dv for both deep
+and ordinary volume evaluation. The fixture supplies no width/blur override,
+and no step-dependent derivative/filter-width path was found. OSL volume
+attribute service calls `primitive_volume_attribute(..., true)`;
+`kernel_image_interp_3d` therefore uses stochastic voxel selection and advances
+`sd->lcg_state`. The new `deep_volume_shader` loop never initializes that local
+state; ordinary beauty volume traversal does. Changing the number of steps
+changes the random draws, invalidating deterministic midpoint convergence.
+
+No renderer source, limits or gates changed during diagnosis. Per the user's
+non-convergence instruction, stop and report before changing evaluation. The
+next fix must address deep-local texture RNG and deterministic grid evaluation
+without changing beauty or analytic VDB; adaptive control is conditional on a
+valid deterministic convergence study. Remaining 8c qualification is pending.

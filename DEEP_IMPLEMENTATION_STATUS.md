@@ -7,7 +7,11 @@ Branch: `codex/landscape-cloud-compatibility`. Phases 0-7, 8a and 8b accepted.
 **Phase 8c stopped at an acceptance failure.** Shader-evaluated volumes are
 implemented, with EXR method/step/error metadata. The textured CPU 1e-4 fixture
 at step 0.005 differs from the 4x-finer reference by 0.003713, above header 0.0001.
-The difference exists before fitting; root cause remains to be established.
+The convergence study is not second order; repeating the same step differs by
+0.003836. OSL grid reads use stochastic interpolation, and deep leaves their
+local RNG uninitialized. No step-dependent texture filter width was found.
+The h/32 reference hits the unchanged event cap; no renderer changes were made.
+[Diagnosis](builds/validation/landscape-cloud/optimization-phase8c/convergence.json).
 Both own reconstruction oracles pass and CPU beauty remains exact. Four
 constant CPU/OptiX mode cases and eight atomic rejections pass.
 [Partial results](builds/validation/landscape-cloud/optimization-phase8c/phase-results.json).

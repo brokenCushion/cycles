@@ -83,7 +83,7 @@ matching release-style toolchain, then qualify Phase 8a before dropping the
 restriction. If no supported deep toolchain works, retain the agreed fallback:
 OptiX excludes shader-raytrace (AO/Bevel), rejects explicitly and directs to
 CUDA; Phase 9 uses CUDA. Deep builds are switched; qualification is stopped
-at the one-time toolchain audit: a numeric CPU curve difference exceeds 1e-6.
+at the one-time toolchain audit: strict CPU surface depth steps shift by one ULP.
 
 ### Recorded toolchain re-baseline (user decision, 2026-10-08)
 
@@ -1872,8 +1872,11 @@ fitting breakdown and sampled memory: [baseline](builds/validation/landscape-clo
 | Same CUDA case | Informational max transmittance / flattened-alpha difference | Header bound 1e-6; byte identity mandatory | 2.16944e-7 / 8.81517e-14; still FAIL under mandatory byte identity | `786b9387b` |
 | CUDA 33x17/4 raw spill, before fitting | Rays / events; raw difference | 2,244 / 70,201 | Same counts; 338 changed rays; event FLOAT max 1 ULP (0.0001220703); cubic coefficients identical; companion depth max 3.31379e-5 | `786b9387b` |
 | CPU adaptive_volume strict | Samples; max curve difference; independent oracle | 102,429 samples | 102,415; 5.10897e-7 <= 1e-6; oracle 1.97456e-7 <= header 1e-6; exact same-build CPU beauty/raw | `786b9387b` |
-| CPU adaptive_volume 1e-4 | Samples; max curve difference; independent oracle | 9,700 samples | 9,699; FAIL: 1.96236e-5 > compiler ceiling 1e-6; oracle 2.25958e-5 <= header 1e-4; exact same-build CPU beauty/raw | `786b9387b` |
+| CPU adaptive_volume 1e-4 | Samples; informational curve difference; independent oracle | 9,700 samples | 9,699; PASS under corrected numeric rule: difference 1.96236e-5; both own oracles <= header 1e-4; exact same-build CPU beauty/raw | `786b9387b` |
 | Toolchain audit (2/111 cases before stop) | CTests / beauty sources / resources | 9 / source hash / 75 records | PASS: 9 tests, 12.75 s; sources and 75 records unchanged | `469b4d90b` |
+| Corrected toolchain audit, CPU cases | Coverage / outcome | 2/111; numeric rule corrected | 25/111 checked; 24 PASS, one strict FAIL; all 25 differ in bytes; old/new own oracles and CPU beauty/raw PASS | `e123847ba`, `93048bde2` |
+| CPU surface_ao strict, 32x32/4 | Samples; cross-build T / flattened-alpha difference | 112,239 | 112,264; FAIL: 0.35744182 > 1e-6 at (14,12); flattened-alpha difference 4.75330e-7; counts change at 61 pixels (-6..8) | `786b9387b` |
+| Same strict surface case | Independent oracle max / header bound | 2.12226357e-7 / 1e-6 | 2.12207475e-7 / 1e-6; both pass 81 diagnostic pixels and depth cuts; exact same-build CPU beauty/raw | `786b9387b` |
 
 The earlier clean MSVC builds used CUDA 12.8.1 / NVCC 12.8.93 and runtime
 PTX; OptiX 9.0 and 8.0 both failed native `PIP_SHADE` with 11 duplicate
@@ -1930,19 +1933,29 @@ fitting: fitting/export alone cannot explain them. NVCC versus host-generated
 GPU scene/camera inputs is not isolated by this two-build comparison.
 [Raw capture report](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json).
 
-The audit stops after 2/111 cases at CPU adaptive_volume 1e-4, worst pixel
-(13,22): maximum old/new transmittance difference 1.96236e-5 exceeds the user's
-1e-6 compiler ceiling. Strict passes that ceiling; both cases pass independent
-camera oracle/depth cuts (81 diagnostic pixels each) and exact CPU beauty/raw.
-Strict counts change at 56 pixels (delta -4..4); numeric counts at four (-2..1).
-Deterministic headers match in both. Nine CTests and source/resource proof pass.
-[Audit report](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json).
+The corrected numeric rule accepts CPU adaptive_volume 1e-4. The resumed audit
+checks 25/111 cases (9 strict, 8 at each numeric setting); 24 pass. All numeric
+old/new outputs pass their own oracle/depth cuts within their header bounds;
+cross-build differences are informational. Eight strict volume cases pass the
+1e-6 cross-build ceiling (largest 6.86099e-7). Full case-by-case counts, differences
+and both oracle maxima are in the [audit report](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json).
 
-No new baseline was promoted; one partial candidate reference is retained only
-in the failed audit's owned D: run directory. All legacy references remain.
-The remaining audit cases, identity replay, full regression, OptiX AO/Bevel,
-GPU beauty and speed comparisons remain pending. No Phase 8a acceptance or
-speedup claimed. The accepted regression config/Gaffer scene remain unchanged.
+Strict surface_ao fails at (14,12): max transmittance difference 0.35744182.
+The front-surface steps move from 1436.059204/1436.059326 to
+1436.059326/1436.059448, one FLOAT ULP (0.0001220703125). At the cut
+1436.059326, reference T=0.475656764 and new T=0.833098583; after both
+steps T differs by only 6.06004e-9. A shifted discontinuity can therefore
+produce a large pointwise difference despite rounding-sized depth movement.
+Final flattened alpha differs by 4.75330e-7. This diagnosis does not waive the
+user's unchanged strict 1e-6 gate. Both own oracles/depth cuts pass on the
+81 diagnostic pixels; same-build CPU beauty/raw stay exact.
+[Surface-cut evidence](builds/validation/landscape-cloud/optimization-phase8a/strict-surface-toolchain-difference.json).
+
+Stopped without promoting the 24 partial candidate references in the owned
+D: audit workspace. All legacy references remain. The remaining 86 audit
+cases, identity replay, full regression, OptiX AO/Bevel, GPU beauty and speed
+comparisons remain pending. No Phase 8a acceptance or speedup claimed. The
+accepted regression config/Gaffer scene remain unchanged. Renderer code and
+fixed toolchain pairing are unchanged; only the audit harness/policy changed.
 [Measured evidence](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json);
-large evidence and TEMP: `D:/CyclesDeepScratch/optimization-phase8a/` and the
-owned D: regression directory named in the audit report.
+large evidence and TEMP stay in the D: directories named in the reports.

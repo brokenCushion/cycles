@@ -22,6 +22,7 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
   image.compression = deep::DeepCompression::Zips;
   image.error = tile.error();
   image.volume_shader_error = tile.volume_shader_error();
+  image.volume_shader_adaptive = tile.volume_shader_adaptive();
   image.volume_step_min = tile.volume_step_min();
   image.volume_step_max = tile.volume_step_max();
   image.z_tolerance = tile.z_tolerance();

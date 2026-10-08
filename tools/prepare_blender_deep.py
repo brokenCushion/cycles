@@ -92,7 +92,7 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
         description="Capture scalar absorption through supported volume density grids",
     )
     use_deep_volume_shader_eval: BoolProperty(name="Deep Volume Shader Evaluation", default=False,
-        description="Opt in to fixed-step extinction evaluation; OSL volumes use it automatically")
+        description="Opt in to adaptive extinction evaluation; OSL volumes use it automatically")
     deep_volume_step: FloatProperty(name="Deep Volume Step", default=0, min=0,
         description="World-unit step cap; 0 derives from grid voxels, nongrid volumes require an explicit step")
     deep_z_tolerance: FloatProperty(name="Deep Surface Depth Tolerance", default=1e-4, min=0,
@@ -191,6 +191,7 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.export_statistics = tile.export_statistics();
   image.error = tile.error();
   image.volume_shader_error = tile.volume_shader_error();
+  image.volume_shader_adaptive = tile.volume_shader_adaptive();
   image.volume_step_min = tile.volume_step_min();
   image.volume_step_max = tile.volume_step_max();
   image.z_tolerance = tile.z_tolerance();

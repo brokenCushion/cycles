@@ -664,6 +664,17 @@ int main(int argc, char **argv)
       require(step == double(image.volume_step_max) && integration == reconstruction &&
                   integration + reconstruction == header.typedAttribute<Imf::DoubleAttribute>("cycles:deepError").value(),
               "Stated shader integration and proven reconstruction must sum to requested error");
+      image.volume_shader_adaptive = true;
+      const auto adaptive_path = directory / "settings" / "shader-eval-adaptive.exr";
+      write_deep_exr(adaptive_path, image);
+      Imf::DeepScanLineInputFile adaptive(adaptive_path.string().c_str());
+      require(adaptive.header().typedAttribute<Imf::StringAttribute>("cycles:deepVolumeMethod").value() ==
+                  "shader-eval-adaptive" &&
+                  adaptive.header().typedAttribute<Imf::StringAttribute>("cycles:deepVolumeStepRule").value().find(
+                      "step-doubling") != std::string::npos &&
+                  adaptive.header().typedAttribute<Imf::StringAttribute>("cycles:deepVolumeErrorProof").value().find(
+                      "narrower than the finest evaluated step") != std::string::npos,
+              "Adaptive method, starting step and unresolved-feature limitation must be explicit");
       image.volume_shader_error = 2e-4f;
       expect_invalid(image);
     }

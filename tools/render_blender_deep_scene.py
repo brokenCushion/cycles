@@ -158,6 +158,7 @@ report = {
     'deep_volume': args.deep and args.deep_volume,
     'deep_volume_shader_eval': args.deep and args.deep_volume_shader_eval,
     'deep_volume_step': args.deep_volume_step if args.deep else 0,
+    'deep_volume_fixed_step': os.environ.get('CYCLES_DEEP_VOLUME_FIXED_STEP') == '1',
     'deep_error': error if args.deep else None,
     'deep_z_tolerance': args.deep_z_tolerance if args.deep and error else 0,
     'deep_samples': args.deep_samples if args.deep else None,

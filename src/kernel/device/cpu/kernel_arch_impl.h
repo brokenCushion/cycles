@@ -139,14 +139,19 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
                                             const int max_events,
                                             const bool volume,
                                             KernelDeepDensity *density,
-                                            const double eps_ray)
+                                            const double eps_ray, unsigned int *evaluations)
 {
 #  ifdef KERNEL_STUB
   STUB_ASSERT(KERNEL_ARCH, deep_surface);
   return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
 #  else
-  if (volume)
-    return deep_volume_cpu(kg, camera, events, max_events, density, eps_ray);
+  *evaluations = 0;
+  if (volume) {
+    KernelDeepWriteState write{};
+    const auto result = deep_volume_cpu(kg, camera, events, max_events, density, eps_ray, &write);
+    *evaluations = write.shader_evaluations;
+    return result;
+  }
   IntegratorStateCPU traversal = *camera;
   IntegratorState state = &traversal;
   Ray ray;

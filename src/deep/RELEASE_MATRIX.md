@@ -2,13 +2,13 @@
 
 Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
 and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-7 are accepted.
-Phases 8a and 8b are accepted; Phase 8c stopped at its textured-volume finer-step gate.
+Phases 8a and 8b are accepted; Phase 8c deterministic convergence passes; adaptive qualification is pending.
 Qualification covers the named fixtures; arbitrary feature combinations and the
 full-resolution landscape are not implied. Phase 9 remains unlaunched.
 
 | Feature | Qualified scope |
 | --- | --- |
-| Devices | Single CPU/CUDA/OptiX with SVM; CPU/OptiX OSL scalar surfaces, background render. CUDA OSL is unsupported. Shader-evaluated volumes remain unqualified after the Phase 8c finer-step failure. |
+| Devices | Single CPU/CUDA/OptiX with SVM; CPU/OptiX OSL scalar surfaces, background render. CUDA OSL is unsupported. Shader-evaluated volumes remain unqualified pending adaptive Phase 8c checks. |
 | Shading | Native SVM scalar camera opacity/extinction; OSL constant/texture/noise/camera-query surfaces and Script/native-node materials, within preflight. OSL trace/@ao/@bevel, unsafe ray/path/unknown queries, dynamic textures and unprovable closure capacity fail explicitly. Runtime rejects coloured/invalid extinction and cache misses. |
 | Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
 | Camera | Surface-only perspective/orthographic, DOF and rigid motion; volumes require static mono perspective without DOF/motion. |
@@ -30,7 +30,7 @@ Positive z tolerance approximates the interiors of merged surface depth bands;
 combined alpha and curves outside those bands retain the error checks. Use zero
 for the whole-curve depth contract. Strict always uses zero.
 OSL volumes, or SVM volumes explicitly selected with `--deep-volume-shader-eval`,
-use fixed midpoint integration. Numeric error E assigns E/2 to stepping (stated,
+use deterministic adaptive midpoint step doubling. Numeric error E assigns E/2 to stepping (stated,
 not proven) and E/2 to bounded reconstruction/publication. The EXR records the
 method, world-unit step range, selection rule and both allowances. Shader
 variation can exceed the stepping allowance; each fixture needs a 4x-finer-step

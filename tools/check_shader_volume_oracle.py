@@ -58,28 +58,35 @@ def compare(directory, oracle):
     maximum_capture = maximum_exr = 0.
     pixels = []
     for key, refs in reference.items():
-        rays = captured[key]
-        if set(refs) != set(rays) or set(refs) != set(range(len(refs))):
+        rays = captured.get(key)
+        if (rays is not None and set(refs) != set(rays)) or set(refs) != set(range(len(refs))):
             raise ValueError('Accepted populations differ: '+str(key))
         output = pixel(image, *key)
         published = curve([(a, b, -np.log1p(-v)) for a, b, v in output if a < b],
                           [(a, v) for a, b, v in output if a == b])
         depths = np.unique(np.concatenate([v[1] for v in refs.values()] +
-                          [v[1] for v in rays.values()] + [published[1], published[2]]))
+                          [v[1] for v in (rays or {}).values()] + [published[1], published[2]]))
         depths = np.sort(np.concatenate((depths, (depths[:-1]+depths[1:])*.5)))
         raw_error = exr_error = 0.
         for start in range(0, len(depths), 4096):
             z = depths[start:start+4096]
             expected = sum(v[0](z) for v in refs.values())/len(refs)
-            actual = sum(v[0](z) for v in rays.values())/len(rays)
-            raw_error = max(raw_error, float(np.max(np.abs(actual-expected))))
+            if rays is not None:
+                actual = sum(v[0](z) for v in rays.values())/len(rays)
+                raw_error = max(raw_error, float(np.max(np.abs(actual-expected))))
             exr_error = max(exr_error, float(np.max(np.abs(published[0](z)-expected))))
         pixels.append(dict(x=key[0], y=key[1], cameras=len(refs),
-                           capture_error=raw_error, exr_error=exr_error))
+                           capture_error=raw_error if rays is not None else None,
+                           exr_error=exr_error))
         maximum_capture = max(maximum_capture, raw_error)
         maximum_exr = max(maximum_exr, exr_error)
-    return dict(passed=maximum_exr <= bound(image), header_bound=bound(image),
+    if not captured:
+        raise ValueError('No raw diagnostic pixels overlap the selected oracle rays')
+    step_bound = float(np.asarray(image.header()['cycles:deepVolumeStepError']).item())
+    return dict(passed=maximum_exr <= bound(image) and maximum_capture <= step_bound,
+        header_bound=bound(image), stated_step_bound=step_bound,
         max_capture_error=maximum_capture, max_exr_error=maximum_exr, pixels=pixels,
+        raw_diagnostic_pixels=len(captured), published_pixels=len(reference),
         oracle='Independent NumPy midpoint integral of actual CPU shader samples; no event cap')
 
 

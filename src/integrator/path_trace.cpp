@@ -758,6 +758,7 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
       settings.samples ? capture_samples : 0, settings.ids);
   if (settings.volume_shader_evaluation) {
     deep_capture_->volume_shader_error = settings.error;
+    deep_capture_->volume_shader_adaptive = !settings.volume_shader_fixed_step;
     deep_capture_->volume_step_min = settings.volume_step_min;
     deep_capture_->volume_step_max = settings.volume_step_max;
   }
@@ -813,6 +814,8 @@ void PathTrace::write_deep_output()
                      << " spill_read_bytes=" << spill.read_bytes
                      << " spill_write_bytes=" << spill.write_bytes
                      << " spill_file_bytes=" << spill.file_bytes;
+  if (deep_capture_->volume_shader_error)
+    LOG_INFO_IMPORTANT << "Deep output: shader_evaluations=" << deep_capture_->shader_evaluations.load();
 }
 #endif
 

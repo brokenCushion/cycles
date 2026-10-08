@@ -186,6 +186,7 @@ ccl_device void deep_surface_kernel(const int index,
     record->result = deep_surface_cuda(nullptr, state, lane_events, event_stride, max_events, &write);
   }
   record->payload_counts = write.events | (write.companions << 16);
+  record->population |= write.shader_evaluations << 16;
   if (write.failed)
     record->result = {DEEP_FAILED, record->result.count, DEEP_ERROR_EVENT_CAPACITY};
   /* Restore every field modified by visibility traversal, including failure.

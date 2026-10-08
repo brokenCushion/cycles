@@ -26,7 +26,8 @@ struct SurfaceImage {
   DeepCompression compression = DeepCompression::None;
   std::string beauty_identity;
   float error = 0; /* Strict omits new attributes to preserve legacy headers. */
-  float volume_shader_error = 0; /* Shader stepping is stated, not proven. */
+    float volume_shader_error = 0; /* Shader stepping is stated, not proven. */
+    bool volume_shader_adaptive = false;
   float volume_step_min = 0, volume_step_max = 0;
   float z_tolerance = 0; /* Depth-domain approximation, independent of error. */
   bool ids = false;

@@ -11,18 +11,46 @@
 CCL_NAMESPACE_BEGIN
 
 #ifdef __VOLUME__
-/* Midpoint sampling has no uniform error bound for arbitrary shader functions.
- * The host declares half the requested absolute transmittance allowance for
- * this quadrature (stated, not proven), checked against a 4x-finer reference.
- * The other half bounds capture representation, fitting and FLOAT publication.
- * Use the native extinction evaluator, tiny ShaderData and fixed loop/event
- * limits; never change the accepted beauty ray, RNG or integrator state. */
+/* Midpoint shader error is stated, not proven. Host supplies E/2 in pad2,
+ * separately from the proven E/2 for representation/fitting/publication.
+ * Split stepping E/2 into E/4 accumulated optical-depth indicators and E/4
+ * local variation. For N media, telescope products and allocate each object
+ * E/(4N) for each. An accepted half emits at most one record: charge endpoint
+ * error per occupied half to E/(4N*capacity), so the sum cannot exceed E/4.
+ * Only one interval per object is active at any queried depth, so local
+ * indicators use E/(4N) without accumulating across depths. Nonnegative
+ * extinction gives |T exp(-u)-T exp(-v)| <= T |u-v|. Prefix attenuation uses
+ * exp(-tau+accumulated_indicator+roundoff), clamped to 1, not optimistic T.
+ * These are error estimators, not a proof about unsampled shader values:
+ * features narrower than the finest evaluated step can be missed.
+ * Coarse midpoint versus two half midpoints controls integration error.
+ * The local variation check also refines linear density: endpoint step
+ * doubling alone cannot detect within-interval depth-cut error for a line.
+ * Emit the two positive half integrals, reusing them as child midpoints if
+ * refinement is needed. Fixed-size DFS, 24 levels, 65535 evaluations and the
+ * unchanged event capacity fail explicitly; no RNG, heap or silent cutoff. */
+ccl_device_inline KernelDeepError deep_shader_sigma_checked(
+    KernelGlobals kg, IntegratorState state, const Ray &ray, const VolumeStack &entry,
+    const double t, ccl_private KernelDeepWriteState *write, float *value)
+{
+  if (write->shader_evaluations == 65535)
+    return DEEP_ERROR_GRID_STEPS;
+  ++write->shader_evaluations;
+  bool miss = false;
+  const float3 sigma = deep_volume_sigma(kg, state, ray, entry, t, &miss);
+  if (miss) return DEEP_ERROR_CACHE_MISS;
+  if (!isfinite(sigma.x) || sigma.x < 0 || sigma.x != sigma.y || sigma.x != sigma.z)
+    return DEEP_ERROR_EXTINCTION;
+  *value = sigma.x;
+  return DEEP_ERROR_NONE;
+}
+
 ccl_device KernelDeepResult deep_volume_shader(
-    KernelGlobals kg, IntegratorState state, ShaderData *sd, const Ray &ray,
+    KernelGlobals kg, IntegratorState state, const Ray &ray,
     const VolumeStack &entry, const double start, const double end, const float step,
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
     const int stride, const int capacity, int count, const double eps_ray,
-    ccl_private KernelDeepWriteState *write)
+    ccl_private DeepVolumeCompression *stream, ccl_private KernelDeepWriteState *write)
 {
 #if defined(WITH_NANOVDB) && (!defined(__KERNEL_GPU__) || defined(__KERNEL_CUDA__))
   const double physical_length = double(len(ray.D));
@@ -37,25 +65,76 @@ ccl_device KernelDeepResult deep_volume_shader(
   const double depth_per_t = double(camera_z.x) * double(ray.D.x) +
                              double(camera_z.y) * double(ray.D.y) +
                              double(camera_z.z) * double(ray.D.z);
+  KernelDeepWriteState local{};
+  if (!write) write = &local;
+  const double stepping = double(__int_as_float(kernel_data.pad2));
+  const int objects = kernel_data.film.pad1;
+  if (!(stepping > 0 && objects > 0 && objects <= DEEP_MAX_MEDIA))
+    return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
+  const double local_allowance = .5 * stepping / objects;
+  const double per_record_allowance = local_allowance / capacity;
   for (int i = 0; i < int(required); ++i) {
     const double front = start + double(i) * dt;
     const double back = i + 1 == int(required) ? end : start + double(i + 1) * dt;
     if (!(back > front && back <= end))
       return {DEEP_FAILED, 0, DEEP_ERROR_PROGRESS};
-    const double midpoint = (front + back) * .5;
-    bool cache_miss = false;
-    const float3 sigma = deep_volume_sigma(kg, state, ray, entry, midpoint, &cache_miss);
-    if (cache_miss)
-      return {DEEP_FAILED, 0, DEEP_ERROR_CACHE_MISS};
-    if (!isfinite(sigma.x) || sigma.x < 0 || sigma.x != sigma.y || sigma.x != sigma.z)
-      return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
-    if (sigma.x == 0) continue;
-    const auto error = deep_volume_constant(
-        depth_origin + front * depth_per_t, depth_origin + back * depth_per_t,
-        double(sigma.x) * (back - front) * physical_length, .25 * eps_ray / capacity,
-        events, density, stride, capacity, &count, entry.object, write);
+    float middle = 0;
+    auto error = deep_shader_sigma_checked(kg, state, ray, entry, (front+back)*.5, write, &middle);
     if (error != DEEP_ERROR_NONE)
       return {DEEP_FAILED, 0, error};
+    if (kernel_data.pad3 == 1) { /* Diagnostic fixed-step comparison/reference. */
+      if (middle == 0) continue;
+      error = deep_volume_constant(
+          depth_origin + front * depth_per_t, depth_origin + back * depth_per_t,
+          double(middle) * (back-front) * physical_length, .25 * eps_ray / capacity,
+          events, density, stride, capacity, &count, entry.object, write);
+      if (error != DEEP_ERROR_NONE) return {DEEP_FAILED, 0, error};
+      continue;
+    }
+    struct Interval { double front, back; float sigma; int level; };
+    Interval pending[24];
+    int size = 0;
+    Interval interval{front, back, middle, 0};
+    while (true) {
+      const double mid = (interval.front+interval.back)*.5;
+      if (!(mid > interval.front && interval.back > mid))
+        return {DEEP_FAILED, 0, DEEP_ERROR_PROGRESS};
+      float left = 0, right = 0;
+      error = deep_shader_sigma_checked(kg, state, ray, entry,
+                                       (interval.front+mid)*.5, write, &left);
+      if (error == DEEP_ERROR_NONE)
+        error = deep_shader_sigma_checked(kg, state, ray, entry,
+                                         (mid+interval.back)*.5, write, &right);
+      if (error != DEEP_ERROR_NONE) return {DEEP_FAILED, 0, error};
+      const double length = (interval.back-interval.front)*physical_length;
+      const double tau = .5*length*(double(left)+double(right));
+      const double difference = ::fabs(length*double(interval.sigma)-tau);
+      const double prefix = ::fmin(1.0, ::exp(-stream->tau+stream->prefix_error));
+      const int occupied = int(left > 0) + int(right > 0);
+      if (prefix*difference <= occupied*per_record_allowance &&
+          prefix*.25*length*::fabs(double(left)-double(right)) <= local_allowance) {
+        const float values[2] = {left, right};
+        const double positions[3] = {interval.front, mid, interval.back};
+        for (int half = 0; half < 2; ++half) {
+          if (values[half] == 0) continue;
+          error = deep_volume_constant(depth_origin+positions[half]*depth_per_t,
+              depth_origin+positions[half+1]*depth_per_t,
+              double(values[half])*(positions[half+1]-positions[half])*physical_length,
+              .25*eps_ray/capacity, events, density, stride, capacity, &count, entry.object, write);
+          if (error != DEEP_ERROR_NONE) return {DEEP_FAILED, 0, error};
+        }
+        stream->tau += tau;
+        stream->prefix_error += difference + 64*2.2204460492503131e-16*(1+stream->tau+tau);
+        if (!size) break;
+        interval = pending[--size];
+      }
+      else {
+        if (interval.level == 24 || size == 24)
+          return {DEEP_FAILED, 0, DEEP_ERROR_GRID_STEPS};
+        pending[size++] = {mid, interval.back, right, interval.level+1};
+        interval = {interval.front, mid, left, interval.level+1};
+      }
+    }
   }
   return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
 #else
@@ -75,9 +154,9 @@ ccl_device KernelDeepResult deep_volume_interval(
   const VolumeStack entry = {sd->object, sd->shader};
   const float grid_scale = kernel_data_fetch(shaders, sd->shader & SHADER_MASK).deep_density_scale;
   if (grid_scale == -2)
-    return deep_volume_shader(kg, state, sd, ray, entry, start, end,
+    return deep_volume_shader(kg, state, ray, entry, start, end,
         -kernel_data_fetch(shaders, entry.shader & SHADER_MASK).deep_homogeneous_extinction,
-        events, density, stride, capacity, count, eps_ray, write);
+        events, density, stride, capacity, count, eps_ray, object_stream, write);
   /* A zero multiplier may eliminate the density attribute during native shader
    * compilation. It contributes no extinction and needs no voxel lookup. */
   if (grid_scale == 0)

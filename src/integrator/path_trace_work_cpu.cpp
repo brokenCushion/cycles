@@ -196,10 +196,12 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
           events = deep_grid_events_.data() + offset;
           density = deep_grid_density_.data() + offset;
         }
+        unsigned evaluations = 0;
         const KernelDeepResult result = kernels_.deep_surface(
             kernel_globals, state, events, capture->max_events(), capture->volume(), density,
             capture->volume_grid() ? (.5 * deep::error_budget(capture->error()).density) *
-                                        (capture->error() > 0) : 0);
+                                        (capture->error() > 0) : 0, &evaluations);
+        capture->shader_evaluations.fetch_add(evaluations, std::memory_order_relaxed);
         capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, events, density);
         /* Opt-in diagnostic oracle: selected actual accepted CPU camera rays.
          * All allocation/file access is host-side. One file per ray avoids a
@@ -245,8 +247,9 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
         /* Independent opaque traversal also records surface facing. Beauty
          * keeps its original queued intersection and unmodified path state. */
         KernelDeepEvent event;
+        unsigned evaluations = 0;
         const KernelDeepResult result = kernels_.deep_surface(
-            kernel_globals, state, &event, 1, false, nullptr, 0);
+            kernel_globals, state, &event, 1, false, nullptr, 0, &evaluations);
         capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, &event);
       }
     }

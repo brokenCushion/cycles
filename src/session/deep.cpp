@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
 #include <map>
 #include <set>
@@ -677,6 +678,11 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
           break;
         }
   scene->dscene.data.film.pad1 = std::max(1, std::min(volume_objects, int(DEEP_MAX_MEDIA)));
+  /* Deep-only padding: constant offsets and beauty kernel layouts stay fixed. */
+  scene->dscene.data.pad2 = __float_as_int(params.deep.error / 2);
+  const char *fixed = std::getenv("CYCLES_DEEP_VOLUME_FIXED_STEP");
+  params.deep.volume_shader_fixed_step = fixed && string(fixed) == "1";
+  scene->dscene.data.pad3 = params.deep.volume_shader_fixed_step ? 1 : 0;
   /* Store deep-only selection and step in existing shader slots, preserving
    * KernelShader size/beauty constant offsets. Shared materials take the finest
    * step of their objects. Metadata states the actual material-step range. */

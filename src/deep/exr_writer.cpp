@@ -211,14 +211,18 @@ Imf::Header make_header(const SurfaceImage &image)
           image.volume_step_min > 0 && std::isfinite(image.volume_step_min) &&
           image.volume_step_max >= image.volume_step_min && std::isfinite(image.volume_step_max)))
       throw std::invalid_argument("Invalid shader-evaluated volume metadata/error split");
-    header.insert("cycles:deepVolumeMethod", Imf::StringAttribute("shader-eval"));
+    header.insert("cycles:deepVolumeMethod", Imf::StringAttribute(
+        image.volume_shader_adaptive ? "shader-eval-adaptive" : "shader-eval"));
     header.insert("cycles:deepVolumeStep", Imf::DoubleAttribute(image.volume_step_max));
     header.insert("cycles:deepVolumeStepMin", Imf::DoubleAttribute(image.volume_step_min));
-    header.insert("cycles:deepVolumeStepRule", Imf::StringAttribute(
-        "fixed midpoint integration; per-material minimum world-space voxel edge across its objects; "
+    header.insert("cycles:deepVolumeStepRule", Imf::StringAttribute(std::string(
+        image.volume_shader_adaptive ?
+            "adaptive midpoint step-doubling; step attributes are starting/maximum material steps; "
+            "24 refinement levels, 65535 evaluations per ray; " : "fixed midpoint integration; ") +
+        "per-material minimum world-space voxel edge across its objects; "
         "explicit world-unit step caps grids and is required without a grid; final segment is clipped"));
     header.insert("cycles:deepVolumeErrorProof", Imf::StringAttribute(
-        "stated, not proven: stepping error depends on step size versus shader variation; "
+        "stated, not proven: features narrower than the finest evaluated step can be missed; "
         "validate against a 4x-finer step; reconstruction/publication bound is proven"));
     header.insert("cycles:deepVolumeStepError", Imf::DoubleAttribute(declared_error - budget.effective));
     header.insert("cycles:deepReconstructionError", Imf::DoubleAttribute(budget.effective));

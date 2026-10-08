@@ -1113,6 +1113,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
     for (int i = 0; i < buffer.count; ++i) {
       const auto &record = buffer.records[i];
       const auto &range = buffer.ranges[i];
+      capture->shader_evaluations.fetch_add(record.population >> 16, std::memory_order_relaxed);
       deep_lane_event_writes_ += record.payload_counts & 0xffffu;
       deep_lane_density_writes_ += record.payload_counts >> 16;
       if (record.result.status != DEEP_COMPLETE || record.result.error != DEEP_ERROR_NONE ||
@@ -1205,8 +1206,9 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
         }
         if (record.result.count > event_slots - buffer.slots)
           break;
+        capture->shader_evaluations.fetch_add(record.population >> 16, std::memory_order_relaxed);
         if (capture->adaptive())
-          capture->set_population(record.x, record.y, record.population);
+          capture->set_population(record.x, record.y, record.population & 0xffffu);
         if (record.result.status == DEEP_SKIPPED) {
           ++deep_skipped_count_;
         }
@@ -1392,6 +1394,7 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
           }
           for (int i = 0; i < count; ++i)
             {
+            capture->shader_evaluations.fetch_add(deep_records_[i].population >> 16, std::memory_order_relaxed);
             deep_lane_event_writes_ += deep_records_[i].payload_counts & 0xffffu;
             deep_lane_density_writes_ += deep_records_[i].payload_counts >> 16;
           }
@@ -1440,7 +1443,7 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
                  record.result.error == DEEP_ERROR_CAPACITY))
               continue;
             if (capture->adaptive()) {
-              capture->set_population(record.x, record.y, record.population);
+              capture->set_population(record.x, record.y, record.population & 0xffffu);
             }
             if (record.result.status == DEEP_SKIPPED && record.result.count == 0 &&
                 record.result.error == DEEP_ERROR_NONE)

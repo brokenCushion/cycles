@@ -34,7 +34,7 @@ def validate(directory, samples=None, adaptive=None, ledger=None, output=None):
     if bool(requested)!=('cycles:deepError' in header) or (requested and not math.isclose(result['deep_error'],requested,rel_tol=1e-7)):
         raise ValueError('Deep error header mismatch')
     reconstruction_bound = result['deep_error']
-    if header.get('cycles:deepVolumeMethod') == 'shader-eval':
+    if header.get('cycles:deepVolumeMethod') in ('shader-eval', 'shader-eval-adaptive'):
         step, minimum, reconstruction_bound, stepping_bound = [float(np.asarray(header[name]).item())
             for name in ('cycles:deepVolumeStep', 'cycles:deepVolumeStepMin',
                          'cycles:deepReconstructionError', 'cycles:deepVolumeStepError')]
@@ -45,6 +45,7 @@ def validate(directory, samples=None, adaptive=None, ledger=None, output=None):
                 or reconstruction_bound + stepping_bound != result['deep_error']):
             raise ValueError('Shader volume method/step/error metadata mismatch')
         result['shader_volume'] = dict(step=step, minimum_step=minimum,
+            method=header['cycles:deepVolumeMethod'],
             stated_step_error=stepping_bound, proven_reconstruction_error=reconstruction_bound)
     source=Path(ledger) if ledger is not None else directory/'scene.deep.exr.samples.csv'
     normalized=None

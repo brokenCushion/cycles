@@ -120,6 +120,8 @@ class Capture {
   SpillStatistics spill_statistics() const;
   mutable ExportStatistics export_statistics;
   float volume_shader_error = 0; /* Total stated bound; error() is the proven half. */
+  bool volume_shader_adaptive = false;
+  std::atomic<uint64_t> shader_evaluations{0};
   float volume_step_min = 0, volume_step_max = 0;
   /* Sequential Y-down export: prepare on the caller thread before parallel
    * pixel reads; finish only after the row has been serialized. */

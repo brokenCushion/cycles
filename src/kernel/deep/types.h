@@ -97,6 +97,8 @@ struct KernelDeepResult {
   KernelDeepError error;
 };
 struct KernelDeepRecord {
+  /* Population in low 16 bits (host cap 4096); shader point evaluations in
+   * high 16 bits. Strict uses zero evaluations and keeps its original bytes. */
   unsigned int x, y, sample, population;
   KernelDeepResult result;
   unsigned int payload_counts; // low/high 16 bits: event/companion stores (predicted in count pass)
@@ -122,6 +124,7 @@ struct DeepVolumeCompression {
 struct KernelDeepRange { unsigned int offset, count, work, density_offset, density_count; };
 static_assert(sizeof(KernelDeepRange) == 20, "Deep flat range layout");
 struct KernelDeepWriteState {
+  unsigned int shader_evaluations = 0;
   unsigned int written_bytes = 0;
   unsigned int events = 0, companions = 0;
   unsigned int limit = ~0u;

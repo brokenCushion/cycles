@@ -1,28 +1,19 @@
 # Cycles deep output: current state
 
 [Optimization plan](DEEP_OPTIMIZATION_PLAN.md) is the plan of record;
-[peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
+[peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0-7, 8a and 8b accepted.
 
-**Phase 8c stopped at an acceptance failure.** Shader-evaluated volumes are
-implemented, with EXR method/step/error metadata. The textured CPU 1e-4 fixture
-at step 0.005 differs from the 4x-finer reference by 0.003713, above header 0.0001.
-The convergence study is not second order; repeating the same step differs by
-0.003836. OSL grid reads use stochastic interpolation, and deep leaves their
-local RNG uninitialized. No step-dependent texture filter width was found.
-The h/32 reference hits the unchanged event cap; no renderer changes were made.
-[Diagnosis](builds/validation/landscape-cloud/optimization-phase8c/convergence.json).
-Both own reconstruction oracles pass and CPU beauty remains exact. Four
-constant CPU/OptiX mode cases and eight atomic rejections pass.
-[Partial results](builds/validation/landscape-cloud/optimization-phase8c/phase-results.json).
-
-Native identity (81/81 + 30/30, OptiX 65/65), full regression, nine CTests,
-landscape and remaining OSL volume qualification are pending for this build.
-The acceptance failure stopped the queue. No gate was relaxed.
-Connected Gaffer diagnostic: `D:/CyclesDeepScratch/regression-tools/phase8c_failure_review.gfr`.
+**Phase 8c is in progress.** Initialized, deterministic shader evaluation passes
+CPU/OptiX same-step identity and the native beauty source/75-resource proofs.
+The independent uncapped CPU h/64 oracle confirms midpoint order 2.
+[Convergence](builds/validation/landscape-cloud/optimization-phase8c/deterministic-convergence.json).
+Adaptive step doubling is building; complete volume qualification, native
+81/81 + 30/30 + OptiX 65/65, regression and Gaffer presentation remain pending.
+No gate or total error bound changed. Phase 9 remains unlaunched.
 
 [Toolchain](BUILDING.md): clang-cl 20.1.8 / NVCC 12.8.61, CUDA 12.8.0,
-OptiX 8.0.0, OSL 1.15.3.0. [Support matrix](src/deep/RELEASE_MATRIX.md).
-Large evidence/TEMP stay on D:. Phase 9 remains unlaunched.
+OptiX 8.0.0, OSL 1.15.3.0. Large evidence/TEMP stay on D:.
+[Support matrix](src/deep/RELEASE_MATRIX.md),
 [M8 release](src/deep/M8_RELEASE_VALIDATION.md),
 [archived reports](src/deep/ARCHIVED_REPORTS.md), [regression](src/deep/README.md).

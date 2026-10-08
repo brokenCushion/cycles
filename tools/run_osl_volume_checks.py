@@ -14,6 +14,7 @@ from compare_deep_identity import compare
 from compare_deep_ids import curve_error, flattened_transmittance
 from deep_exr import read, bound, pixel, exact_flat
 from validate_deep_render import validate
+from check_shader_volume_oracle import compare as shader_oracle
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO/'src/deep'))
@@ -62,14 +63,17 @@ def main():
     env = dict(os.environ, TEMP=str(root/'temp'), TMP=str(root/'temp'),
                BLENDER_USER_RESOURCES='D:/CyclesDeepScratch/regression-cache')
     for name in ('OCIO', 'CYCLES_KERNEL_PATH', 'CYCLES_DEEP_Z_BASELINE',
-                 'CYCLES_DEEP_VALIDATE_CAPTURE_ONLY', 'CYCLES_DEEP_HOST_ONLY_BEAUTY_PROOF'):
+                 'CYCLES_DEEP_VALIDATE_CAPTURE_ONLY', 'CYCLES_DEEP_HOST_ONLY_BEAUTY_PROOF',
+                 'CYCLES_DEEP_VOLUME_ORACLE_DIR', 'CYCLES_DEEP_VOLUME_ORACLE_PIXELS',
+                 'CYCLES_DEEP_VOLUME_ORACLE_STEP', 'CYCLES_DEEP_VOLUME_FIXED_STEP'):
         env.pop(name, None)
     digest = hashlib.sha256(args.blender.read_bytes()).hexdigest()
     result = dict(passed=False, smoke=args.smoke, renderer_sha256=digest, cases={}, rejections={})
     start = time.monotonic()
     def save():
         args.report.write_text(json.dumps(result, indent=2)+'\n')
-    def render(case, device, label, mode=None, step=0, seed=0, analytic=False, extra=(), rejection=None):
+    def render(case, device, label, mode=None, step=0, seed=0, analytic=False, extra=(),
+               rejection=None, fixed=False, oracle=None):
         directory = root/device/case['name']/label
         directory.mkdir(parents=True, exist_ok=True)
         scene = Path(case['scenes']['analytic' if analytic else 'eval'])
@@ -77,7 +81,8 @@ def main():
                         device=device, deep=bool(mode), seed=seed, samples=4, percentage=100)
         if mode:
             expected.update(deep_error=0 if mode == 'strict' else float(mode),
-                            deep_volume_shader_eval=case['optin'] and not analytic, deep_volume_step=step)
+                            deep_volume_shader_eval=case['optin'] and not analytic, deep_volume_step=step,
+                            deep_volume_fixed_step=fixed)
         if (directory/'render.json').exists():
             old = json.loads((directory/'render.json').read_text())
             if any(old.get(k) != v for k, v in expected.items()):
@@ -99,7 +104,14 @@ def main():
                 command += ['--deep-volume-shader-eval']
         command += list(extra)
         with (directory/'process.log').open('w') as log:
-            status = subprocess.run(list(map(str, command)), cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT)
+            render_env = env.copy()
+            render_env['CYCLES_DEEP_VOLUME_FIXED_STEP'] = '1' if fixed else '0'
+            if oracle:
+                oracle.mkdir(parents=True, exist_ok=True)
+                render_env.update(CYCLES_DEEP_VOLUME_ORACLE_DIR=str(oracle),
+                    CYCLES_DEEP_VOLUME_ORACLE_PIXELS=';2,1;;6,2;;8,4;;10,5;;14,7;',
+                    CYCLES_DEEP_VOLUME_ORACLE_STEP=str(step/64))
+            status = subprocess.run(list(map(str, command)), cwd=REPO, env=render_env, stdout=log, stderr=subprocess.STDOUT)
         if rejection:
             text = (directory/'process.log').read_text(errors='replace')
             if (not status.returncode or rejection.lower() not in text.lower()
@@ -127,19 +139,41 @@ def main():
                 for mode in (('1e-3',) if args.smoke else ('1e-4', '1e-3')):
                     directory = render(case, device, mode, mode, step=case['step'])
                     step = float(np.asarray(read(directory/'scene.deep.exr').header()['cycles:deepVolumeStepMin']).item())
-                    fine = render(case, device, mode+'-fine', mode, step=step/4)
+                    fine = render(case, device, mode+'-fine', mode, step=step/4, fixed=True)
+                    fixed = render(case, device, mode+'-fixed', mode, step=step, fixed=True)
                     with (directory/'checks.log').open('w') as log, redirect_stdout(log):
                         value = validate(directory)
                         value['fine_oracle'] = validate(fine)
                     if not value['total_deep_samples'] or not value['fine_oracle']['total_deep_samples']:
                         raise ValueError('Nonzero-volume fixture produced empty deep output: '+str(directory))
                     value.update(metrics=metrics(directory), fine_metrics=metrics(fine),
+                                 fixed_metrics=metrics(fixed), fixed_comparison=difference(directory, fixed),
                                  finer_reference=difference(directory, fine), step=step,
                                  fine_step=float(np.asarray(read(fine/'scene.deep.exr').header()['cycles:deepVolumeStep']).item()))
                     result['cases'][device+'/'+case['name']+'/'+mode] = value
                     save()
                     if not value['finer_reference']['passed'] or value['fine_step'] != step/4:
                         raise ValueError('4x-finer reference gate failed: '+str(directory))
+                    oracle = root/'cpu-shader-oracle'/case['name']
+                    if device == 'CPU' and not oracle.exists():
+                        diagnostic = render(case, device, 'oracle-h64', '1e-4', step=step, oracle=oracle)
+                        value['oracle_capture_identity'] = compare(
+                            directory/'scene.deep.exr', diagnostic/'scene.deep.exr') if mode == '1e-4' else None
+                        if value['oracle_capture_identity'] and not value['oracle_capture_identity']['passed']:
+                            raise ValueError('Oracle observation changed deep output: '+str(directory))
+                    value['independent_cpu_shader_oracle'] = shader_oracle(directory, oracle)
+                    if not value['independent_cpu_shader_oracle']['passed']:
+                        save()
+                        raise ValueError('Uncapped CPU shader oracle failed: '+str(directory))
+                    if case['name'] == 'texture' and mode == '1e-4':
+                        coarse = render(case, device, 'adaptive-coarse-start', mode, step=.32)
+                        with (coarse/'checks.log').open('w') as log, redirect_stdout(log):
+                            value['coarse_start_validation'] = validate(coarse)
+                        value['coarse_start_oracle'] = shader_oracle(coarse, oracle)
+                        value['coarse_start_metrics'] = metrics(coarse)
+                        if not value['coarse_start_oracle']['passed']:
+                            save()
+                            raise ValueError('Adaptive coarse-start refinement failed: '+str(coarse))
                     if device == 'CPU':
                         value['beauty'] = exact_flat(directory/'beauty.exr', controls[0]/'beauty.exr')
                         value['raw_beauty'] = exact_flat(directory/'render-passes.exr', controls[0]/'render-passes.exr')

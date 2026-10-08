@@ -141,10 +141,10 @@ it never bypasses either backend's own bound.
 OSL volumes select native shader evaluation on CPU/OptiX. SVM requires explicit
 `--deep-volume-shader-eval`; qualifying analytic volumes keep their existing path.
 Use numeric `--deep-error` above 2e-6. `--deep-volume-step` is a world-unit cap on
-the minimum voxel edge and is required for volumes without a grid. EXR attributes
+the starting/maximum voxel step and is required for volumes without a grid. EXR attributes
 `cycles:deepVolumeMethod`, `cycles:deepVolumeStep`, `cycles:deepVolumeStepMin`,
 `cycles:deepVolumeStepRule` and `cycles:deepVolumeErrorProof` identify the method.
-Half the error is a stated, not proven, midpoint allowance; half bounds
+Half the error is a stated, not proven, adaptive-stepping allowance; half bounds
 reconstruction/publication. Arbitrarily fast shader variation is not bounded.
 
 `tools/run_osl_volume_checks.py --blender EXE --cases CASES.json --root D:/OUTPUT --report REPORT.json`
@@ -152,3 +152,15 @@ checks each fixture against a 4x-finer step, CPU exact/GPU calibrated beauty,
 same-build identity, native analytic cost, and atomic capacity/preflight failures.
 Fixture creation uses `tools/create_osl_volume_cases.py` and the small pinned
 OpenVDB asset generator `tools/create_osl_volume_grid.cpp`; no new dependency.
+
+Deep shader data/globals are initialized and use native deterministic grid
+filters, with no lookup RNG. Adaptive capture reuses evaluations and fails at
+24 refinement levels, 65535 point evaluations or the unchanged event cap.
+Features narrower than the finest evaluated step can be missed. Diagnostic
+`CYCLES_DEEP_VOLUME_FIXED_STEP=1` selects fixed midpoint capture for comparison;
+production defaults to `cycles:deepVolumeMethod=shader-eval-adaptive`.
+The independent CPU shader oracle is enabled with `CYCLES_DEEP_VOLUME_ORACLE_DIR`,
+`CYCLES_DEEP_VOLUME_ORACLE_STEP` and selected render pixels in
+`CYCLES_DEEP_VOLUME_ORACLE_PIXELS` (for example `;8,4;;10,5;`). It samples actual
+accepted rays without event records/cap. `tools/check_shader_volume_oracle.py`
+independently integrates its CSVs and checks the EXR header bound.

@@ -34,7 +34,7 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
                                             KernelDeepEvent *events,
                                             int max_events,
                                             bool volume,
-                                            KernelDeepDensity *density, double eps_ray);
+                                            KernelDeepDensity *density, double eps_ray, unsigned int *evaluations);
 bool KERNEL_FUNCTION_FULL_NAME(deep_volume_oracle)(const ThreadKernelGlobalsCPU *,
     const IntegratorStateCPU *, int, double, double, int, double *);
 #endif

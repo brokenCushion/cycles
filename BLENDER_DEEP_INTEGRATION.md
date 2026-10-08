@@ -150,7 +150,7 @@ in Blender); otherwise analytic capture is unchanged. Supply numeric deep error.
 `--deep-volume-step` (`deep_volume_step`) caps the world-space voxel step and is
 required for a volume without a grid. Zero selects the grid step automatically.
 
-The EXR identifies shader evaluation, actual step range and the step rule. Half
+The EXR identifies shader evaluation, starting/maximum step range and the adaptive step rule. Half
 the requested error bounds representation/fitting/publication; half is the
 **stated, not proven** stepping allowance. Validate shader variation against a
 4x-finer-step reference. Non-grey/invalid extinction, unsupported shader features

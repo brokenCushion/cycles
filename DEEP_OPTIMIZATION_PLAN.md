@@ -619,9 +619,9 @@ Stop after 8b before starting 8c.
 Phase 8b accepted. 8c preserves analytic/SVM payloads and deterministic headers
 (81 strict + 30 numeric, OptiX 65, landscape fixtures). Only OSL volumes or
 `--deep-volume-shader-eval` select evaluation; no implicit SVM fallback.
-Numeric error is required: E/2 is the stated (not proven) midpoint-stepping
+Numeric error is required: E/2 is the stated (not proven) adaptive-stepping
 allowance, E/2 bounds capture representation, fitting and publication. Header
-method, actual minimum/maximum step, step rule and both allocations are explicit.
+method, starting/maximum material steps, step rule and both allocations are explicit.
 The world-unit step is the minimum voxel edge across objects sharing a material;
 an explicit `--deep-volume-step` caps it and is required without a grid.
 Qualification measures each fixture against a 4x-finer step without loosening E.
@@ -631,7 +631,8 @@ The analytic VDB path reads the density grid directly and needs a node graph
 that `deep.cpp` can prove is "density x constant". An OSL volume shader cannot be
 analysed that way, so OSL volumes need the general shader-evaluation path
 (previously listed under "Later"; it moves here).
-- Evaluate the real volume shader with `PATH_RAY_EXTINCTION` at fixed steps
+- Evaluate the real volume shader with `PATH_RAY_EXTINCTION` using adaptive midpoint
+  step doubling (coarse versus two half integrals, reusing evaluations)
   along each medium interval and integrate extinction (same visibility chain,
   no beauty state or RNG changes, bounded per-thread scratch).
 - Step size: from the object's grid voxel size when the shader reads a grid,
@@ -2085,7 +2086,30 @@ Four constant CPU/OptiX mode cases pass finer reference, identity and beauty;
 eight strict/step/capacity atomic rejections pass. No full Phase 8c acceptance
 is claimed. Phase 9 remains held for user confirmation after 8c.
 
-#### Phase 8c convergence diagnosis (before renderer changes)
+#### Phase 8c deterministic convergence (3347aaca4)
+
+Initialized deep shader data/globals, deterministic native grid filters, separate
+OptiX deep services; native evaluator bytes and all 75 common CUDA resources pass.
+CPU and OptiX textured same-step payload/deterministic headers repeat identically.
+Independent CPU h/64 reference evaluates the actual shader on 20 selected accepted
+rays without event records/cap. Raw convergence covers the eight rays on the
+existing diagnostic grid; exported EXRs cover all 20 selected rays.
+
+| World step | Raw max error vs h/64 | Published max error | Raw order | Commit |
+| --- | --- | --- | --- | --- |
+| 0.005 | 4.75544e-6 | 1.17926e-5 | 1.99996 | 3347aaca4 |
+| 0.0025 | 1.18889e-6 | 1.25428e-5 | 1.99988 | 3347aaca4 |
+| 0.00125 | 2.97246e-7 | 1.22462e-5 | 1.99971 | 3347aaca4 |
+| 0.000625 | 7.43266e-8 | 1.22358e-5 | 1.99610 | 3347aaca4 |
+| 0.0003125 | 1.86320e-8 | 1.22503e-5 | - | 3347aaca4 |
+
+The approximately 4x error reduction confirms midpoint quadrature. Published
+errors include the separately bounded host fit, explaining its plateau. All
+five own header oracles pass; CPU raw beauty is exact.
+[Study](builds/validation/landscape-cloud/optimization-phase8c/deterministic-convergence.json).
+Adaptive implementation/qualification follows; Phase 8c is not yet accepted.
+
+#### Superseded stochastic convergence diagnosis
 
 [Study](builds/validation/landscape-cloud/optimization-phase8c/convergence.json):
 unchanged Blender SHA `bce7489b322d9e5efe7d726e42e325e96ed314b6a61362a641d1537f8f433b1e`,

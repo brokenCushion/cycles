@@ -45,6 +45,8 @@ for name in ('constant', 'texture', 'grid', 'svm_optin'):
                           'texture' if name in ('texture', 'svm_optin') else 'grid')+'.vdb')
             bpy.ops.object.volume_import(filepath=str(path))
             bpy.context.object.data.render.precision = 'FULL'
+            # Weak-density fixtures must survive native Blender VDB clipping.
+            bpy.context.object.data.render.clipping = 0
         obj = bpy.context.object
         objects.append(obj)
         material = bpy.data.materials.new(name+('_OSL' if osl else '_analytic'))

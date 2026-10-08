@@ -53,6 +53,8 @@ def main():
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--smoke', action='store_true')
+    parser.add_argument('--devices', nargs='+', choices=('CPU', 'CUDA', 'OPTIX'),
+                        default=('CPU', 'CUDA', 'OPTIX'))
     args = parser.parse_args()
     root = args.root.resolve()
     if root.drive.upper() != 'D:':
@@ -127,10 +129,11 @@ def main():
             if args.smoke and case['name'] != 'constant':
                 continue
             if case.get('rejection'):
-                for device in ('CPU', 'OPTIX'):
+                for device in (d for d in ('CPU', 'OPTIX') if d in args.devices):
                     render(case, device, 'reject', '1e-3', step=.005, rejection=case['rejection'])
                 continue
             devices = ('CPU', 'CUDA', 'OPTIX') if case['optin'] else ('CPU', 'OPTIX')
+            devices = [d for d in devices if d in args.devices]
             for device in devices:
                 controls = [render(case, device, 'off-'+str(i))
                             for i in range(1, 2 if device == 'CPU' or args.smoke else 21)]

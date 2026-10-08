@@ -9,15 +9,16 @@ See its results and [current status](DEEP_IMPLEMENTATION_STATUS.md).
 Pinned Blender: `749518deb2f0735a22361a07488b35f7ea5c2fdf` (5.3 alpha).
 Cycles synchronization point: `97dbe6f57cdf4ede2d2b75ebdda507c8712edb7a`.
 Windows libraries: `60d6e96b917568278d400a4024c98da0fb777338`.
-Source, build and install live under `builds/blender/`.
+New source, build, install and render outputs live under `D:/CyclesDeepScratch/`.
+Use clang-cl, Ninja, CUDA 12.8.0 and OptiX 8.0.0 in an x64 Visual Studio
+developer environment. NVCC still uses its supported MSVC host compiler.
 
 Use `tools/prepare_blender_deep.py` on a clean pinned Blender checkout. It
 applies the core and host adapter; do not rerun it over an existing dirty overlay.
 
 ```powershell
-cmake -S builds/blender/source -B builds/blender/build -G 'Visual Studio 17 2022' -A x64 -C tools/blender_deep_build.cmake -DLIBDIR=C:/Users/jun/Documents/ChatGPT/cycles_deep/lib/windows_x64 -DCMAKE_INSTALL_PREFIX=C:/Users/jun/Documents/ChatGPT/cycles_deep/builds/blender/install-m9 -DWITH_CYCLES_DEEP_OPAQUE=ON
-cmake --build builds/blender/build --target blender --config Release --parallel 2 -- /verbosity:quiet /p:CL_MPCount=2
-cmake --install builds/blender/build --config Release --prefix builds/blender/install-m9
+cmake -S D:/CyclesDeepScratch/blender/source -B D:/CyclesDeepScratch/blender/build -G Ninja -C tools/blender_deep_build.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_C_FLAGS=-m64 -DCMAKE_CXX_FLAGS=-m64 -DLIBDIR=C:/Users/jun/Documents/ChatGPT/cycles_deep/lib/windows_x64 -DCMAKE_INSTALL_PREFIX=D:/CyclesDeepScratch/blender/install -DOPTIX_ROOT_DIR=D:/CyclesDeepScratch/optix-dev-8.0 -DCYCLES_RUNTIME_OPTIX_ROOT_DIR=D:/CyclesDeepScratch/optix-dev-8.0 -DCYCLES_CUDA_BINARIES_ARCH=sm_86 -DWITH_CYCLES_DEEP_OPAQUE=ON
+cmake --build D:/CyclesDeepScratch/blender/build --target install --parallel 24
 ```
 
 Close test Blender processes before installing. The system Blender installation
@@ -26,9 +27,9 @@ is separate and does not include this feature.
 ## Render and review
 
 ```powershell
-& builds/blender/install-m9/blender.exe --factory-startup --background --disable-autoexec test-assets/blender/blender-3.5-splash.blend --python-exit-code 1 --python tools/render_blender_deep_scene.py -- --output builds/validation/blender-deep/scene-full-deep --samples 128 --percentage 100 --deep
-& builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd env python src/deep/validate_blender_deep_gaffer.py builds/validation/blender-deep/scene-full-deep
-& builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd builds/validation/blender-deep/scene-full-deep/blender_deep_review.gfr
+& D:/CyclesDeepScratch/blender/install/blender.exe --factory-startup --background --disable-autoexec test-assets/blender/blender-3.5-splash.blend --python-exit-code 1 --python tools/render_blender_deep_scene.py -- --output D:/CyclesDeepScratch/blender/review --samples 4 --percentage 10 --deep
+& builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd env python src/deep/validate_blender_deep_gaffer.py D:/CyclesDeepScratch/blender/review
+& builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd D:/CyclesDeepScratch/blender/review/blender_deep_review.gfr
 ```
 
 `deep_error` defaults to `1e-3`. Set it to `0` in Blender for strict output;

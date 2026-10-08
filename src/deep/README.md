@@ -32,7 +32,7 @@ stage (JSON `targets`: run-relative case, references, pool, seed_references,
 snapshot_off/on/build). It applies the unchanged policy in the plan.
 `--optix` adds native SVM OptiX matrices, boundaries and fixed landscapes;
 the beauty stage accepts independently matched controls for each GPU backend.
-The unqualified Phase 8a OptiX implementation uses its own module, pipeline,
+The qualified Phase 8a OptiX SVM implementation uses its own module, pipeline,
 shader table and queue arguments.
 It shares capture/reconstruction with CUDA; beauty's shaders and launch layout
 remain unchanged. Native grids retain double integration; volume bounds use

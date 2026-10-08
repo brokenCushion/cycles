@@ -1848,74 +1848,68 @@ Phase 7 accepted. Phase 8a stopped at the OptiX small-landscape beauty bias gate
 Full-resolution Phase 9 remains unlaunched.
 
 
-### Phase 8a results (stopped at OptiX beauty bias gate)
+### Phase 8a results (complete; awaiting acceptance review)
 
-Native OptiX SVM deep capture, separate pipeline/SBT and launch state share
-reconstruction with CUDA. The pinned clang-cl/NVCC/OptiX toolchain links
-AO/Bevel shader-raytrace modules. Beauty sources/flags are unchanged.
-Bevel is admitted only outside opacity dependencies; its opacity use rejects
-atomically on CPU/CUDA/OptiX. Fixture creation now preserves logical .blend
-paths through archive junctions and rejects empty VDB bounds.
+OptiX SVM uses its own deep module/pipeline/SBT and per-queue launch state;
+shared capture/reconstruction, native double grid integration and beauty
+sources remain unchanged. Native shader-raytrace modules link with the pinned
+clang-cl/NVCC toolchain. AO/Bevel are qualified outside opacity dependencies;
+ray-traced opacity fails explicit preflight. No fallback restriction is needed.
 
 | Case | Metric | Before | After | Commit |
 | --- | --- | --- | --- | --- |
-| Compiler audit | Own oracles/depth cuts; cross flattened alpha | Retained cl.exe/NVCC references | 111/111 PASS; 104 byte-different; max flat 4.75347219e-07 < 1e-4 | `c88897ac0` |
-| CUDA 33x17/4 raw capture | Before host fitting | 2,244 rays / 70,201 events | Counts equal; 338 changed rays; FLOAT max 1 ULP; cubic coefficients identical | `c88897ac0` |
-| CPU/CUDA reference matches | Payload + deterministic headers | Staged clang-cl references | 81/81 strict + 30/30 numeric byte matches; new-executable/backend reruns still pending | `c88897ac0` |
-| Oracles/depth cuts / CPU beauty / resources | Completed checks | Unchanged gates | All completed alpha cases PASS; CPU exact; beauty sources and 75 records unchanged; nine CTests PASS | `c88897ac0` |
-| CUDA/OptiX cross pairs | Flattened alpha / own bounds | Unified limit 1e-4 | 65 PASS; max flat 1.39451287e-08; curves/depths/counts informational | `c88897ac0` |
-| CUDA beauty / OptiX beauty | Full approved policy | 32 targets/backend | CUDA 32 PASS; OptiX 20 PASS, 1 FAIL, 11 pending | `c88897ac0` |
-| Opaque foreground (0,5), OptiX 1e-3 | Denoising Normal X calibrated flag | Difference 2.22044605e-16; allowed 1.39863599e-16 | Resolved by six snapshot diagnostic runs: all checked raw passes bit-identical | `c88897ac0` |
-| Small landscape 47x20/16, OptiX strict | Noisy green paired-pixel bias | 3 SE limit 1.0618765144530342e-9 | FAIL: signed mean 1.0698072689532338e-9; SE 3.5395883815101144e-10 (3.022406 SE) | `c88897ac0` |
-| Same landscape | Raw states / count / denoising | Unchanged pixel gates | All 940 pixels reproduced within 4 ULP/count; zero fallback; count and denoising PASS; bias still FAIL | `c88897ac0` |
-| Same fixture, deep-off leave-one-out | Informational green bias | 20 ordinary controls | 0/20 fail 3 SE; absolute bias ratios 0.01216 to 2.02966 SE; no acceptance waiver | `c88897ac0` |
-| volume33 strict | Render+capture / wait+copy / export s | CUDA 0.5155 / 0.4683 / 0.4315 | OptiX 0.4255 / 0.3520 / 0.4306 | `c88897ac0` |
-| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.1523 / 0.3158 / 0.2065 | OptiX 0.1530 / 0.3133 / 0.2047 | `c88897ac0` |
-| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 7,551,024 / 115,818,976 / 3,758,164 | OptiX 7,551,024 / 115,818,976 / 3,758,164 | `c88897ac0` |
-| volume33 1e-4 | Render+capture / wait+copy / export s | CUDA 0.3254 / 0.2765 / 0.2145 | OptiX 0.2306 / 0.1550 / 0.2160 | `c88897ac0` |
-| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.0181 / 0.0380 / 0.0129 | OptiX 0.0182 / 0.0375 / 0.0129 | `c88897ac0` |
-| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 2,332,408 / 2,415,032 / 2,440,120 | OptiX 2,332,408 / 2,415,032 / 2,440,120 | `c88897ac0` |
-| volume33 1e-3 | Render+capture / wait+copy / export s | CUDA 0.3291 / 0.2803 / 0.0869 | OptiX 0.2221 / 0.1501 / 0.0871 | `c88897ac0` |
-| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.0048 / 0.0131 / 0.0024 | OptiX 0.0048 / 0.0133 / 0.0024 | `c88897ac0` |
-| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 953,108 / 1,035,732 / 1,060,820 | OptiX 953,108 / 1,035,732 / 1,060,820 | `c88897ac0` |
-| small strict | Render+capture / wait+copy / export s | CUDA 2.8568 / 1.7533 / 7.9137 | OptiX 4.6664 / 3.6808 / 7.9922 | `c88897ac0` |
-| Same case | Aggregate worker s: density / mixture / publication | CUDA 2.3169 / 22.5614 / 2.4189 | OptiX 2.3237 / 22.5969 / 2.3434 | `c88897ac0` |
-| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 26,307,972 / 360,742,784 / 13,367,672 | OptiX 26,308,472 / 360,742,784 / 13,367,732 | `c88897ac0` |
-| small 1e-4 | Render+capture / wait+copy / export s | CUDA 1.7829 / 0.6951 / 3.5972 | OptiX 1.6921 / 0.7275 / 3.6707 | `c88897ac0` |
-| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.2526 / 0.9845 / 0.1159 | OptiX 0.2517 / 0.9684 / 0.1125 | `c88897ac0` |
-| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 8,441,980 / 9,404,540 / 9,163,900 | OptiX 8,442,060 / 9,404,620 / 9,163,980 | `c88897ac0` |
-| small 1e-3 | Render+capture / wait+copy / export s | CUDA 1.7585 / 0.6816 / 3.4207 | OptiX 1.6929 / 0.7373 / 3.5299 | `c88897ac0` |
-| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.1802 / 0.3823 / 0.0417 | OptiX 0.1813 / 0.3826 / 0.0417 | `c88897ac0` |
-| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 7,462,316 / 8,424,876 / 8,184,236 | OptiX 7,462,396 / 8,424,956 / 8,184,316 | `c88897ac0` |
-| performance strict | Render+capture / wait+copy / export s | CUDA 33.7385 / 30.8840 / 32.6980 | OptiX 54.1163 / 51.4686 / 32.7222 | `c88897ac0` |
-| Same case | Aggregate worker s: density / mixture / publication | CUDA 70.0270 / 246.3750 / 140.9640 | OptiX 69.8806 / 245.2360 / 140.9930 | `c88897ac0` |
-| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 886,601,284 / 7,165,515,584 / 522,461,344 | OptiX 886,600,804 / 7,164,432,320 / 522,461,184 | `c88897ac0` |
-| performance 1e-4 | Render+capture / wait+copy / export s | CUDA 11.4912 / 8.9838 / 3.6599 | OptiX 10.8676 / 8.5926 / 3.6468 | `c88897ac0` |
-| Same case | Aggregate worker s: density / mixture / publication | CUDA 4.6722 / 17.2369 / 6.7716 | OptiX 4.6806 / 17.2769 / 6.7814 | `c88897ac0` |
-| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 329,903,372 / 367,471,372 / 358,079,372 | OptiX 329,903,788 / 367,471,788 / 358,079,788 | `c88897ac0` |
-| performance 1e-3 | Render+capture / wait+copy / export s | CUDA 11.5487 / 9.0912 / 2.2239 | OptiX 10.1119 / 7.8752 / 2.1389 | `c88897ac0` |
-| Same case | Aggregate worker s: density / mixture / publication | CUDA 1.6966 / 6.9553 / 2.2453 | OptiX 1.7002 / 6.9828 / 2.2437 | `c88897ac0` |
-| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 291,168,564 / 328,736,564 / 319,344,564 | OptiX 291,168,560 / 328,736,560 / 319,344,560 | `c88897ac0` |
+| All compiler audit cases | Own oracle/depth cuts; cross flattened alpha | Retained cl.exe/NVCC references | 111/111 PASS; 104 byte-different; max flat 4.75347219e-07 < 1e-4 | `5640d9db5` |
+| CUDA 33x17/4 raw capture | Before fitting | 2,244 rays / 70,201 events | Counts equal; 338 rays differ; event max 1 ULP; cubic coefficients identical | `5640d9db5` |
+| Same-build/backend identity | Payload + deterministic headers | New candidate references | CPU/CUDA 81/81 strict + 30/30 numeric; OptiX 41/41 strict + 24/24 numeric | `5640d9db5` |
+| CUDA/OptiX beauty | Matched per-backend controls | 20 ordinary + four seeds per fixture | 64/64 targets PASS; CPU exact; unchanged sources and 75 resources | `5640d9db5` |
+| OptiX small strict noisy green | Signed bias / reference-mean FLOAT ULP | Bare 3-SE flag | PASS: 1.06980727e-09 / 1.49011612e-08; reference mean 0.163578587 | `5640d9db5` |
+| Full regression / default replay | Wall time | Nine CTests + matrices/boundaries/CPU beauty/identity | PASS; full cumulative 2919.6 s; default 660.7 s | `5640d9db5` |
+| OptiX/CUDA pairs | Cross flattened alpha / own bounds | Unified limit 1e-4 | 65 PASS; max flat 1.39451287e-08; own oracles/depth cuts PASS | `5640d9db5` |
+| Opaque foreground strict | Own oracle / cross flat | CUDA oracle 1.49011612e-8 | OptiX same oracle; flat 0; <=3-ULP depths informational | `5640d9db5` |
+| volume33 strict | Render+capture / wait+copy / export s | CUDA 0.5155 / 0.4683 / 0.4315 | OptiX 0.4255 / 0.3520 / 0.4306 | `5640d9db5` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.1523 / 0.3158 / 0.2065 | OptiX 0.1530 / 0.3133 / 0.2047 | `5640d9db5` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 7,551,024 / 115,818,976 / 3,758,164 | OptiX 7,551,024 / 115,818,976 / 3,758,164 | `5640d9db5` |
+| volume33 1e-4 | Render+capture / wait+copy / export s | CUDA 0.3254 / 0.2765 / 0.2145 | OptiX 0.2306 / 0.1550 / 0.2160 | `5640d9db5` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.0181 / 0.0380 / 0.0129 | OptiX 0.0182 / 0.0375 / 0.0129 | `5640d9db5` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 2,332,408 / 2,415,032 / 2,440,120 | OptiX 2,332,408 / 2,415,032 / 2,440,120 | `5640d9db5` |
+| volume33 1e-3 | Render+capture / wait+copy / export s | CUDA 0.3291 / 0.2803 / 0.0869 | OptiX 0.2221 / 0.1501 / 0.0871 | `5640d9db5` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.0048 / 0.0131 / 0.0024 | OptiX 0.0048 / 0.0133 / 0.0024 | `5640d9db5` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 953,108 / 1,035,732 / 1,060,820 | OptiX 953,108 / 1,035,732 / 1,060,820 | `5640d9db5` |
+| small strict | Render+capture / wait+copy / export s | CUDA 2.8568 / 1.7533 / 7.9137 | OptiX 4.6664 / 3.6808 / 7.9922 | `5640d9db5` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 2.3169 / 22.5614 / 2.4189 | OptiX 2.3237 / 22.5969 / 2.3434 | `5640d9db5` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 26,307,972 / 360,742,784 / 13,367,672 | OptiX 26,308,472 / 360,742,784 / 13,367,732 | `5640d9db5` |
+| small 1e-4 | Render+capture / wait+copy / export s | CUDA 1.7829 / 0.6951 / 3.5972 | OptiX 1.6921 / 0.7275 / 3.6707 | `5640d9db5` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.2526 / 0.9845 / 0.1159 | OptiX 0.2517 / 0.9684 / 0.1125 | `5640d9db5` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 8,441,980 / 9,404,540 / 9,163,900 | OptiX 8,442,060 / 9,404,620 / 9,163,980 | `5640d9db5` |
+| small 1e-3 | Render+capture / wait+copy / export s | CUDA 1.7585 / 0.6816 / 3.4207 | OptiX 1.6929 / 0.7373 / 3.5299 | `5640d9db5` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 0.1802 / 0.3823 / 0.0417 | OptiX 0.1813 / 0.3826 / 0.0417 | `5640d9db5` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 7,462,316 / 8,424,876 / 8,184,236 | OptiX 7,462,396 / 8,424,956 / 8,184,316 | `5640d9db5` |
+| performance strict | Render+capture / wait+copy / export s | CUDA 33.7385 / 30.8840 / 32.6980 | OptiX 54.1163 / 51.4686 / 32.7222 | `5640d9db5` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 70.0270 / 246.3750 / 140.9640 | OptiX 69.8806 / 245.2360 / 140.9930 | `5640d9db5` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 886,601,284 / 7,165,515,584 / 522,461,344 | OptiX 886,600,804 / 7,164,432,320 / 522,461,184 | `5640d9db5` |
+| performance 1e-4 | Render+capture / wait+copy / export s | CUDA 11.4912 / 8.9838 / 3.6599 | OptiX 10.8676 / 8.5926 / 3.6468 | `5640d9db5` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 4.6722 / 17.2369 / 6.7716 | OptiX 4.6806 / 17.2769 / 6.7814 | `5640d9db5` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 329,903,372 / 367,471,372 / 358,079,372 | OptiX 329,903,788 / 367,471,788 / 358,079,788 | `5640d9db5` |
+| performance 1e-3 | Render+capture / wait+copy / export s | CUDA 11.5487 / 9.0912 / 2.2239 | OptiX 10.1119 / 7.8752 / 2.1389 | `5640d9db5` |
+| Same case | Aggregate worker s: density / mixture / publication | CUDA 1.6966 / 6.9553 / 2.2453 | OptiX 1.7002 / 6.9828 / 2.2437 | `5640d9db5` |
+| Same case | Lane bytes written / GPU copied / spill bytes | CUDA 291,168,564 / 328,736,564 / 319,344,564 | OptiX 291,168,560 / 328,736,560 / 319,344,560 | `5640d9db5` |
 
-Times are single sequential RTX 3080 / Ryzen 5900X runs, setup excluded;
-wait+copy includes kernel wait and transfer. They are measurements of candidates,
-not completed backend qualification. Beauty-only medians (20 controls), sample
-counts, EXR sizes, all fitting stages and sampled memory are in the report.
+All 64 saved CUDA/OptiX beauty cases were re-evaluated with the reference-mean
+FLOAT ULP floor. Only OptiX small strict noisy green exceeds 3 SE; its bias
+is 0.072 reference-mean ULP and passes. The original opaque-foreground pixel
+flag and its six-render snapshot root-cause resolution remain recorded.
 
-The opaque-foreground cross comparison passes Section 2 (flat alpha equal;
-both own oracle maxima 1.49e-8). Its separate normal flag resolves under the
-approved snapshot rule. The small-landscape image-wide bias failure does not:
-root-cause pixel resolution cannot waive the unchanged 3-SE bias test. The
-excess is 7.9307545e-12, about 0.75% beyond the limit. This is a gate failure,
-not established evidence of a visible or causal renderer defect. No thresholds,
-policies or beauty code were changed. Diagnostic overlay sources/resources and
-the qualified candidate executable are restored/preserved byte-for-byte.
+Times are single sequential runs on RTX 3080 / Ryzen 5900X; setup excluded.
+Capture wait+copy includes GPU kernel wait and transfer, not kernel-only time.
+Beauty-only medians (20 controls), deep samples/EXR sizes, peak host/device memory,
+all fitting stages and each beauty fallback pixel/channel are in the report.
+Cross-build/backend curves, depth shifts and counts are informational under
+Section 2. Same-build/backend byte checks include all deterministic headers.
 
-Stopped before the remaining 11 OptiX beauty targets, same-build/backend identity
-reruns and promotion. Old references/default configuration remain unchanged;
-new compiler candidates are still staged on D:. Phase 8b/8c/9 remain unlaunched.
-Connected candidate review: `D:/CyclesDeepScratch/regression-tools/phase8a_candidate_review.gfr`.
+New clang-cl 20.1.8 / NVCC 12.8.61 references are promoted separately on D:;
+old references remain unchanged. [Promotion](builds/validation/landscape-cloud/optimization-phase8a/promoted-baseline.json).
 [Results](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json),
-[bias evidence](builds/validation/landscape-cloud/optimization-phase8a/bias-stop-diagnostic.json),
 [compiler audit](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json),
-[raw capture](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json).
+[raw diagnostic](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json).
+Connected review: `D:/CyclesDeepScratch/regression-tools/phase8a_review.gfr`.
+Stopped for Phase 8a review; Phase 8b/8c/9 remain unlaunched.

@@ -2,13 +2,14 @@
 
 Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
 and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-7 are accepted.
+Phase 8a qualification is complete, awaiting review.
 Qualification covers the named fixtures; arbitrary feature combinations and the
 full-resolution landscape are not implied. Phase 9 remains unlaunched.
 
 | Feature | Qualified scope |
 | --- | --- |
-| Devices | Single CPU or CUDA, background render; OptiX/OSL are Phase 8. |
-| Shading | Native SVM scalar camera opacity/extinction, within `session/deep.cpp` preflight. |
+| Devices | Single CPU, CUDA or OptiX with SVM, background render; OSL is pending Phase 8b/8c. |
+| Shading | Native SVM scalar camera opacity/extinction, within `session/deep.cpp` preflight. AO/Bevel may shade beauty but cannot drive deep opacity. |
 | Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
 | Camera | Surface-only perspective/orthographic, DOF and rigid motion; volumes require static mono perspective without DOF/motion. |
 | Samples | Fixed/native adaptive accepted populations; `--deep-samples 0` uses all, positive N retains the first N without changing beauty. |

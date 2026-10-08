@@ -302,7 +302,7 @@ bool OptiXDeviceQueue::enqueue_deep(const int work_size, const DeviceKernelArgum
   sbt.hitgroupRecordStrideInBytes = sizeof(SbtRecord);
   sbt.hitgroupRecordCount = NUM_HIT_PROGRAM_GROUPS;
 #ifdef WITH_OSL
-  if (device->kernel_features & KERNEL_FEATURE_OSL_SHADING) {
+  if (device->osl_globals.use_shading) {
     sbt.callablesRecordBase = records + NUM_PROGRAM_GROUPS * sizeof(SbtRecord);
     sbt.callablesRecordStrideInBytes = sizeof(SbtRecord);
     sbt.callablesRecordCount = device->osl_groups.size();

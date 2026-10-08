@@ -80,7 +80,7 @@ for name in [*expressions, 'mixed']:
         node = nodes.new('ShaderNodeScript')
         node.mode = 'EXTERNAL'
         source = root/(name+'.osl')
-        params = 'float opacity = 0.35, ' if name == 'unknown_userdata' else ''
+        params = 'float opacity = 0.35 [[int lockgeom=0]], ' if name == 'unknown_userdata' else ''
         body = expressions[name] + '\nCi = (1-a)*transparent() + a*emission();'
         if name == 'non_grey':
             body = 'Ci = color(0.2, 0.4, 0.6)*transparent() + 0.35*emission();'

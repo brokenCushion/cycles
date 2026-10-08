@@ -1332,7 +1332,7 @@ bool OptiXDevice::load_osl_kernels()
   }
 
 #ifdef WITH_CYCLES_DEEP_OPAQUE
-  load_deep_pipeline(kernel_features & KERNEL_FEATURE_OSL_SHADING);
+  load_deep_pipeline(osl_globals.use_shading);
 #endif
   /* Copy colorsystem data from OSL to the device. */
   {

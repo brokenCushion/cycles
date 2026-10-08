@@ -41,7 +41,7 @@ inline OSLFeatures osl_features(const std::string &bytecode)
       }
       continue;
     }
-    if (op == "trace" || op == "getmessage" || op == "setmessage" || op == "pointcloud_write")
+    if (op == "trace" || op == "getmessage" || op == "setmessage" || op.rfind("pointcloud_", 0) == 0)
       result.unsupported = op;
     /* functioncall marks an INLINED region (e.g. stdosl clamp); it does not
      * repeat it. Repetition is represented by the loop operations below. */

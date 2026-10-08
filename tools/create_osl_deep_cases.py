@@ -43,6 +43,7 @@ expressions = {
     'camera': 'float a = raytype("camera") ? 0.35 : 0.9;',
     'trace': 'float a = trace(P, I) ? 0.35 : 0.9;',
     'shadow': 'float a = raytype("shadow") ? 0.35 : 0.9;',
+    'bevel': 'float a = texture("@bevel", 4, 0.05);',
     'ray_depth': 'float a = 0; getattribute("path:ray_depth", a); a = 0.35 + a * 0.01;',
     'ray_length': 'float a = 0; getattribute("path:ray_length", a); a = 0.35 + a * 0.01;',
     'unknown_attribute': 'float a = 0; getattribute("missing_attribute", a); a = 0.35 + a * 0.01;',
@@ -52,14 +53,13 @@ expressions = {
     'non_finite': 'float a = 1e30 * (1e30 + u);',
     'closure_loop': 'float a = 0.35;',
     'arena_overflow': 'float a = 0.35;',
-    'missing_texture': 'float a = texture("'+(root/'absent.exr').as_posix()+'", u, v);',
 }
 reject = {
-    'trace': 'trace', 'shadow': 'ray-type queries', 'ray_depth': 'path:ray_depth',
+    'trace': 'trace', 'shadow': 'ray-type queries', 'bevel': '@bevel', 'ray_depth': 'path:ray_depth',
     'ray_length': 'path:ray_length', 'unknown_attribute': 'missing_attribute',
     'dynamic_attribute': 'dynamic/unknown', 'unknown_userdata': 'unknown userdata',
     'non_grey': 'extinction', 'non_finite': 'extinction', 'closure_loop': 'closure-building loops',
-    'arena_overflow': 'closure', 'missing_texture': 'texture',
+    'arena_overflow': 'closure',
 }
 cases = []
 for name in [*expressions, 'mixed']:

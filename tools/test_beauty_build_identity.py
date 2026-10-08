@@ -16,3 +16,11 @@ assert b'deep/write.h' not in normalized
 assert b'set(SRC_KERNEL_DEVICE_GPU_HEADERS' in normalized
 assert hashlib.sha256(normalized).hexdigest() == beauty_identity('HEAD')[1]['src/kernel/CMakeLists.txt']
 print('PASS deep-only kernel header list; other build contents retained')
+
+# New OSL metadata is guarded; Session excludes only its exact validation hook.
+for name in ('src/scene/osl.cpp', 'src/scene/osl.h', 'src/scene/shader.h', 'src/session/session.cpp'):
+    assert beauty_identity('67faae68c')[1][name] == beauty_identity('HEAD')[1][name], name
+session = git('show', 'HEAD:src/session/session.cpp')
+assert b'validate_deep_osl(scene.get());' in session
+assert b'scene->device_update' in session
+print('PASS OSL metadata and exact Session validation boundary')

@@ -43,7 +43,9 @@ inline OSLFeatures osl_features(const std::string &bytecode)
     }
     if (op == "trace" || op == "getmessage" || op == "setmessage" || op == "pointcloud_write")
       result.unsupported = op;
-    if (op == "for" || op == "while" || op == "dowhile" || op == "functioncall") result.loop = true;
+    /* functioncall marks an INLINED region (e.g. stdosl clamp); it does not
+     * repeat it. Repetition is represented by the loop operations below. */
+    if (op == "for" || op == "while" || op == "dowhile") result.loop = true;
     tokens >> name;
     if (op == "closure") ++result.components;
     if (closures.count(name)) {

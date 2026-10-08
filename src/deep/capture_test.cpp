@@ -60,6 +60,7 @@ int main()
   check(ccl::deep::osl_features("code main\ntrace hit P I\n").unsupported == "trace");
   check(ccl::deep::osl_features("code main\nwhile flag\n").loop);
   check(!ccl::deep::osl_features("# while\ncode main\nassign x y\n").loop);
+  check(!ccl::deep::osl_features("code main\nfunctioncall clamp 3\nmin t a b\nmax c t d\n").loop);
   check(!ccl::deep::osl_features("temp closure color c\ncode main\nmix c a b\n").unsupported.empty());
   static_assert(sizeof(ccl::deep::SurfaceEvent) == 24);
   static_assert(sizeof(ccl::deep::IntervalSample) == 32);

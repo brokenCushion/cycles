@@ -76,7 +76,6 @@ enum {
   PG_HIT_DEEP_ALL,
   PG_MISS_DEEP,
 #endif
-
   /* Callable */
   PG_CALL_SVM_AO,
   PG_CALL_SVM_BEVEL,

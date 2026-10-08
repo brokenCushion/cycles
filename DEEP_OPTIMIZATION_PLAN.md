@@ -1920,42 +1920,85 @@ old references remain unchanged. [Promotion](builds/validation/landscape-cloud/o
 [compiler audit](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json),
 [raw diagnostic](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json).
 Connected review: `D:/CyclesDeepScratch/regression-tools/phase8a_review.gfr`.
-Phase 8a accepted by the user on 2026-10-09. Phase 8b is in progress; 8c/9 remain unlaunched.
+Phase 8a accepted by the user on 2026-10-09. Phase 8b qualification is complete; 8c/9 remain unlaunched.
 
-### Phase 8b qualification (native texture waiver accepted)
+### Phase 8b results (complete; awaiting acceptance review)
 
-[Fixed-case before measurements](builds/validation/landscape-cloud/optimization-phase8b/baseline.json)
-cover 18 CUDA/OptiX case/mode combinations using the accepted 8a executable.
-OSL 1.15.3.0: query optimized groups with ShadingSystem::getattribute;
-raytype_queries, attributes/scopes, unknown_attributes_needed, globals,
-userdata and closure names. Cached OSO operation metadata supplements the
-missing trace query and bounds the unchanged 1024-byte arena/16-entry stack.
-Closure-building loops and unprovable allocations fail explicitly. Deep's
-pipeline reuses OSL's original callables/SBT; beauty's pipeline is unchanged.
+[Before measurements](builds/validation/landscape-cloud/optimization-phase8b/baseline.json):
+18 fixed CUDA/OptiX cases, accepted 8a executable, measured before implementation.
+Renderer `21149fed7`, OSL 1.15.3.0: optimized ShadingSystem::getattribute group
+queries plus actual loaded OSO operation metadata. Constant, texture, noise,
+camera-ray queries and mixed Script/native-node materials pass on CPU/OptiX.
+Static allocation proof preserves the native 1024-byte arena/16-entry stack;
+trace/@ao/@bevel, unsafe ray/attribute/userdata queries, closure loops/capacity,
+coloured or invalid extinction fail explicitly. The deep program reuses native
+OSL callables; the guarded deep program-group gap was moved before callables.
+Beauty shader sources and call paths remain unchanged.
 
-
-Renderer `32cd52c1a` implements optimized-group OSL preflight and the separate
-OptiX deep OSL program using existing native callables. It fixes the deep-only
-program-group gap before OSL callables without changing beauty shader sources.
-[Partial checks](builds/validation/landscape-cloud/optimization-phase8b/osl-surfaces.json)
-and [blocker evidence](builds/validation/landscape-cloud/optimization-phase8b/blocker.json).
-Constant transparency passes both devices in all three modes; CPU texture
-passes all three. OptiX strict texture passes its own oracle, native alpha,
-20-control beauty policy and same-build identity. The native texture waiver
-above resolves this cross-backend failure; remaining qualification resumes.
-
-| Case | Metric | Before (pristine Blender) | After (8b) | Commit |
+| Case | Metric | Before | After | Commit |
 | --- | --- | --- | --- | --- |
-| texture 33x17x4 | CPU/OptiX maximum flattened alpha difference | 0.000901579857 (native deep-off) | 0.000901608817 (deep); FAIL <=1e-4 gate | `32cd52c1a` |
-| texture 33x17x4 CPU | Deep vs own native alpha | unavailable | 9.75338e-8; PASS 1e-6 header bound | `32cd52c1a` |
-| texture 33x17x4 OptiX | Deep vs own native alpha | unavailable | 9.43985e-8; PASS 1e-6 header bound | `32cd52c1a` |
+| OSL five fixtures / two devices / three modes | Own oracle/native alpha, beauty, rerun identity | GPU OSL unsupported | 30/30 PASS; max native-alpha error 9.75338e-8 | `21149fed7` |
+| OSL unsafe fixtures | Explicit rejection and previous EXR preserved | Restricted node allowlist | 26/26 PASS | `21149fed7` |
+| Texture 33x17x4 CPU vs OptiX | Maximum flattened-alpha difference | Pristine beauty 0.000901579857 | Deep 0.000901608817; native waiver PASS; own errors CPU 9.75338e-8 / OptiX 9.43985e-8 | `21149fed7` |
+| Other OSL CPU vs OptiX cases | Maximum flattened-alpha difference | GPU OSL unsupported | 2.78461e-7; PASS 1e-4 | `21149fed7` |
 
-Pristine revision 749518deb, identical toolchain and fixture, reproduces the
-failure at (14,9): CPU alpha 0.3420817852, OptiX 0.3411802053. Pristine vs
-patched deep-off alpha differs by 0 on CPU and <=5.96046e-8 on OptiX.
-Both native image paths ignore the shader interpolation option; the precise
-native backend difference is not yet attributed. No gate, fixture or beauty
-implementation was changed to pass. Pending: remaining OSL/rejection fixtures,
-SVM 81/81 + 30/30 + OptiX 65/65, final regression/beauty replay, after timings
-and Gaffer review. Also reject the native @ao texture hook alongside @bevel
-before qualification; it performs ray tracing. 8c/9 remain unlaunched.
+[Full OSL checks](builds/validation/landscape-cloud/optimization-phase8b/osl-surfaces-qualified.json),
+[summary](builds/validation/landscape-cloud/optimization-phase8b/osl-summary.json),
+[pristine evidence](builds/validation/landscape-cloud/optimization-phase8b/pristine-waiver.json).
+Pristine revision 749518deb reproduces texture alpha difference at (14,9).
+CPU exact beauty and all 15 calibrated OptiX beauty targets pass. All 30
+same-build OSL payload/header reruns are identical. GPU OSL requires OptiX;
+OSL volumes remain 8c. Native nodes and Script nodes share Cycles' scene-wide OSL.
+Connected review: `D:/CyclesDeepScratch/regression-tools/phase8b_review.gfr`:
+10 actual deep inputs, paired beauty, orthographic camera, depth cut and point
+cloud; 1683 points per full image, 561 after a cut at 2.5.
+
+Final SVM identity: 81/81 strict + 30/30 numeric; OptiX 65/65. Nine CTests
+pass (11.08 s); CPU beauty exact, beauty-source hash and 75 kernel resource
+records unchanged. Full SVM GPU beauty: 64/64 PASS, plus 15/15 new OSL OptiX
+beauty targets. Matrices, boundaries, all header oracles/depth cuts, adaptive,
+lens/motion, IDs, holdout and AO/Bevel checks pass.
+
+The OptiX performance/1e-4 beauty count initially had five fallback pixels
+against the control maximum four; channel limits and bias all passed. Existing
+Section 2 snapshot resolution passes every checked raw channel at all five:
+(274,140), (560,198), (533,66) are six-run bit-identical; (515,216) differs at
+most 1.49012e-8 and (159,68) at most 5.96046e-8, with each deep-on matching
+one deep-off within 4 ULP. All six runs have four accepted samples per pixel.
+The diagnostic executable remains isolated; no beauty patch entered this branch.
+Only the eight unfinished beauty checks resumed; completed renders/oracles
+were retained. [Resolution](builds/validation/landscape-cloud/optimization-phase8b/majorant-resolutions.json).
+
+[Final results](builds/validation/landscape-cloud/optimization-phase8b/phase-results.json),
+[regression](builds/validation/deep-regression/20261008T155657Z-2f92fb70/results.json).
+Expanded regression work took 2089.95 s (34.83 min), including the resumed
+beauty tail; six diagnostic renders add 173.49 s separately.
+This includes OptiX and full GPU beauty, beyond the default regression set.
+All 18 fixed-case sample counts, EXR bytes, lane-written/copied/spill bytes
+are unchanged. Single sequential timings follow; density/mixture values are
+aggregate worker seconds, not wall time. Timing noise is not an optimization
+claim. After peaks: host working set <=5.38 GiB; device-wide GPU <=6750 MiB
+(includes desktop/other apps). Exact counters and measured peaks are in JSON.
+
+| Case / backend / error | Capture s, before -> after | Export s, before -> after | Density / mixture fit worker s, before -> after | Deep samples | EXR MB | Commit |
+| --- | --- | --- | --- | --- | --- | --- |
+| volume33 / CUDA / strict | 0.556 -> 0.516 | 0.435 -> 0.434 | 0.156/0.315 -> 0.155/0.315 | 114,304 -> 114,304 | 0.789 -> 0.789 | `21149fed7` |
+| volume33 / CUDA / 1e-4 | 0.332 -> 0.327 | 0.216 -> 0.217 | 0.018/0.038 -> 0.019/0.038 | 10,329 -> 10,329 | 0.088 -> 0.088 | `21149fed7` |
+| volume33 / CUDA / 1e-3 | 0.345 -> 0.326 | 0.087 -> 0.085 | 0.005/0.014 -> 0.005/0.013 | 3,452 -> 3,452 | 0.033 -> 0.033 | `21149fed7` |
+| small / CUDA / strict | 3.014 -> 3.039 | 8.081 -> 7.854 | 2.344/22.909 -> 2.287/21.448 | 561,860 -> 561,860 | 4.447 -> 4.447 | `21149fed7` |
+| small / CUDA / 1e-4 | 1.767 -> 1.967 | 3.757 -> 3.727 | 0.254/1.003 -> 0.260/0.974 | 89,072 -> 89,072 | 0.613 -> 0.613 | `21149fed7` |
+| small / CUDA / 1e-3 | 1.759 -> 1.797 | 3.421 -> 3.553 | 0.179/0.383 -> 0.182/0.385 | 53,481 -> 53,481 | 0.361 -> 0.361 | `21149fed7` |
+| performance / CUDA / strict | 34.316 -> 34.289 | 33.230 -> 33.054 | 70.670/248.539 -> 71.058/247.479 | 52,191,416 -> 52,191,416 | 394.322 -> 394.322 | `21149fed7` |
+| performance / CUDA / 1e-4 | 11.607 -> 11.558 | 3.790 -> 3.717 | 4.701/17.444 -> 4.689/17.156 | 6,828,290 -> 6,828,290 | 59.346 -> 59.346 | `21149fed7` |
+| performance / CUDA / 1e-3 | 11.590 -> 11.622 | 2.127 -> 2.094 | 1.695/6.952 -> 1.705/6.952 | 3,090,807 -> 3,090,807 | 22.574 -> 22.574 | `21149fed7` |
+| volume33 / OPTIX / strict | 0.439 -> 0.417 | 0.435 -> 0.436 | 0.155/0.316 -> 0.156/0.318 | 114,304 -> 114,304 | 0.789 -> 0.789 | `21149fed7` |
+| volume33 / OPTIX / 1e-4 | 0.248 -> 0.228 | 0.214 -> 0.214 | 0.018/0.037 -> 0.018/0.038 | 10,329 -> 10,329 | 0.088 -> 0.088 | `21149fed7` |
+| volume33 / OPTIX / 1e-3 | 0.239 -> 0.215 | 0.090 -> 0.088 | 0.005/0.013 -> 0.005/0.013 | 3,452 -> 3,452 | 0.033 -> 0.033 | `21149fed7` |
+| small / OPTIX / strict | 4.858 -> 4.876 | 8.039 -> 7.965 | 2.347/22.777 -> 2.289/21.518 | 561,628 -> 561,628 | 4.443 -> 4.443 | `21149fed7` |
+| small / OPTIX / 1e-4 | 1.691 -> 1.765 | 3.616 -> 3.730 | 0.252/0.976 -> 0.253/0.953 | 88,934 -> 88,934 | 0.611 -> 0.611 | `21149fed7` |
+| small / OPTIX / 1e-3 | 1.780 -> 1.742 | 3.546 -> 3.460 | 0.183/0.376 -> 0.181/0.385 | 53,356 -> 53,356 | 0.358 -> 0.358 | `21149fed7` |
+| performance / OPTIX / strict | 54.858 -> 55.017 | 32.815 -> 33.021 | 70.401/246.392 -> 70.780/246.809 | 52,183,415 -> 52,183,415 | 394.246 -> 394.246 | `21149fed7` |
+| performance / OPTIX / 1e-4 | 10.889 -> 10.961 | 3.684 -> 3.838 | 4.716/17.358 -> 4.764/17.374 | 6,823,509 -> 6,823,509 | 59.304 -> 59.304 | `21149fed7` |
+| performance / OPTIX / 1e-3 | 10.093 -> 10.136 | 2.085 -> 2.103 | 1.707/6.970 -> 1.703/6.921 | 3,086,077 -> 3,086,077 | 22.521 -> 22.521 | `21149fed7` |
+
+Stop for Phase 8b review. Phase 8c/9 remain unlaunched.

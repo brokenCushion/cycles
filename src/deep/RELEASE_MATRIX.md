@@ -2,14 +2,14 @@
 
 Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
 and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-7 are accepted.
-Phase 8a is accepted; Phase 8b qualification is in progress.
+Phase 8a is accepted; Phase 8b is complete, awaiting acceptance review.
 Qualification covers the named fixtures; arbitrary feature combinations and the
 full-resolution landscape are not implied. Phase 9 remains unlaunched.
 
 | Feature | Qualified scope |
 | --- | --- |
-| Devices | Single CPU, CUDA or OptiX with SVM, background render; OSL is pending Phase 8b/8c. |
-| Shading | Native SVM scalar camera opacity/extinction, within `session/deep.cpp` preflight. AO/Bevel may shade beauty but cannot drive deep opacity. |
+| Devices | Single CPU/CUDA/OptiX with SVM; CPU/OptiX OSL scalar surfaces, background render. CUDA OSL and OSL volumes (8c) remain unqualified. |
+| Shading | Native SVM scalar camera opacity/extinction; OSL constant/texture/noise/camera-query surfaces and Script/native-node materials, within preflight. OSL trace/@ao/@bevel, unsafe ray/path/unknown queries, dynamic textures and unprovable closure capacity fail explicitly. Runtime rejects coloured/invalid extinction and cache misses. |
 | Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
 | Camera | Surface-only perspective/orthographic, DOF and rigid motion; volumes require static mono perspective without DOF/motion. |
 | Samples | Fixed/native adaptive accepted populations; `--deep-samples 0` uses all, positive N retains the first N without changing beauty. |
@@ -41,7 +41,7 @@ CPU beauty remains exact. CUDA beauty policy and its GPU-only phase scope are in
 Section 2; source hashes and 75 kernel resource records provide the host-only proof.
 Strict backend equality is not promised: OptiX hardware intersections compute
 surface t differently from CUDA BVH2. Across builds/toolchains/backends, both
-sides qualify independently and flattened alpha differs by at most 1e-4;
+sides qualify independently and flattened alpha differs by at most 1e-4.
 A case-specific waiver applies only when pristine Blender without deep
 reproduces a beauty-alpha difference of the same size AND each backend's deep
 flattened alpha matches its own beauty alpha within its existing header bound.
@@ -55,7 +55,9 @@ only within the same build and backend. See Section 2 of the plan.
 
 Use [the single regression command](README.md#regression-command): nine CTests,
 CPU/CUDA matrices, boundaries, oracles, CPU beauty, resource/source proof and
-81/81 strict + 30/30 numeric identity. Gaffer is optional for interactive review.
+81/81 strict + 30/30 numeric identity. OptiX SVM identity is 65/65 with `--optix`; the separate OSL suite checks 30
+mode/backend cases, 26 atomic rejections and calibrated OptiX beauty. Gaffer is
+optional for interactive review.
 Large validation output/TEMP lives on D:, with only small reports under `builds/`.
 Verified historical sample ZIPs stream without disk expansion. The approved
 [M8 release record](M8_RELEASE_VALIDATION.md) is retained; other historical

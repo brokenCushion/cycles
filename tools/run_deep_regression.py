@@ -131,7 +131,14 @@ def main():
         if off is not None:
             v['cpu_beauty']=exact_flat(d/'beauty.exr',off/'beauty.exr')
             if (d/'render-passes.exr').exists():v['cpu_raw']=exact_flat(d/'render-passes.exr',off/'render-passes.exr')
-        result['cases'][d.relative_to(root).as_posix()]=v;save()
+        key=d.relative_to(root).as_posix()
+        if 'OPTIX' in key.split('/'):
+            reference=config['golden']/'optix'/key/'scene.deep.exr'
+            if reference.exists():
+                identity_result=compare(reference,d/'scene.deep.exr')
+                result.setdefault('optix_identity',{})[key]=identity_result
+                if not identity_result['passed']:raise ValueError('OptiX SVM identity failed: '+key)
+        result['cases'][key]=v;save()
         return v
     def ids_compare(off,on):
         a,b=read(off/'scene.deep.exr'),read(on/'scene.deep.exr')
@@ -267,6 +274,9 @@ def main():
         # Additional surface/adaptive/lens/motion and exact-ID fixtures are shared below.
         from run_deep_smokes import run_smokes
         run_smokes(root,config,env,run,verify,native,numerical,ids_compare,backend_compare,result,optix=args.optix)
+        if args.optix:
+            result['optix_identity_count']=len(result.get('optix_identity',{}))
+            if result['optix_identity_count']!=65:raise ValueError('Expected OptiX SVM identity 65/65')
         if args.cuda_beauty:
             from cuda_beauty_gate import validate_cuda_beauty
             targets=json.loads(args.cuda_beauty.read_text())['targets'];result['cuda_beauty']={}

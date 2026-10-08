@@ -115,6 +115,7 @@ def depth_window_error(old, new, ulps):
     source=str(Path(__file__).resolve().parents[1]/'src/deep')
     if source not in sys.path:sys.path.insert(0,source)
     from validate_volume_camera_curves import curve
+    from cuda_beauty_gate import float32_ulp
     def make(samples):
         return curve([(a,b,-math.log1p(-v)) for a,b,v in samples if a<b],
                      [(a,v) for a,b,v in samples if a==b])
@@ -124,8 +125,7 @@ def depth_window_error(old, new, ulps):
     knots=np.union1d(old_knots,new_knots)
     if not len(knots):return 0.
     def spacing(z):
-        z=float(np.float32(z))
-        return math.ldexp(1.,max(-149,math.frexp(z)[1]-24))
+        return float32_ulp(float(np.float32(z)))
     lo=max(0.,float(knots[0])-ulps*spacing(knots[0]))
     hi=float(knots[-1])+ulps*spacing(knots[-1])
     # Nearest-FLOAT binade changes occur half a previous ULP below powers of two.

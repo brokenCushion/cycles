@@ -7,7 +7,7 @@ from deep_exr import read, exact_flat, pixel, bound
 from compare_deep_ids import name_hash, flattened_transmittance
 
 
-def run_smokes(root,config,env,run,verify,native,numerical,ids_compare,result):
+def run_smokes(root,config,env,run,verify,native,numerical,ids_compare,backend_compare,result):
     material='''<shader name="near"><emission name="e" color=".3 .5 .7"/><transparent_bsdf name="t" color="1 1 1"/>
 <mix_closure name="m" fac=".5"/><connect from="e emission" to="m closure1"/><connect from="t bsdf" to="m closure2"/><connect from="m closure" to="output surface"/></shader>'''
     plane='<state shader="near"><mesh P="-10 -10 5 10 -10 5 10 10 5 -10 10 5" nverts="4" verts="0 1 2 3"/></state>'
@@ -70,5 +70,16 @@ def run_smokes(root,config,env,run,verify,native,numerical,ids_compare,result):
                 if ids and json.loads(b.header()['cycles:deepIDHoldoutManifest'])!={f'{name_hash(case["holdout_name"]):08x}':case['holdout_name']}:
                     raise ValueError('Holdout manifest lost marker')
     resource=config['cycles'].parent
+    if 'raytrace_cases' in config:
+        for device in ('CPU','CUDA','OPTIX'):
+            for name,case in json.loads(config['raytrace_cases'].read_text())['cases'].items():
+                base=root/'raytrace'/device/name
+                off=native(base/'beauty',case['scene'],case['samples'],100,device,deep=False) if device=='CPU' else None
+                for mode,ids in [('strict',False),('1e-3',False),('1e-3',True)]:
+                    d=native(base/(mode+('-ids' if ids else '')),case['scene'],case['samples'],100,device,mode,ids)
+                    v=verify(d,off)
+                    if ids:v['combined_alpha']=ids_compare(base/mode,d)
+                    if device=='OPTIX':v['cuda_alpha']=numerical('raytrace-alpha-'+name+'-'+mode+'-'+str(ids),
+                        lambda:backend_compare(root/'raytrace/CUDA'/name/d.name,d))
     run('cuda-lifecycle',[resource/'cycles_deep_output_driver_test.exe',resource,repo/'src/app/deep_output_driver_test.xml',
                           repo/'src/app/deep_output_driver_transparent_test.xml',repo/'src/app/deep_output_driver_volume_test.xml','CUDA'])

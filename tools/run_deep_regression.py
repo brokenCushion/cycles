@@ -264,7 +264,7 @@ def main():
             return
         # Additional surface/adaptive/lens/motion and exact-ID fixtures are shared below.
         from run_deep_smokes import run_smokes
-        run_smokes(root,config,env,run,verify,native,numerical,ids_compare,result)
+        run_smokes(root,config,env,run,verify,native,numerical,ids_compare,backend_compare,result)
         if args.cuda_beauty:
             from cuda_beauty_gate import validate_cuda_beauty
             targets=json.loads(args.cuda_beauty.read_text())['targets'];result['cuda_beauty']={}

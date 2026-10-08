@@ -37,7 +37,7 @@ def validate(directory, samples=None, adaptive=None, ledger=None, output=None):
     # Standalone surface ledgers encode FLOAT depths/alphas with max_digits10.
     with open_samples(source) as stream:
         fields=csv.DictReader(stream).fieldnames
-    if ledger is not None:
+    if ledger is not None or 'depth' in fields:
         normalized=output/'normalized.samples.csv'
         with open_samples(source) as stream, normalized.open('w',newline='') as target:
             writer=csv.writer(target);writer.writerow(('file_x','file_y','sample','event','front','back','value','kind'))

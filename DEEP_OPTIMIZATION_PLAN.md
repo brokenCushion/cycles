@@ -82,7 +82,8 @@ Do not change beauty sources or Cycles flags. Switch the deep builds to the
 matching release-style toolchain, then qualify Phase 8a before dropping the
 restriction. If no supported deep toolchain works, retain the agreed fallback:
 OptiX excludes shader-raytrace (AO/Bevel), rejects explicitly and directs to
-CUDA; Phase 9 uses CUDA. Stopped after the requested pristine step 1.
+CUDA; Phase 9 uses CUDA. Deep builds are switched; qualification is stopped
+at the legacy strict CPU payload gate. No identity-policy exception was added.
 
 ### Final CUDA/OptiX raw beauty rule (user decisions, 2026-10-08)
 
@@ -1813,7 +1814,7 @@ them. Failed harness-development evidence stays on D:. Thirteen archived validat
 listed in [the archive index](src/deep/ARCHIVED_REPORTS.md); the approved
 [M8 record](src/deep/M8_RELEASE_VALIDATION.md) is retained. README lists all 59 current core files plus Blender
 overlay plumbing. Connected review: `D:/CyclesDeepScratch/regression-tools/phase7_review.gfr`.
-Phase 7 accepted. Phase 8a awaits deep qualification after pristine toolchain step 1 passed.
+Phase 7 accepted. Phase 8a stopped at strict CPU identity after the clang-cl switch.
 Full-resolution Phase 9 remains unlaunched.
 
 
@@ -1840,6 +1841,11 @@ fitting breakdown and sampled memory: [baseline](builds/validation/landscape-clo
 | 33x17/4 probe, 1e-3 | Saved parts / visible channels; deep identity | 10 parts / reader sees 4 channels | 1 part / 26 channels; all 12 required raw channels identical; deep payload + deterministic headers identical | `181a382cb` |
 | Landscape 235x100/4 AO, pristine clang-cl / CUDA 12.8.0 / OptiX 8.0.0 | Native precompiled shader-raytrace link/render | MSVC runtime PTX failed | PASS; 123.55 s process (cold setup), 0.938 s render excluding synchronization | Blender `749518deb2f0` |
 | Same executable/scene, runtime PTX diagnostic copy | Runtime link comparison | Precompiled modules pass | INCONCLUSIVE: native Windows guard rejects missing modules before compilation/linking; 10.02 s | Blender `749518deb2f0` |
+| Deep Blender / standalone clang-cl builds | Compile/install | MSVC / runtime modules | PASS; clang-cl 20.1.8, CUDA 12.8.0, OptiX 8.0.0; native precompiled modules | `63f609837`, `786b9387b` |
+| Accepted beauty sources / CUDA resources | Hash / 75 common records | `abef02ee...`; accepted Phase 6a records | Same source hash; all 75 records unchanged | `786b9387b` |
+| CPU half_precision 32x32/4 | Deep-on vs deep-off beauty / stored passes | Exact equality required | PASS; maximum difference 0 for beauty and every stored pass | `786b9387b` |
+| Same CPU case, strict | Legacy payload / deterministic headers | 118,775 deep samples; reference hash `a0f75cbb...` | FAIL: 118,777 samples; counts differ at 44 pixels; payload hash `87f28c6c...`; headers identical | `786b9387b` |
+| Same CPU case | Informational max transmittance / combined-alpha difference | Legacy output; header bound 1e-6 | 6.86099e-7 / 4.75196e-7; strict byte identity still fails | `786b9387b` |
 
 The earlier clean MSVC builds used CUDA 12.8.1 / NVCC 12.8.93 and runtime
 PTX; OptiX 9.0 and 8.0 both failed native `PIP_SHADE` with 11 duplicate
@@ -1869,9 +1875,26 @@ first part. The harness now saves interleaved passes: all required inputs/counts
 are visible, with zero raw difference and unchanged deep payload/deterministic
 headers. [Harness proof](builds/validation/landscape-cloud/optimization-phase8a/raw-passes-fix.json).
 
-Stopped after requested clang-cl pristine step 1. Switching deep builds,
-CPU exact/source proof, full matrices/boundaries, fresh identity, GPU beauty,
-after measurements and Gaffer qualification remain pending. No Phase 8a
-acceptance or deep speedup claimed.
+Deep builds now use the matching release-style toolchain. Clang's existing
+double-promotion errors were fixed with explicit FLOAT-to-double conversions
+in three deep headers, retaining the intended arithmetic. No beauty source,
+compiler-flag workaround or gate change. The source hash and all 75 resources
+match the accepted deep-feature configuration. A comparison with pristine
+without that compiled feature has 16 resource differences already present in
+accepted deep builds; it is not the Phase 8 before/after comparison.
+
+The first strict CPU precheck fails payload identity despite identical
+deterministic headers. Current deep-on/off CPU beauty and all stored passes
+are exact. Legacy-vs-current ordinary CPU RGB differs at 19 pixels (maximum
+1.19209e-7); this is consistent with toolchain numerical differences, but does
+not isolate the cause of the deep partition changes. Paired record-index depth
+differences are not physical curve errors when the interval partition changes.
+[Strict comparison](builds/validation/landscape-cloud/optimization-phase8a/clangcl-strict-difference.json),
+[CPU/source/resource precheck](builds/validation/landscape-cloud/optimization-phase8a/clangcl-step2.json).
+
+Stopped under the existing strict gate. The full 81/81 + 30/30 replay, nine
+CTests, matrices/boundaries, CUDA/OptiX beauty, fixed after measurements and
+qualified Gaffer presentation were not launched. No Phase 8a acceptance or
+deep speedup claimed. The accepted regression config/Gaffer scene remain in use.
 [Measured evidence](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json);
 large evidence and TEMP: `D:/CyclesDeepScratch/optimization-phase8a/`.

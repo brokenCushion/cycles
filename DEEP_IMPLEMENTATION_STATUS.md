@@ -4,20 +4,21 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0-7 accepted.
 
-**Phase 8a remains unqualified; pristine toolchain step 1 passed.** The pinned
-revision renders the AO landscape on OptiX with clang-cl 20.1.8, CUDA 12.8.0
-and OptiX 8.0.0 using native precompiled modules (235x100, four samples).
-Earlier MSVC/runtime-PTX failures used CUDA 12.8.1. Compiler and module path
-both changed; clang-cl alone is not isolated. Beauty sources/flags untouched.
-Stopped before switching deep builds or resuming qualification. The AO/Bevel
-restriction and Phase 9 CUDA fallback are conditional on that qualification.
+**Phase 8a is stopped, unqualified: strict CPU legacy identity failed.**
+Both deep builds now use clang-cl 20.1.8, CUDA 12.8.0 and OptiX 8.0.0 with
+native precompiled modules. Pristine AO rendering passes; deep qualification
+stopped before CUDA/OptiX controls and full regression. Three deep headers now
+spell their FLOAT-to-double conversions explicitly for Clang's existing checks.
+Beauty sources/flags and every gate remain unchanged.
 
-The raw-pass harness is fixed: all required count/denoiser channels are visible;
-raw data and deep payload/deterministic headers are unchanged. Deep build
-toolchain switch, full matrices/boundaries, fresh 81/81 + 30/30 identity, GPU beauty and
-after measurements remain pending. Nine CTests and 75 resource records passed
-earlier; the OptiX volume probe matches CUDA and passes its alpha oracle.
+CPU half_precision (32x32/four samples): deep-on/off beauty and all stored
+passes are exact; beauty-source hash and all 75 resource records match the
+accepted baseline. Legacy strict samples change 118,775 -> 118,777, with count
+changes at 44 pixels; deterministic headers match. Whole-curve transmittance
+difference is 6.86099e-7, but this does not satisfy strict byte identity.
 [Evidence and pending checks](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json).
+Full 81/81 + 30/30 replay, nine CTests, matrices/boundaries, GPU beauty and
+after measurements remain pending. The raw-pass harness fix is retained.
 No Phase 8b/8c or full-resolution Phase 9 run started.
 
 The approved [M8 release record](src/deep/M8_RELEASE_VALIDATION.md) is restored

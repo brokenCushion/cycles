@@ -15,6 +15,8 @@ scene.cycles.samples = 4
 scene.cycles.use_adaptive_sampling = False
 scene.cycles.use_denoising = False
 scene.cycles.transparent_max_bounces = 16
+# Three planes: disable roulette so native alpha is an independent exact oracle.
+scene.cycles.min_transparent_bounces = 16
 scene.render.film_transparent = True
 scene.render.use_persistent_data = True
 scene.render.resolution_x, scene.render.resolution_y = 33, 17

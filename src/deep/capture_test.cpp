@@ -55,7 +55,7 @@ int main()
 {
   const auto osl = ccl::deep::osl_features(
       "temp closure color c\nconst string label \"trace\"\ncode main\n"
-      "# trace in a comment\nclosure c label\nmul c c weight\nadd c c c\nend\n");
+      "# trace in a comment\n# c = transparent()\nclosure c label\nmul c c weight\nadd c c c\nend\n");
   check(osl.unsupported.empty() && osl.components == 1 && osl.muls == 1 && osl.adds == 1);
   check(ccl::deep::osl_features("code main\ntrace hit P I\n").unsupported == "trace");
   check(ccl::deep::osl_features("code main\nwhile flag\n").loop);

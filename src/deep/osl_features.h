@@ -32,6 +32,7 @@ inline OSLFeatures osl_features(const std::string &bytecode)
     std::istringstream tokens(line);
     std::string op, type, name;
     tokens >> op;
+    if (op.empty() || op[0] == '#') continue;
     if (op == "code") { code = true; continue; }
     if (!code) {
       tokens >> type;

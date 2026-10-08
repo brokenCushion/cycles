@@ -1839,134 +1839,40 @@ them. Failed harness-development evidence stays on D:. Thirteen archived validat
 listed in [the archive index](src/deep/ARCHIVED_REPORTS.md); the approved
 [M8 record](src/deep/M8_RELEASE_VALIDATION.md) is retained. README lists all 59 current core files plus Blender
 overlay plumbing. Connected review: `D:/CyclesDeepScratch/regression-tools/phase7_review.gfr`.
-Phase 7 accepted. Phase 8a stopped at the toolchain rounding audit after the clang-cl switch.
+Phase 7 accepted. Phase 8a is qualifying the recorded clang-cl/NVCC toolchain.
 Full-resolution Phase 9 remains unlaunched.
 
 
-### Phase 8a results (stopped)
+### Phase 8a results (qualification in progress)
 
-Implementation `0b55e8567`: separate OptiX SVM module/pipeline/SBT and per-queue
-launch snapshot; shared capture, exact double volume/grid integration. Before
-regression: 600.25 s, 81/81 strict + 30/30 numeric identity. Full counters,
-fitting breakdown and sampled memory: [baseline](builds/validation/landscape-cloud/optimization-phase8a/before.json).
+Separate OptiX SVM module/pipeline/SBT and per-queue launch snapshot share
+capture and exact double grid integration; beauty sources and flags unchanged.
+Pristine Blender 749518deb2f0 links/renders the AO landscape with clang-cl,
+native modules, CUDA 12.8.0 / NVCC 12.8.61 and OptiX 8.0.0.
+[Toolchain](BUILDING.md), [pristine evidence](builds/validation/landscape-cloud/optimization-phase8a/pristine-clangcl-precompiled.json).
 
 | Case | Metric | Before | After | Commit |
 | --- | --- | --- | --- | --- |
-| 47x20/16 strict | Render+capture / export s; samples; EXR bytes | 2.835 / 8.046; 561,793; 4,445,714 | Not measured: qualification stopped | `0b55e8567` |
-| 47x20/16 1e-4 | Same metrics | 1.789 / 3.757; 88,699; 609,496 | Not measured | `0b55e8567` |
-| 47x20/16 1e-3 | Same metrics | 1.786 / 3.537; 53,113; 357,145 | Not measured | `0b55e8567` |
-| 587x250/4 strict | Same metrics | 33.950 / 33.692; 52,189,081; 394,273,944 | Not measured | `0b55e8567` |
-| 587x250/4 1e-4 | Same metrics | 11.626 / 3.805; 6,813,973; 59,210,585 | Not measured | `0b55e8567` |
-| 587x250/4 1e-3 | Same metrics | 11.871 / 2.142; 3,076,802; 22,398,061 | Not measured | `0b55e8567` |
-| 33x17/4 volume, 1e-3 | OptiX vs CUDA whole-curve error; oracle error | CUDA reference | 0; 0.000159669 <= header 0.0010000000475 | `0b55e8567` |
-| Same probe | Render+capture / export s; samples; EXR bytes | Not timed as a before case | 0.236609 / 0.095553; 3,452; 32,845 (startup/JIT excluded) | `0b55e8567` |
-| Nine CTests / common CUDA resources / beauty sources | Proof | 9 / 75 / source hash PASS | 9 PASS (16.13 s); 75 unchanged; same source hash | `0b55e8567` |
-| Landscape 47x20/16, pristine / OptiX 9.0 | Native shader-raytrace link | No pristine comparison | FAIL: 11 duplicate symbols, no deep patches; 405.94 s including cold JIT | Blender `749518deb2f0` |
-| Same landscape, pristine / OptiX 8.0.0 | Same; official SDK version | 9.0 failed | FAIL: same 11 symbols; 403.95 s including cold JIT | Blender `749518deb2f0` |
-| 33x17/4 probe, 1e-3 | Saved parts / visible channels; deep identity | 10 parts / reader sees 4 channels | 1 part / 26 channels; all 12 required raw channels identical; deep payload + deterministic headers identical | `181a382cb` |
-| Landscape 235x100/4 AO, pristine clang-cl / CUDA 12.8.0 / OptiX 8.0.0 | Native precompiled shader-raytrace link/render | MSVC runtime PTX failed | PASS; 123.55 s process (cold setup), 0.938 s render excluding synchronization | Blender `749518deb2f0` |
-| Same executable/scene, runtime PTX diagnostic copy | Runtime link comparison | Precompiled modules pass | INCONCLUSIVE: native Windows guard rejects missing modules before compilation/linking; 10.02 s | Blender `749518deb2f0` |
-| Deep Blender / standalone clang-cl builds | Compile/install | MSVC / runtime modules | PASS; clang-cl 20.1.8, CUDA 12.8.0, OptiX 8.0.0; native precompiled modules | `63f609837`, `786b9387b` |
-| Accepted beauty sources / CUDA resources | Hash / 75 common records | `abef02ee...`; accepted Phase 6a records | Same source hash; all 75 records unchanged | `786b9387b` |
-| CPU half_precision 32x32/4 | Deep-on vs deep-off beauty / stored passes | Exact equality required | PASS; maximum difference 0 for beauty and every stored pass | `786b9387b` |
-| Same CPU case, strict | Legacy payload / deterministic headers | 118,775 deep samples; reference hash `a0f75cbb...` | FAIL: 118,777 samples; counts differ at 44 pixels; payload hash `87f28c6c...`; headers identical | `786b9387b` |
-| Same CPU case | Informational max transmittance / combined-alpha difference | Legacy output; header bound 1e-6 | 6.86099e-7 / 4.75196e-7; strict byte identity still fails | `786b9387b` |
-| CUDA denoised_volume 33x17/4 strict, clang-cl toolchain | Legacy payload / deterministic headers | 114,297 samples; hash `924c8fe5...` | FAIL: 114,304 samples; 14 pixels change count; A/Z/ZBack differ at 96 pixels; all headers identical | `786b9387b` |
-| Same CUDA case | Informational max transmittance / flattened-alpha difference | Header bound 1e-6; byte identity mandatory | 2.16944e-7 / 8.81517e-14; still FAIL under mandatory byte identity | `786b9387b` |
-| CUDA 33x17/4 raw spill, before fitting | Rays / events; raw difference | 2,244 / 70,201 | Same counts; 338 changed rays; event FLOAT max 1 ULP (0.0001220703); cubic coefficients identical; companion depth max 3.31379e-5 | `786b9387b` |
-| CPU adaptive_volume strict | Samples; max curve difference; independent oracle | 102,429 samples | 102,415; 5.10897e-7 <= 1e-6; oracle 1.97456e-7 <= header 1e-6; exact same-build CPU beauty/raw | `786b9387b` |
-| CPU adaptive_volume 1e-4 | Samples; informational curve difference; independent oracle | 9,700 samples | 9,699; PASS under corrected numeric rule: difference 1.96236e-5; both own oracles <= header 1e-4; exact same-build CPU beauty/raw | `786b9387b` |
-| Toolchain audit (2/111 cases before stop) | CTests / beauty sources / resources | 9 / source hash / 75 records | PASS: 9 tests, 12.75 s; sources and 75 records unchanged | `469b4d90b` |
-| Corrected toolchain audit, CPU cases | Coverage / outcome | 2/111; numeric rule corrected | 25/111 checked; 24 PASS, one strict FAIL; all 25 differ in bytes; old/new own oracles and CPU beauty/raw PASS | `e123847ba`, `93048bde2` |
-| CPU surface_ao strict, 32x32/4 | Samples; cross-build T / flattened-alpha difference | 112,239 | 112,264; FAIL: 0.35744182 > 1e-6 at (14,12); flattened-alpha difference 4.75330e-7; counts change at 61 pixels (-6..8) | `786b9387b` |
-| Same strict surface case | Independent oracle max / header bound | 2.12226357e-7 / 1e-6 | 2.12207475e-7 / 1e-6; both pass 81 diagnostic pixels and depth cuts; exact same-build CPU beauty/raw | `786b9387b` |
-| CPU surface_ao strict, corrected depth-window rule | Maximum minimum integer-ULP window / residual | Unshifted comparison failed | PASS: 3 ULP over full case; residual <= 6.85291e-7; both own oracles pass | `56d289610` |
-| Depth-window toolchain audit | Identity coverage / outcome | 25/111 before correction | 106/111 checked: 105 PASS, one strict FAIL; CPU/CUDA matrices and both boundary suites pass; no baseline promoted | `56d289610` |
-| Small landscape 47x20/16 strict | Samples; four-ULP-envelope violation | 561,793 | 561,860; FAIL: max 0.05626202 > 1e-6 at (26,7); 379/940 pixels flagged; flattened-alpha difference 0 | `786b9387b` |
-| Same small strict landscape | Independent oracle max / header bound | 2.20131377e-7 / 1e-6 | 2.18971653e-7 / 1e-6; both pass own oracle/depth cuts at 81 diagnostic pixels | `786b9387b` |
+| Toolchain audit | Coverage / independent oracle and depth cuts | Retained cl.exe/NVCC references | 111/111 PASS (81 strict, 30 numeric); new same-build CPU beauty/raw exact | `673775bb6` |
+| All 111 cross-build cases | Maximum flattened-alpha difference | Sanity limit 1e-4 | 4.75347219e-07; PASS; 104 cases differ in bytes | `673775bb6` |
+| Small landscape 47x20/16 strict | Samples; informational curve difference | 561,793 | 561,860; max curve difference 0.057613866; flattened-alpha difference 0 | `786b9387b` |
+| Same landscape | Independent oracle max / header bound | 2.20131377e-7 / 1e-6 | 2.18971653e-7 / 1e-6; PASS | `786b9387b` |
+| CUDA 33x17/4 raw capture before fitting | Rays/events; changes | 2,244 / 70,201 | Same counts; 338 changed rays; FLOAT event max 1 ULP; cubic coefficients identical | `786b9387b` |
+| Beauty sources / common CUDA resources / CTests | Proof | Accepted source hash / 75 records / 9 tests | Unchanged / unchanged / 9 PASS (12.75 s) | `786b9387b` |
 
-The earlier clean MSVC builds used CUDA 12.8.1 / NVCC 12.8.93 and runtime
-PTX; OptiX 9.0 and 8.0 both failed native `PIP_SHADE` with 11 duplicate
-symbols. [9.0 report](builds/validation/landscape-cloud/optimization-phase8a/pristine-optix9.json),
-[8.0 report](builds/validation/landscape-cloud/optimization-phase8a/pristine-optix8.json).
+Cross-build curve/sample/ULP differences are informational under the final
+Section 2 user decision; the previous small-strict stop is superseded.
+Near-coincident hits can change discrete outcomes across compilers. Old and new
+own oracles/depth cuts pass; every per-case count, curve difference and oracle
+maximum is in the [audit](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json).
+Raw differences precede fitting, but NVCC vs host-generated GPU inputs is not
+isolated. [Raw diagnostic](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json),
+[informational depth windows](builds/validation/landscape-cloud/optimization-phase8a/strict-landscape-depth-window.json).
 
-Rebuilt the same pristine revision with clang-cl 20.1.8, Ninja 1.13.2,
-CUDA 12.8.0 / NVCC 12.8.61 and OptiX 8.0.0, following the pinned
-[buildbot config](https://github.com/blender/blender/blob/749518deb2f0735a22361a07488b35f7ea5c2fdf/build_files/config/pipeline_config.yaml).
-NVCC retains its supported MSVC host compiler. Native precompiled modules
-render the unchanged AO scene at 10% / 4 samples with GPU OIDN. All 12
-required raw channels/counts are present and finite. Executable SHA256:
-`a65a724dad67b89da8597f4ce6f6bbdf3e9bcd5bbb7fa04eaa65c39feff2b681`.
-[Pass report](builds/validation/landscape-cloud/optimization-phase8a/pristine-clangcl-precompiled.json).
-
-The runtime diagnostic copy (same executable SHA) stops at upstream Windows'
-precompiled-kernel guard before compiling/linking; it is not a linker failure.
-Native CMake keeps device functions only in the shader-raytrace module;
-runtime compilation adds that flag to the base module too when raytrace is
-requested. This is a likely contributor, not an isolated causal test.
-[Runtime report](builds/validation/landscape-cloud/optimization-phase8a/pristine-clangcl-runtime.json).
-No beauty source/flag changes. Source remains clean. Diagnostics stay outside
-the ordinary beauty reference pool; downloads/builds/EXRs/TEMP remain on D:.
-
-Raw inputs were present in the previous multipart EXR; the reader only saw its
-first part. The harness now saves interleaved passes: all required inputs/counts
-are visible, with zero raw difference and unchanged deep payload/deterministic
-headers. [Harness proof](builds/validation/landscape-cloud/optimization-phase8a/raw-passes-fix.json).
-
-Deep builds now use the matching release-style toolchain. Clang's existing
-double-promotion errors were fixed with explicit FLOAT-to-double conversions
-in three deep headers, retaining the intended arithmetic. No beauty source,
-compiler-flag workaround or gate change. The source hash and all 75 resources
-match the accepted deep-feature configuration. A comparison with pristine
-without that compiled feature has 16 resource differences already present in
-accepted deep builds; it is not the Phase 8 before/after comparison.
-
-The first strict CPU precheck fails payload identity despite identical
-deterministic headers. Current deep-on/off CPU beauty and all stored passes
-are exact. Legacy-vs-current ordinary CPU RGB differs at 19 pixels (maximum
-1.19209e-7); this is consistent with toolchain numerical differences, but does
-not isolate the cause of the deep partition changes. Paired record-index depth
-differences are not physical curve errors when the interval partition changes.
-[Strict comparison](builds/validation/landscape-cloud/optimization-phase8a/clangcl-strict-difference.json),
-[CPU/source/resource precheck](builds/validation/landscape-cloud/optimization-phase8a/clangcl-step2.json).
-
-The initial CUDA byte-identity stop is superseded by the user-approved one-time
-toolchain re-baseline policy in Section 2. The pairing remains clang-cl 20.1.8 /
-NVCC 12.8.61. Raw diagnostic renders use the actual legacy executable SHA
-`4c9a3e7d...` and new SHA `966041b0...`. Read handles preserved the original
-sample-major spill streams without instrumenting either renderer. Parsing
-verified every ray, excluding index offsets and padding. Payloads differ before
-fitting: fitting/export alone cannot explain them. NVCC versus host-generated
-GPU scene/camera inputs is not isolated by this two-build comparison.
-[Raw capture report](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json).
-
-The corrected numeric and strict depth-window rules are applied. All 25 retained
-cases now pass, including surface_ao (maximum required integer window 3 ULP).
-The resumed audit checks 106/111 cases: 105 pass and small-strict fails.
-CPU/CUDA matrices, both all-pixel boundary suites and all numeric cases reached
-pass their own oracle/depth cuts. Full case counts, differences, required ULP
-windows and both oracle maxima are in the [audit report](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json).
-
-Small-strict (47x20/16) has 379/940 pixels outside the four-ULP envelope plus
-1e-6. Maximum residual is 0.05626202 at (26,7); final flattened alpha is
-identical. Both own oracles pass, and scene/settings match across builds.
-Larger windows were measured for diagnosis only: (40,0) requires seven ULP;
-325 flagged pixels still fail at 64 ULP. The maximum required shift is therefore
->64 ULP (diagnostic lower bound), not an accepted tolerance. At (39,8), an
-independent endpoint witness at z=897.2246704101562 has new T=0.813372318,
-outside old [0.755758452,0.812008449] for d=0.000244140625 (four ULP), by
-0.001363869. This verifies a real envelope violation without relying on the
-stationary-point calculation. Do not waive the approved gate.
-[Window diagnostic](builds/validation/landscape-cloud/optimization-phase8a/strict-landscape-depth-window.json),
-[direct cut witness](builds/validation/landscape-cloud/optimization-phase8a/strict-landscape-window-witness.json).
-
-Stopped without promoting the 105 partial candidate references in the owned
-D: audit workspace. All legacy references remain. Five audit cases, identity
-replay, full regression, OptiX AO/Bevel, GPU beauty and speed comparisons remain
-pending. AO/Bevel fixtures and their regression stage are prepared, not qualified.
-No Phase 8a acceptance or speedup claimed; accepted regression config/Gaffer
-scene and renderer/toolchain pairing remain unchanged. Only audit/fixture
-harness and documentation changed. Nine CTests, source/resource proof and
-all tested CPU beauty/raw pairs pass.
-[Measured evidence](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json);
-large evidence and TEMP stay in the D: directories named in the reports.
+Candidates are staged on D:, not promoted. Same-toolchain identity replay,
+full regression and CUDA/OptiX beauty/alpha/speed qualification (AO and Bevel
+included) remain pending. Matching-toolchain ordinary controls: 20 plus four
+distinct seeds per fixture/backend, reused across error/ID modes. No beauty
+kernel workaround or Phase 8b/8c/9 started. Old references remain unchanged.
+[Measurements before](builds/validation/landscape-cloud/optimization-phase8a/before.json),
+[qualification progress](builds/validation/landscape-cloud/optimization-phase8a/final-qualification-progress.json).

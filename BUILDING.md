@@ -108,9 +108,10 @@ compiler remains MSVC 19.44 (14.44.35207), explicitly selected with
 and OptiX modules. Keep builds, validation images and TEMP/TMP on D:.
 
 See [Blender deep build commands](BLENDER_DEEP_INTEGRATION.md) and the
-[qualification plan](DEEP_OPTIMIZATION_PLAN.md). CUDA references remain
-mandatory byte-identity checks. Any qualified clang-cl CPU references are
-separate from the retained cl.exe references.
+[qualification plan](DEEP_OPTIMIZATION_PLAN.md). A recorded compiler change
+uses its own CPU/CUDA references after the one-time qualification in Section 2;
+retain the cl.exe/NVCC references for history. Within a fixed toolchain, payload
+and deterministic-header byte identity remains mandatory.
 
 Cycles uses the CMake build system. As an alternative to the `make` wrapper, CMake can be manually configured.
 

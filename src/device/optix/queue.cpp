@@ -301,6 +301,13 @@ bool OptiXDeviceQueue::enqueue_deep(const int work_size, const DeviceKernelArgum
   sbt.hitgroupRecordBase = device->deep_sbt_data->device_pointer;
   sbt.hitgroupRecordStrideInBytes = sizeof(SbtRecord);
   sbt.hitgroupRecordCount = NUM_HIT_PROGRAM_GROUPS;
+#ifdef WITH_OSL
+  if (device->kernel_features & KERNEL_FEATURE_OSL_SHADING) {
+    sbt.callablesRecordBase = records + NUM_PROGRAM_GROUPS * sizeof(SbtRecord);
+    sbt.callablesRecordStrideInBytes = sizeof(SbtRecord);
+    sbt.callablesRecordCount = device->osl_groups.size();
+  }
+#endif
   debug_enqueue_begin(DEVICE_KERNEL_DEEP_SURFACE, work_size);
   optix_device_assert(device, optixLaunch(device->deep_pipeline, cuda_stream_, launch,
                                          sizeof(KernelParamsOptiX), &sbt, work_size, 1, 1));

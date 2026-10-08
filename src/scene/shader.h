@@ -15,6 +15,9 @@
 
 #include "kernel/types.h"
 #include "scene/attribute.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "deep/osl_features.h"
+#endif
 
 #include "graph/node.h"
 
@@ -125,6 +128,9 @@ class Shader : public Node {
   float deep_density_scale = -1.0f;
   /* Validated constant total extinction for a homogeneous volume closure graph. */
   float deep_homogeneous_extinction = -1.0f;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  deep::OSLFeatures deep_osl_features;
+#endif
   bool has_light_path_node;
   bool has_aov_output_node;
   bool has_time_dependency;

@@ -750,6 +750,11 @@ bool Session::update_scene(const bool reset_samples)
     profiler.reset(scene->shaders.size(), scene->objects.size());
   }
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (params.deep.enabled && scene->params.shadingsystem == SHADINGSYSTEM_OSL) {
+    validate_deep_osl(scene.get());
+  }
+#endif
   return reset;
 }
 

@@ -570,6 +570,9 @@ const char *OSLManager::shader_load_bytecode(const string &hash, const string &b
   info.has_surface_emission = (bytecode.find("\"emission\"") != string::npos);
   info.has_surface_transparent = (bytecode.find("\"transparent\"") != string::npos);
   info.has_surface_bssrdf = (bytecode.find("\"bssrdf\"") != string::npos);
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  info.deep_features = deep::osl_features(bytecode);
+#endif
 
   loaded_shaders[hash] = info;
 
@@ -1118,6 +1121,21 @@ void OSLCompiler::add(ShaderNode *node, const char *name, bool isfilepath)
   /* test if we shader contains specific closures */
   OSLShaderInfo *info = scene->osl_manager->shader_loaded_info(name);
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (current_type == SHADER_TYPE_SURFACE) {
+    if (info) {
+      current_shader->deep_osl_features.merge(info->deep_features);
+    }
+    else {
+      string bytecode;
+      if (path_read_text(path_join(path_get("shader"), string(name) + ".oso"), bytecode))
+        current_shader->deep_osl_features.merge(deep::osl_features(bytecode));
+      else
+        current_shader->deep_osl_features.unsupported = "unavailable shader bytecode";
+    }
+  }
+#endif
+
   if (current_type == SHADER_TYPE_SURFACE) {
     if (info) {
       if (info->has_surface_emission && node->special_type == SHADER_SPECIAL_TYPE_OSL) {
@@ -1533,6 +1551,9 @@ OSL::ShaderGroupRef OSLCompiler::compile_type(Shader *shader, ShaderGraph *graph
 void OSLCompiler::compile(Shader *shader)
 {
   if (shader->is_modified()) {
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    shader->deep_osl_features = {};
+#endif
     ShaderGraph *graph = shader->graph.get();
     current_graph = graph;
 

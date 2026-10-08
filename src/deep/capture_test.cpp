@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "deep/capture.h"
+#include "deep/osl_features.h"
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -52,6 +53,14 @@ constexpr size_t single_record_bytes = sizeof(KernelDeepResult) + sizeof(KernelD
 constexpr size_t chain_bytes = 2 * (sizeof(KernelDeepResult) + 2 * sizeof(KernelDeepEvent));
 int main()
 {
+  const auto osl = ccl::deep::osl_features(
+      "temp closure color c\nconst string label \"trace\"\ncode main\n"
+      "# trace in a comment\nclosure c label\nmul c c weight\nadd c c c\nend\n");
+  check(osl.unsupported.empty() && osl.components == 1 && osl.muls == 1 && osl.adds == 1);
+  check(ccl::deep::osl_features("code main\ntrace hit P I\n").unsupported == "trace");
+  check(ccl::deep::osl_features("code main\nwhile flag\n").loop);
+  check(!ccl::deep::osl_features("# while\ncode main\nassign x y\n").loop);
+  check(!ccl::deep::osl_features("temp closure color c\ncode main\nmix c a b\n").unsupported.empty());
   static_assert(sizeof(ccl::deep::SurfaceEvent) == 24);
   static_assert(sizeof(ccl::deep::IntervalSample) == 32);
   {

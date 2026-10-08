@@ -15,7 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DEEP_HOST = {'src/app/deep_output.cpp', 'src/app/deep_output.h',
              'src/integrator/path_trace_deep_tile.h', 'src/session/output_driver.h',
              'src/session/deep.h', 'src/session/deep.cpp', 'src/app/deep_output_driver_test.cpp'}
-DEEP_DEVICE = {'src/kernel/device/optix/kernel_deep.cu'}
+DEEP_DEVICE = {'src/kernel/device/optix/kernel_deep.cu',
+               'src/kernel/device/optix/kernel_deep_osl.cu'}
 
 
 def git(*args):
@@ -58,6 +59,15 @@ def beauty_identity(commit):
                     'src/device/cpu/kernel.h', 'src/kernel/device/cpu/kernel_arch.h',
                     'src/kernel/device/cpu/kernel_arch_impl.h'):
             files[path] = hashlib.sha256(without_deep_blocks(git('show', commit + ':' + path))).hexdigest()
+        elif path == 'src/session/session.cpp':
+            source = git('show', commit + ':' + path)
+            # Only this exact host validation hook is excluded. Existing Session
+            # code and any change to its beauty/sampling body retain their hash.
+            source = source.replace(b"#ifdef WITH_CYCLES_DEEP_OPAQUE\n  if (params.deep.enabled && scene->params.shadingsystem == SHADINGSYSTEM_OSL) {\n    validate_deep_osl(scene.get());\n  }\n#endif\n", b'')
+            files[path] = hashlib.sha1(b'blob '+str(len(source)).encode()+b'\0'+source).hexdigest()
+        elif path in ('src/scene/osl.cpp', 'src/scene/osl.h', 'src/scene/shader.h'):
+            source = without_deep_blocks(git('show', commit + ':' + path))
+            files[path] = hashlib.sha1(b'blob '+str(len(source)).encode()+b'\0'+source).hexdigest()
         elif path.startswith('src/device/optix/'):
             source = without_deep_blocks(git('show', commit + ':' + path))
             # Preserve the original Git blob identity when a deep-only block is added.

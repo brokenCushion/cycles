@@ -1848,7 +1848,7 @@ Phase 7 accepted. Phase 8a stopped at the OptiX small-landscape beauty bias gate
 Full-resolution Phase 9 remains unlaunched.
 
 
-### Phase 8a results (complete; awaiting acceptance review)
+### Phase 8a results (accepted)
 
 OptiX SVM uses its own deep module/pipeline/SBT and per-queue launch state;
 shared capture/reconstruction, native double grid integration and beauty
@@ -1912,4 +1912,15 @@ old references remain unchanged. [Promotion](builds/validation/landscape-cloud/o
 [compiler audit](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json),
 [raw diagnostic](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json).
 Connected review: `D:/CyclesDeepScratch/regression-tools/phase8a_review.gfr`.
-Stopped for Phase 8a review; Phase 8b/8c/9 remain unlaunched.
+Phase 8a accepted by the user on 2026-10-09. Phase 8b is in progress; 8c/9 remain unlaunched.
+
+### Phase 8b baseline (implementation in progress)
+
+[Fixed-case before measurements](builds/validation/landscape-cloud/optimization-phase8b/baseline.json)
+cover 18 CUDA/OptiX case/mode combinations using the accepted 8a executable.
+OSL 1.15.3.0: query optimized groups with ShadingSystem::getattribute;
+raytype_queries, attributes/scopes, unknown_attributes_needed, globals,
+userdata and closure names. Cached OSO operation metadata supplements the
+missing trace query and bounds the unchanged 1024-byte arena/16-entry stack.
+Closure-building loops and unprovable allocations fail explicitly. Deep's
+pipeline reuses OSL's original callables/SBT; beauty's pipeline is unchanged.

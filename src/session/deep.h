@@ -30,5 +30,6 @@ struct DeepSettings {
 class Scene;
 class SessionParams;
 void validate_deep_scene(Scene *scene, SessionParams &params);
+void validate_deep_osl(Scene *scene);
 
 CCL_NAMESPACE_END

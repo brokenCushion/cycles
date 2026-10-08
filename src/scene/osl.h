@@ -16,6 +16,9 @@
 #include "scene/shader.h"
 #include "scene/shader_graph.h"
 #include "scene/shader_nodes.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "deep/osl_features.h"
+#endif
 
 #ifdef WITH_OSL
 #  include <OSL/llvm_util.h>
@@ -51,6 +54,9 @@ struct OSLShaderInfo {
   bool has_surface_emission = false;
   bool has_surface_transparent = false;
   bool has_surface_bssrdf = false;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  deep::OSLFeatures deep_features;
+#endif
 };
 
 #endif

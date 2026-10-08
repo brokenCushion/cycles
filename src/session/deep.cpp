@@ -8,6 +8,7 @@
 #include "scene/integrator.h"
 #include "scene/mesh.h"
 #include "scene/object.h"
+#include "scene/osl.h"
 #include "scene/scene.h"
 #include "scene/shader.h"
 #include "scene/shader_nodes.h"
@@ -16,12 +17,17 @@
 #include "util/murmurhash.h"
 #include "kernel/deep/types.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <map>
 #include <set>
 #include <stdexcept>
 #include <vector>
+#ifdef WITH_OSL
+#  include <OSL/genclosure.h>
+#  include "kernel/osl/types.h"
+#endif
 
 CCL_NAMESPACE_BEGIN
 static void require_deep(const bool condition, const char *message)
@@ -282,6 +288,11 @@ static void validate_shader(Scene *scene, Shader *shader,
   require_deep((volume || !output->input("Volume")->link) && !output->input("Displacement")->link,
                "volume and displacement shaders are unsupported");
   require_deep(output->input("Surface")->link != nullptr, "surface shader must be connected");
+  if (!background && scene->params.shadingsystem == SHADINGSYSTEM_OSL) {
+    /* Optimized groups are checked after scene update, before any camera work.
+     * Native SVM keeps its existing opacity dependency proof unchanged. */
+    return;
+  }
   if (background) {
     /* Environment radiance does not attenuate camera alpha. Keep native beauty
      * evaluation, including textures and colour adjustments, untouched. World
@@ -459,9 +470,9 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                   params.device.type == DEVICE_OPTIX) &&
                    params.background,
                "requires single CPU, CUDA or OptiX background rendering");
-  require_deep(params.device.type == DEVICE_CPU ||
+  require_deep(params.device.type != DEVICE_CUDA ||
                    scene->params.shadingsystem == SHADINGSYSTEM_SVM,
-               "GPU deep supports native SVM only; GPU OSL is not qualified");
+               "CUDA deep requires native SVM; GPU OSL requires OptiX");
   require_deep(transparent || scene->params.shadingsystem == SHADINGSYSTEM_SVM,
                "OSL is not supported by the M3 material allowlist");
   require_deep(params.samples > 0 && params.samples <= 4096 && !params.use_sample_subset &&
@@ -638,6 +649,110 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                      !object->get_is_caustics_caster() && !object->get_is_caustics_receiver(),
                  "holdout, shadow catcher and caustics are unsupported");
   }
+}
+
+
+/* Query the groups OSL actually optimized; neither execute them nor specialize
+ * their ray types for deep. Beauty keeps its original group and callables. */
+void validate_deep_osl(Scene *scene)
+{
+#ifdef WITH_OSL
+  if (scene->params.shadingsystem != SHADINGSYSTEM_OSL) return;
+  std::set<Shader *> used;
+  for (Geometry *geometry : scene->geometry) {
+    if (geometry->is_light()) continue;
+    if (geometry->get_used_shaders().empty()) used.insert(scene->default_surface);
+    for (Node *node : geometry->get_used_shaders()) used.insert(static_cast<Shader *>(node));
+  }
+  OSLManager::foreach_osl_device(scene->device, [&](Device *device, OSLGlobals *) {
+    OSL::ShadingSystem *ss = scene->osl_manager->get_shading_system(device);
+    for (Shader *shader : used) {
+      const string prefix = "OSL material '" + shader->name.string() + "': ";
+      const auto require = [&](bool ok, const string &reason) {
+        require_deep(ok, (prefix + reason).c_str());
+      };
+      const auto found = shader->osl_cache.find(device);
+      require(found != shader->osl_cache.end() && found->second.surface, "missing compiled surface group");
+      OSL::ShaderGroup *group = found->second.surface.get();
+      const auto integer = [&](const char *name) {
+        int value = 0;
+        require(ss->getattribute(group, name, value), string("unavailable OSL query ") + name);
+        return value;
+      };
+      const auto names = [&](const char *count, const char *attribute) {
+        const int n = integer(count);
+        require(n >= 0, "invalid OSL query count");
+        OSL::ustring *data = nullptr;
+        require(ss->getattribute(group, attribute, OSL::TypeDesc::PTR, &data) && (!n || data),
+                string("unavailable OSL query ") + attribute);
+        return n ? std::vector<OSL::ustring>(data, data + n) : std::vector<OSL::ustring>();
+      };
+      require(!(integer("raytype_queries") & ~ss->raytype_bit(ustring("camera"))),
+              "ray-type queries other than camera are unsupported");
+      require(!integer("unknown_attributes_needed"), "dynamic/unknown attribute queries are unsupported");
+      const auto stable_attribute = [&](const string &name) {
+        if (name.rfind("geom:", 0) == 0 && Attribute::name_standard(name.c_str()+5) != ATTR_STD_NONE)
+          return true;
+        static const std::set<string> known = {"object:location", "object:color", "object:alpha",
+          "object:index", "object:random", "material:index", "geom:name", "geom:is_smooth",
+          "geom:num_polyvertices", "geom:trianglevertices", "geom:polyvertices", "scene:time", "scene:frame"};
+        if (known.count(name)) return true;
+        bool present = false;
+        for (Geometry *geometry : scene->geometry) {
+          if (geometry->geometry_type != Geometry::MESH) continue;
+          const auto &shaders = geometry->get_used_shaders();
+          if (std::find(shaders.begin(), shaders.end(), shader) == shaders.end()) continue;
+          if (!static_cast<Mesh *>(geometry)->attributes.find(ustring(name))) return false;
+          present = true;
+        }
+        return present;
+      };
+      const auto attributes = names("num_attributes_needed", "attributes_needed");
+      OSL::ustring *scopes = nullptr;
+      require(ss->getattribute(group, "attribute_scopes", OSL::TypeDesc::PTR, &scopes) &&
+                  (attributes.empty() || scopes), "unavailable attribute scope query");
+      for (size_t i = 0; i < attributes.size(); ++i) {
+        const string name = attributes[i].string();
+        require(scopes[i].empty() && name.rfind("path:", 0) != 0 && stable_attribute(name),
+                "disallowed attribute '" + name + "'");
+      }
+      for (const auto &name : names("num_userdata", "userdata_names"))
+        require(stable_attribute(name.string()), "unknown userdata '" + name.string() + "'");
+      static const std::set<string> globals = {"P", "I", "N", "Ng", "u", "v", "dPdu", "dPdv",
+        "time", "dtime", "dPdx", "dPdy", "dIdx", "dIdy", "Ci", "surfacearea", "backfacing", "flipHandedness"};
+      for (const auto &name : names("num_globals_needed", "globals_needed"))
+        require(globals.count(name.string()), "unsupported global '" + name.string() + "'");
+      require(!integer("unknown_closures_needed"), "unknown closure types are unsupported");
+      size_t component_size = sizeof(OSLClosureComponent), alignment = alignof(OSLClosureComponent);
+      for (const auto &name : names("num_closures_needed", "closures_needed")) {
+        require(name != ustring("layer"), "nested closure layering is unsupported by the bounded traversal");
+        const char *closure_name = name.c_str(); int id = 0;
+        const OSL::ClosureParam *params = nullptr;
+        require(ss->query_closure(&closure_name, &id, &params) && params, "unknown closure '" + name.string() + "'");
+        while (params->type != OSL::TypeDesc()) ++params;
+        require(params->offset >= 0 && params->field_size > 0, "invalid closure layout");
+        component_size = std::max(component_size, sizeof(OSLClosureComponent) + size_t(params->offset));
+        alignment = std::max(alignment, size_t(params->field_size));
+      }
+      const deep::OSLFeatures &f = shader->deep_osl_features;
+      require(f.unsupported.empty(), "unsupported operation '" + f.unsupported + "'");
+      require(!f.loop || !(f.components || f.muls || f.adds), "cannot bound closure-building loops");
+      require(f.adds < 16, "closure traversal exceeds the existing 16-entry stack");
+      /* Every component/mul/add executes at most once (branches count both
+       * sides). Charge alignment-1 to EVERY allocation, including the first.
+       * Optimization may remove allocations, never increase this upper bound. */
+      require(f.components <= 1024 && f.muls <= 1024 && f.adds <= 1024, "closure arena capacity exceeded");
+      /* Weighted-closure folding may replace a mul with a component. Charge
+       * the largest registered component/operator to every closure operation. */
+      component_size = std::max(component_size, std::max(sizeof(OSLClosureMul), sizeof(OSLClosureAdd)));
+      alignment = std::max(alignment, std::max(alignof(OSLClosureMul), alignof(OSLClosureAdd)));
+      const size_t bytes = (f.components + f.muls + f.adds) * (component_size + alignment - 1);
+      require(bytes <= 1024, "closure allocation bound " + std::to_string(bytes) + " exceeds the existing 1024-byte GPU arena");
+    }
+  });
+#else
+  require_deep(scene->params.shadingsystem != SHADINGSYSTEM_OSL, "OSL support was not built");
+#endif
 }
 
 CCL_NAMESPACE_END

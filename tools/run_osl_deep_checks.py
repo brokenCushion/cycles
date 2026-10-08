@@ -130,13 +130,16 @@ def main():
                         cross = max(abs(flattened_transmittance(pixel(image,x,y))-
                                         flattened_transmittance(pixel(cpu,x,y)))
                                     for y in range(alpha.shape[0]) for x in range(alpha.shape[1]))
-                        if cross > 1e-4:
-                            raise ValueError('OSL cross-backend flattened alpha gate failed: '+str(cross))
                         value['cpu_flattened_alpha_difference'] = cross
                     value['exr_bytes'] = (directory/'scene.deep.exr').stat().st_size
                     result['cases'][device+'/'+case['name']+'/'+mode] = value
                     save()
+                    if device == 'OPTIX' and cross > 1e-4:
+                        raise ValueError('OSL cross-backend flattened alpha gate failed: '+str(cross))
         result['passed'] = True
+    except Exception as error:
+        result['error'] = str(error)
+        raise
     finally:
         result['seconds'] = time.monotonic()-start
         save()

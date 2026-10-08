@@ -4,7 +4,7 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) remain mandatory.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0-7 accepted.
 
-**Phase 8a complete; awaiting acceptance review.** OptiX SVM, including native
+**Phase 8a accepted.** OptiX SVM, including native
 AO/Bevel outside opacity dependencies, is qualified alongside CPU/CUDA.
 [Toolchain](BUILDING.md): clang-cl 20.1.8 / NVCC 12.8.61, CUDA 12.8.0,
 OptiX 8.0.0. Independent oracles/depth cuts and CUDA/OptiX beauty policy pass.
@@ -15,6 +15,14 @@ Cross build/backend flattened alpha <=1e-4; other cross differences informationa
 [Results](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json).
 
 Connected Gaffer review: `D:/CyclesDeepScratch/regression-tools/phase8a_review.gfr`.
-Large evidence/TEMP stay on D:. Phase 8b/8c/9 remain unlaunched.
+Large evidence/TEMP stay on D:.
+
+**Phase 8b implemented, qualification stopped at an acceptance failure.**
+The texture fixture differs between CPU/OptiX by 9.01609e-4, exceeding the
+1e-4 cross-backend gate. Pristine Blender reproduces it; each backend's deep
+alpha matches its own native alpha within 9.8e-8. No gates were changed.
+[Measured blocker](builds/validation/landscape-cloud/optimization-phase8b/blocker.json).
+Remaining shader/rejection checks, identity/regression replay, performance
+measurements and Gaffer review are pending. Phase 8c/9 remain unlaunched.
 [M8 release](src/deep/M8_RELEASE_VALIDATION.md),
 [archived reports](src/deep/ARCHIVED_REPORTS.md), [regression](src/deep/README.md).

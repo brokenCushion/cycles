@@ -1914,7 +1914,7 @@ old references remain unchanged. [Promotion](builds/validation/landscape-cloud/o
 Connected review: `D:/CyclesDeepScratch/regression-tools/phase8a_review.gfr`.
 Phase 8a accepted by the user on 2026-10-09. Phase 8b is in progress; 8c/9 remain unlaunched.
 
-### Phase 8b baseline (implementation in progress)
+### Phase 8b: stopped at texture cross-backend acceptance
 
 [Fixed-case before measurements](builds/validation/landscape-cloud/optimization-phase8b/baseline.json)
 cover 18 CUDA/OptiX case/mode combinations using the accepted 8a executable.
@@ -1924,3 +1924,29 @@ userdata and closure names. Cached OSO operation metadata supplements the
 missing trace query and bounds the unchanged 1024-byte arena/16-entry stack.
 Closure-building loops and unprovable allocations fail explicitly. Deep's
 pipeline reuses OSL's original callables/SBT; beauty's pipeline is unchanged.
+
+
+Renderer `32cd52c1a` implements optimized-group OSL preflight and the separate
+OptiX deep OSL program using existing native callables. It fixes the deep-only
+program-group gap before OSL callables without changing beauty shader sources.
+[Partial checks](builds/validation/landscape-cloud/optimization-phase8b/osl-surfaces.json)
+and [blocker evidence](builds/validation/landscape-cloud/optimization-phase8b/blocker.json).
+Constant transparency passes both devices in all three modes; CPU texture
+passes all three. OptiX strict texture passes its own oracle, native alpha,
+20-control beauty policy and same-build identity, but fails cross-backend alpha.
+
+| Case | Metric | Before (pristine Blender) | After (8b) | Commit |
+| --- | --- | --- | --- | --- |
+| texture 33x17x4 | CPU/OptiX maximum flattened alpha difference | 0.000901579857 (native deep-off) | 0.000901608817 (deep); FAIL <=1e-4 gate | `32cd52c1a` |
+| texture 33x17x4 CPU | Deep vs own native alpha | unavailable | 9.75338e-8; PASS 1e-6 header bound | `32cd52c1a` |
+| texture 33x17x4 OptiX | Deep vs own native alpha | unavailable | 9.43985e-8; PASS 1e-6 header bound | `32cd52c1a` |
+
+Pristine revision 749518deb, identical toolchain and fixture, reproduces the
+failure at (14,9): CPU alpha 0.3420817852, OptiX 0.3411802053. Pristine vs
+patched deep-off alpha differs by 0 on CPU and <=5.96046e-8 on OptiX.
+Both native image paths ignore the shader interpolation option; the precise
+native backend difference is not yet attributed. No gate, fixture or beauty
+implementation was changed to pass. Pending: remaining OSL/rejection fixtures,
+SVM 81/81 + 30/30 + OptiX 65/65, final regression/beauty replay, after timings
+and Gaffer review. Also reject the native @ao texture hook alongside @bevel
+before qualification; it performs ray tracing. 8c/9 remain unlaunched.

@@ -1,0 +1,74 @@
+{
+  "passed": false,
+  "renderer_commit": "32cd52c1a",
+  "renderer_sha256": "ae6529de31be9c6bff0d1b9dfb07e45672db763757475e1f4a3b4dab1743920b",
+  "pristine_revision": "749518deb2f0735a22361a07488b35f7ea5c2fdf",
+  "pristine_sha256": "a65a724dad67b89da8597f4ce6f6bbdf3e9bcd5bbb7fa04eaa65c39feff2b681",
+  "case": "texture 33x17x4",
+  "worst_pixel": [
+    14,
+    9
+  ],
+  "pristine_native_alpha_difference": 0.0009015798568725586,
+  "pristine_cpu_alpha": 0.34208178520202637,
+  "pristine_optix_alpha": 0.3411802053451538,
+  "cross_flattened_alpha_limit": 0.0001,
+  "deep_cross_flattened_alpha_difference": 0.0009016088173257053,
+  "native_alpha_error": {
+    "CPU": 9.753382801402921e-08,
+    "OPTIX": 9.439848902559334e-08
+  },
+  "header_bound": 1e-06,
+  "own_gates": {
+    "CPU": {
+      "oracle": {
+        "passed": true,
+        "deep_error": 1e-06,
+        "max_accepted_camera_error": 2.2230868201855714e-08,
+        "accepted_camera_probes": 810,
+        "accepted_camera_pixels": 81
+      },
+      "beauty_passed": true,
+      "identity": {
+        "passed": true,
+        "before": "e85b23a0798eaceb50a94adb8dd3453c78aafbc229312567009aa3907768c9c5",
+        "after": "e85b23a0798eaceb50a94adb8dd3453c78aafbc229312567009aa3907768c9c5",
+        "changed_deterministic_attributes": [],
+        "changed_run_metadata": []
+      }
+    },
+    "OPTIX": {
+      "oracle": {
+        "passed": true,
+        "deep_error": 1e-06,
+        "max_accepted_camera_error": 1.6147525094822868e-08,
+        "accepted_camera_probes": 810,
+        "accepted_camera_pixels": 81
+      },
+      "beauty_passed": true,
+      "identity": {
+        "passed": true,
+        "before": "1110d3b6e838b84acac0aed5512bd5ae600f046c771df32f71745c57ea525e58",
+        "after": "1110d3b6e838b84acac0aed5512bd5ae600f046c771df32f71745c57ea525e58",
+        "changed_deterministic_attributes": [],
+        "changed_run_metadata": []
+      }
+    }
+  },
+  "pristine_vs_patched_deep_off": {
+    "CPU": 0.0,
+    "OPTIX": 5.960464477539063e-08
+  },
+  "evidence": "D:\\CyclesDeepScratch\\optimization-phase8b",
+  "pending": [
+    "noise/camera/mixed fixtures",
+    "atomic rejection fixtures",
+    "SVM 81/81 + 30/30 + OptiX 65/65 replay",
+    "full CUDA/OptiX beauty + regression replay",
+    "fixed-case after measurements",
+    "connected Gaffer review"
+  ],
+  "diagnosis": "Native CPU/OptiX texture evaluation already differs in pristine Blender. Exact source of native difference not established; changing beauty evaluation or raising the gate is outside this phase.",
+  "recorded_osl_cases": 10,
+  "passed_osl_cases": 9
+}

@@ -45,12 +45,11 @@ def main():
     parser.add_argument('--keep',action='store_true',help='Keep the owned D: run folder after PASS')
     parser.add_argument('--optix',action='store_true',help='Also qualify OptiX SVM matrices and boundaries')
     parser.add_argument('--toolchain-audit',action='store_true',help='Audit the approved one-time compiler change; stage new references only, not GPU qualification')
-    parser.add_argument('--resume-audit',type=Path,help='Resume a retained compiler audit results.json without repeating completed renders')
+    parser.add_argument('--resume-audit','--resume',type=Path,help='Resume retained results.json without repeating completed renders')
     parser.add_argument('--cuda-beauty',type=Path,help='Optional separate calibrated CUDA beauty stage configuration')
     args=parser.parse_args();os.chdir(REPO)
     if args.toolchain_audit and (args.optix or args.cuda_beauty):
         parser.error('Toolchain audit is separate from OptiX/GPU beauty qualification')
-    if args.resume_audit and not args.toolchain_audit:parser.error('--resume-audit requires --toolchain-audit')
     if args.toolchain_audit:args.keep=True
     settings=json.loads(args.config.read_text());source_baseline=settings.pop('source_baseline')
     config={k:Path(v).resolve() for k,v in settings.items()}
@@ -59,7 +58,7 @@ def main():
     run_id=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex[:8]
     previous=json.loads(args.resume_audit.read_text()) if args.resume_audit else None
     if previous:
-        if not previous.get('toolchain_audit'):raise ValueError('Not a retained compiler audit')
+        if bool(previous.get('toolchain_audit'))!=args.toolchain_audit:raise ValueError('Retained run uses a different audit mode')
         root=Path(previous['root']);run_id=previous['run_id']
         if root.resolve().parent!=SCRATCH.resolve() or root.is_junction():raise ValueError('Foreign audit workspace')
         report_dir=args.resume_audit.resolve().parent
@@ -154,8 +153,8 @@ def main():
                 error=curve_error(left,right)
                 if error>maximum:maximum,worst=error,[x,y]
                 combined=max(combined,abs(flattened_transmittance(left)-flattened_transmittance(right)))
-        value=dict(passed=maximum<=bound(b),max_curve_error=maximum,
-                   max_combined_alpha_error=combined,bound=bound(b),worst_pixel=worst)
+        value=dict(passed=bool(maximum<=bound(b)),max_curve_error=float(maximum),
+                   max_combined_alpha_error=float(combined),bound=bound(b),worst_pixel=worst)
         (optix/'backend-comparison.json').write_text(json.dumps(value,indent=2))
         if not value['passed']:raise ValueError('OptiX/CUDA alpha exceeds header bound: '+str(value))
         return value

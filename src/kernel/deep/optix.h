@@ -17,6 +17,7 @@ struct KernelDeepParamsOptiX {
   const KernelDeepRange *ranges;
   int tile_count, media_count, sample_limit;
 };
+static_assert(sizeof(KernelDeepParamsOptiX) == 104, "OptiX deep launch ABI must match host/device");
 
 /* First 24 SBT records are the unmodified native hit groups. */
 constexpr int DEEP_OPTIX_ALL_HIT_OFFSET = 24;

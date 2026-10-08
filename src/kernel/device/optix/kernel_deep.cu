@@ -6,6 +6,8 @@
 #include "kernel/tables.h"
 #include "kernel/integrator/init_from_camera.h"
 #include "kernel/integrator/shade_surface.h"
+#include "kernel/integrator/volume_shader.h"
+#include "kernel/device/gpu/work_stealing.h"
 #include "kernel/film/read.h"
 #include "kernel/deep/surface_cuda.h"
 

@@ -1798,8 +1798,45 @@ Each archive has a decompressed SHA256/size verification record before replaceme
 
 Results and inventory: `builds/validation/landscape-cloud/optimization-phase7/`.
 Passing run intermediates removed from its owned D: directory; `--keep` preserves
-them. Failed harness-development evidence stays on D:. Fourteen validation reports
+them. Failed harness-development evidence stays on D:. Thirteen archived validation reports
 listed in [the archive index](src/deep/ARCHIVED_REPORTS.md); the approved
-[M8 record](src/deep/M8_RELEASE_VALIDATION.md) is retained. README lists all 53 core files plus Blender
+[M8 record](src/deep/M8_RELEASE_VALIDATION.md) is retained. README lists all 59 current core files plus Blender
 overlay plumbing. Connected review: `D:/CyclesDeepScratch/regression-tools/phase7_review.gfr`.
-Phase 7 accepted; proceed to Phase 8a. Full-resolution Phase 9 remains unlaunched.
+Phase 7 accepted. Phase 8a stopped at the native OptiX linker failure below.
+Full-resolution Phase 9 remains unlaunched.
+
+
+### Phase 8a results (stopped)
+
+Implementation `0b55e8567`: separate OptiX SVM module/pipeline/SBT and per-queue
+launch snapshot; shared capture, exact double volume/grid integration. Before
+regression: 600.25 s, 81/81 strict + 30/30 numeric identity. Full counters,
+fitting breakdown and sampled memory: [baseline](builds/validation/landscape-cloud/optimization-phase8a/before.json).
+
+| Case | Metric | Before | After | Commit |
+| --- | --- | --- | --- | --- |
+| 47x20/16 strict | Render+capture / export s; samples; EXR bytes | 2.835 / 8.046; 561,793; 4,445,714 | Not measured: qualification stopped | `0b55e8567` |
+| 47x20/16 1e-4 | Same metrics | 1.789 / 3.757; 88,699; 609,496 | Not measured | `0b55e8567` |
+| 47x20/16 1e-3 | Same metrics | 1.786 / 3.537; 53,113; 357,145 | Not measured | `0b55e8567` |
+| 587x250/4 strict | Same metrics | 33.950 / 33.692; 52,189,081; 394,273,944 | Not measured | `0b55e8567` |
+| 587x250/4 1e-4 | Same metrics | 11.626 / 3.805; 6,813,973; 59,210,585 | Not measured | `0b55e8567` |
+| 587x250/4 1e-3 | Same metrics | 11.871 / 2.142; 3,076,802; 22,398,061 | Not measured | `0b55e8567` |
+| 33x17/4 volume, 1e-3 | OptiX vs CUDA whole-curve error; oracle error | CUDA reference | 0; 0.000159669 <= header 0.0010000000475 | `0b55e8567` |
+| Same probe | Render+capture / export s; samples; EXR bytes | Not timed as a before case | 0.236609 / 0.095553; 3,452; 32,845 (startup/JIT excluded) | `0b55e8567` |
+| Nine CTests / common CUDA resources / beauty sources | Proof | 9 / 75 / source hash PASS | 9 PASS (16.13 s); 75 unchanged; same source hash | `0b55e8567` |
+| Landscape OptiX deep-off | Native shader-raytrace pipeline | No qualified OptiX baseline | Link failure also with all deep OptiX host blocks disabled | `0b55e8567` |
+
+Native OptiX linking fails with duplicate visible functions (`sqrtf`, RGBE,
+packed-normal and state constructors) on Windows/CUDA 12.8/OptiX 9.0. The
+diagnostic-only executable removes all four OptiX host deep blocks; the same
+native beauty shader pipeline fails. Generated files were restored byte-for-byte;
+no diagnostic change entered Git or the ordinary reference pool. No beauty
+source, compiler flag or acceptance threshold changed to bypass this failure.
+
+The probe's saved raw EXR contains Combined RGBA only, so the beauty validator
+correctly rejects missing counts/denoiser inputs. An explicit pass-registration
+refresh did not restore them and was reverted; it preserved deep byte identity.
+Full matrices, boundaries, fresh identity, GPU beauty, after measurements and
+Gaffer qualification remain pending. No speedup or Phase 8a acceptance claimed.
+[Measured evidence](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json);
+large evidence and TEMP: `D:/CyclesDeepScratch/optimization-phase8a/`.

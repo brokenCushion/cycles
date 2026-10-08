@@ -32,7 +32,8 @@ stage (JSON `targets`: run-relative case, references, pool, seed_references,
 snapshot_off/on/build). It applies the unchanged policy in the plan.
 `--optix` adds native SVM OptiX matrices, boundaries and fixed landscapes;
 the beauty stage accepts independently matched controls for each GPU backend.
-OptiX capture uses its own module, pipeline, shader table and queue arguments.
+The unqualified Phase 8a OptiX implementation uses its own module, pipeline,
+shader table and queue arguments.
 It shares capture/reconstruction with CUDA; beauty's shaders and launch layout
 remain unchanged. Native grids retain double integration; volume bounds use
 the exact triangle scan because OptiX has no CUDA BVH2 nodes.

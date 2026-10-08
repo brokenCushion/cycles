@@ -22,6 +22,13 @@ class OptiXDeviceQueue : public CUDADeviceQueue {
   bool enqueue(DeviceKernel kernel,
                const int work_size,
                const DeviceKernelArguments &args) override;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  ~OptiXDeviceQueue() override;
+
+ private:
+  unique_ptr<device_only_memory<uint8_t>> deep_launch_params_;
+  bool enqueue_deep(const int work_size, const DeviceKernelArguments &args);
+#endif
 };
 
 CCL_NAMESPACE_END

@@ -23,7 +23,7 @@ parser.add_argument('--percentage', type=int, default=25)
 parser.add_argument('--threads', type=int, default=8)
 parser.add_argument('--deep', action='store_true')
 parser.add_argument('--deep-volume', action='store_true')
-parser.add_argument('--device', choices=('CPU', 'CUDA'), default='CPU')
+parser.add_argument('--device', choices=('CPU', 'CUDA', 'OPTIX'), default='CPU')
 parser.add_argument('--deep-max-events', type=int, default=16)
 parser.add_argument('--deep-memory-mb', type=int, default=512)
 parser.add_argument('--deep-ids', action='store_true')
@@ -72,16 +72,16 @@ if args.seed is not None:
 source_hash = hashlib.sha256(Path(bpy.data.filepath).read_bytes()).hexdigest()
 scene.render.engine = 'CYCLES'
 scene.cycles.device = 'CPU'
-if args.device == 'CUDA':
+if args.device != 'CPU':
     preferences = bpy.context.preferences.addons['cycles'].preferences
-    preferences.compute_device_type = 'CUDA'
+    preferences.compute_device_type = args.device
     preferences.refresh_devices()
-    candidates = [device for device in preferences.devices if device.type == 'CUDA']
+    candidates = [device for device in preferences.devices if device.type == args.device]
     if not candidates:
-        raise RuntimeError('No CUDA render device available')
+        raise RuntimeError('No '+args.device+' render device available')
     selected_id = candidates[0].id
     for device in preferences.devices:
-        device.use = device.type == 'CUDA' and device.id == selected_id
+        device.use = device.type == args.device and device.id == selected_id
     scene.cycles.device = 'GPU'
 scene.cycles.samples = args.samples
 scene.render.threads_mode = 'FIXED'

@@ -3,6 +3,9 @@
 #include "kernel/deep/write.h"
 #include "kernel/deep/volume_boundary.h"
 #include "kernel/deep/volume_native.h"
+#ifdef __KERNEL_OPTIX__
+#  include "kernel/deep/volume_optix.h"
+#endif
 
 CCL_NAMESPACE_BEGIN
 
@@ -122,7 +125,7 @@ ccl_device_inline void deep_volume_candidate(
   nearest = t; near_u = u; near_v = v; near_prim = prim; back = candidate_back;
 }
 
-#ifdef __KERNEL_CUDA__
+#if defined(__KERNEL_CUDA__) && !defined(__KERNEL_OPTIX__)
 /* Reuse the native BVH2 object root and leaf mapping, without FLOAT triangle
  * filtering. Non-aligned nodes are visited conservatively. No hit array or
  * candidate limit: refine every visited triangle; stack overflow fails. */
@@ -234,7 +237,7 @@ ccl_device KernelDeepResult deep_volume_object(
     double nearest = double(FLT_MAX), near_u = 0, near_v = 0;
     int near_prim = -1;
     bool back = false;
-#ifdef __KERNEL_CUDA__
+#if defined(__KERNEL_CUDA__) && !defined(__KERNEL_OPTIX__)
     if (size > 32) {
       if (!deep_volume_nearest_bvh(kg, object, origin, direction, cursor, cursor_prim,
                                    nearest, near_u, near_v, near_prim, back))
@@ -243,7 +246,9 @@ ccl_device KernelDeepResult deep_volume_object(
     else
 #endif
     {
-      /* Small bounds and CPU/other backends retain the exact reference scan. */
+      /* Small bounds and CPU/OptiX retain the exact reference scan.
+       * OptiX has no BVH2 nodes; RT cores discover objects, while this scan
+       * preserves grazing double-precision crossings without FLOAT filtering. */
       for (int i = 0; i < size; ++i)
         deep_volume_candidate(kg, object, first + i, origin, direction, cursor, cursor_prim,
                               nearest, near_u, near_v, near_prim, back);

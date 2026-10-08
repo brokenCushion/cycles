@@ -92,8 +92,7 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
   }
 }
 
-ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
-    ccl_gpu_kernel_signature(deep_surface,
+ccl_device void deep_surface_kernel(const int index,
                              const ccl_global KernelWorkTile *tiles,
                              const int tile_index,
                              const int offset,
@@ -111,7 +110,6 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
                              const int media_count,
                              const int sample_limit)
 {
-  const int index = ccl_gpu_global_id_x();
   if (index >= count)
     return;
   int selected_tile = tile_index;
@@ -196,4 +194,29 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
   INTEGRATOR_STATE_WRITE(state, path, rng_offset) = rng_offset;
   INTEGRATOR_STATE_WRITE(state, path, transparent_bounce) = transparent_bounce;
 }
+#ifndef __KERNEL_OPTIX__
+ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
+    ccl_gpu_kernel_signature(deep_surface,
+                             const ccl_global KernelWorkTile *tiles,
+                             const int tile_index,
+                             const int offset,
+                             const int count,
+                             const int max_events,
+                             const int event_stride,
+                             ccl_global float *render_buffer,
+                             ccl_global KernelDeepRecord *records,
+                             ccl_global KernelDeepEvent *events,
+                             ccl_global KernelDeepMedium *media,
+                             ccl_global KernelDeepDensity *density,
+                             const float eps_ray,
+                             const ccl_global KernelDeepRange *ranges,
+                             const int tile_count,
+                             const int media_count,
+                             const int sample_limit)
+{
+  deep_surface_kernel(ccl_gpu_global_id_x(), tiles, tile_index, offset, count,
+      max_events, event_stride, render_buffer, records, events, media, density,
+      eps_ray, ranges, tile_count, media_count, sample_limit);
+}
 ccl_gpu_kernel_postfix
+#endif

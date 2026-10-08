@@ -271,6 +271,8 @@ set(SRC_KERNEL_DEEP_HEADERS
   deep/types.h
   deep/write.h
   deep/surface_cuda.h
+  deep/volume_optix.h
+  deep/optix.h
 )
 
 set(SRC_KERNEL_HEADERS

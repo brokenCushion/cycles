@@ -9,6 +9,9 @@
 
 #  define __KERNEL_OPTIX__
 #  include "kernel/device/optix/globals.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "kernel/deep/optix.h"
+#endif
 
 CCL_NAMESPACE_BEGIN
 
@@ -44,6 +47,10 @@ bool OptiXDeviceQueue::enqueue(DeviceKernel kernel,
                                const DeviceKernelArguments &args)
 {
   OptiXDevice *const optix_device = static_cast<OptiXDevice *>(cuda_device_);
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (kernel == DEVICE_KERNEL_DEEP_SURFACE)
+    return enqueue_deep(work_size, args);
+#endif
 
 #  ifdef WITH_OSL
   const OSLGlobals *og = static_cast<const OSLGlobals *>(optix_device->get_cpu_osl_memory());
@@ -226,6 +233,81 @@ bool OptiXDeviceQueue::enqueue(DeviceKernel kernel,
   return !(optix_device->have_error());
 }
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+OptiXDeviceQueue::~OptiXDeviceQueue()
+{
+  if (deep_launch_params_)
+    synchronize();
+}
+
+bool OptiXDeviceQueue::enqueue_deep(const int work_size, const DeviceKernelArguments &args)
+{
+  OptiXDevice *device = static_cast<OptiXDevice *>(cuda_device_);
+  if (device->have_error())
+    return false;
+  const CUDAContextScope scope(device);
+  KernelDeepParamsOptiX params{};
+  const size_t offsets[] = {
+    offsetof(KernelDeepParamsOptiX, tiles), offsetof(KernelDeepParamsOptiX, tile_index),
+    offsetof(KernelDeepParamsOptiX, offset), offsetof(KernelDeepParamsOptiX, count),
+    offsetof(KernelDeepParamsOptiX, max_events), offsetof(KernelDeepParamsOptiX, event_stride),
+    offsetof(KernelDeepParamsOptiX, render_buffer), offsetof(KernelDeepParamsOptiX, records),
+    offsetof(KernelDeepParamsOptiX, events), offsetof(KernelDeepParamsOptiX, media),
+    offsetof(KernelDeepParamsOptiX, density), offsetof(KernelDeepParamsOptiX, eps_ray),
+    offsetof(KernelDeepParamsOptiX, ranges), offsetof(KernelDeepParamsOptiX, tile_count),
+    offsetof(KernelDeepParamsOptiX, media_count), offsetof(KernelDeepParamsOptiX, sample_limit)};
+  const DeviceKernelArguments::Type types[] = {
+    DeviceKernelArguments::POINTER, DeviceKernelArguments::INT32,
+    DeviceKernelArguments::INT32, DeviceKernelArguments::INT32,
+    DeviceKernelArguments::INT32, DeviceKernelArguments::INT32,
+    DeviceKernelArguments::POINTER, DeviceKernelArguments::POINTER,
+    DeviceKernelArguments::POINTER, DeviceKernelArguments::POINTER,
+    DeviceKernelArguments::POINTER, DeviceKernelArguments::FLOAT32,
+    DeviceKernelArguments::POINTER, DeviceKernelArguments::INT32,
+    DeviceKernelArguments::INT32, DeviceKernelArguments::INT32};
+  if (args.count != 16) {
+    device->set_error("Invalid OptiX deep argument count");
+    return false;
+  }
+  for (size_t i = 0; i < args.count; ++i) {
+    const size_t bytes = types[i] == DeviceKernelArguments::POINTER ? sizeof(device_ptr) : 4;
+    if (args.types[i] != types[i] || args.sizes[i] != bytes) {
+      device->set_error("Invalid OptiX deep argument layout");
+      return false;
+    }
+    memcpy(reinterpret_cast<char *>(&params) + offsets[i], args.values[i], bytes);
+  }
+  if (!deep_launch_params_) {
+    deep_launch_params_ = make_unique<device_only_memory<uint8_t>>(device, "deep_optix_params");
+    deep_launch_params_->alloc_to_device(sizeof(KernelParamsOptiX) + sizeof(params));
+    if (device->have_error())
+      return false;
+  }
+  const device_ptr launch = deep_launch_params_->device_pointer;
+  const device_ptr arguments = launch + sizeof(KernelParamsOptiX);
+  /* Each capture/readback queue owns its snapshot. Overlapping batches must
+   * never overwrite beauty's launch parameters or another queue's arguments. */
+  cuda_device_assert(device, cuMemcpyDtoDAsync(launch, device->launch_params.device_pointer,
+                                             sizeof(KernelParamsOptiX), cuda_stream_));
+  cuda_device_assert(device, cuMemcpyHtoDAsync(arguments, &params, sizeof(params), cuda_stream_));
+  cuda_device_assert(device, cuMemcpyHtoDAsync(launch + offsetof(KernelParamsOptiX, path_index_array),
+                                             &arguments, sizeof(arguments), cuda_stream_));
+  OptixShaderBindingTable sbt = {};
+  const device_ptr records = device->sbt_data.device_pointer;
+  sbt.raygenRecord = records + PG_RGEN_DEEP_SURFACE * sizeof(SbtRecord);
+  sbt.missRecordBase = records + PG_MISS_DEEP * sizeof(SbtRecord);
+  sbt.missRecordStrideInBytes = sizeof(SbtRecord);
+  sbt.missRecordCount = 1;
+  sbt.hitgroupRecordBase = device->deep_sbt_data->device_pointer;
+  sbt.hitgroupRecordStrideInBytes = sizeof(SbtRecord);
+  sbt.hitgroupRecordCount = NUM_HIT_PROGRAM_GROUPS + 1;
+  debug_enqueue_begin(DEVICE_KERNEL_DEEP_SURFACE, work_size);
+  optix_device_assert(device, optixLaunch(device->deep_pipeline, cuda_stream_, launch,
+                                         sizeof(KernelParamsOptiX), &sbt, work_size, 1, 1));
+  debug_enqueue_end();
+  return !device->have_error();
+}
+#endif
 CCL_NAMESPACE_END
 
 #endif /* WITH_OPTIX */

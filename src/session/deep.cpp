@@ -446,19 +446,21 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
   }
   require_deep(params.deep.memory_bytes > 0, "working memory budget must be positive");
   if (volume) {
-    require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA) &&
+    require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA ||
+                  params.device.type == DEVICE_OPTIX) &&
                      scene->params.shadingsystem == SHADINGSYSTEM_SVM,
-                 "M8 volumes require CPU or CUDA native SVM");
+                 "deep volumes require CPU, CUDA or OptiX native SVM");
     require_deep(!scene->integrator->get_motion_blur() &&
                      scene->camera->get_aperturesize() == 0 && scene->camera->get_nearclip() > 0,
                  "deep volumes require static pinhole camera and positive near clip");
   }
-  require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA) &&
+  require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA ||
+                  params.device.type == DEVICE_OPTIX) &&
                    params.background,
-               "requires single CPU or CUDA background rendering");
+               "requires single CPU, CUDA or OptiX background rendering");
   require_deep(params.device.type == DEVICE_CPU ||
                    scene->params.shadingsystem == SHADINGSYSTEM_SVM,
-               "CUDA deep supports native SVM only; GPU OSL is not qualified");
+               "GPU deep supports native SVM only; GPU OSL is not qualified");
   require_deep(transparent || scene->params.shadingsystem == SHADINGSYSTEM_SVM,
                "OSL is not supported by the M3 material allowlist");
   require_deep(params.samples > 0 && params.samples <= 4096 && !params.use_sample_subset &&

@@ -26,6 +26,9 @@
 
 #  define __KERNEL_OPTIX__
 #  include "kernel/device/optix/globals.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "kernel/deep/optix.h"
+#endif
 
 CCL_NAMESPACE_BEGIN
 
@@ -124,6 +127,17 @@ OptiXDevice::~OptiXDevice()
       optixModuleDestroy(builtin_modules[i]);
     }
   }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  deep_sbt_data.reset();
+  if (deep_pipeline) {
+    optixPipelineDestroy(deep_pipeline);
+    deep_pipeline = nullptr;
+  }
+  if (deep_module) {
+    optixModuleDestroy(deep_module);
+    deep_module = nullptr;
+  }
+#endif
   for (int i = 0; i < NUM_PIPELINES; ++i) {
     if (pipelines[i] != nullptr) {
       optixPipelineDestroy(pipelines[i]);
@@ -331,6 +345,17 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
       builtin_modules[i] = nullptr;
     }
   }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  deep_sbt_data.reset();
+  if (deep_pipeline) {
+    optixPipelineDestroy(deep_pipeline);
+    deep_pipeline = nullptr;
+  }
+  if (deep_module) {
+    optixModuleDestroy(deep_module);
+    deep_module = nullptr;
+  }
+#endif
   for (int i = 0; i < NUM_PIPELINES; ++i) {
     if (pipelines[i] != nullptr) {
       optixPipelineDestroy(pipelines[i]);
@@ -476,6 +501,12 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
     }
 #  endif
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    string deep_ptx_data;
+    if (!load_optional_module("kernel_optix_deep", deep_ptx_data))
+      return false;
+    OptixResult deep_result = OPTIX_SUCCESS;
+#endif
     TaskPool pool;
     OptixResult base_result = OPTIX_SUCCESS;
     OptixResult mnee_result = OPTIX_SUCCESS;
@@ -486,6 +517,9 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
 #  endif
 
     create_optix_module(pool, module_options, base_ptx_data, optix_module, base_result);
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    create_optix_module(pool, module_options, deep_ptx_data, deep_module, deep_result);
+#endif
     if (use_mnee) {
       create_optix_module(pool, module_options, mnee_ptx_data, mnee_module, mnee_result);
     }
@@ -508,6 +542,12 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
 #  endif
     pool.wait_work();
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    if (deep_result != OPTIX_SUCCESS) {
+      set_error(string_printf("Failed to load OptiX deep kernel (%s)", optixGetErrorName(deep_result)));
+      return false;
+    }
+#endif
     if (base_result != OPTIX_SUCCESS) {
       set_error(string_printf("Failed to load OptiX kernel from '%s' (%s)",
                               ptx_filename.c_str(),
@@ -768,6 +808,17 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
   }
 #  endif
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  group_descs[PG_RGEN_DEEP_SURFACE].kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
+  group_descs[PG_RGEN_DEEP_SURFACE].raygen.module = deep_module;
+  group_descs[PG_RGEN_DEEP_SURFACE].raygen.entryFunctionName = "__raygen__kernel_optix_deep_surface";
+  group_descs[PG_HIT_DEEP_ALL].kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+  group_descs[PG_HIT_DEEP_ALL].hitgroup.moduleAH = deep_module;
+  group_descs[PG_HIT_DEEP_ALL].hitgroup.entryFunctionNameAH = "__anyhit__kernel_optix_deep_all_hit";
+  group_descs[PG_MISS_DEEP].kind = OPTIX_PROGRAM_GROUP_KIND_MISS;
+  group_descs[PG_MISS_DEEP].miss.module = deep_module;
+  group_descs[PG_MISS_DEEP].miss.entryFunctionName = "__miss__kernel_optix_deep";
+#endif
   optix_assert(optixProgramGroupCreate(
       context, group_descs, NUM_PROGRAM_GROUPS, &group_options, nullptr, nullptr, groups));
 
@@ -906,6 +957,35 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
         pipelines[PIP_INTERSECT], 0, 0, css, pipeline_options.usesMotionBlur ? 3 : 2));
   }
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  {
+    static_assert(NUM_HIT_PROGRAM_GROUPS == DEEP_OPTIX_ALL_HIT_OFFSET);
+    vector<OptixProgramGroup> pipeline_groups = {
+      groups[PG_RGEN_DEEP_SURFACE], groups[PG_HIT_DEEP_ALL], groups[PG_MISS_DEEP]};
+    add_hit_miss_program_groups(groups, pipeline_groups);
+    optix_assert(optixPipelineCreate(context, &pipeline_options, &link_options,
+                                    pipeline_groups.data(), pipeline_groups.size(),
+                                    nullptr, nullptr, &deep_pipeline));
+    unsigned int trace_css;
+    const vector<OptixStackSizes> sizes = get_pipeline_stack_size(deep_pipeline, pipeline_groups, trace_css);
+    const unsigned int css = sizes[PG_RGEN_DEEP_SURFACE].cssRG +
+        std::max(trace_css, sizes[PG_HIT_DEEP_ALL].cssAH);
+    optix_assert(optixPipelineSetStackSize(deep_pipeline, 0, 0, css,
+                                         pipeline_options.usesMotionBlur ? 3 : 2));
+    deep_sbt_data = make_unique<device_vector<SbtRecord>>(this, "deep_optix_sbt", MEM_READ_ONLY);
+    deep_sbt_data->alloc(NUM_HIT_PROGRAM_GROUPS + 1);
+    memset(deep_sbt_data->host_pointer, 0, deep_sbt_data->memory_size());
+    for (int i = 0; i < NUM_HIT_PROGRAM_GROUPS; ++i)
+      if (groups[HIT_PROGAM_GROUP_OFFSET + i])
+        optix_assert(optixSbtRecordPackHeader(groups[HIT_PROGAM_GROUP_OFFSET + i], &(*deep_sbt_data)[i]));
+    optix_assert(optixSbtRecordPackHeader(groups[PG_HIT_DEEP_ALL], &(*deep_sbt_data)[NUM_HIT_PROGRAM_GROUPS]));
+    deep_sbt_data->copy_to_device();
+    LOG_INFO_IMPORTANT << "OptiX deep resources: raygen_stack=" << sizes[PG_RGEN_DEEP_SURFACE].cssRG
+                       << " anyhit_stack=" << sizes[PG_HIT_DEEP_ALL].cssAH
+                       << " continuation_stack=" << css
+                       << " queue_launch_bytes=" << sizeof(KernelParamsOptiX) + sizeof(KernelDeepParamsOptiX);
+  }
+#endif
   return !have_error();
 }
 

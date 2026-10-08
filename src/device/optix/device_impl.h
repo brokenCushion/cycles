@@ -74,6 +74,11 @@ enum {
   /* Callable */
   PG_CALL_SVM_AO,
   PG_CALL_SVM_BEVEL,
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  PG_RGEN_DEEP_SURFACE,
+  PG_HIT_DEEP_ALL,
+  PG_MISS_DEEP,
+#endif
 
   NUM_PROGRAM_GROUPS
 };
@@ -116,6 +121,11 @@ class OptiXDevice : public CUDADevice {
 
   device_vector<SbtRecord> sbt_data;
   device_only_memory<KernelParamsOptiX> launch_params;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  OptixModule deep_module = nullptr;
+  OptixPipeline deep_pipeline = nullptr;
+  unique_ptr<device_vector<SbtRecord>> deep_sbt_data;
+#endif
 
  private:
   OptixTraversableHandle tlas_handle = 0;

@@ -170,9 +170,9 @@ def depth_window_error(old, new, ulps):
 def toolchain_difference(before, after, mode='strict'):
     """Audit physical curves rather than pairing differently partitioned records.
 
-    Across a recorded toolchain change, only flattened alpha has a sanity bound.
+    Across different builds/toolchains/backends, flattened alpha has a sanity bound.
     Curve differences and depth windows are informational; both builds must pass
-    their own independent oracles. Fixed-toolchain identity is unchanged.
+    their own independent gates. Same-build/backend identity is unchanged.
     This comparison never replaces an independent oracle check.
     """
     import numpy as np

@@ -1135,7 +1135,6 @@ void OSLCompiler::add(ShaderNode *node, const char *name, bool isfilepath)
     }
   }
 #endif
-
   if (current_type == SHADER_TYPE_SURFACE) {
     if (info) {
       if (info->has_surface_emission && node->special_type == SHADER_SPECIAL_TYPE_OSL) {

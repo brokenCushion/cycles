@@ -173,7 +173,11 @@ if bpy.ops.render.render(write_still=True) != {'FINISHED'}:
 if args.save_render_passes:
     scene.render.image_settings.media_type = 'MULTI_LAYER_IMAGE'
     scene.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
+    # Validators read one EXR part; newer Blender defaults to one part per pass.
+    interleave = scene.render.image_settings.use_exr_interleave
+    scene.render.image_settings.use_exr_interleave = True
     bpy.data.images['Render Result'].save_render(str(directory / 'render-passes.exr'), scene=scene)
+    scene.render.image_settings.use_exr_interleave = interleave
     scene.render.image_settings.media_type = 'IMAGE'
     scene.render.image_settings.file_format = 'OPEN_EXR'
 report['seconds'] = time.monotonic()-start

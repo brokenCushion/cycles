@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Small storage/reader checks; run with the regression Python environment."""
 import hashlib
+import json
 from pathlib import Path
 import tempfile
 import zipfile
@@ -62,9 +63,11 @@ def main():
         c=write('c.exr',[(1,1,1)])
         d=write('d.exr',[(2,2,1)])
         v=toolchain_difference(c,d)
+        json.dumps(v)
         assert not v['audit_passed'] and v['max_transmittance_difference']==1
         # Numeric differences are informational; a separate oracle remains mandatory.
         v=toolchain_difference(c,d,'1e-4')
+        json.dumps(v)
         assert v['audit_passed'] and v['difference_limit'] is None and v['max_transmittance_difference']==1
     channels={}
     for name,value,dtype in [('Z',1,np.float32),('ZBack',1,np.float32),('A',1,np.float32),('id',7,np.uint32)]:

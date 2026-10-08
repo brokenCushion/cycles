@@ -83,7 +83,7 @@ matching release-style toolchain, then qualify Phase 8a before dropping the
 restriction. If no supported deep toolchain works, retain the agreed fallback:
 OptiX excludes shader-raytrace (AO/Bevel), rejects explicitly and directs to
 CUDA; Phase 9 uses CUDA. Deep builds are switched; qualification is stopped
-at the one-time toolchain audit: strict CPU surface depth steps shift by one ULP.
+at the one-time toolchain audit: strict small landscape exceeds the four-ULP envelope.
 
 ### Recorded toolchain re-baseline (user decision, 2026-10-08)
 
@@ -1883,6 +1883,10 @@ fitting breakdown and sampled memory: [baseline](builds/validation/landscape-clo
 | Corrected toolchain audit, CPU cases | Coverage / outcome | 2/111; numeric rule corrected | 25/111 checked; 24 PASS, one strict FAIL; all 25 differ in bytes; old/new own oracles and CPU beauty/raw PASS | `e123847ba`, `93048bde2` |
 | CPU surface_ao strict, 32x32/4 | Samples; cross-build T / flattened-alpha difference | 112,239 | 112,264; FAIL: 0.35744182 > 1e-6 at (14,12); flattened-alpha difference 4.75330e-7; counts change at 61 pixels (-6..8) | `786b9387b` |
 | Same strict surface case | Independent oracle max / header bound | 2.12226357e-7 / 1e-6 | 2.12207475e-7 / 1e-6; both pass 81 diagnostic pixels and depth cuts; exact same-build CPU beauty/raw | `786b9387b` |
+| CPU surface_ao strict, corrected depth-window rule | Maximum minimum integer-ULP window / residual | Unshifted comparison failed | PASS: 3 ULP over full case; residual <= 6.85291e-7; both own oracles pass | `56d289610` |
+| Depth-window toolchain audit | Identity coverage / outcome | 25/111 before correction | 106/111 checked: 105 PASS, one strict FAIL; CPU/CUDA matrices and both boundary suites pass; no baseline promoted | `56d289610` |
+| Small landscape 47x20/16 strict | Samples; four-ULP-envelope violation | 561,793 | 561,860; FAIL: max 0.05626202 > 1e-6 at (26,7); 379/940 pixels flagged; flattened-alpha difference 0 | `786b9387b` |
+| Same small strict landscape | Independent oracle max / header bound | 2.20131377e-7 / 1e-6 | 2.18971653e-7 / 1e-6; both pass own oracle/depth cuts at 81 diagnostic pixels | `786b9387b` |
 
 The earlier clean MSVC builds used CUDA 12.8.1 / NVCC 12.8.93 and runtime
 PTX; OptiX 9.0 and 8.0 both failed native `PIP_SHADE` with 11 duplicate
@@ -1939,29 +1943,33 @@ fitting: fitting/export alone cannot explain them. NVCC versus host-generated
 GPU scene/camera inputs is not isolated by this two-build comparison.
 [Raw capture report](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json).
 
-The corrected numeric rule accepts CPU adaptive_volume 1e-4. The resumed audit
-checks 25/111 cases (9 strict, 8 at each numeric setting); 24 pass. All numeric
-old/new outputs pass their own oracle/depth cuts within their header bounds;
-cross-build differences are informational. Eight strict volume cases pass the
-1e-6 cross-build ceiling (largest 6.86099e-7). Full case-by-case counts, differences
-and both oracle maxima are in the [audit report](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json).
+The corrected numeric and strict depth-window rules are applied. All 25 retained
+cases now pass, including surface_ao (maximum required integer window 3 ULP).
+The resumed audit checks 106/111 cases: 105 pass and small-strict fails.
+CPU/CUDA matrices, both all-pixel boundary suites and all numeric cases reached
+pass their own oracle/depth cuts. Full case counts, differences, required ULP
+windows and both oracle maxima are in the [audit report](builds/validation/landscape-cloud/optimization-phase8a/toolchain-audit.json).
 
-Strict surface_ao fails at (14,12): max transmittance difference 0.35744182.
-The front-surface steps move from 1436.059204/1436.059326 to
-1436.059326/1436.059448, one FLOAT ULP (0.0001220703125). At the cut
-1436.059326, reference T=0.475656764 and new T=0.833098583; after both
-steps T differs by only 6.06004e-9. A shifted discontinuity can therefore
-produce a large pointwise difference despite rounding-sized depth movement.
-Final flattened alpha differs by 4.75330e-7. This diagnosis does not waive the
-user's unchanged strict 1e-6 gate. Both own oracles/depth cuts pass on the
-81 diagnostic pixels; same-build CPU beauty/raw stay exact.
-[Surface-cut evidence](builds/validation/landscape-cloud/optimization-phase8a/strict-surface-toolchain-difference.json).
+Small-strict (47x20/16) has 379/940 pixels outside the four-ULP envelope plus
+1e-6. Maximum residual is 0.05626202 at (26,7); final flattened alpha is
+identical. Both own oracles pass, and scene/settings match across builds.
+Larger windows were measured for diagnosis only: (40,0) requires seven ULP;
+325 flagged pixels still fail at 64 ULP. The maximum required shift is therefore
+>64 ULP (diagnostic lower bound), not an accepted tolerance. At (39,8), an
+independent endpoint witness at z=897.2246704101562 has new T=0.813372318,
+outside old [0.755758452,0.812008449] for d=0.000244140625 (four ULP), by
+0.001363869. This verifies a real envelope violation without relying on the
+stationary-point calculation. Do not waive the approved gate.
+[Window diagnostic](builds/validation/landscape-cloud/optimization-phase8a/strict-landscape-depth-window.json),
+[direct cut witness](builds/validation/landscape-cloud/optimization-phase8a/strict-landscape-window-witness.json).
 
-Stopped without promoting the 24 partial candidate references in the owned
-D: audit workspace. All legacy references remain. The remaining 86 audit
-cases, identity replay, full regression, OptiX AO/Bevel, GPU beauty and speed
-comparisons remain pending. No Phase 8a acceptance or speedup claimed. The
-accepted regression config/Gaffer scene remain unchanged. Renderer code and
-fixed toolchain pairing are unchanged; only the audit harness/policy changed.
+Stopped without promoting the 105 partial candidate references in the owned
+D: audit workspace. All legacy references remain. Five audit cases, identity
+replay, full regression, OptiX AO/Bevel, GPU beauty and speed comparisons remain
+pending. AO/Bevel fixtures and their regression stage are prepared, not qualified.
+No Phase 8a acceptance or speedup claimed; accepted regression config/Gaffer
+scene and renderer/toolchain pairing remain unchanged. Only audit/fixture
+harness and documentation changed. Nine CTests, source/resource proof and
+all tested CPU beauty/raw pairs pass.
 [Measured evidence](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json);
 large evidence and TEMP stay in the D: directories named in the reports.

@@ -85,30 +85,32 @@ OptiX excludes shader-raytrace (AO/Bevel), rejects explicitly and directs to
 CUDA; Phase 9 uses CUDA. Deep builds are switched; qualification continues under the final recorded
 toolchain re-baseline policy below.
 
-### Recorded toolchain re-baseline (user decision, 2026-10-08)
+### Unified cross-comparison rule (final user decision, 2026-10-08)
 
-Byte identity detects code changes under a fixed toolchain. The recorded switch
-to clang-cl 20.1.8 / NVCC 12.8.61 (CUDA 12.8.0), matching the buildbot, triggers
-a one-time CPU/CUDA re-baseline. Keep this pairing and retain the cl.exe /
-previous NVCC references for history. This final decision replaces all previous
-cross-build curve ceilings and depth-window acceptance rules.
+Every comparison across different builds, toolchains or backends uses one rule:
+1. Each side must pass its own gates: independent oracle/depth cuts within its
+   EXR header bounds, same-build/backend beauty policy and rerun identity.
+   CPU deep-on/off beauty remains exact; CUDA/OptiX use the policy below.
+2. Maximum cross-side flattened-alpha difference must be <= 1e-4 per case.
+3. Cross-side curves, depth shifts and deep sample counts are informational.
+   Byte/curve identity applies only within the same build and backend.
 
-A compiler change can change discrete ray outcomes, including near-coincident
-surfaces closer than intersection_t_offset: at (39,8), one hit becomes two.
-Cross-build curves, sample counts and required ULP shifts are informational.
-The only cross-build sanity gate is maximum flattened-alpha difference <= 1e-4
-per case (small-strict: 0). Report all other differences without qualifying them.
+This replaces all previous cross-build/backend curve ceilings, depth-window
+acceptance rules and strict backend equality requirements. Independent bounds
+and beauty gates remain unchanged. OptiX hardware intersections compute surface
+t differently from CUDA BVH2; near-coincident hits can change discrete outcomes
+across compilers. The opaque-foreground comparison therefore passes: flattened
+alpha identical, both own oracle maxima 1.49e-8; curve/depth differences recorded.
 
-The new build must independently pass every existing gate: oracle/depth cuts
-within its EXR header bound; CPU same-build beauty exactness; the unchanged
-CUDA/OptiX beauty policy; strict-versus-strict rerun identity within this build;
-nine CTests and the regression command. Compare the 33x17 raw GPU spill before
-fitting for diagnosis, and report all 81 strict + 30 numeric cross-build cases.
-Both builds' own oracle/depth-cut evidence remains recorded. No beauty or error
-gate changes. Only after the sanity check and new-build gates pass, promote the
-separate clang-cl/NVCC-12.8.61 references and replay 81/81 + 30/30 byte identity.
-Candidate references may be staged for replay before promotion; do not replace
-the accepted default configuration until all qualification checks pass.
+The recorded clang-cl 20.1.8 / NVCC 12.8.61 (CUDA 12.8.0) pairing, matching
+the buildbot, gets separate CPU/CUDA references after its one-time audit and
+new-build qualification. Keep this pairing and retain cl.exe/previous NVCC
+references for history. Record all 81 strict + 30 numeric cross-build cases and
+the 33x17 raw-capture diagnostic. The new build must pass nine CTests and the
+regression command, including same-build identity, CPU exact beauty and the
+CUDA/OptiX beauty policy. Promote only after those gates pass, then replay
+81/81 + 30/30 identity. Candidate references may be staged for qualification;
+do not replace the accepted default configuration beforehand.
 
 ### Final CUDA/OptiX raw beauty rule (user decisions, 2026-10-08)
 

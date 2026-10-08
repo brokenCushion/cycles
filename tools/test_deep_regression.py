@@ -43,7 +43,10 @@ def main():
     assert len(tile)==size*size and list(tile[:3])==[0,1,2] and list(tile[size:size+3])==[3,4,5]
     assert image_channels({'channels':dict.fromkeys(('Layer.B','Layer.A','Layer.R','Layer.G'))})==['Layer.R','Layer.G','Layer.B','Layer.A']
     import OpenEXR
-    from compare_deep_identity import toolchain_difference, depth_window_error
+    from compare_deep_identity import toolchain_difference, depth_window_error, cross_comparison_passed
+    assert cross_comparison_passed(0) and cross_comparison_passed(1e-4)
+    assert not cross_comparison_passed(1.00001e-4)
+    assert not cross_comparison_passed(float('nan')) and not cross_comparison_passed(float('inf'))
     z=np.float32(1436);one=float(np.spacing(z))
     for amount in (1,4):
         assert depth_window_error([(float(z),float(z),.5)],[(float(z)+amount*one,float(z)+amount*one,.5)],4)<1e-14

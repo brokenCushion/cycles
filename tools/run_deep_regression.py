@@ -15,7 +15,7 @@ import sys
 import time
 import uuid
 import numpy as np
-from compare_deep_identity import compare, toolchain_difference
+from compare_deep_identity import compare, toolchain_difference, cross_comparison_passed, CROSS_ALPHA_LIMIT
 from compare_deep_ids import curve_error, name_hash
 from deep_exr import read, bound, pixel, exact_flat
 from validate_deep_render import validate, boundary_analytic
@@ -145,18 +145,21 @@ def main():
     def backend_compare(cuda,optix):
         a,b=read(cuda/'scene.deep.exr'),read(optix/'scene.deep.exr')
         h,w=b.channels()['A'].pixels.shape
-        maximum=0.;combined=0.;worst=None
+        maximum=0.;combined=0.;worst=None;totals=[0,0];count_changed=0
         from compare_deep_ids import flattened_transmittance
         for y in range(h):
             for x in range(w):
                 left,right=pixel(a,x,y),pixel(b,x,y)
+                totals[0]+=len(left);totals[1]+=len(right);count_changed+=len(left)!=len(right)
                 error=curve_error(left,right)
                 if error>maximum:maximum,worst=error,[x,y]
                 combined=max(combined,abs(flattened_transmittance(left)-flattened_transmittance(right)))
-        value=dict(passed=bool(maximum<=bound(b)),max_curve_error=float(maximum),
-                   max_combined_alpha_error=float(combined),bound=bound(b),worst_pixel=worst)
+        value=dict(passed=cross_comparison_passed(combined),max_curve_error=float(maximum),
+                   max_combined_alpha_error=float(combined),flattened_alpha_limit=CROSS_ALPHA_LIMIT,
+                   bound=bound(b),worst_pixel=worst,curve_depth_counts_informational=True,
+                   samples_before=totals[0],samples_after=totals[1],count_changed_pixels=count_changed)
         (optix/'backend-comparison.json').write_text(json.dumps(value,indent=2))
-        if not value['passed']:raise ValueError('OptiX/CUDA alpha exceeds header bound: '+str(value))
+        if not value['passed']:raise ValueError('OptiX/CUDA flattened alpha exceeds cross-comparison bound: '+str(value))
         return value
     try:
         # Source/build provenance is explicit: an executable cannot infer its Git revision.

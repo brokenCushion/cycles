@@ -38,6 +38,11 @@ does not encode arbitrary subpixel correlations or recover colour from beauty.
 
 CPU beauty remains exact. CUDA beauty policy and its GPU-only phase scope are in
 Section 2; source hashes and 75 kernel resource records provide the host-only proof.
+Strict backend equality is not promised: OptiX hardware intersections compute
+surface t differently from CUDA BVH2. Across builds/toolchains/backends, both
+sides qualify independently and flattened alpha differs by at most 1e-4;
+curves, depth shifts and counts are informational. Byte/curve identity applies
+only within the same build and backend. See Section 2 of the plan.
 
 ## Reproduction
 

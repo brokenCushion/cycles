@@ -14,6 +14,13 @@ import sys
 
 RUN_METADATA = frozenset(('cycles:beautyIdentity', 'capDate', 'DateTime', 'filePath',
                          'cycles:runId', 'cycles:sourcePath', 'cycles:outputPath'))
+CROSS_ALPHA_LIMIT = 1e-4
+
+
+def cross_comparison_passed(max_flattened_alpha_difference):
+    """Cross-build/backend sanity only; each side must qualify independently."""
+    return bool(math.isfinite(max_flattened_alpha_difference) and
+                0 <= max_flattened_alpha_difference <= CROSS_ALPHA_LIMIT)
 
 
 def identity(path):
@@ -209,12 +216,12 @@ def toolchain_difference(before, after, mode='strict'):
                   count_delta_min=min(deltas), count_delta_max=max(deltas),
                   max_transmittance_difference=float(maximum), max_flattened_alpha_difference=float(flat),
                   worst_pixel=worst, header_bound=bound(b),
-                  difference_limit=None, flattened_alpha_limit=1e-4,
+                  difference_limit=None, flattened_alpha_limit=CROSS_ALPHA_LIMIT,
                   triangle_inequality_bound=bound(a)+bound(b),
                   max_depth_window_violation=window_maximum if mode=='strict' else None,
                   max_required_shift_ulps=None if shift_failed else shift,
                   required_shift_exceeds_four=shift_failed,shift_report='Minimum integer ULP window; 0 when the unshifted error passes',
-                  audit_passed=bool(flat<=1e-4))
+                  audit_passed=cross_comparison_passed(flat))
     return result
 
 

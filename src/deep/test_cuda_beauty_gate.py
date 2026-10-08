@@ -98,10 +98,23 @@ reference = 1 - float32_ulp(.5)
 assert not monte_carlo_gate(reference + 5*float32_ulp(reference), [reference],
                             [reference]*4, ratio_limit=0)['passed']
 assert not monte_carlo_gate(1, [], [1]*4)['passed']
-assert bias_gate([0]*100)['passed']
-assert bias_gate([-1, 1]*50)['passed']
-assert not bias_gate([0.001]*100)['passed']
-assert not bias_gate([0.1 + v for v in [-0.01, 0.01]*50])['passed']
+assert bias_gate([0]*100, 1)['passed']
+assert bias_gate([-1, 1]*50, 1)['passed']
+assert not bias_gate([0.001]*100, 1)['passed']
+assert not bias_gate([0.1 + v for v in [-0.01, 0.01]*50], 1)['passed']
+ulp = float32_ulp(1)
+assert bias_gate([ulp]*100, 1)['passed']
+assert bias_gate([ulp]*100, -1)['passed']
+assert not bias_gate([math.nextafter(ulp, math.inf)]*100, 1)['passed']
+assert bias_gate([-1, 1]*50, 0)['passed']
+assert bias_gate([float32_ulp(0)], 0)['passed']
+for value in (math.nan, math.inf):
+    try:
+        bias_gate([0], value)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('Nonfinite reference mean accepted')
 for seeds in ([1]*3, [1, 2, 3, math.inf]):
     try:
         monte_carlo_gate(1, [1], seeds)

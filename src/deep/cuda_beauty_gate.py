@@ -102,14 +102,17 @@ def monte_carlo_gate(value, references, seeds, ratio_limit=None):
                 nearest=nearest, reference_value=references[nearest], four_ulp=floor)
 
 
-def bias_gate(differences):
-    """Paired-pixel signed mean against mean same-count controls; no ULP floor."""
+def bias_gate(differences, reference_mean):
+    """Reject only statistically significant bias above one reference-mean FLOAT ULP."""
     if not differences or not all(math.isfinite(v) for v in differences):
         raise ValueError('Need finite paired-pixel differences')
     mean = statistics.mean(differences)
     se = statistics.stdev(differences)/math.sqrt(len(differences)) if len(differences) > 1 else 0.0
-    return dict(passed=abs(mean) <= 3*se, mean_signed_difference=mean,
-                standard_error=se, limit=3*se, pixels=len(differences))
+    ulp = float32_ulp(reference_mean)
+    return dict(passed=abs(mean) <= max(3*se, ulp), mean_signed_difference=mean,
+                standard_error=se, statistical_limit=3*se, limit=max(3*se, ulp),
+                reference_image_mean=reference_mean, reference_mean_float_ulp=ulp,
+                pixels=len(differences))
 
 
 def snapshot_raw_agreement(directory, off, on, manifest, pixels, channels, reader_backend="gaffer"):
@@ -299,6 +302,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
         report['raw_rule'] = 'one reproduced state within 4 ULP; otherwise difference <= max(calibrated ratio * four-seed SE, reference 4 ULP), with >=20 ordinary controls and calibrated fallback count; image bias <= 3 SE'
     checked_channels = [c for cs in groups.values() for c in cs]
     bias_differences = {c: [] for c in checked_channels}
+    bias_references = {c: [] for c in checked_channels}
     calibration = [dict(reference=str(p), fallback_pixels=0,
                         max_ratio={c: 0.0 for c in checked_channels},
                         unmatched_population_pixels=0,
@@ -499,6 +503,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                                 for c in checked_channels:
                                     ref_mean = statistics.mean(float(pool_data[c][r][index]) for r in same_count)
                                     bias_differences[c].append(float(raw_data[c][0][index])-ref_mean)
+                                    bias_references[c].append(ref_mean)
                         elif failed_groups or not matched:
                             cs = [c for group in groups for c in groups[group]]
                             v = [float(raw_data[c][0][index]) for c in cs]
@@ -539,7 +544,8 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     report['raw_passed'] = not report['unmatched_population_pixels'] and all(not s['violations'] for s in stats.values())
     if final_raw_rule:
         report['bias_estimator'] = 'mean paired-pixel residual to mean same-count pool references; sample SD / sqrt(pixel count)'
-        report['bias'] = {c: bias_gate(d) for c, d in bias_differences.items() if d}
+        report['bias'] = {c: bias_gate(d, statistics.mean(bias_references[c]))
+                          for c, d in bias_differences.items() if d}
         report['bias_passed'] = (all(len(d) == width*height for d in bias_differences.values()) and
                                  all(r['passed'] for r in report['bias'].values()))
         report['statistical_pixel_fraction'] = len(report['statistical_pixels'])/(width*height)

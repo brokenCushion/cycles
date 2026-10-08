@@ -148,11 +148,14 @@ comparisons are informational, never a blocker. Do not revisit this scope.
    only and cannot qualify a GPU-changing phase. Report deep-off min/median/max
    beside deep-on; report every fallback pixel/channel. Do not revisit these
    user-approved consistency and minimum-control rules.
-3. Every pass/channel must also pass the unchanged image-wide bias test:
-   abs(mean signed difference) <= 3 standard errors. User-confirmed estimator:
-   subtract the MEAN of each pixel's same-count pool references (not nearest);
-   compute signed mean and sample SD / sqrt(image pixel count) of those paired
-   residuals. Missing counts/nonfinite data fail; no ULP bias floor.
+3. Image-wide bias test (final user decision, 2026-10-08): a channel fails
+   only when abs(mean signed difference) > 3 standard errors AND exceeds
+   1 FLOAT ULP of that channel's image-mean reference value. Subtract the
+   MEAN of each pixel's same-count pool references (not nearest); compute
+   signed mean and sample SD / sqrt(image pixel count) of these paired
+   residuals. The reference image mean averages those same per-pixel reference
+   means. Record both limits, the reference mean and its FLOAT ULP. Missing
+   counts/nonfinite data fail. CPU exact equality is unchanged.
 
 4. Root-cause resolution (user decision, 2026-10-07): a pixel flagged by the
    calibrated rule is resolved if deep-on and deep-off in the separate

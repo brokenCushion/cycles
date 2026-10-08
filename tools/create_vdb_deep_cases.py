@@ -7,6 +7,7 @@ These small fixtures qualify combinations; they are not production-scale tests.
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -37,7 +38,9 @@ width = args.resolution if args.width is None else args.width
 height = args.resolution if args.height is None else args.height
 if not all(16 <= v <= 2048 for v in (width, height)):
     raise ValueError('Width and height must be between 16 and 2048')
-source = args.source.resolve(strict=True)
+# Keep the logical .blend directory: resolving an archive junction changes
+# Blender-relative VDB paths even though it reads the same .blend bytes.
+source = args.source.absolute()
 source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
 root = args.output.resolve()
 root.mkdir(parents=True, exist_ok=True)
@@ -52,6 +55,8 @@ for case in args.cases:
     corners = [evaluated.matrix_world @ Vector(p) for p in evaluated.bound_box]
     center = sum(corners, Vector()) / 8
     extent = max((p-center).length for p in corners)
+    if not math.isfinite(extent) or extent <= 0:
+        raise ValueError('SuppliedVDB has no finite nonzero bounds; check its VDB path')
     camera = scene.camera
     right = camera.rotation_euler.to_matrix() @ Vector((1, 0, 0))
     if case in ('mixed_surface', 'surface_ao', 'surface_bevel', 'opaque_mix_ao', 'mirrored_surface', 'reject_ao_opacity', 'reject_bevel_opacity'):

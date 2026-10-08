@@ -150,6 +150,8 @@ reconstruction/publication. Arbitrarily fast shader variation is not bounded.
 `tools/run_osl_volume_checks.py --blender EXE --cases CASES.json --root D:/OUTPUT --report REPORT.json`
 checks each fixture against a 4x-finer step, CPU exact/GPU calibrated beauty,
 same-build identity, native analytic cost, and atomic capacity/preflight failures.
+`--control-root D:/PREVIOUS` reuses GPU controls only after fixture hashes and the
+beauty validator's executable/source, sampling and raw-pass checks agree.
 Fixture creation uses `tools/create_osl_volume_cases.py` and the small pinned
 OpenVDB asset generator `tools/create_osl_volume_grid.cpp`; no new dependency.
 

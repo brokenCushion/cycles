@@ -53,6 +53,8 @@ def main():
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--smoke', action='store_true')
+    parser.add_argument('--control-root', type=Path,
+                        help='Reuse previously qualified GPU controls with matching beauty source/settings')
     parser.add_argument('--devices', nargs='+', choices=('CPU', 'CUDA', 'OPTIX'),
                         default=('CPU', 'CUDA', 'OPTIX'))
     args = parser.parse_args()
@@ -135,10 +137,22 @@ def main():
             devices = ('CPU', 'CUDA', 'OPTIX') if case['optin'] else ('CPU', 'OPTIX')
             devices = [d for d in devices if d in args.devices]
             for device in devices:
-                controls = [render(case, device, 'off-'+str(i))
-                            for i in range(1, 2 if device == 'CPU' or args.smoke else 21)]
-                seeds = [] if device == 'CPU' or args.smoke else [
-                    render(case, device, 'seed-'+str(i), seed=100+i) for i in range(1, 5)]
+                if args.control_root and device != 'CPU' and not args.smoke:
+                    reference = args.control_root/device/case['name']
+                    controls = [reference/('off-'+str(i)) for i in range(1, 21)]
+                    seeds = [reference/('seed-'+str(i)) for i in range(1, 5)]
+                    source_hash = hashlib.sha256(Path(case['scenes']['eval']).read_bytes()).hexdigest()
+                    for path in controls + seeds:
+                        metadata = json.loads((path/'render.json').read_text())
+                        if metadata.get('source_sha256') != source_hash:
+                            raise ValueError('GPU control fixture mismatch: '+str(path))
+                    # validate_cuda_beauty checks every executable/source identity,
+                    # device, sampling setting and raw pass before using this pool.
+                else:
+                    controls = [render(case, device, 'off-'+str(i))
+                                for i in range(1, 2 if device == 'CPU' or args.smoke else 21)]
+                    seeds = [] if device == 'CPU' or args.smoke else [
+                        render(case, device, 'seed-'+str(i), seed=100+i) for i in range(1, 5)]
                 for mode in (('1e-3',) if args.smoke else ('1e-4', '1e-3')):
                     directory = render(case, device, mode, mode, step=case['step'])
                     step = float(np.asarray(read(directory/'scene.deep.exr').header()['cycles:deepVolumeStepMin']).item())

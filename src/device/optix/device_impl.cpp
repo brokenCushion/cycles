@@ -974,9 +974,12 @@ void OptiXDevice::load_deep_pipeline(const bool use_osl)
       groups[PG_RGEN_DEEP_SURFACE], groups[PG_HIT_DEEP_ALL], groups[PG_MISS_DEEP]};
     add_hit_miss_program_groups(groups, pipeline_groups);
 #ifdef WITH_OSL
-    if (use_osl)
-      for (const auto &group : osl_groups)
-        if (group) pipeline_groups.push_back(group);
+      if (use_osl) {
+        pipeline_groups.push_back(groups[PG_CALL_SVM_AO]);
+        pipeline_groups.push_back(groups[PG_CALL_SVM_BEVEL]);
+        for (const auto &group : osl_groups)
+          if (group) pipeline_groups.push_back(group);
+      }
 #endif
     OptixPipelineLinkOptions link_options = {};
     link_options.maxTraceDepth = 1;

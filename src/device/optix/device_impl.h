@@ -71,14 +71,15 @@ enum {
   PG_HITV_POINTCLOUD,
   PG_HITL_POINTCLOUD,
 
-  /* Callable */
-  PG_CALL_SVM_AO,
-  PG_CALL_SVM_BEVEL,
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   PG_RGEN_DEEP_SURFACE,
   PG_HIT_DEEP_ALL,
   PG_MISS_DEEP,
 #endif
+
+  /* Callable */
+  PG_CALL_SVM_AO,
+  PG_CALL_SVM_BEVEL,
 
   NUM_PROGRAM_GROUPS
 };
@@ -89,6 +90,11 @@ static const int HIT_PROGAM_GROUP_OFFSET = PG_HITD;
 static const int NUM_HIT_PROGRAM_GROUPS = 24;
 static const int CALLABLE_PROGRAM_GROUPS_BASE = PG_CALL_SVM_AO;
 static const int NUM_CALLABLE_PROGRAM_GROUPS = 2;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+/* OSL groups append at NUM_PROGRAM_GROUPS; callable indices start at BASE.
+ * Deep records must not create a gap between the native and OSL callables. */
+static_assert(CALLABLE_PROGRAM_GROUPS_BASE + NUM_CALLABLE_PROGRAM_GROUPS == NUM_PROGRAM_GROUPS);
+#endif
 
 /* List of OptiX pipelines. */
 enum { PIP_SHADE, PIP_INTERSECT, NUM_PIPELINES };

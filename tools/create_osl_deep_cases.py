@@ -41,7 +41,7 @@ image.save()
 expressions = {
     'constant': 'float a = 0.35;',
     'texture': 'float a = texture("'+(root/'alpha.exr').as_posix()+'", u, v, "interp", "closest", "wrap", "clamp");',
-    'noise': 'float a = 0.15 + 0.6 * noise("perlin", P * 3);',
+    'noise': 'float a = clamp(0.35 + 0.15 * noise("perlin", P * 3), 0.05, 0.95);',
     'camera': 'float a = raytype("camera") ? 0.35 : 0.9;',
     'trace': 'float a = trace(P, I) ? 0.35 : 0.9;',
     'shadow': 'float a = raytype("shadow") ? 0.35 : 0.9;',

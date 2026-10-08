@@ -38,7 +38,9 @@ def main():
     env = dict(os.environ, TEMP=str(root/'temp'), TMP=str(root/'temp'),
                BLENDER_USER_RESOURCES='D:/CyclesDeepScratch/regression-cache')
     (root/'temp').mkdir(exist_ok=True)
-    env.pop('CYCLES_KERNEL_PATH', None)
+    for name in ('OCIO', 'CYCLES_KERNEL_PATH', 'CYCLES_DEEP_Z_BASELINE',
+                 'CYCLES_DEEP_VALIDATE_CAPTURE_ONLY', 'CYCLES_DEEP_HOST_ONLY_BEAUTY_PROOF'):
+        env.pop(name, None)
     digest = hashlib.sha256(args.blender.read_bytes()).hexdigest()
     cases = json.loads(args.cases.read_text())
     result = dict(passed=False, renderer_sha256=digest, cases={}, rejections={},

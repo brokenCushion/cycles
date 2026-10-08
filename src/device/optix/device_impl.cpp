@@ -959,7 +959,7 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
 
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   {
-    static_assert(NUM_HIT_PROGRAM_GROUPS == DEEP_OPTIX_ALL_HIT_OFFSET);
+    static_assert(PG_HITV - PG_HITD == DEEP_OPTIX_ALL_HIT_OFFSET);
     vector<OptixProgramGroup> pipeline_groups = {
       groups[PG_RGEN_DEEP_SURFACE], groups[PG_HIT_DEEP_ALL], groups[PG_MISS_DEEP]};
     add_hit_miss_program_groups(groups, pipeline_groups);
@@ -973,12 +973,12 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
     optix_assert(optixPipelineSetStackSize(deep_pipeline, 0, 0, css,
                                          pipeline_options.usesMotionBlur ? 3 : 2));
     deep_sbt_data = make_unique<device_vector<SbtRecord>>(this, "deep_optix_sbt", MEM_READ_ONLY);
-    deep_sbt_data->alloc(NUM_HIT_PROGRAM_GROUPS + 1);
+    deep_sbt_data->alloc(NUM_HIT_PROGRAM_GROUPS);
     memset(deep_sbt_data->host_pointer, 0, deep_sbt_data->memory_size());
     for (int i = 0; i < NUM_HIT_PROGRAM_GROUPS; ++i)
       if (groups[HIT_PROGAM_GROUP_OFFSET + i])
         optix_assert(optixSbtRecordPackHeader(groups[HIT_PROGAM_GROUP_OFFSET + i], &(*deep_sbt_data)[i]));
-    optix_assert(optixSbtRecordPackHeader(groups[PG_HIT_DEEP_ALL], &(*deep_sbt_data)[NUM_HIT_PROGRAM_GROUPS]));
+    optix_assert(optixSbtRecordPackHeader(groups[PG_HIT_DEEP_ALL], &(*deep_sbt_data)[DEEP_OPTIX_ALL_HIT_OFFSET]));
     deep_sbt_data->copy_to_device();
     LOG_INFO_IMPORTANT << "OptiX deep resources: raygen_stack=" << sizes[PG_RGEN_DEEP_SURFACE].cssRG
                        << " anyhit_stack=" << sizes[PG_HIT_DEEP_ALL].cssAH

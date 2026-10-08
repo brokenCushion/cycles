@@ -209,6 +209,9 @@ def main():
                 d=native(root/'landscape'/name/mode,config['landscape'],samples,percentage,'CUDA',mode,measure=True,max_events=8192)
                 verify(d)
                 identity(name+'-'+mode,config['golden']/name/('noids-'+mode+'-cap0')/'scene.deep.exr',d/'scene.deep.exr',mode)
+                if args.optix:
+                    o=native(root/'landscape/OPTIX'/name/mode,config['landscape'],samples,percentage,'OPTIX',mode,measure=True,max_events=8192)
+                    verify(o)['cuda_alpha']=numerical('optix-landscape-'+name+'-'+mode,lambda:backend_compare(d,o))
         counts={m:len(v) for m,v in result['identity'].items()}
         if counts!={'strict':81,'1e-4':15,'1e-3':15}:raise ValueError('Identity coverage changed: '+str(counts))
         result['identity_counts']=counts

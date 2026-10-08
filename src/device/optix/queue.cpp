@@ -300,7 +300,7 @@ bool OptiXDeviceQueue::enqueue_deep(const int work_size, const DeviceKernelArgum
   sbt.missRecordCount = 1;
   sbt.hitgroupRecordBase = device->deep_sbt_data->device_pointer;
   sbt.hitgroupRecordStrideInBytes = sizeof(SbtRecord);
-  sbt.hitgroupRecordCount = NUM_HIT_PROGRAM_GROUPS + 1;
+  sbt.hitgroupRecordCount = NUM_HIT_PROGRAM_GROUPS;
   debug_enqueue_begin(DEVICE_KERNEL_DEEP_SURFACE, work_size);
   optix_device_assert(device, optixLaunch(device->deep_pipeline, cuda_stream_, launch,
                                          sizeof(KernelParamsOptiX), &sbt, work_size, 1, 1));

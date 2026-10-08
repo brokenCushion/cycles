@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""CUDA beauty isolation: reproduced states, bounded Monte Carlo noise, and bias."""
+"""CUDA/OptiX beauty isolation: reproduced states, calibrated noise, and bias."""
 import csv
 import json
 import math
@@ -180,8 +180,8 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
         raise ValueError('Reference renders must be independent directories')
     paths = [directory] + references
     settings = [json.loads((p / 'render.json').read_text()) for p in paths]
-    if settings[0]['device'] != 'CUDA' or not settings[0]['deep'] or any(s['deep'] for s in settings[1:]):
-        raise ValueError('Expected one CUDA deep render and independent deep-off controls')
+    if settings[0]['device'] not in ('CUDA', 'OPTIX') or not settings[0]['deep'] or any(s['deep'] for s in settings[1:]):
+        raise ValueError('Expected one CUDA/OptiX deep render and independent deep-off controls')
     keys = SETTINGS_KEYS
     def executable(p, s):
         return s.get('renderer_sha256') or json.loads((p / 'measurement.json').read_text())['executable_sha256']

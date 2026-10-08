@@ -19,6 +19,7 @@ struct KernelDeepParamsOptiX {
 };
 static_assert(sizeof(KernelDeepParamsOptiX) == 104, "OptiX deep launch ABI must match host/device");
 
-/* First 24 SBT records are the unmodified native hit groups. */
-constexpr int DEEP_OPTIX_ALL_HIT_OFFSET = 24;
+/* Deep's private SBT replaces the native volume slot; trace offsets are 4 bits. */
+constexpr int DEEP_OPTIX_ALL_HIT_OFFSET = 3;
+static_assert(DEEP_OPTIX_ALL_HIT_OFFSET < 16);
 CCL_NAMESPACE_END

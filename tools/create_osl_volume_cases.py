@@ -56,7 +56,7 @@ for name in ('constant', 'texture', 'grid', 'svm_optin'):
             source = root/(name+'.osl')
             expression = 'float d = 0.35;'
             if name != 'constant':
-                expression = 'float d = 0; getattribute("density", d);'
+                expression = 'float d = 0; getattribute("geom:density", d);'
             if name == 'texture':
                 expression += ' d *= texture("'+(root/'density.exr').as_posix()+'", (P[0]+2)/4, 0.5, "interp", "bilinear", "wrap", "clamp");'
             source.write_text('shader fixture(output closure color Volume = 0) { '+expression+' Volume = d*absorption(); }\n')

@@ -134,4 +134,21 @@ then run `tools/run_osl_deep_checks.py --blender EXE --cases CASES.json --root D
 Checks include native-alpha/oracle/depth cuts, CPU exact beauty, OptiX's 20-control
 beauty policy, and same-build identity. `--pristine FILE` supplies hash-checked
 native Blender evidence for the case-specific cross-backend waiver in the plan;
-it never bypasses either backend's own bound. OSL volumes remain Phase 8c.
+it never bypasses either backend's own bound.
+
+## Shader-evaluated volumes
+
+OSL volumes select native shader evaluation on CPU/OptiX. SVM requires explicit
+`--deep-volume-shader-eval`; qualifying analytic volumes keep their existing path.
+Use numeric `--deep-error` above 2e-6. `--deep-volume-step` is a world-unit cap on
+the minimum voxel edge and is required for volumes without a grid. EXR attributes
+`cycles:deepVolumeMethod`, `cycles:deepVolumeStep`, `cycles:deepVolumeStepMin`,
+`cycles:deepVolumeStepRule` and `cycles:deepVolumeErrorProof` identify the method.
+Half the error is a stated, not proven, midpoint allowance; half bounds
+reconstruction/publication. Arbitrarily fast shader variation is not bounded.
+
+`tools/run_osl_volume_checks.py --blender EXE --cases CASES.json --root D:/OUTPUT --report REPORT.json`
+checks each fixture against a 4x-finer step, CPU exact/GPU calibrated beauty,
+same-build identity, native analytic cost, and atomic capacity/preflight failures.
+Fixture creation uses `tools/create_osl_volume_cases.py` and the small pinned
+OpenVDB asset generator `tools/create_osl_volume_grid.cpp`; no new dependency.

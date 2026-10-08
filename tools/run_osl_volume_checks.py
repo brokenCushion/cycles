@@ -131,6 +131,8 @@ def main():
                     with (directory/'checks.log').open('w') as log, redirect_stdout(log):
                         value = validate(directory)
                         value['fine_oracle'] = validate(fine)
+                    if not value['total_deep_samples'] or not value['fine_oracle']['total_deep_samples']:
+                        raise ValueError('Nonzero-volume fixture produced empty deep output: '+str(directory))
                     value.update(metrics=metrics(directory), fine_metrics=metrics(fine),
                                  finer_reference=difference(directory, fine), step=step,
                                  fine_step=float(np.asarray(read(fine/'scene.deep.exr').header()['cycles:deepVolumeStep']).item()))
@@ -155,6 +157,7 @@ def main():
                     with (analytic/'checks.log').open('w') as log, redirect_stdout(log):
                         value['analytic_oracle'] = validate(analytic)
                     value['analytic_metrics'] = metrics(analytic)
+                    value['analytic_comparison'] = difference(directory, analytic)
                     value['analytic_equivalence'] = case['analytic_equivalence']
                     if device != 'CPU':
                         value['cpu_comparison'] = difference(directory, root/'CPU'/case['name']/mode)

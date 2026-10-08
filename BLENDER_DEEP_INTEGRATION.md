@@ -139,5 +139,20 @@ rejects trace/ray-dependent/path-dependent or unknown queries, dynamic textures,
 closure-building loops and unprovable closure capacity; runtime rejects coloured
 or invalid extinction and cache misses. The material and reason appear in the
 error. Native shader nodes and Script nodes can coexist in OSL mode; Cycles uses
-one scene-wide shading system. CUDA OSL and OSL volumes are not qualified.
+one scene-wide shading system. CUDA OSL is unsupported.
 See [support and native texture differences](src/deep/RELEASE_MATRIX.md).
+
+## Shader-evaluated volume capture
+
+OSL volumes use the native extinction shader evaluator on CPU/OptiX. SVM volume
+graphs use it only with `--deep-volume-shader-eval` (`use_deep_volume_shader_eval`
+in Blender); otherwise analytic capture is unchanged. Supply numeric deep error.
+`--deep-volume-step` (`deep_volume_step`) caps the world-space voxel step and is
+required for a volume without a grid. Zero selects the grid step automatically.
+
+The EXR identifies shader evaluation, actual step range and the step rule. Half
+the requested error bounds representation/fitting/publication; half is the
+**stated, not proven** stepping allowance. Validate shader variation against a
+4x-finer-step reference. Non-grey/invalid extinction, unsupported shader features
+and bounded traversal/event overflow fail explicitly. Phase 8c qualification is
+recorded in the [plan](DEEP_OPTIMIZATION_PLAN.md).

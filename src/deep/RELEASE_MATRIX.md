@@ -2,13 +2,13 @@
 
 Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
 and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-7 are accepted.
-Phase 8a is accepted; Phase 8b is complete, awaiting acceptance review.
+Phases 8a and 8b are accepted; Phase 8c is in qualification.
 Qualification covers the named fixtures; arbitrary feature combinations and the
 full-resolution landscape are not implied. Phase 9 remains unlaunched.
 
 | Feature | Qualified scope |
 | --- | --- |
-| Devices | Single CPU/CUDA/OptiX with SVM; CPU/OptiX OSL scalar surfaces, background render. CUDA OSL and OSL volumes (8c) remain unqualified. |
+| Devices | Single CPU/CUDA/OptiX with SVM; CPU/OptiX OSL scalar surfaces, background render. CUDA OSL is unsupported. Shader-evaluated volumes are in Phase 8c qualification. |
 | Shading | Native SVM scalar camera opacity/extinction; OSL constant/texture/noise/camera-query surfaces and Script/native-node materials, within preflight. OSL trace/@ao/@bevel, unsafe ray/path/unknown queries, dynamic textures and unprovable closure capacity fail explicitly. Runtime rejects coloured/invalid extinction and cache misses. |
 | Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
 | Camera | Surface-only perspective/orthographic, DOF and rigid motion; volumes require static mono perspective without DOF/motion. |
@@ -29,6 +29,13 @@ per-object errors; independent exact-cubic/camera/depth-cut checks remain mandat
 Positive z tolerance approximates the interiors of merged surface depth bands;
 combined alpha and curves outside those bands retain the error checks. Use zero
 for the whole-curve depth contract. Strict always uses zero.
+OSL volumes, or SVM volumes explicitly selected with `--deep-volume-shader-eval`,
+use fixed midpoint integration. Numeric error E assigns E/2 to stepping (stated,
+not proven) and E/2 to bounded reconstruction/publication. The EXR records the
+method, world-unit step range, selection rule and both allowances. Shader
+variation can exceed the stepping allowance; each fixture needs a 4x-finer-step
+check. Grid voxel size selects the step; `--deep-volume-step` caps it and is
+required without a grid. Native analytic capture remains the default for SVM.
 Completed misses count in normalization; incomplete/overflowing work fails explicitly.
 
 Device buffers are host-allocated and bounded. Spill and parallel host fitting

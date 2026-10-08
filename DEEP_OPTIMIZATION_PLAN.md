@@ -1839,11 +1839,11 @@ them. Failed harness-development evidence stays on D:. Thirteen archived validat
 listed in [the archive index](src/deep/ARCHIVED_REPORTS.md); the approved
 [M8 record](src/deep/M8_RELEASE_VALIDATION.md) is retained. README lists all 59 current core files plus Blender
 overlay plumbing. Connected review: `D:/CyclesDeepScratch/regression-tools/phase7_review.gfr`.
-Phase 7 accepted. Phase 8a is qualifying the recorded clang-cl/NVCC toolchain.
+Phase 7 accepted. Phase 8a stopped at the OptiX/CUDA strict depth gate.
 Full-resolution Phase 9 remains unlaunched.
 
 
-### Phase 8a results (qualification in progress)
+### Phase 8a results (stopped for acceptance review)
 
 Separate OptiX SVM module/pipeline/SBT and per-queue launch snapshot share
 capture and exact double grid integration; beauty sources and flags unchanged.
@@ -1858,7 +1858,18 @@ native modules, CUDA 12.8.0 / NVCC 12.8.61 and OptiX 8.0.0.
 | Small landscape 47x20/16 strict | Samples; informational curve difference | 561,793 | 561,860; max curve difference 0.057613866; flattened-alpha difference 0 | `786b9387b` |
 | Same landscape | Independent oracle max / header bound | 2.20131377e-7 / 1e-6 | 2.18971653e-7 / 1e-6; PASS | `786b9387b` |
 | CUDA 33x17/4 raw capture before fitting | Rays/events; changes | 2,244 / 70,201 | Same counts; 338 changed rays; FLOAT event max 1 ULP; cubic coefficients identical | `786b9387b` |
-| Beauty sources / common CUDA resources / CTests | Proof | Accepted source hash / 75 records / 9 tests | Unchanged / unchanged / 9 PASS (12.75 s) | `786b9387b` |
+| Beauty sources / common CUDA resources / CTests | Proof | Accepted source hash / 75 records / 9 tests | Unchanged / unchanged / 9 PASS (audit 12.75 s; qualification replay 12.187 s) | `786b9387b` |
+| Same-toolchain matrix replay | Byte identity | New staged references | 13/13 strict + 26/26 numeric PASS before stop; remaining 72 pending | `7fca7208f` |
+| OptiX native volume matrices | Whole curve vs CUDA / own oracle | Header bounds unchanged | 15 mode/ID pairs PASS with curve difference 0 | `0b55e8567` |
+| Opaque foreground 33x17/4 strict | OptiX/CUDA whole curve vs header | Limit 1e-6 | FAIL: 0.750000015 at (22,6); 486/561 pixels fail; flattened-alpha difference 0 | `0b55e8567` |
+| Same foreground | Own oracle / informational depth window | Independent header bound 1e-6 | Both own maxima 1.49011612e-8; all 486 flagged pixels fit a window <=3 FLOAT ULP (not the acceptance gate) | `0b55e8567` |
+| CUDA/OptiX beauty controls | Fixed finite pool | Matching backend and toolchain required | 384 renders complete, 1,928.703 s; 20 ordinary + four seeds for each of eight fixtures/backend; raw-policy stage not reached | `7fca7208f` |
+| 33x17/4 volume strict | Render+capture / capture wait+copy / export s (single run; setup excluded) | CUDA 0.544394 / 0.493819 / 0.439195 | OptiX 0.443143 / 0.366162 / 0.433644 | `0b55e8567` |
+| Same strict | Aggregate worker s: density / mixture / publication fit | CUDA 0.155745 / 0.321544 / 0.211846 | OptiX 0.155502 / 0.318202 / 0.206975 | `0b55e8567` |
+| 33x17/4 volume 1e-4 | Render+capture / capture wait+copy / export s (single run; setup excluded) | CUDA 0.341632 / 0.292201 / 0.218987 | OptiX 0.241901 / 0.165319 / 0.218794 | `0b55e8567` |
+| Same 1e-4 | Aggregate worker s: density / mixture / publication fit | CUDA 0.018764 / 0.037527 / 0.012909 | OptiX 0.018620 / 0.037816 / 0.013196 | `0b55e8567` |
+| 33x17/4 volume 1e-3 | Render+capture / capture wait+copy / export s (single run; setup excluded) | CUDA 0.334824 / 0.284752 / 0.088036 | OptiX 0.229452 / 0.155604 / 0.087359 | `0b55e8567` |
+| Same 1e-3 | Aggregate worker s: density / mixture / publication fit | CUDA 0.004812 / 0.013111 / 0.002418 | OptiX 0.004621 / 0.012927 / 0.002378 | `0b55e8567` |
 
 Cross-build curve/sample/ULP differences are informational under the final
 Section 2 user decision; the previous small-strict stop is superseded.
@@ -1869,10 +1880,25 @@ Raw differences precede fitting, but NVCC vs host-generated GPU inputs is not
 isolated. [Raw diagnostic](builds/validation/landscape-cloud/optimization-phase8a/raw-capture-toolchain.json),
 [informational depth windows](builds/validation/landscape-cloud/optimization-phase8a/strict-landscape-depth-window.json).
 
-Candidates are staged on D:, not promoted. Same-toolchain identity replay,
-full regression and CUDA/OptiX beauty/alpha/speed qualification (AO and Bevel
-included) remain pending. Matching-toolchain ordinary controls: 20 plus four
-distinct seeds per fixture/backend, reused across error/ID modes. No beauty
-kernel workaround or Phase 8b/8c/9 started. Old references remain unchanged.
-[Measurements before](builds/validation/landscape-cloud/optimization-phase8a/before.json),
-[qualification progress](builds/validation/landscape-cloud/optimization-phase8a/final-qualification-progress.json).
+Stopped at the unchanged OptiX/CUDA whole-curve gate, not the compiler
+cross-build sanity gate. At (22,6), CUDA publishes opaque coverage at two depths
+849.180114746 and 849.180175781; OptiX at three depths 849.179992676,
+849.180053711 and 849.180175781. The earlier OptiX depths lie two FLOAT ULP below the two CUDA depths;
+per-ray depth rounding changes coverage clusters. Terminal alpha is
+identical. Every flagged pixel fits an informational three-ULP window and both
+own oracles/depth cuts pass. This diagnoses backend depth quantization; it does
+not waive the approved unshifted OptiX/CUDA gate or prove a beauty effect.
+[Diagnostic](builds/validation/landscape-cloud/optimization-phase8a/optix-depth-diagnostic.json).
+
+Candidates are staged on D:, not promoted: full regression/GPU beauty policy
+and all 81/30 same-toolchain identity checks are prerequisites. The recorded
+compiler change passed all 111 cross-build sanity/oracle checks. Fifteen OptiX
+volume pairs match CUDA exactly; opaque foreground strict stops qualification.
+AO/Bevel deep-off controls render successfully with native shader-raytrace,
+but deep AO/Bevel, OptiX boundaries, landscapes, full beauty policy and complete
+identity replay remain pending. Timing rows above are single tested volume
+runs, not landscape/backend qualification claims; all counters, CPU fitting and
+beauty-only medians are in the report. No beauty source/flag workaround, new
+threshold, Phase 8b/8c/9, or deletion of old references.
+[Results](builds/validation/landscape-cloud/optimization-phase8a/phase-results.json),
+[before measurements](builds/validation/landscape-cloud/optimization-phase8a/before.json).

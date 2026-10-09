@@ -50,6 +50,11 @@ Root causes, in code:
 
 ## 2. Rules for this work
 
+- User standing permission (2026-10-10): repair parser/import/report-only
+  validation or measurement failures, add a regression check, rerun only affected
+  analysis on preserved outputs and continue, reporting the repair. Renderer code,
+  gates, thresholds, reference data or new renders still require stopping for review.
+
 - Do not change beauty kernels or beauty sampling. Deep must remain a
   side-channel. (See Phase 0 for the existing violation.)
 Phase 8c user decisions: initialize all deep shader inputs on every device.
@@ -2381,22 +2386,49 @@ snapshot SHA `fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da`.
 [Every raw value, count mismatch list and source inspection](builds/validation/landscape-cloud/optimization-phase9/cuda-count-isolation.json).
 Large outputs: `D:/CyclesDeepScratch/optimization-phase9/cuda-count-diagnostic-20261010/`.
 
-#### Phase 9 - fixed-336 OptiX pair: renders complete, comparison harness failed
+#### Phase 9 - fixed-336 OptiX pair: preserved-output comparison complete
 
 User-approved diagnostic: exactly one full-frame OptiX off/on pair, existing
 snapshot executable, fixed 336 beauty samples/adaptive OFF, unchanged deep
 prefix64/IDs/error1e-3/default z/8192 MiB. Pair started October 10 Sydney; large
 outputs under `D:/CyclesDeepScratch/optimization-phase9/optix-fixed-count-diagnostic-20261010/`.
-Both renders exited 0; outputs and logs remain preserved. The comparison parser
-unconditionally requires an adaptive `Step` field, absent from the native summary
-when adaptive sampling is OFF. It failed before publishing the raw-pass comparison.
-No numerical failure is established. No retry, parser fix, extra comparison,
-root-cause fix or rebuild followed; stopped for review.
+Both renders exited 0; outputs and logs remain preserved. The user approved repairing
+the parser's missing adaptive `Step` handling. `tools/deep_scheduler_log.py` treats
+adaptive OFF as fixed336, with no adaptive step or filter invocation. Its regression
+check covers the formerly failing summary, adaptive checkpoints and malformed
+adaptive-ON summaries. Only the saved-output analysis was rerun; no new render,
+reference/threshold change, rebuild or renderer fix. Zero count mismatches over
+587,500 pixels and exact noisy alpha, but the few-ULP-everywhere prerequisite fails.
 
 | Run | Render/capture main loop | Export | Measurement wall | Result |
 |---|---:|---:|---:|---|
-| OptiX off, fixed336 | 221.042 s | — | 349.828 s | Render exit 0; comparison pending |
-| OptiX on, fixed336/prefix64/IDs | 630.534 s | 181.235 s | 822.188 s | Render exit 0; comparison pending |
+| OptiX off, fixed336 | 221.042 s | — | 349.828 s | Exit 0; analysis complete |
+| OptiX on, fixed336/prefix64/IDs | 630.534 s | 181.235 s | 822.188 s | Exit 0; analysis complete |
+
+| Raw channel | Image-wide max absolute difference | Max reference FLOAT ULP | Pixels >4 reference ULP |
+|---|---:|---:|---:|
+| Noisy R | 1.06812e-4 | 118 | 27,879 |
+| Noisy G | 6.86646e-5 | 349 | 33,474 |
+| Noisy B | 6.10352e-5 | 118 | 32,503 |
+| Noisy A | 0 | 0 | 0 |
+| Albedo R | 2.74181e-6 | 35 | 148,181 |
+| Albedo G | 7.15256e-7 | 58 | 20,095 |
+| Albedo B | 1.66893e-6 | 65 | 107,892 |
+| Normal X | 5.36442e-7 | 199,729 | 86,711 |
+| Normal Y | 1.81794e-6 | 611,669 | 143,258 |
+| Normal Z | 1.84774e-6 | 43 | 207,435 |
+| Depth Z | 1.83105e-3 | 30 | 71,324 |
+
+ULP means absolute difference divided by FLOAT spacing at the off value. Absolute
+and ULP maxima can occur at different pixels. Normal X/Y ULP maxima are near-zero
+cancellation; max absolute differences in ULP(1.0) are 4.5/15.25/15.5 for X/Y/Z.
+Noisy G max349 ULP at (986,36) is 0.01486229524 → 0.01486262027.
+These are diagnostic differences, not a replay or revision of the beauty gate.
+
+| Schedule | Off batch sizes | On batch sizes | Adaptive filter samples |
+|---|---|---|---|
+| Fixed336 | 1,1,2,4,8,16, nine×32,16 | 1,1,2,4,8,14,2,9,14,9,14,21,21,8,14,20,20,20,20,20,14,20,20,20,20 | None, directly confirmed in DEBUG logs |
+| Adaptive1024 (all three pairs) | 1,1,2,4,8, then 63×16 | 1,1,2,4,8,14,2,8,8, then 61×16 | 16,32,…1024 on both; reconstructed from INFO batch logs |
 
 Earlier adaptive
 filter checkpoints reconstructed from batch ends and the scheduler rule are
@@ -2404,6 +2436,13 @@ filter checkpoints reconstructed from batch ends and the scheduler rule are
 threshold is 0.15 (scene setting 0.03 × native factor 5). The saved EXRs contain no
 checkpoint half-sample accumulation buffer; a numerical convergence metric at
 (986,61) cannot be recovered with this binary and no rebuild. Final sample counts
-alone do not separate local convergence from neighbour dilation. No scheduler-fix
-proposal can yet be justified from this fixed-pair comparison.
-[Failure evidence and preserved output paths](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-harness-failure.json).
+alone do not separate local convergence from neighbour dilation. At (986,61), fixed
+off/on both have336 samples; noisy RGB differs2/3/3 ULP (B/G/R), albedo R5 ULP,
+normal Z6 ULP, depth1 ULP. Earlier adaptive off stops at336 and on at464, but the
+checkpoint's combined/class-A sums and neighbour masks were not saved. Step3's
+numeric convergence metric and exact first divergence remain unavailable without
+instrumentation/new rendering. The condition for attributing this to accumulation
+order and proposing exclusion of capture time is not met; root cause unproven.
+Stopped for review, no renderer fix.
+[Raw values, maxima locations and every batch/checkpoint](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-isolation.json).
+[Previous harness failure](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-harness-failure.json).

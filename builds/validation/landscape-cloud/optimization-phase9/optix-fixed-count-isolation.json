@@ -1,0 +1,3879 @@
+{
+  "targets": [
+    {
+      "pixel": [
+        986,
+        60
+      ],
+      "off_samples": 336,
+      "on_samples": 336,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8397496938705444,
+          "on": 0.8397499322891235,
+          "signed_difference": 2.384185791015625e-07,
+          "abs_difference": 2.384185791015625e-07,
+          "ulp_difference": 4.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.8254166841506958,
+          "on": 0.8254167437553406,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.8210535645484924,
+          "on": 0.8210533857345581,
+          "signed_difference": -1.7881393432617188e-07,
+          "abs_difference": 1.7881393432617188e-07,
+          "ulp_difference": 3.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 905.5537109375,
+          "on": 905.553466796875,
+          "signed_difference": -0.000244140625,
+          "abs_difference": 0.000244140625,
+          "ulp_difference": 4.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": -0.001071165781468153,
+          "on": -0.0010711655486375093,
+          "signed_difference": 2.3283064365386963e-10,
+          "abs_difference": 2.3283064365386963e-10,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.0014118801336735487,
+          "on": 0.001411877223290503,
+          "signed_difference": -2.9103830456733704e-09,
+          "abs_difference": 2.9103830456733704e-09,
+          "ulp_difference": 25.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9186918139457703,
+          "on": -0.9186912775039673,
+          "signed_difference": 5.364418029785156e-07,
+          "abs_difference": 5.364418029785156e-07,
+          "ulp_difference": 9.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6541147232055664,
+          "on": 0.6541147232055664,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.8405168652534485,
+          "on": 0.8405174016952515,
+          "signed_difference": 5.364418029785156e-07,
+          "abs_difference": 5.364418029785156e-07,
+          "ulp_difference": 9.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.114305019378662,
+          "on": 1.114305019378662,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Denoising Normal.X",
+        "ViewLayer.Denoising Normal.Y",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.G"
+      ]
+    },
+    {
+      "pixel": [
+        985,
+        61
+      ],
+      "off_samples": 336,
+      "on_samples": 336,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.7812130451202393,
+          "on": 0.7812129855155945,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.7673861384391785,
+          "on": 0.7673860192298889,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.7636343836784363,
+          "on": 0.7636346220970154,
+          "signed_difference": 2.384185791015625e-07,
+          "abs_difference": 2.384185791015625e-07,
+          "ulp_difference": 4.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 898.4586181640625,
+          "on": 898.4586181640625,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": -0.003420937340706587,
+          "on": -0.0034209415316581726,
+          "signed_difference": -4.190951585769653e-09,
+          "abs_difference": 4.190951585769653e-09,
+          "ulp_difference": 18.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": -0.0021143723279237747,
+          "on": -0.0021143711637705564,
+          "signed_difference": 1.1641532182693481e-09,
+          "abs_difference": 1.1641532182693481e-09,
+          "ulp_difference": 5.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9173303246498108,
+          "on": -0.9173297882080078,
+          "signed_difference": 5.364418029785156e-07,
+          "abs_difference": 5.364418029785156e-07,
+          "ulp_difference": 9.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.518669068813324,
+          "on": 0.5186691284179688,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.6747561693191528,
+          "on": 0.6747560501098633,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 0.8983545303344727,
+          "on": 0.8983542919158936,
+          "signed_difference": -2.384185791015625e-07,
+          "abs_difference": 2.384185791015625e-07,
+          "ulp_difference": 4.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Normal.X",
+        "ViewLayer.Denoising Normal.Y",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.G",
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        986,
+        61
+      ],
+      "off_samples": 336,
+      "on_samples": 336,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8641160726547241,
+          "on": 0.8641160726547241,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.8494919538497925,
+          "on": 0.8494919538497925,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.8450724482536316,
+          "on": 0.8450721502304077,
+          "signed_difference": -2.980232238769531e-07,
+          "abs_difference": 2.980232238769531e-07,
+          "ulp_difference": 5.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 900.1265258789062,
+          "on": 900.1265869140625,
+          "signed_difference": 6.103515625e-05,
+          "abs_difference": 6.103515625e-05,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 4.8248477213519436e-08,
+          "on": 4.8248477213519436e-08,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.008530268445611,
+          "on": 0.008530268445611,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9327754378318787,
+          "on": -0.9327757954597473,
+          "signed_difference": -3.5762786865234375e-07,
+          "abs_difference": 3.5762786865234375e-07,
+          "ulp_difference": 6.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.7226669788360596,
+          "on": 0.72266685962677,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.9213531017303467,
+          "on": 0.9213529229164124,
+          "signed_difference": -1.7881393432617188e-07,
+          "abs_difference": 1.7881393432617188e-07,
+          "ulp_difference": 3.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.2304095029830933,
+          "on": 1.2304091453552246,
+          "signed_difference": -3.5762786865234375e-07,
+          "abs_difference": 3.5762786865234375e-07,
+          "ulp_difference": 3.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.G",
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        985,
+        62
+      ],
+      "off_samples": 336,
+      "on_samples": 336,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.775726854801178,
+          "on": 0.7757267951965332,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.7611415386199951,
+          "on": 0.7611414194107056,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.7567254900932312,
+          "on": 0.7567256689071655,
+          "signed_difference": 1.7881393432617188e-07,
+          "abs_difference": 1.7881393432617188e-07,
+          "ulp_difference": 3.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 895.0679321289062,
+          "on": 895.0679931640625,
+          "signed_difference": 6.103515625e-05,
+          "abs_difference": 6.103515625e-05,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 4.82905306853354e-08,
+          "on": 4.82905306853354e-08,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.008537545800209045,
+          "on": 0.008537545800209045,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9327815771102905,
+          "on": -0.9327810406684875,
+          "signed_difference": 5.364418029785156e-07,
+          "abs_difference": 5.364418029785156e-07,
+          "ulp_difference": 9.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6978618502616882,
+          "on": 0.697861909866333,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.8987752795219421,
+          "on": 0.8987752199172974,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.1713610887527466,
+          "on": 1.1713612079620361,
+          "signed_difference": 1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 1.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.G",
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        986,
+        62
+      ],
+      "off_samples": 336,
+      "on_samples": 336,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8354611396789551,
+          "on": 0.8354611992835999,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.8208650350570679,
+          "on": 0.8208650946617126,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.8164474964141846,
+          "on": 0.8164480328559875,
+          "signed_difference": 5.364418029785156e-07,
+          "abs_difference": 5.364418029785156e-07,
+          "ulp_difference": 9.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 900.1505737304688,
+          "on": 900.15087890625,
+          "signed_difference": 0.00030517578125,
+          "abs_difference": 0.00030517578125,
+          "ulp_difference": 5.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 3.425371630783047e-08,
+          "on": 3.425371986054415e-08,
+          "signed_difference": 3.552713678800501e-15,
+          "abs_difference": 3.552713678800501e-15,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.006108295638114214,
+          "on": 0.006108294706791639,
+          "signed_difference": -9.313225746154785e-10,
+          "abs_difference": 9.313225746154785e-10,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9277610778808594,
+          "on": -0.9277605414390564,
+          "signed_difference": 5.364418029785156e-07,
+          "abs_difference": 5.364418029785156e-07,
+          "ulp_difference": 9.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6693781018257141,
+          "on": 0.6693780422210693,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.859994649887085,
+          "on": 0.8599945306777954,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.1077747344970703,
+          "on": 1.1077744960784912,
+          "signed_difference": -2.384185791015625e-07,
+          "abs_difference": 2.384185791015625e-07,
+          "ulp_difference": 2.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Denoising Normal.X",
+        "ViewLayer.Denoising Normal.Y",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.G",
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        985,
+        63
+      ],
+      "off_samples": 336,
+      "on_samples": 336,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8124398589134216,
+          "on": 0.8124401569366455,
+          "signed_difference": 2.980232238769531e-07,
+          "abs_difference": 2.980232238769531e-07,
+          "ulp_difference": 5.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.7978277802467346,
+          "on": 0.7978278994560242,
+          "signed_difference": 1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.7933158874511719,
+          "on": 0.7933160066604614,
+          "signed_difference": 1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 900.2730712890625,
+          "on": 900.2730102539062,
+          "signed_difference": -6.103515625e-05,
+          "abs_difference": 6.103515625e-05,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 4.995035496335731e-08,
+          "on": 4.995035496335731e-08,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.007384641095995903,
+          "on": 0.007384641095995903,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9228827357292175,
+          "on": -0.9228822588920593,
+          "signed_difference": 4.76837158203125e-07,
+          "abs_difference": 4.76837158203125e-07,
+          "ulp_difference": 8.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.7125674486160278,
+          "on": 0.7125673294067383,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.943382203578949,
+          "on": 0.9433820843696594,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.252821683883667,
+          "on": 1.2528220415115356,
+          "signed_difference": 3.5762786865234375e-07,
+          "abs_difference": 3.5762786865234375e-07,
+          "ulp_difference": 3.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.G",
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        986,
+        63
+      ],
+      "off_samples": 336,
+      "on_samples": 336,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8700668811798096,
+          "on": 0.8700663447380066,
+          "signed_difference": -5.364418029785156e-07,
+          "abs_difference": 5.364418029785156e-07,
+          "ulp_difference": 9.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.8554702997207642,
+          "on": 0.8554702401161194,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.8510535359382629,
+          "on": 0.8510523438453674,
+          "signed_difference": -1.1920928955078125e-06,
+          "abs_difference": 1.1920928955078125e-06,
+          "ulp_difference": 20.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 897.4053344726562,
+          "on": 897.405517578125,
+          "signed_difference": 0.00018310546875,
+          "abs_difference": 0.00018310546875,
+          "ulp_difference": 3.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 4.7878195630346454e-08,
+          "on": 4.787819918306013e-08,
+          "signed_difference": 3.552713678800501e-15,
+          "abs_difference": 3.552713678800501e-15,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.008466186001896858,
+          "on": 0.008466186001896858,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9267690777778625,
+          "on": -0.9267694354057312,
+          "signed_difference": -3.5762786865234375e-07,
+          "abs_difference": 3.5762786865234375e-07,
+          "ulp_difference": 6.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6735337376594543,
+          "on": 0.6735337376594543,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.8743648529052734,
+          "on": 0.8743648529052734,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.1551932096481323,
+          "on": 1.1551930904388428,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 1.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Denoising Normal.X",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        987,
+        63
+      ],
+      "off_samples": 336,
+      "on_samples": 336,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8383157849311829,
+          "on": 0.8383157849311829,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.823702871799469,
+          "on": 0.8237027525901794,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.8192845582962036,
+          "on": 0.8192844390869141,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 902.253662109375,
+          "on": 902.2532958984375,
+          "signed_difference": -0.0003662109375,
+          "abs_difference": 0.0003662109375,
+          "ulp_difference": 6.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 4.8248747219759025e-08,
+          "on": 4.8248747219759025e-08,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.00853031501173973,
+          "on": 0.00853031501173973,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9297992587089539,
+          "on": -0.929799497127533,
+          "signed_difference": -2.384185791015625e-07,
+          "abs_difference": 2.384185791015625e-07,
+          "ulp_difference": 4.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6335116624832153,
+          "on": 0.6335117220878601,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.8189422488212585,
+          "on": 0.818942129611969,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.0621839761734009,
+          "on": 1.062184453010559,
+          "signed_difference": 4.76837158203125e-07,
+          "abs_difference": 4.76837158203125e-07,
+          "ulp_difference": 4.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.G",
+        "ViewLayer.Noisy Image.R"
+      ]
+    }
+  ],
+  "target_counts_identical": true,
+  "target_raw_bit_identical": false,
+  "image_count_mismatches": 0,
+  "other_count_mismatches": 0,
+  "count_difference_histogram": {},
+  "count_mismatch_pixels": [],
+  "raw_image_summary": {
+    "ViewLayer.Denoising Albedo.B": {
+      "max_abs": 1.6689300537109375e-06,
+      "max_reference_ulp": 65.0,
+      "max_ulp_pixel": [
+        986,
+        36
+      ],
+      "reference_at_max_ulp": 0.09650448709726334,
+      "on_at_max_ulp": 0.09650497138500214,
+      "pixels_above_4_ulp": 107892,
+      "differing_pixels": 476767,
+      "max_unit_scale_ulp": 14.0
+    },
+    "ViewLayer.Denoising Albedo.G": {
+      "max_abs": 7.152557373046875e-07,
+      "max_reference_ulp": 58.0,
+      "max_ulp_pixel": [
+        986,
+        36
+      ],
+      "reference_at_max_ulp": 0.08839324861764908,
+      "on_at_max_ulp": 0.0883936807513237,
+      "pixels_above_4_ulp": 20095,
+      "differing_pixels": 392442,
+      "max_unit_scale_ulp": 6.0
+    },
+    "ViewLayer.Denoising Albedo.R": {
+      "max_abs": 2.7418136596679688e-06,
+      "max_reference_ulp": 35.0,
+      "max_ulp_pixel": [
+        535,
+        325
+      ],
+      "reference_at_max_ulp": 0.4315984845161438,
+      "on_at_max_ulp": 0.43159952759742737,
+      "pixels_above_4_ulp": 148181,
+      "differing_pixels": 471759,
+      "max_unit_scale_ulp": 23.0
+    },
+    "ViewLayer.Denoising Depth.Z": {
+      "max_abs": 0.0018310546875,
+      "max_reference_ulp": 30.0,
+      "max_ulp_pixel": [
+        372,
+        472
+      ],
+      "reference_at_max_ulp": 821.335205078125,
+      "on_at_max_ulp": 821.3333740234375,
+      "pixels_above_4_ulp": 71324,
+      "differing_pixels": 450396,
+      "max_unit_scale_ulp": 15360.0
+    },
+    "ViewLayer.Denoising Normal.X": {
+      "max_abs": 5.364418029785156e-07,
+      "max_reference_ulp": 199729.0,
+      "max_ulp_pixel": [
+        854,
+        488
+      ],
+      "reference_at_max_ulp": 4.096156303035059e-08,
+      "on_at_max_ulp": 4.1671142980703735e-08,
+      "pixels_above_4_ulp": 86711,
+      "differing_pixels": 391933,
+      "max_unit_scale_ulp": 4.5
+    },
+    "ViewLayer.Denoising Normal.Y": {
+      "max_abs": 1.817941665649414e-06,
+      "max_reference_ulp": 611669.0,
+      "max_ulp_pixel": [
+        535,
+        16
+      ],
+      "reference_at_max_ulp": 9.582966953303185e-08,
+      "on_at_max_ulp": 1.001758391794283e-07,
+      "pixels_above_4_ulp": 143258,
+      "differing_pixels": 433897,
+      "max_unit_scale_ulp": 15.25
+    },
+    "ViewLayer.Denoising Normal.Z": {
+      "max_abs": 1.8477439880371094e-06,
+      "max_reference_ulp": 43.0,
+      "max_ulp_pixel": [
+        778,
+        381
+      ],
+      "reference_at_max_ulp": -0.4352174997329712,
+      "on_at_max_ulp": -0.4352162182331085,
+      "pixels_above_4_ulp": 207435,
+      "differing_pixels": 485245,
+      "max_unit_scale_ulp": 15.5
+    },
+    "ViewLayer.Noisy Image.A": {
+      "max_abs": 0.0,
+      "max_reference_ulp": 0.0,
+      "max_ulp_pixel": [
+        0,
+        0
+      ],
+      "reference_at_max_ulp": 1.0,
+      "on_at_max_ulp": 1.0,
+      "pixels_above_4_ulp": 0,
+      "differing_pixels": 0,
+      "max_unit_scale_ulp": 0.0
+    },
+    "ViewLayer.Noisy Image.B": {
+      "max_abs": 6.103515625e-05,
+      "max_reference_ulp": 118.0,
+      "max_ulp_pixel": [
+        986,
+        36
+      ],
+      "reference_at_max_ulp": 0.021781153976917267,
+      "on_at_max_ulp": 0.021781373769044876,
+      "pixels_above_4_ulp": 32503,
+      "differing_pixels": 414406,
+      "max_unit_scale_ulp": 512.0
+    },
+    "ViewLayer.Noisy Image.G": {
+      "max_abs": 6.866455078125e-05,
+      "max_reference_ulp": 349.0,
+      "max_ulp_pixel": [
+        986,
+        36
+      ],
+      "reference_at_max_ulp": 0.014862295240163803,
+      "on_at_max_ulp": 0.014862620271742344,
+      "pixels_above_4_ulp": 33474,
+      "differing_pixels": 415650,
+      "max_unit_scale_ulp": 576.0
+    },
+    "ViewLayer.Noisy Image.R": {
+      "max_abs": 0.0001068115234375,
+      "max_reference_ulp": 118.0,
+      "max_ulp_pixel": [
+        986,
+        36
+      ],
+      "reference_at_max_ulp": 0.03203669562935829,
+      "on_at_max_ulp": 0.03203713521361351,
+      "pixels_above_4_ulp": 27879,
+      "differing_pixels": 407504,
+      "max_unit_scale_ulp": 896.0
+    }
+  },
+  "device": "OPTIX",
+  "samples": 336,
+  "adaptive": false,
+  "settings": {
+    "renderer_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+    "blender": "5.3.0 Alpha",
+    "build_hash": "749518deb2f0",
+    "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+    "camera": "Camera",
+    "camera_type": "PERSP",
+    "ortho_scale": 7.314285755157471,
+    "frame": 0,
+    "samples": 336,
+    "threads": 24,
+    "resolution": [
+      2350,
+      1000
+    ],
+    "percentage": 50,
+    "dof": false,
+    "adaptive": false,
+    "adaptive_threshold": 0.029999999329447746,
+    "adaptive_min_samples": 8,
+    "seed": 0,
+    "use_animated_seed": true,
+    "denoising": true,
+    "denoiser": "OPENIMAGEDENOISE",
+    "denoising_use_gpu": true,
+    "save_render_passes": true,
+    "capture_only": false,
+    "diagnostic_sample_count_pass": true,
+    "kernel_source_override": null,
+    "materials": 110,
+    "objects": 376,
+    "compositing": false,
+    "deep": true,
+    "device": "OPTIX",
+    "deep_volume": true,
+    "deep_volume_shader_eval": false,
+    "deep_volume_step": 0,
+    "deep_volume_fixed_step": false,
+    "deep_error": 0.001,
+    "deep_z_tolerance": 0.0001,
+    "deep_samples": 64,
+    "deep_ids": true,
+    "deep_max_events": 8192,
+    "deep_memory_mb": 8192,
+    "view_layers": [
+      "ViewLayer"
+    ],
+    "pixel_filter": "BLACKMAN_HARRIS",
+    "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+    "camera_world_matrix": [
+      [
+        3.319657325744629,
+        -0.6532265543937683,
+        0.7761955857276917,
+        563.4478149414062
+      ],
+      [
+        1.0144872665405273,
+        2.137481212615967,
+        -2.53994083404541,
+        -556.8704223632812
+      ],
+      [
+        1.539787626825273e-05,
+        2.655895233154297,
+        2.2350683212280273,
+        697.09521484375
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "camera_frame": [
+      [
+        0.5,
+        0.21276596188545227,
+        -1.6666666269302368
+      ],
+      [
+        0.5,
+        -0.21276596188545227,
+        -1.6666666269302368
+      ],
+      [
+        -0.5,
+        -0.21276596188545227,
+        -1.6666666269302368
+      ],
+      [
+        -0.5,
+        0.21276596188545227,
+        -1.6666666269302368
+      ]
+    ],
+    "camera_translation": [
+      563.4478149414062,
+      -556.8704223632812,
+      697.09521484375
+    ],
+    "camera_rotation_degrees": [
+      49.91771354898617,
+      -0.0002541571951613384,
+      16.993152070060297
+    ],
+    "camera_scale": [
+      3.4712114334106445,
+      3.4712116718292236,
+      3.4712116718292236
+    ],
+    "pixel_aspect": [
+      1.0,
+      1.0
+    ],
+    "seconds": 817.0000583000365,
+    "beauty_exists": true,
+    "deep_bytes": 728690948
+  },
+  "scheduler": {
+    "fixed/off-1": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010\\off-1\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 16,
+          "end_sample": 32
+        },
+        {
+          "samples": 32,
+          "end_sample": 64
+        },
+        {
+          "samples": 32,
+          "end_sample": 96
+        },
+        {
+          "samples": 32,
+          "end_sample": 128
+        },
+        {
+          "samples": 32,
+          "end_sample": 160
+        },
+        {
+          "samples": 32,
+          "end_sample": 192
+        },
+        {
+          "samples": 32,
+          "end_sample": 224
+        },
+        {
+          "samples": 32,
+          "end_sample": 256
+        },
+        {
+          "samples": 32,
+          "end_sample": 288
+        },
+        {
+          "samples": 32,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        }
+      ],
+      "adaptive": false,
+      "threshold": null,
+      "step": null,
+      "min_samples": null,
+      "fixed_sample_count": 336,
+      "adaptive_filter_samples": [],
+      "direct_filter_logs": [],
+      "filter_evidence": "disabled; no debug invocation"
+    },
+    "fixed/on-1": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010\\on-1\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        14,
+        2,
+        9,
+        14,
+        9,
+        14,
+        21,
+        21,
+        8,
+        14,
+        20,
+        20,
+        20,
+        20,
+        20,
+        14,
+        20,
+        20,
+        20,
+        20
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 14,
+          "end_sample": 30
+        },
+        {
+          "samples": 2,
+          "end_sample": 32
+        },
+        {
+          "samples": 9,
+          "end_sample": 41
+        },
+        {
+          "samples": 14,
+          "end_sample": 55
+        },
+        {
+          "samples": 9,
+          "end_sample": 64
+        },
+        {
+          "samples": 14,
+          "end_sample": 78
+        },
+        {
+          "samples": 21,
+          "end_sample": 99
+        },
+        {
+          "samples": 21,
+          "end_sample": 120
+        },
+        {
+          "samples": 8,
+          "end_sample": 128
+        },
+        {
+          "samples": 14,
+          "end_sample": 142
+        },
+        {
+          "samples": 20,
+          "end_sample": 162
+        },
+        {
+          "samples": 20,
+          "end_sample": 182
+        },
+        {
+          "samples": 20,
+          "end_sample": 202
+        },
+        {
+          "samples": 20,
+          "end_sample": 222
+        },
+        {
+          "samples": 20,
+          "end_sample": 242
+        },
+        {
+          "samples": 14,
+          "end_sample": 256
+        },
+        {
+          "samples": 20,
+          "end_sample": 276
+        },
+        {
+          "samples": 20,
+          "end_sample": 296
+        },
+        {
+          "samples": 20,
+          "end_sample": 316
+        },
+        {
+          "samples": 20,
+          "end_sample": 336
+        }
+      ],
+      "adaptive": false,
+      "threshold": null,
+      "step": null,
+      "min_samples": null,
+      "fixed_sample_count": 336,
+      "adaptive_filter_samples": [],
+      "direct_filter_logs": [],
+      "filter_evidence": "disabled; no debug invocation"
+    },
+    "adaptive/off-1": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\off-1\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 16,
+          "end_sample": 32
+        },
+        {
+          "samples": 16,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "fixed_sample_count": null,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "direct_filter_logs": [],
+      "filter_evidence": "reconstructed from batch ends and AdaptiveSampling::need_filter; INFO omits invocations"
+    },
+    "adaptive/off-2": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\off-2\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 16,
+          "end_sample": 32
+        },
+        {
+          "samples": 16,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "fixed_sample_count": null,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "direct_filter_logs": [],
+      "filter_evidence": "reconstructed from batch ends and AdaptiveSampling::need_filter; INFO omits invocations"
+    },
+    "adaptive/off-3": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\off-3\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 16,
+          "end_sample": 32
+        },
+        {
+          "samples": 16,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "fixed_sample_count": null,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "direct_filter_logs": [],
+      "filter_evidence": "reconstructed from batch ends and AdaptiveSampling::need_filter; INFO omits invocations"
+    },
+    "adaptive/on-1": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\on-1\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        14,
+        2,
+        8,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 14,
+          "end_sample": 30
+        },
+        {
+          "samples": 2,
+          "end_sample": 32
+        },
+        {
+          "samples": 8,
+          "end_sample": 40
+        },
+        {
+          "samples": 8,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "fixed_sample_count": null,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "direct_filter_logs": [],
+      "filter_evidence": "reconstructed from batch ends and AdaptiveSampling::need_filter; INFO omits invocations"
+    },
+    "adaptive/on-2": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\on-2\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        14,
+        2,
+        8,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 14,
+          "end_sample": 30
+        },
+        {
+          "samples": 2,
+          "end_sample": 32
+        },
+        {
+          "samples": 8,
+          "end_sample": 40
+        },
+        {
+          "samples": 8,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "fixed_sample_count": null,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "direct_filter_logs": [],
+      "filter_evidence": "reconstructed from batch ends and AdaptiveSampling::need_filter; INFO omits invocations"
+    },
+    "adaptive/on-3": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\on-3\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        14,
+        2,
+        8,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 14,
+          "end_sample": 30
+        },
+        {
+          "samples": 2,
+          "end_sample": 32
+        },
+        {
+          "samples": 8,
+          "end_sample": 40
+        },
+        {
+          "samples": 8,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "fixed_sample_count": null,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "direct_filter_logs": [],
+      "filter_evidence": "reconstructed from batch ends and AdaptiveSampling::need_filter; INFO omits invocations"
+    }
+  },
+  "reference_ulp_definition": "absolute raw-pass difference divided by FLOAT spacing at deep-off reference; unit-scale ULP additionally supplied for bounded normal/albedo cancellation",
+  "convergence_checkpoint": {
+    "pixel": [
+      986,
+      61
+    ],
+    "earlier_off_final_samples": 336,
+    "earlier_on_final_samples": 464,
+    "scheduler_threshold": 0.15,
+    "metric": null,
+    "limitation": "Existing binary and saved EXRs do not expose I/A half-sample accumulators at adaptive checkpoints. Fixed-sample runs disable that auxiliary buffer. Neither the metric at 336 nor an earlier first divergent checkpoint can be reconstructed; final counts do not distinguish local threshold from neighbour dilation.",
+    "status": "unavailable in preserved outputs; requires checkpoint instrumentation/new render",
+    "source": "src/kernel/film/adaptive_sampling.h:47-84; src/kernel/film/light_passes.h:175-197",
+    "formula": "I=combined RGB sum, A=twice the class-A sample RGB sum, S=exposure/sampleCount; error=S*sum(abs(I-A))/(0.0001+(sqrt(S*sum(I)) if S*sum(I)<1 else S*sum(I))); converged iff error<threshold",
+    "missing_data": [
+      "Combined RGB accumulation at adaptive checkpoint",
+      "Class-A auxiliary RGB accumulation at adaptive checkpoint",
+      "Pre/post neighbour-dilation flags at target and neighbouring pixels"
+    ]
+  },
+  "root_cause_fix_implemented": false,
+  "new_build": false,
+  "analysis_repair": {
+    "scope": "Parser only; no renderer, gates, thresholds or reference changes",
+    "fix": "Missing adaptive Step with adaptive OFF uses expected fixed sample count336, no adaptive step/threshold and no filter invocations",
+    "test_command": "D:/CyclesDeepScratch/regression-tools/Scripts/python.exe C:/Users/jun/Documents/ChatGPT/cycles_deep/tools/deep_scheduler_log.py",
+    "tests": "Fixed336 missing-Step regression, adaptive checkpoint case, reject missing-Step adaptive-ON",
+    "comparison_command": "D:/CyclesDeepScratch/regression-tools/Scripts/python.exe D:/CyclesDeepScratch/optimization-phase9/optix-fixed-count-diagnostic-20261010/compare_fixed.py",
+    "comparison_exit_code": 0,
+    "renders_repeated": 0
+  },
+  "scheduler_comparison": {
+    "fixed_batches_identical": false,
+    "fixed_filters": [],
+    "adaptive_batches_identical": false,
+    "adaptive_filter_checkpoints_identical": true,
+    "legacy_invocations_reconstructed_not_directly_logged": true
+  },
+  "conclusion": "Fixed sample counts and alpha match, but image-wide raw passes exceed a few reference ULP; the requested sufficient condition for the accumulation-order explanation is not met. Batch scheduling differs, filter checkpoints do not. No root-cause conclusion or renderer-fix proposal justified from these measurements; stop for review."
+}

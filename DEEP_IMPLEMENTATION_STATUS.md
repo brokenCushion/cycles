@@ -4,50 +4,36 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–8 accepted.
 
-**Phase 9: fixed-336 OptiX renders complete; comparison harness failed.** Both production deep outputs and all nine
-beauty references completed. Independent oracles, exterior alpha, Gaffer depth
-cuts and native populations pass. The repaired beauty validator reports a
-calibrated count-rate failure: all-samples mean 488, prefix64 mean 470.6,
-control maximum 329. Direction passes for both. The approved isolated snapshot
-experiment completed: all three off leave-one-out counts are 0; each on render
-has 8 unmatched pixels against three controls and every two-control subset.
-This is outside the diagnostic off range. The user approved state auditing and
-CPU/CUDA/OptiX crop comparisons. Step 1 identified the same eight cloud-over-castle
-pixels in every on render. The debug-only audit enlarged metadata from 32 to
-8,228 bytes and failed the existing GPU staging reservation assertions; the
-comparison queue did not start. No retry or root-cause fix. Generated source/cache
-originals and both production/snapshot installs were restored and hash-verified.
-The authorized full-frame CUDA off/on pair completed with zero count mismatches
-over 587,500 pixels. At the eight targets, raw differences are at most 2 FLOAT ULP;
-alpha is exact. The repeated count effect is OptiX-specific in this experiment.
-No-build inspection found queue-private launch parameters and a private deep SBT;
-no beauty overwrite was identified. Deep time changes beauty batch boundaries on
-both devices, suggesting a scheduling/accumulation route, but the root cause is
-unproven. No rebuild, state audit, bisect or fix followed. Production and snapshot
-hashes remain unchanged. The user approved one further full-frame OptiX off/on
-pair with adaptive sampling disabled and 336 fixed beauty samples; deep remains
-prefix64/IDs/error1e-3/default z/8192 MiB. It uses the existing snapshot executable.
-Earlier adaptive batches differ, but reconstructed filter checkpoints are identical
-(16,32,…1024). The binary does not expose checkpoint half-sample accumulators, so
-the numeric convergence metric cannot be recovered without instrumentation.
-Both fixed-336 renders exited successfully. The comparison parser wrongly requires
-an adaptive `Step` field, which is omitted when adaptive sampling is OFF; it failed
-before publishing the raw comparison. Outputs are preserved; no retry, parser fix,
-new build or root-cause fix. Stopped for review. Qualification/Gaffer remain pending.
-[Harness failure and preserved outputs](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-harness-failure.json).
-[CUDA counts, every raw pass and source inspection](builds/validation/landscape-cloud/optimization-phase9/cuda-count-isolation.json).
-Large outputs: `D:/CyclesDeepScratch/optimization-phase9/cuda-count-diagnostic-20261010/`.
-Current pair: `D:/CyclesDeepScratch/optimization-phase9/optix-fixed-count-diagnostic-20261010/`.
-[Crop sampling check](builds/validation/landscape-cloud/optimization-phase9/crop-sampling-check.json).
-[Investigation evidence](builds/validation/landscape-cloud/optimization-phase9/state-investigation-step1.json).
-[Production results](builds/validation/landscape-cloud/optimization-phase9/production-results.json),
-[run 1 count gate](builds/validation/landscape-cloud/optimization-phase9/deep-all-beauty-count-policy.json),
-[run 2 count gate](builds/validation/landscape-cloud/optimization-phase9/deep-64-beauty-count-policy.json).
-[Snapshot diagnostic](builds/validation/landscape-cloud/optimization-phase9/majorant-count-diagnostic.json).
-No production render repeated; no diagnostic retries or extra cases.
+**Phase 9: fixed-336 OptiX analysis complete; stopped for review.**
+Both production deep outputs pass the deep gates; the adaptive beauty count-rate
+failure remains unresolved. The isolated snapshot experiment reproduces the same
+8 count-mismatch pixels on OptiX. CUDA off/on has zero image-wide count mismatches.
+
+The approved fixed 336/adaptive-OFF OptiX pair uses the existing snapshot executable.
+Both renders finished. The parser repair and regression check passed; only analysis
+of preserved outputs was rerun. All 587,500 pixels have 336 samples and noisy alpha
+is exact, but image-wide raw differences exceed a few ULP: noisy R/G/B 118/349/118,
+albedo R/G/B 35/58/65, depth 30. Normal near-zero cancellation inflates reference ULP;
+unit-scale maxima are 4.5/15.25/15.5 ULP(1.0).
+
+Batch sizes differ in fixed and adaptive pairs. Adaptive filter checkpoints match
+(16,32,…1024, reconstructed from earlier INFO logs); fixed runs have no filters.
+At (986,61) the adaptive count is 336 off versus 464 on, with threshold 0.15. Its
+checkpoint combined/class-A accumulations and neighbour masks were not saved,
+so the convergence metric and exact first divergence cannot be recovered.
+The accumulation-order explanation remains unproven. Step 3 needs additional
+checkpoint evidence; no instrumentation, rebuild, new render or renderer fix.
+
+[Fixed comparison, every raw pass and schedules](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-isolation.json).
+[CUDA isolation](builds/validation/landscape-cloud/optimization-phase9/cuda-count-isolation.json).
+[Snapshot count experiment](builds/validation/landscape-cloud/optimization-phase9/majorant-count-diagnostic.json).
+[Production results](builds/validation/landscape-cloud/optimization-phase9/production-results.json).
+[Previous parser failure](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-harness-failure.json).
+Large fixed-pair outputs: `D:/CyclesDeepScratch/optimization-phase9/optix-fixed-count-diagnostic-20261010/`.
+Qualification and connected Gaffer review remain pending; monitor deleted.
 
 [Toolchain](BUILDING.md): clang-cl 20.1.8 / NVCC 12.8.61, CUDA 12.8.0,
-OptiX 8.0.0, OSL 1.15.3.0. Large evidence/TEMP stay on D:.
+OptiX 8.0.0, OSL 1.15.3.0. Snapshot patch is diagnostic only; production unchanged.
 [Support matrix](src/deep/RELEASE_MATRIX.md),
 [M8 release](src/deep/M8_RELEASE_VALIDATION.md),
 [archived reports](src/deep/ARCHIVED_REPORTS.md), [regression](src/deep/README.md).

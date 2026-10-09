@@ -2143,3 +2143,16 @@ High Performance active: AC/DC automatic sleep and hibernate both Never.
 Large outputs and child TEMP/TMP/cache paths:
 `D:/CyclesDeepScratch/optimization-phase9/production-20261009/`.
 Production timings/gates remain pending; no Gaffer production review created.
+
+#### Phase 9 validation-harness repair (2026-10-09)
+
+Run 1 rendered and published successfully; the queue stopped before the
+independent oracle because Python `-I` omitted its sibling `sample_csv` import.
+The oracle CLI now explicitly adds its own directory; the same fix covers the
+Gaffer validator's isolated invocation. No renderer/binary or gate changed.
+[Dry run](builds/validation/landscape-cloud/optimization-phase9/resume-dry-run.json):
+15/15 checks on preserved 47x20/33x17 outputs, 13.52 seconds, zero new renders.
+Includes exterior comparison, curve extraction, isolated oracle, Gaffer cuts,
+raw/native population checks, all five control/four seed command validations,
+and the full beauty-policy invocation. User authorized continuation from run 2
+only after preserved run-1 checks pass; deep-memory remains 8192 MiB.

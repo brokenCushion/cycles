@@ -9,8 +9,11 @@ import itertools
 import json
 import math
 from pathlib import Path
+import sys
 
 import numpy as np
+# This CLI is also invoked with -I; isolated mode omits the script directory.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sample_csv import open_samples
 
 

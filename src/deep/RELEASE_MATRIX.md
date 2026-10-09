@@ -2,7 +2,7 @@
 
 Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
 and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-7 are accepted.
-Phases 8a and 8b are accepted; Phase 8c qualification passes and awaits review.
+Phases 8a, 8b and 8c are accepted; Phase 9 production validation is authorized.
 Qualification covers the named fixtures; arbitrary feature combinations and the
 full-resolution landscape are not implied. Phase 9 remains unlaunched.
 

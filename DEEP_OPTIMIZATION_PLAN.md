@@ -654,20 +654,26 @@ analysed that way, so OSL volumes need the general shader-evaluation path
 
 ### Phase 9 - Landscape production run (last)
 
-Run only after Phases 0-8 pass and the user confirms. One run validates the
-final pipeline. Use CUDA if the conditional shader-raytrace fallback applies.
+Phases 0-8 accepted; user confirmed launch on 2026-10-09. Use OptiX;
+CUDA fallback is permitted only for an OptiX startup failure, which must be
+reported. Stop on any other failure/process stoppage; never retry automatically.
 
-Run the full landscape (1175x500, max 1024 adaptive, GPU OIDN) with
-`--deep-error 1e-3 --deep-samples 0 --deep-ids` first, then
-`--deep-error 1e-3 --deep-samples 64 --deep-ids`; retain the ids-off size/time
-comparison. Set both `TEMP` and `TMP` to D: for these runs: C: has about
-86 GB free, while the all-samples spill estimate is about 181 GB. The Phase 5
-beauty-only projection scales fixed startup cost with pixel count and is an
-upper bound; the measured full-resolution beauty took about 7 minutes, not
-the projected 52 minutes. Report capture time, export time, peak host/GPU
-memory, EXR size, alpha oracle, Gaffer cuts, beauty gate. Create the connected
-Gaffer review only after gates pass. Optionally run `1e-4`, and strict only if
-the earlier phases make it practical (< 12 h).
+Original landscape: 1175x500, max 1024 adaptive, GPU OIDN, numeric error 1e-3,
+default z-tolerance 1e-4. Run `--deep-samples 0 --deep-ids`, then
+`--deep-samples 64 --deep-ids`, followed by five ordinary deep-off controls and
+four seed-varied deep-off controls. No additional production renders requested.
+TEMP/TMP, caches and large outputs stay under D:/CyclesDeepScratch.
+D: has approximately 1.17 TB free; the Phase 5 all-samples spill estimate is
+181 GB. Record executable SHA/toolchain and automatic sleep/hibernate settings
+before launch. The Phase 5 beauty estimate scales startup cost 100x and is an
+upper bound: earlier full-resolution beauty measured about seven minutes.
+
+Report render+capture, export, peak host/GPU memory, spill, EXR size, deep
+sample count, independent accepted-camera oracle/depth cuts, beauty policy and
+Phase 5 estimate comparison. Same-capture z=0 validation publication uses the
+existing diagnostic hook; report its export overhead separately. Keep the
+approved surface-span exterior check. Notify after run 1 completes. Create a
+connected Gaffer review only after all gates pass; stop for acceptance review.
 
 ### Not recommended now: deep RGB
 
@@ -2030,7 +2036,7 @@ claim. After peaks: host working set <=5.38 GiB; device-wide GPU <=6750 MiB
 
 Phase 8b accepted. Phase 8c results follow; Phase 9 remains unlaunched.
 
-### Phase 8c - qualification complete; stop for acceptance review
+### Phase 8c - accepted (2026-10-09)
 
 Renderer `8137045eb` (Blender SHA `677aab08cfb6ffb02298f7d67f1e61a24801fd1b195436524a935871b85358a8`). Initialized deep shader storage/globals on CPU and GPU; deterministic native grid filters and native mip-selection expectation in the separate deep OptiX services module. Beauty remains unchanged. Adaptive midpoint step doubling reuses evaluations and fails explicitly on capacity/refinement/evaluation limits.
 
@@ -2122,4 +2128,18 @@ The native mip selector unit integrates its two-level probabilities independentl
 
 Weak synthetic grids use native Blender clipping=0 so the intended geometry is present; an explicit nonempty-output assertion caught the original clipped fixture. Existing qualified VDB/landscape assets are unchanged.
 
-Large EXRs/CSV/spill/TEMP: `D:/CyclesDeepScratch/optimization-phase8c/qualified-mip/` and the regression D: root in its report. Connected Gaffer review: `D:/CyclesDeepScratch/regression-tools/phase8c_final_review.gfr` (actual deep inputs, alpha/beauty/fine-step selection, DeepSlice -> DeepToPointCloud). [Presentation checks](builds/validation/landscape-cloud/optimization-phase8c/gaffer-review.json). Phase 9 remains unlaunched, awaiting user confirmation.
+Large EXRs/CSV/spill/TEMP: `D:/CyclesDeepScratch/optimization-phase8c/qualified-mip/` and the regression D: root in its report. Connected Gaffer review: `D:/CyclesDeepScratch/regression-tools/phase8c_final_review.gfr` (actual deep inputs, alpha/beauty/fine-step selection, DeepSlice -> DeepToPointCloud). [Presentation checks](builds/validation/landscape-cloud/optimization-phase8c/gaffer-review.json). Phase 8c accepted; Phase 9 launch confirmed by the user on 2026-10-09.
+
+### Phase 9 - production preflight (2026-10-09)
+
+[Preflight](builds/validation/landscape-cloud/optimization-phase9/preflight.json):
+installed `D:/CyclesDeepScratch/optimization-phase8c/mip/blender/blender.exe`,
+SHA-256 `677aab08cfb6ffb02298f7d67f1e61a24801fd1b195436524a935871b85358a8`.
+clang-cl 20.1.8 / NVCC 12.8.61 / CUDA 12.8.0 / OptiX 8.0.0 / OSL 1.15.3.0.
+Scene hash `4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902`;
+376 objects, 110 materials, all external assets present. Original threshold
+0.03/minimum 8, seed 0/frame 0/animated seed, GPU OIDN retained.
+High Performance active: AC/DC automatic sleep and hibernate both Never.
+Large outputs and child TEMP/TMP/cache paths:
+`D:/CyclesDeepScratch/optimization-phase9/production-20261009/`.
+Production timings/gates remain pending; no Gaffer production review created.

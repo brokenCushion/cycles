@@ -2259,3 +2259,16 @@ binomial p alone does not fail: its direction is inside the calibrated range.
 and [run 2 count report](builds/validation/landscape-cloud/optimization-phase9/deep-64-beauty-count-policy.json)
 retain every unmatched pixel, subset, exclusion and histogram. This exceeds the
 control rate range; cause is uninvestigated as instructed. Phase 9 is incomplete.
+
+#### Phase 9 - approved majorant count diagnostic (running)
+
+One user-approved experiment: production source/toolchain plus isolated snapshot
+patch `9a017f055`, full1175x500/max1024 adaptive/GPU OIDN/OptiX, three deep-off
+then three deep-on/error1e-3/prefix64/IDs/default z/8192 MiB renders. Diagnostic
+install, TEMP and outputs: `D:/CyclesDeepScratch/optimization-phase9/majorant-count-diagnostic-20261009/`.
+The previous backup/build/install/restore procedure preserves production binary
+`677aab08…358a8`, installed modules and generated source/cache originals.
+Compare off leave-one-out (two references) with each on run's mean across three
+two-reference subsets; also report unmatched counts against all three controls,
+direction and tie exclusions. No gate change or acceptance; record the result
+and stop for the user's decision. No further investigation or retries.

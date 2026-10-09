@@ -1,0 +1,989 @@
+{
+  "scope": "Existing 19x20 border [977,52,996,72], same full-resolution camera and original adaptive settings, OptiX deep-off; no new render/build",
+  "executable": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\blender.exe",
+  "executable_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+  "crop": "D:\\CyclesDeepScratch\\optimization-phase9\\deep-beauty-state-diagnostic-20261009\\optix-off\\render-passes.exr",
+  "full_controls": [
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\off-1\\render-passes.exr",
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\off-2\\render-passes.exr",
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\off-3\\render-passes.exr"
+  ],
+  "pixels": [
+    {
+      "pixel": [
+        986,
+        60
+      ],
+      "crop_sample_count": 224,
+      "full_sample_counts": [
+        224,
+        224,
+        224
+      ],
+      "differing_raw_channels": [
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Noisy Image.R"
+      ],
+      "values": {
+        "ViewLayer.Debug Sample Count.X": {
+          "crop": 0.21875,
+          "full_controls": [
+            0.21875,
+            0.21875,
+            0.21875
+          ]
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "crop": 0.8691623210906982,
+          "full_controls": [
+            0.869162380695343,
+            0.8691623210906982,
+            0.8691623210906982
+          ]
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "crop": 0.854897677898407,
+          "full_controls": [
+            0.8548976182937622,
+            0.854897677898407,
+            0.854897677898407
+          ]
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "crop": 0.8508009314537048,
+          "full_controls": [
+            0.8508010506629944,
+            0.8508009314537048,
+            0.8508009314537048
+          ]
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "crop": 900.9400024414062,
+          "full_controls": [
+            900.9401245117188,
+            900.93994140625,
+            900.9400634765625
+          ]
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "crop": -0.0015152986161410809,
+          "full_controls": [
+            -0.0015152986161410809,
+            -0.0015152986161410809,
+            -0.0015152986161410809
+          ]
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "crop": -0.00030528302886523306,
+          "full_controls": [
+            -0.00030528302886523306,
+            -0.00030528302886523306,
+            -0.00030528302886523306
+          ]
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "crop": -0.9162030816078186,
+          "full_controls": [
+            -0.9162030816078186,
+            -0.9162030816078186,
+            -0.9162030816078186
+          ]
+        },
+        "ViewLayer.Noisy Image.A": {
+          "crop": 1.0,
+          "full_controls": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ViewLayer.Noisy Image.B": {
+          "crop": 0.5399952530860901,
+          "full_controls": [
+            0.5399953126907349,
+            0.5399952530860901,
+            0.5399951934814453
+          ]
+        },
+        "ViewLayer.Noisy Image.G": {
+          "crop": 0.685788094997406,
+          "full_controls": [
+            0.6857880353927612,
+            0.6857880353927612,
+            0.685788094997406
+          ]
+        },
+        "ViewLayer.Noisy Image.R": {
+          "crop": 0.9010427594184875,
+          "full_controls": [
+            0.9010428190231323,
+            0.9010428190231323,
+            0.9010428190231323
+          ]
+        }
+      }
+    },
+    {
+      "pixel": [
+        985,
+        61
+      ],
+      "crop_sample_count": 336,
+      "full_sample_counts": [
+        336,
+        336,
+        336
+      ],
+      "differing_raw_channels": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.R"
+      ],
+      "values": {
+        "ViewLayer.Debug Sample Count.X": {
+          "crop": 0.328125,
+          "full_controls": [
+            0.328125,
+            0.328125,
+            0.328125
+          ]
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "crop": 0.8138645887374878,
+          "full_controls": [
+            0.8138647675514221,
+            0.8138647675514221,
+            0.8138647675514221
+          ]
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "crop": 0.7995501160621643,
+          "full_controls": [
+            0.7995501160621643,
+            0.7995501160621643,
+            0.7995502352714539
+          ]
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "crop": 0.7953853607177734,
+          "full_controls": [
+            0.7953853607177734,
+            0.7953853607177734,
+            0.795385479927063
+          ]
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "crop": 907.6599731445312,
+          "full_controls": [
+            907.6599731445312,
+            907.6599731445312,
+            907.6600952148438
+          ]
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "crop": -0.001186654670163989,
+          "full_controls": [
+            -0.001186654670163989,
+            -0.001186654670163989,
+            -0.001186654670163989
+          ]
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "crop": 0.000505346804857254,
+          "full_controls": [
+            0.000505346804857254,
+            0.000505346804857254,
+            0.000505346804857254
+          ]
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "crop": -0.917894721031189,
+          "full_controls": [
+            -0.9178950786590576,
+            -0.9178950786590576,
+            -0.9178950786590576
+          ]
+        },
+        "ViewLayer.Noisy Image.A": {
+          "crop": 1.0,
+          "full_controls": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ViewLayer.Noisy Image.B": {
+          "crop": 0.49562111496925354,
+          "full_controls": [
+            0.49562111496925354,
+            0.49562111496925354,
+            0.49562111496925354
+          ]
+        },
+        "ViewLayer.Noisy Image.G": {
+          "crop": 0.6266167163848877,
+          "full_controls": [
+            0.6266166567802429,
+            0.6266166567802429,
+            0.6266167163848877
+          ]
+        },
+        "ViewLayer.Noisy Image.R": {
+          "crop": 0.8223952651023865,
+          "full_controls": [
+            0.8223951458930969,
+            0.8223951458930969,
+            0.8223951458930969
+          ]
+        }
+      }
+    },
+    {
+      "pixel": [
+        986,
+        61
+      ],
+      "crop_sample_count": 336,
+      "full_sample_counts": [
+        336,
+        336,
+        336
+      ],
+      "differing_raw_channels": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.G"
+      ],
+      "values": {
+        "ViewLayer.Debug Sample Count.X": {
+          "crop": 0.328125,
+          "full_controls": [
+            0.328125,
+            0.328125,
+            0.328125
+          ]
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "crop": 0.8104204535484314,
+          "full_controls": [
+            0.8104207515716553,
+            0.8104206323623657,
+            0.8104206323623657
+          ]
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "crop": 0.7958349585533142,
+          "full_controls": [
+            0.7958349585533142,
+            0.7958349585533142,
+            0.7958349585533142
+          ]
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "crop": 0.7913739681243896,
+          "full_controls": [
+            0.7913739681243896,
+            0.7913739681243896,
+            0.7913739681243896
+          ]
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "crop": 896.632080078125,
+          "full_controls": [
+            896.632080078125,
+            896.632080078125,
+            896.6318969726562
+          ]
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "crop": 2.8725473555368808e-08,
+          "full_controls": [
+            2.8725473555368808e-08,
+            2.8725473555368808e-08,
+            2.8725473555368808e-08
+          ]
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "crop": 0.004892335738986731,
+          "full_controls": [
+            0.004892335738986731,
+            0.004892335738986731,
+            0.004892335738986731
+          ]
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "crop": -0.929713785648346,
+          "full_controls": [
+            -0.9297141432762146,
+            -0.9297141432762146,
+            -0.9297141432762146
+          ]
+        },
+        "ViewLayer.Noisy Image.A": {
+          "crop": 1.0,
+          "full_controls": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ViewLayer.Noisy Image.B": {
+          "crop": 0.6684823036193848,
+          "full_controls": [
+            0.6684821844100952,
+            0.66848224401474,
+            0.66848224401474
+          ]
+        },
+        "ViewLayer.Noisy Image.G": {
+          "crop": 0.8625141382217407,
+          "full_controls": [
+            0.862514078617096,
+            0.862514078617096,
+            0.862514078617096
+          ]
+        },
+        "ViewLayer.Noisy Image.R": {
+          "crop": 1.1191365718841553,
+          "full_controls": [
+            1.1191365718841553,
+            1.1191365718841553,
+            1.1191365718841553
+          ]
+        }
+      }
+    },
+    {
+      "pixel": [
+        985,
+        62
+      ],
+      "crop_sample_count": 336,
+      "full_sample_counts": [
+        336,
+        336,
+        336
+      ],
+      "differing_raw_channels": [
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.R"
+      ],
+      "values": {
+        "ViewLayer.Debug Sample Count.X": {
+          "crop": 0.328125,
+          "full_controls": [
+            0.328125,
+            0.328125,
+            0.328125
+          ]
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "crop": 0.8294225335121155,
+          "full_controls": [
+            0.8294225335121155,
+            0.8294225335121155,
+            0.8294225335121155
+          ]
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "crop": 0.814801812171936,
+          "full_controls": [
+            0.814801812171936,
+            0.814801812171936,
+            0.814801812171936
+          ]
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "crop": 0.810376763343811,
+          "full_controls": [
+            0.810376763343811,
+            0.810376763343811,
+            0.810376763343811
+          ]
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "crop": 901.2241821289062,
+          "full_controls": [
+            901.2241821289062,
+            901.2241821289062,
+            901.2241821289062
+          ]
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "crop": 4.544486387203506e-08,
+          "full_controls": [
+            4.544486387203506e-08,
+            4.544486387203506e-08,
+            4.544486387203506e-08
+          ]
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "crop": 0.008045070804655552,
+          "full_controls": [
+            0.008045070804655552,
+            0.008045070804655552,
+            0.008045070804655552
+          ]
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "crop": -0.9293907880783081,
+          "full_controls": [
+            -0.9293911457061768,
+            -0.9293911457061768,
+            -0.9293911457061768
+          ]
+        },
+        "ViewLayer.Noisy Image.A": {
+          "crop": 1.0,
+          "full_controls": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ViewLayer.Noisy Image.B": {
+          "crop": 0.6281606554985046,
+          "full_controls": [
+            0.6281607151031494,
+            0.6281607747077942,
+            0.6281607151031494
+          ]
+        },
+        "ViewLayer.Noisy Image.G": {
+          "crop": 0.8206295967102051,
+          "full_controls": [
+            0.8206296563148499,
+            0.8206295967102051,
+            0.8206295967102051
+          ]
+        },
+        "ViewLayer.Noisy Image.R": {
+          "crop": 1.077136516571045,
+          "full_controls": [
+            1.0771363973617554,
+            1.0771363973617554,
+            1.0771363973617554
+          ]
+        }
+      }
+    },
+    {
+      "pixel": [
+        986,
+        62
+      ],
+      "crop_sample_count": 336,
+      "full_sample_counts": [
+        336,
+        336,
+        336
+      ],
+      "differing_raw_channels": [
+        "ViewLayer.Denoising Normal.Z"
+      ],
+      "values": {
+        "ViewLayer.Debug Sample Count.X": {
+          "crop": 0.328125,
+          "full_controls": [
+            0.328125,
+            0.328125,
+            0.328125
+          ]
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "crop": 0.8193884491920471,
+          "full_controls": [
+            0.8193886280059814,
+            0.8193885684013367,
+            0.8193884491920471
+          ]
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "crop": 0.8047835826873779,
+          "full_controls": [
+            0.8047835826873779,
+            0.8047835826873779,
+            0.8047835826873779
+          ]
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "crop": 0.8002100586891174,
+          "full_controls": [
+            0.8002100586891174,
+            0.8002100586891174,
+            0.8002100586891174
+          ]
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "crop": 902.8709106445312,
+          "full_controls": [
+            902.8709106445312,
+            902.8710327148438,
+            902.8710327148438
+          ]
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "crop": 4.624567395694612e-08,
+          "full_controls": [
+            4.624567395694612e-08,
+            4.624567395694612e-08,
+            4.624567395694612e-08
+          ]
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "crop": 0.005932557862251997,
+          "full_controls": [
+            0.005932557862251997,
+            0.005932557862251997,
+            0.005932557862251997
+          ]
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "crop": -0.9276130199432373,
+          "full_controls": [
+            -0.9276134371757507,
+            -0.9276134371757507,
+            -0.9276134371757507
+          ]
+        },
+        "ViewLayer.Noisy Image.A": {
+          "crop": 1.0,
+          "full_controls": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ViewLayer.Noisy Image.B": {
+          "crop": 0.6188092827796936,
+          "full_controls": [
+            0.6188092827796936,
+            0.6188092827796936,
+            0.6188092827796936
+          ]
+        },
+        "ViewLayer.Noisy Image.G": {
+          "crop": 0.7827066779136658,
+          "full_controls": [
+            0.7827066779136658,
+            0.7827066779136658,
+            0.7827066779136658
+          ]
+        },
+        "ViewLayer.Noisy Image.R": {
+          "crop": 1.029668927192688,
+          "full_controls": [
+            1.0296690464019775,
+            1.0296690464019775,
+            1.029668927192688
+          ]
+        }
+      }
+    },
+    {
+      "pixel": [
+        985,
+        63
+      ],
+      "crop_sample_count": 336,
+      "full_sample_counts": [
+        336,
+        336,
+        336
+      ],
+      "differing_raw_channels": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Normal.Y",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.G",
+        "ViewLayer.Noisy Image.R"
+      ],
+      "values": {
+        "ViewLayer.Debug Sample Count.X": {
+          "crop": 0.328125,
+          "full_controls": [
+            0.328125,
+            0.328125,
+            0.328125
+          ]
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "crop": 0.8044868111610413,
+          "full_controls": [
+            0.8044869899749756,
+            0.8044869899749756,
+            0.8044869899749756
+          ]
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "crop": 0.7898693084716797,
+          "full_controls": [
+            0.7898693084716797,
+            0.7898693084716797,
+            0.7898693084716797
+          ]
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "crop": 0.7854509949684143,
+          "full_controls": [
+            0.7854509949684143,
+            0.7854511141777039,
+            0.7854509949684143
+          ]
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "crop": 899.6533813476562,
+          "full_controls": [
+            899.6535034179688,
+            899.6533813476562,
+            899.6533813476562
+          ]
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "crop": 3.642753299004653e-08,
+          "full_controls": [
+            3.642753299004653e-08,
+            3.642753299004653e-08,
+            3.642753299004653e-08
+          ]
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "crop": 0.006484490353614092,
+          "full_controls": [
+            0.006484493147581816,
+            0.006484493147581816,
+            0.006484493147581816
+          ]
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "crop": -0.9251013398170471,
+          "full_controls": [
+            -0.9251016974449158,
+            -0.9251016974449158,
+            -0.9251016974449158
+          ]
+        },
+        "ViewLayer.Noisy Image.A": {
+          "crop": 1.0,
+          "full_controls": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ViewLayer.Noisy Image.B": {
+          "crop": 0.6774010062217712,
+          "full_controls": [
+            0.6774010062217712,
+            0.677401065826416,
+            0.6774010062217712
+          ]
+        },
+        "ViewLayer.Noisy Image.G": {
+          "crop": 0.8729209899902344,
+          "full_controls": [
+            0.8729208111763,
+            0.8729207515716553,
+            0.8729208111763
+          ]
+        },
+        "ViewLayer.Noisy Image.R": {
+          "crop": 1.1560918092727661,
+          "full_controls": [
+            1.1560919284820557,
+            1.1560919284820557,
+            1.1560919284820557
+          ]
+        }
+      }
+    },
+    {
+      "pixel": [
+        986,
+        63
+      ],
+      "crop_sample_count": 336,
+      "full_sample_counts": [
+        336,
+        336,
+        336
+      ],
+      "differing_raw_channels": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.G"
+      ],
+      "values": {
+        "ViewLayer.Debug Sample Count.X": {
+          "crop": 0.328125,
+          "full_controls": [
+            0.328125,
+            0.328125,
+            0.328125
+          ]
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "crop": 0.8769142627716064,
+          "full_controls": [
+            0.8769140839576721,
+            0.8769142031669617,
+            0.8769142031669617
+          ]
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "crop": 0.8623084425926208,
+          "full_controls": [
+            0.8623083233833313,
+            0.8623083233833313,
+            0.8623083233833313
+          ]
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "crop": 0.8578901886940002,
+          "full_controls": [
+            0.8578900098800659,
+            0.8578900098800659,
+            0.8578900098800659
+          ]
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "crop": 903.2643432617188,
+          "full_controls": [
+            903.2643432617188,
+            903.264404296875,
+            903.2643432617188
+          ]
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "crop": 4.824862287478027e-08,
+          "full_controls": [
+            4.824862287478027e-08,
+            4.824862287478027e-08,
+            4.824862287478027e-08
+          ]
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "crop": 0.00853029452264309,
+          "full_controls": [
+            0.00853029452264309,
+            0.00853029452264309,
+            0.00853029452264309
+          ]
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "crop": -0.9297992587089539,
+          "full_controls": [
+            -0.9297996163368225,
+            -0.9297996163368225,
+            -0.9297996163368225
+          ]
+        },
+        "ViewLayer.Noisy Image.A": {
+          "crop": 1.0,
+          "full_controls": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ViewLayer.Noisy Image.B": {
+          "crop": 0.6446864604949951,
+          "full_controls": [
+            0.6446864604949951,
+            0.6446864604949951,
+            0.6446864604949951
+          ]
+        },
+        "ViewLayer.Noisy Image.G": {
+          "crop": 0.8231783509254456,
+          "full_controls": [
+            0.8231781721115112,
+            0.823178231716156,
+            0.8231781721115112
+          ]
+        },
+        "ViewLayer.Noisy Image.R": {
+          "crop": 1.0826903581619263,
+          "full_controls": [
+            1.0826903581619263,
+            1.0826903581619263,
+            1.0826903581619263
+          ]
+        }
+      }
+    },
+    {
+      "pixel": [
+        987,
+        63
+      ],
+      "crop_sample_count": 336,
+      "full_sample_counts": [
+        336,
+        336,
+        336
+      ],
+      "differing_raw_channels": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.R"
+      ],
+      "values": {
+        "ViewLayer.Debug Sample Count.X": {
+          "crop": 0.328125,
+          "full_controls": [
+            0.328125,
+            0.328125,
+            0.328125
+          ]
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "crop": 0.8493444323539734,
+          "full_controls": [
+            0.8493445515632629,
+            0.8493443727493286,
+            0.8493443727493286
+          ]
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "crop": 0.8347308039665222,
+          "full_controls": [
+            0.8347308039665222,
+            0.8347308039665222,
+            0.834730863571167
+          ]
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "crop": 0.8303125500679016,
+          "full_controls": [
+            0.8303123712539673,
+            0.8303123712539673,
+            0.8303124904632568
+          ]
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "crop": 905.888671875,
+          "full_controls": [
+            905.888671875,
+            905.8886108398438,
+            905.888671875
+          ]
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "crop": 4.8248747219759025e-08,
+          "full_controls": [
+            4.8248747219759025e-08,
+            4.8248747219759025e-08,
+            4.8248747219759025e-08
+          ]
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "crop": 0.00853031501173973,
+          "full_controls": [
+            0.00853031501173973,
+            0.00853031501173973,
+            0.00853031501173973
+          ]
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "crop": -0.9297991394996643,
+          "full_controls": [
+            -0.929799497127533,
+            -0.929799497127533,
+            -0.929799497127533
+          ]
+        },
+        "ViewLayer.Noisy Image.A": {
+          "crop": 1.0,
+          "full_controls": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "ViewLayer.Noisy Image.B": {
+          "crop": 0.7035634517669678,
+          "full_controls": [
+            0.7035635709762573,
+            0.7035635113716125,
+            0.7035635113716125
+          ]
+        },
+        "ViewLayer.Noisy Image.G": {
+          "crop": 0.9076232314109802,
+          "full_controls": [
+            0.9076232314109802,
+            0.9076232314109802,
+            0.9076231122016907
+          ]
+        },
+        "ViewLayer.Noisy Image.R": {
+          "crop": 1.191414475440979,
+          "full_controls": [
+            1.1914145946502686,
+            1.1914145946502686,
+            1.1914145946502686
+          ]
+        }
+      }
+    }
+  ],
+  "sample_counts_reproduced": true,
+  "raw_passes_bit_identical_to_pool": false,
+  "deep_on_border_supported": false,
+  "new_renders": 0,
+  "new_builds": 0,
+  "nearest_control_channel_maxima": {
+    "ViewLayer.Denoising Albedo.B": {
+      "max_abs": 1.7881393432617188e-07,
+      "max_ulp": 3.0
+    },
+    "ViewLayer.Denoising Albedo.G": {
+      "max_abs": 1.1920928955078125e-07,
+      "max_ulp": 2.0
+    },
+    "ViewLayer.Denoising Albedo.R": {
+      "max_abs": 1.7881393432617188e-07,
+      "max_ulp": 3.0
+    },
+    "ViewLayer.Denoising Depth.Z": {
+      "max_abs": 6.103515625e-05,
+      "max_ulp": 1.0
+    },
+    "ViewLayer.Denoising Normal.X": {
+      "max_abs": 0,
+      "max_ulp": 0
+    },
+    "ViewLayer.Denoising Normal.Y": {
+      "max_abs": 2.7939677238464355e-09,
+      "max_ulp": 6.0
+    },
+    "ViewLayer.Denoising Normal.Z": {
+      "max_abs": 4.172325134277344e-07,
+      "max_ulp": 7.0
+    },
+    "ViewLayer.Noisy Image.A": {
+      "max_abs": 0,
+      "max_ulp": 0
+    },
+    "ViewLayer.Noisy Image.B": {
+      "max_abs": 5.960464477539063e-08,
+      "max_ulp": 1.0
+    },
+    "ViewLayer.Noisy Image.G": {
+      "max_abs": 1.7881393432617188e-07,
+      "max_ulp": 3.0
+    },
+    "ViewLayer.Noisy Image.R": {
+      "max_abs": 1.1920928955078125e-07,
+      "max_ulp": 2.0
+    }
+  },
+  "max_nearest_control_ulp": 7.0
+}

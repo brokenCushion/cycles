@@ -17,7 +17,13 @@ pixels in every on render. The debug-only audit enlarged metadata from 32 to
 8,228 bytes and failed the existing GPU staging reservation assertions; the
 comparison queue did not start. No retry or root-cause fix. Generated source/cache
 originals and both production/snapshot installs were restored and hash-verified.
+The user reordered step 3 first, with the existing snapshot install and no build.
+Its preserved 19×20 off crop matches all eight full-frame sample counts; raw
+rounding differences reach 7 ULP of Normal.Z (4.17e-7) and 1 ULP of depth.
+That install rejects deep-on borders before rendering, so CPU/CUDA/OptiX pairs
+cannot run without diagnostic border support. No new build or render started.
 Steps 2–3, conditional bisect, qualification and Gaffer review remain pending.
+[Crop sampling check](builds/validation/landscape-cloud/optimization-phase9/crop-sampling-check.json).
 [Investigation evidence](builds/validation/landscape-cloud/optimization-phase9/state-investigation-step1.json).
 [Production results](builds/validation/landscape-cloud/optimization-phase9/production-results.json),
 [run 1 count gate](builds/validation/landscape-cloud/optimization-phase9/deep-all-beauty-count-policy.json),

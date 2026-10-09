@@ -2329,3 +2329,16 @@ original metadata layout and staging limits.
 [Small evidence report](builds/validation/landscape-cloud/optimization-phase9/state-investigation-step1.json).
 Debug scripts/logs remain at `D:/CyclesDeepScratch/optimization-phase9/deep-beauty-state-diagnostic-20261009/`;
 no snapshot or instrumented C++ was added to the deep branch.
+
+The user reordered step 3 before auditing, using the existing snapshot executable
+and **no new build**. The preserved native 19×20 OptiX off crop matches all eight
+full-frame off sample counts (224 at (986,60), 336 at the other seven). Against the
+nearest of the three full-frame controls, maximum raw differences are noisy RGB
+1.78814e-7, albedo 1.78814e-7, normal 4.17233e-7 (7 ULP of Normal.Z), depth
+6.10352e-5 (1 ULP); noisy alpha is exact. Raw passes are not bit-identical.
+The unchanged snapshot executable (`fa9b6f99…f7da`) rejects deep-on camera borders
+in native preflight, including capture-only mode; a second full-frame guard also
+rejects cropped buffers. No environment bypass exists in these guards. Therefore
+the requested three-device on/off crop comparison is blocked under the no-build
+constraint. No new render/build, backend-specific attribution, audit or bisect.
+[Per-pixel counts and all raw values](builds/validation/landscape-cloud/optimization-phase9/crop-sampling-check.json).

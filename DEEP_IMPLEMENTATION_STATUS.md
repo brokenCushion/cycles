@@ -4,7 +4,7 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–8 accepted.
 
-**Phase 9: CUDA count isolation complete; stopped for review.** Both production deep outputs and all nine
+**Phase 9: fixed-336 OptiX renders complete; comparison harness failed.** Both production deep outputs and all nine
 beauty references completed. Independent oracles, exterior alpha, Gaffer depth
 cuts and native populations pass. The repaired beauty validator reports a
 calibrated count-rate failure: all-samples mean 488, prefix64 mean 470.6,
@@ -24,9 +24,20 @@ No-build inspection found queue-private launch parameters and a private deep SBT
 no beauty overwrite was identified. Deep time changes beauty batch boundaries on
 both devices, suggesting a scheduling/accumulation route, but the root cause is
 unproven. No rebuild, state audit, bisect or fix followed. Production and snapshot
-hashes remain unchanged. Stopped before any fix; qualification/Gaffer remain pending.
+hashes remain unchanged. The user approved one further full-frame OptiX off/on
+pair with adaptive sampling disabled and 336 fixed beauty samples; deep remains
+prefix64/IDs/error1e-3/default z/8192 MiB. It uses the existing snapshot executable.
+Earlier adaptive batches differ, but reconstructed filter checkpoints are identical
+(16,32,…1024). The binary does not expose checkpoint half-sample accumulators, so
+the numeric convergence metric cannot be recovered without instrumentation.
+Both fixed-336 renders exited successfully. The comparison parser wrongly requires
+an adaptive `Step` field, which is omitted when adaptive sampling is OFF; it failed
+before publishing the raw comparison. Outputs are preserved; no retry, parser fix,
+new build or root-cause fix. Stopped for review. Qualification/Gaffer remain pending.
+[Harness failure and preserved outputs](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-harness-failure.json).
 [CUDA counts, every raw pass and source inspection](builds/validation/landscape-cloud/optimization-phase9/cuda-count-isolation.json).
 Large outputs: `D:/CyclesDeepScratch/optimization-phase9/cuda-count-diagnostic-20261010/`.
+Current pair: `D:/CyclesDeepScratch/optimization-phase9/optix-fixed-count-diagnostic-20261010/`.
 [Crop sampling check](builds/validation/landscape-cloud/optimization-phase9/crop-sampling-check.json).
 [Investigation evidence](builds/validation/landscape-cloud/optimization-phase9/state-investigation-step1.json).
 [Production results](builds/validation/landscape-cloud/optimization-phase9/production-results.json),

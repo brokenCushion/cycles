@@ -1,0 +1,2980 @@
+{
+  "status": "comparison-harness-failed",
+  "queue": {
+    "queue_pid": 43936,
+    "status": "failed",
+    "completed": [
+      {
+        "name": "off-1",
+        "finished_utc": "2026-10-09T17:25:30Z"
+      },
+      {
+        "name": "on-1",
+        "finished_utc": "2026-10-09T17:39:13Z"
+      }
+    ],
+    "started_utc": "2026-10-09T17:19:39Z",
+    "scope": "Exactly one OptiX fixed-336 deep-off and deep-on; no rebuild, no fix",
+    "current": null,
+    "command": [
+      "D:\\CyclesDeepScratch\\regression-tools\\Scripts\\python.exe",
+      "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\measure_deep_render.py",
+      "D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010\\on-1",
+      "--",
+      "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\blender.exe",
+      "--factory-startup",
+      "--background",
+      "--disable-autoexec",
+      "--log",
+      "cycles",
+      "--log-level",
+      "debug",
+      "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "--python-exit-code",
+      "1",
+      "--python",
+      "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\render_blender_deep_scene.py",
+      "--",
+      "--output",
+      "D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010\\on-1",
+      "--samples",
+      "336",
+      "--percentage",
+      "50",
+      "--threads",
+      "24",
+      "--device",
+      "OPTIX",
+      "--save-render-passes",
+      "--diagnostic-sample-count",
+      "--deep",
+      "--deep-volume",
+      "--deep-ids",
+      "--deep-error",
+      "1e-3",
+      "--deep-samples",
+      "64",
+      "--deep-max-events",
+      "8192",
+      "--deep-memory-mb",
+      "8192",
+      "--fixed-sampling"
+    ],
+    "started_current_utc": "2026-10-09T17:25:30Z",
+    "measurement_pid": 3368,
+    "error": "Command '['D:\\\\CyclesDeepScratch\\\\regression-tools\\\\Scripts\\\\python.exe', 'D:\\\\CyclesDeepScratch\\\\optimization-phase9\\\\optix-fixed-count-diagnostic-20261010\\\\compare_fixed.py']' returned non-zero exit status 1.",
+    "traceback": "Traceback (most recent call last):\n  File \"D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010\\run_pair.py\", line 61, in <module>\n    subprocess.run([str(old.PYTHON),str(ROOT/'compare_fixed.py')],cwd=old.REPO,check=True)\n  File \"C:\\Users\\jun\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\subprocess.py\", line 571, in run\n    raise CalledProcessError(retcode, process.args,\nsubprocess.CalledProcessError: Command '['D:\\\\CyclesDeepScratch\\\\regression-tools\\\\Scripts\\\\python.exe', 'D:\\\\CyclesDeepScratch\\\\optimization-phase9\\\\optix-fixed-count-diagnostic-20261010\\\\compare_fixed.py']' returned non-zero exit status 1.\n"
+  },
+  "comparison_traceback": "Traceback (most recent call last):\n  File \"D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010\\compare_fixed.py\", line 59, in <module>\n    schedules={f'fixed/{name}':scheduler(ROOT/name/'process.log',False,336) for name in ['off-1','on-1']}\n                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010\\compare_fixed.py\", line 37, in scheduler\n    step=int(re.search(r'Step:\\s*(\\d+)',text)[1])\n             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^\nTypeError: 'NoneType' object is not subscriptable\nTraceback (most recent call last):\n  File \"D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010\\run_pair.py\", line 61, in <module>\n    subprocess.run([str(old.PYTHON),str(ROOT/'compare_fixed.py')],cwd=old.REPO,check=True)\n  File \"C:\\Users\\jun\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\subprocess.py\", line 571, in run\n    raise CalledProcessError(retcode, process.args,\nsubprocess.CalledProcessError: Command '['D:\\\\CyclesDeepScratch\\\\regression-tools\\\\Scripts\\\\python.exe', 'D:\\\\CyclesDeepScratch\\\\optimization-phase9\\\\optix-fixed-count-diagnostic-20261010\\\\compare_fixed.py']' returned non-zero exit status 1.\n",
+  "large_outputs": "D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010",
+  "rerenders": 0,
+  "retry_performed": false,
+  "new_build": false,
+  "root_cause_fix": false,
+  "raw_comparison_published": false,
+  "reason": "Fixed/adaptive-OFF scheduler summaries omit Step/Min Samples/Threshold. The comparison parser wrongly requires Step unconditionally. Both native renders finished before the parser failed. Stopped without retry or further comparison.",
+  "existing_adaptive_scheduler": {
+    "off-1": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\off-1\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 16,
+          "end_sample": 32
+        },
+        {
+          "samples": 16,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "filter_evidence": "reconstructed from logged batch ends and AdaptiveSampling::need_filter; invocation was not logged at INFO",
+      "direct_filter_logs": []
+    },
+    "off-2": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\off-2\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 16,
+          "end_sample": 32
+        },
+        {
+          "samples": 16,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "filter_evidence": "reconstructed from logged batch ends and AdaptiveSampling::need_filter; invocation was not logged at INFO",
+      "direct_filter_logs": []
+    },
+    "off-3": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\off-3\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 16,
+          "end_sample": 32
+        },
+        {
+          "samples": 16,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "filter_evidence": "reconstructed from logged batch ends and AdaptiveSampling::need_filter; invocation was not logged at INFO",
+      "direct_filter_logs": []
+    },
+    "on-1": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\on-1\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        14,
+        2,
+        8,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 14,
+          "end_sample": 30
+        },
+        {
+          "samples": 2,
+          "end_sample": 32
+        },
+        {
+          "samples": 8,
+          "end_sample": 40
+        },
+        {
+          "samples": 8,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "filter_evidence": "reconstructed from logged batch ends and AdaptiveSampling::need_filter; invocation was not logged at INFO",
+      "direct_filter_logs": []
+    },
+    "on-2": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\on-2\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        14,
+        2,
+        8,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 14,
+          "end_sample": 30
+        },
+        {
+          "samples": 2,
+          "end_sample": 32
+        },
+        {
+          "samples": 8,
+          "end_sample": 40
+        },
+        {
+          "samples": 8,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "filter_evidence": "reconstructed from logged batch ends and AdaptiveSampling::need_filter; invocation was not logged at INFO",
+      "direct_filter_logs": []
+    },
+    "on-3": {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\on-3\\process.log",
+      "batch_sizes": [
+        1,
+        1,
+        2,
+        4,
+        8,
+        14,
+        2,
+        8,
+        8,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "batches": [
+        {
+          "samples": 1,
+          "end_sample": 1
+        },
+        {
+          "samples": 1,
+          "end_sample": 2
+        },
+        {
+          "samples": 2,
+          "end_sample": 4
+        },
+        {
+          "samples": 4,
+          "end_sample": 8
+        },
+        {
+          "samples": 8,
+          "end_sample": 16
+        },
+        {
+          "samples": 14,
+          "end_sample": 30
+        },
+        {
+          "samples": 2,
+          "end_sample": 32
+        },
+        {
+          "samples": 8,
+          "end_sample": 40
+        },
+        {
+          "samples": 8,
+          "end_sample": 48
+        },
+        {
+          "samples": 16,
+          "end_sample": 64
+        },
+        {
+          "samples": 16,
+          "end_sample": 80
+        },
+        {
+          "samples": 16,
+          "end_sample": 96
+        },
+        {
+          "samples": 16,
+          "end_sample": 112
+        },
+        {
+          "samples": 16,
+          "end_sample": 128
+        },
+        {
+          "samples": 16,
+          "end_sample": 144
+        },
+        {
+          "samples": 16,
+          "end_sample": 160
+        },
+        {
+          "samples": 16,
+          "end_sample": 176
+        },
+        {
+          "samples": 16,
+          "end_sample": 192
+        },
+        {
+          "samples": 16,
+          "end_sample": 208
+        },
+        {
+          "samples": 16,
+          "end_sample": 224
+        },
+        {
+          "samples": 16,
+          "end_sample": 240
+        },
+        {
+          "samples": 16,
+          "end_sample": 256
+        },
+        {
+          "samples": 16,
+          "end_sample": 272
+        },
+        {
+          "samples": 16,
+          "end_sample": 288
+        },
+        {
+          "samples": 16,
+          "end_sample": 304
+        },
+        {
+          "samples": 16,
+          "end_sample": 320
+        },
+        {
+          "samples": 16,
+          "end_sample": 336
+        },
+        {
+          "samples": 16,
+          "end_sample": 352
+        },
+        {
+          "samples": 16,
+          "end_sample": 368
+        },
+        {
+          "samples": 16,
+          "end_sample": 384
+        },
+        {
+          "samples": 16,
+          "end_sample": 400
+        },
+        {
+          "samples": 16,
+          "end_sample": 416
+        },
+        {
+          "samples": 16,
+          "end_sample": 432
+        },
+        {
+          "samples": 16,
+          "end_sample": 448
+        },
+        {
+          "samples": 16,
+          "end_sample": 464
+        },
+        {
+          "samples": 16,
+          "end_sample": 480
+        },
+        {
+          "samples": 16,
+          "end_sample": 496
+        },
+        {
+          "samples": 16,
+          "end_sample": 512
+        },
+        {
+          "samples": 16,
+          "end_sample": 528
+        },
+        {
+          "samples": 16,
+          "end_sample": 544
+        },
+        {
+          "samples": 16,
+          "end_sample": 560
+        },
+        {
+          "samples": 16,
+          "end_sample": 576
+        },
+        {
+          "samples": 16,
+          "end_sample": 592
+        },
+        {
+          "samples": 16,
+          "end_sample": 608
+        },
+        {
+          "samples": 16,
+          "end_sample": 624
+        },
+        {
+          "samples": 16,
+          "end_sample": 640
+        },
+        {
+          "samples": 16,
+          "end_sample": 656
+        },
+        {
+          "samples": 16,
+          "end_sample": 672
+        },
+        {
+          "samples": 16,
+          "end_sample": 688
+        },
+        {
+          "samples": 16,
+          "end_sample": 704
+        },
+        {
+          "samples": 16,
+          "end_sample": 720
+        },
+        {
+          "samples": 16,
+          "end_sample": 736
+        },
+        {
+          "samples": 16,
+          "end_sample": 752
+        },
+        {
+          "samples": 16,
+          "end_sample": 768
+        },
+        {
+          "samples": 16,
+          "end_sample": 784
+        },
+        {
+          "samples": 16,
+          "end_sample": 800
+        },
+        {
+          "samples": 16,
+          "end_sample": 816
+        },
+        {
+          "samples": 16,
+          "end_sample": 832
+        },
+        {
+          "samples": 16,
+          "end_sample": 848
+        },
+        {
+          "samples": 16,
+          "end_sample": 864
+        },
+        {
+          "samples": 16,
+          "end_sample": 880
+        },
+        {
+          "samples": 16,
+          "end_sample": 896
+        },
+        {
+          "samples": 16,
+          "end_sample": 912
+        },
+        {
+          "samples": 16,
+          "end_sample": 928
+        },
+        {
+          "samples": 16,
+          "end_sample": 944
+        },
+        {
+          "samples": 16,
+          "end_sample": 960
+        },
+        {
+          "samples": 16,
+          "end_sample": 976
+        },
+        {
+          "samples": 16,
+          "end_sample": 992
+        },
+        {
+          "samples": 16,
+          "end_sample": 1008
+        },
+        {
+          "samples": 16,
+          "end_sample": 1024
+        }
+      ],
+      "adaptive": true,
+      "threshold": 0.15,
+      "step": 16,
+      "min_samples": 8,
+      "adaptive_filter_samples": [
+        16,
+        32,
+        48,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        208,
+        224,
+        240,
+        256,
+        272,
+        288,
+        304,
+        320,
+        336,
+        352,
+        368,
+        384,
+        400,
+        416,
+        432,
+        448,
+        464,
+        480,
+        496,
+        512,
+        528,
+        544,
+        560,
+        576,
+        592,
+        608,
+        624,
+        640,
+        656,
+        672,
+        688,
+        704,
+        720,
+        736,
+        752,
+        768,
+        784,
+        800,
+        816,
+        832,
+        848,
+        864,
+        880,
+        896,
+        912,
+        928,
+        944,
+        960,
+        976,
+        992,
+        1008,
+        1024
+      ],
+      "filter_evidence": "reconstructed from logged batch ends and AdaptiveSampling::need_filter; invocation was not logged at INFO",
+      "direct_filter_logs": []
+    }
+  },
+  "runs": {
+    "off-1": {
+      "render": {
+        "renderer_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+        "blender": "5.3.0 Alpha",
+        "build_hash": "749518deb2f0",
+        "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+        "camera": "Camera",
+        "camera_type": "PERSP",
+        "ortho_scale": 7.314285755157471,
+        "frame": 0,
+        "samples": 336,
+        "threads": 24,
+        "resolution": [
+          2350,
+          1000
+        ],
+        "percentage": 50,
+        "dof": false,
+        "adaptive": false,
+        "adaptive_threshold": 0.029999999329447746,
+        "adaptive_min_samples": 8,
+        "seed": 0,
+        "use_animated_seed": true,
+        "denoising": true,
+        "denoiser": "OPENIMAGEDENOISE",
+        "denoising_use_gpu": true,
+        "save_render_passes": true,
+        "capture_only": false,
+        "diagnostic_sample_count_pass": true,
+        "kernel_source_override": null,
+        "materials": 110,
+        "objects": 376,
+        "compositing": false,
+        "deep": false,
+        "device": "OPTIX",
+        "deep_volume": false,
+        "deep_volume_shader_eval": false,
+        "deep_volume_step": 0,
+        "deep_volume_fixed_step": false,
+        "deep_error": null,
+        "deep_z_tolerance": 0,
+        "deep_samples": null,
+        "deep_ids": false,
+        "deep_max_events": null,
+        "deep_memory_mb": null,
+        "view_layers": [
+          "ViewLayer"
+        ],
+        "pixel_filter": "BLACKMAN_HARRIS",
+        "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+        "camera_world_matrix": [
+          [
+            3.319657325744629,
+            -0.6532265543937683,
+            0.7761955857276917,
+            563.4478149414062
+          ],
+          [
+            1.0144872665405273,
+            2.137481212615967,
+            -2.53994083404541,
+            -556.8704223632812
+          ],
+          [
+            1.539787626825273e-05,
+            2.655895233154297,
+            2.2350683212280273,
+            697.09521484375
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "camera_frame": [
+          [
+            0.5,
+            0.21276596188545227,
+            -1.6666666269302368
+          ],
+          [
+            0.5,
+            -0.21276596188545227,
+            -1.6666666269302368
+          ],
+          [
+            -0.5,
+            -0.21276596188545227,
+            -1.6666666269302368
+          ],
+          [
+            -0.5,
+            0.21276596188545227,
+            -1.6666666269302368
+          ]
+        ],
+        "camera_translation": [
+          563.4478149414062,
+          -556.8704223632812,
+          697.09521484375
+        ],
+        "camera_rotation_degrees": [
+          49.91771354898617,
+          -0.0002541571951613384,
+          16.993152070060297
+        ],
+        "camera_scale": [
+          3.4712114334106445,
+          3.4712116718292236,
+          3.4712116718292236
+        ],
+        "pixel_aspect": [
+          1.0,
+          1.0
+        ],
+        "seconds": 344.5628977000015,
+        "beauty_exists": true
+      },
+      "measurement": {
+        "command": [
+          "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\blender.exe",
+          "--factory-startup",
+          "--background",
+          "--disable-autoexec",
+          "--log",
+          "cycles",
+          "--log-level",
+          "debug",
+          "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+          "--python-exit-code",
+          "1",
+          "--python",
+          "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\render_blender_deep_scene.py",
+          "--",
+          "--output",
+          "D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010\\off-1",
+          "--samples",
+          "336",
+          "--percentage",
+          "50",
+          "--threads",
+          "24",
+          "--device",
+          "OPTIX",
+          "--save-render-passes",
+          "--diagnostic-sample-count",
+          "--fixed-sampling"
+        ],
+        "sample_period_seconds": 1,
+        "scope": "One process; sampled I/O includes all files; GPU memory is device-wide",
+        "max_sampled_rss": 6127423488,
+        "peak_working_set": 6140448768,
+        "max_sampled_private": 9328394240,
+        "max_sampled_read_bytes": 706966797,
+        "max_sampled_write_bytes": 89977503,
+        "max_device_memory_mib": 5908,
+        "max_device_memory_at_seconds": 291.59399999998277,
+        "max_device_memory_at_utc": "2026-10-09T17:24:31.976243+00:00",
+        "max_device_memory_log_tail": "\n03:31.938  cycles           | Measured path tracing occupancy: 0.601975\n03:31.938  cycles           | Average path tracing time: 0.666442 seconds.\n03:31.938  cycles           | Denoise volume guiding buffers.\n03:31.938  cycles           | Average volume guiding denoising time: 1.92187e-06 seconds.\n03:31.938  cycles           | Will path trace 32 samples at the resolution divider 1\n03:31.938  cycles           | Will schedule 12 tiles of size: (64, 64), num_samples: 4\n03:31.938  cycles           | Number of unused path states: 12288\n03:52.734  cycles           | Rendered 32 samples in 20.7881 seconds (0.649629 seconds per sample), occupancy: 0.588534\n03:52.734  cycles           | Measured path tracing occupancy: 0.588534\n03:52.734  cycles           | Average path tracing time: 0.66308 seconds.\n03:52.734  cycles           | Will path trace 32 samples at the resolution divider 1\n03:52.734  cycles           | Will schedule 12 tiles of size: (64, 64), num_samples: 4\n03:52.734  cycles           | Number of unused path states: 12288\n04:13.531  cycles           | Rendered 32 samples in 20.8024 seconds (0.650076 seconds per sample), occupancy: 0.600467\n04:13.531  cycles           | Measured path tracing occupancy: 0.600467\n04:13.531  cycles           | Average path tracing time: 0.660913 seconds.\n04:13.531  cycles           | Will path trace 32 samples at the resolution divider 1\n04:13.531  cycles           | Will schedule 12 tiles of size: (64, 64), num_samples: 4\n04:13.531  cycles           | Number of unused path states: 12288\n04:34.359  cycles           | Rendered 32 samples in 20.8187 seconds (0.650583 seconds per sample), occupancy: 0.5974\n04:34.359  cycles           | Measured path tracing occupancy: 0.5974\n04:34.359  cycles           | Average path tracing time: 0.659438 seconds.\n04:34.359  cycles           | Will path trace 32 samples at the resolution divider 1\n04:34.359  cycles           | Will schedule 12 tiles of size: (64, 64), num_samples: 4\n04:34.359  cycles           | Number of unused path states: 12288\n",
+        "max_process_gpu_dedicated_bytes": 3747008512,
+        "process_gpu_samples": 329,
+        "process_gpu_memory_scope": "Windows GPU Process Memory dedicated counter, summed across adapters",
+        "process_gpu_monitor_errors": [],
+        "monitor_errors": [],
+        "exit_code": 0,
+        "wall_seconds": 349.8279999999795,
+        "passed_process": true,
+        "executable_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da"
+      }
+    },
+    "on-1": {
+      "render": {
+        "renderer_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+        "blender": "5.3.0 Alpha",
+        "build_hash": "749518deb2f0",
+        "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+        "camera": "Camera",
+        "camera_type": "PERSP",
+        "ortho_scale": 7.314285755157471,
+        "frame": 0,
+        "samples": 336,
+        "threads": 24,
+        "resolution": [
+          2350,
+          1000
+        ],
+        "percentage": 50,
+        "dof": false,
+        "adaptive": false,
+        "adaptive_threshold": 0.029999999329447746,
+        "adaptive_min_samples": 8,
+        "seed": 0,
+        "use_animated_seed": true,
+        "denoising": true,
+        "denoiser": "OPENIMAGEDENOISE",
+        "denoising_use_gpu": true,
+        "save_render_passes": true,
+        "capture_only": false,
+        "diagnostic_sample_count_pass": true,
+        "kernel_source_override": null,
+        "materials": 110,
+        "objects": 376,
+        "compositing": false,
+        "deep": true,
+        "device": "OPTIX",
+        "deep_volume": true,
+        "deep_volume_shader_eval": false,
+        "deep_volume_step": 0,
+        "deep_volume_fixed_step": false,
+        "deep_error": 0.001,
+        "deep_z_tolerance": 0.0001,
+        "deep_samples": 64,
+        "deep_ids": true,
+        "deep_max_events": 8192,
+        "deep_memory_mb": 8192,
+        "view_layers": [
+          "ViewLayer"
+        ],
+        "pixel_filter": "BLACKMAN_HARRIS",
+        "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+        "camera_world_matrix": [
+          [
+            3.319657325744629,
+            -0.6532265543937683,
+            0.7761955857276917,
+            563.4478149414062
+          ],
+          [
+            1.0144872665405273,
+            2.137481212615967,
+            -2.53994083404541,
+            -556.8704223632812
+          ],
+          [
+            1.539787626825273e-05,
+            2.655895233154297,
+            2.2350683212280273,
+            697.09521484375
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "camera_frame": [
+          [
+            0.5,
+            0.21276596188545227,
+            -1.6666666269302368
+          ],
+          [
+            0.5,
+            -0.21276596188545227,
+            -1.6666666269302368
+          ],
+          [
+            -0.5,
+            -0.21276596188545227,
+            -1.6666666269302368
+          ],
+          [
+            -0.5,
+            0.21276596188545227,
+            -1.6666666269302368
+          ]
+        ],
+        "camera_translation": [
+          563.4478149414062,
+          -556.8704223632812,
+          697.09521484375
+        ],
+        "camera_rotation_degrees": [
+          49.91771354898617,
+          -0.0002541571951613384,
+          16.993152070060297
+        ],
+        "camera_scale": [
+          3.4712114334106445,
+          3.4712116718292236,
+          3.4712116718292236
+        ],
+        "pixel_aspect": [
+          1.0,
+          1.0
+        ],
+        "seconds": 817.0000583000365,
+        "beauty_exists": true,
+        "deep_bytes": 728690948
+      },
+      "measurement": {
+        "command": [
+          "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\blender.exe",
+          "--factory-startup",
+          "--background",
+          "--disable-autoexec",
+          "--log",
+          "cycles",
+          "--log-level",
+          "debug",
+          "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+          "--python-exit-code",
+          "1",
+          "--python",
+          "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\render_blender_deep_scene.py",
+          "--",
+          "--output",
+          "D:\\CyclesDeepScratch\\optimization-phase9\\optix-fixed-count-diagnostic-20261010\\on-1",
+          "--samples",
+          "336",
+          "--percentage",
+          "50",
+          "--threads",
+          "24",
+          "--device",
+          "OPTIX",
+          "--save-render-passes",
+          "--diagnostic-sample-count",
+          "--deep",
+          "--deep-volume",
+          "--deep-ids",
+          "--deep-error",
+          "1e-3",
+          "--deep-samples",
+          "64",
+          "--deep-max-events",
+          "8192",
+          "--deep-memory-mb",
+          "8192",
+          "--fixed-sampling"
+        ],
+        "sample_period_seconds": 1,
+        "scope": "One process; sampled I/O includes all files; GPU memory is device-wide",
+        "max_sampled_rss": 5618229248,
+        "peak_working_set": 5624987648,
+        "max_sampled_private": 10033922048,
+        "max_sampled_read_bytes": 28519901737,
+        "max_sampled_write_bytes": 28413150855,
+        "max_device_memory_mib": 6152,
+        "max_device_memory_at_seconds": 639.0939999999828,
+        "max_device_memory_at_utc": "2026-10-09T17:36:10.058397+00:00",
+        "max_device_memory_log_tail": "time: 4.94e-05 seconds.\n10:38.875  cycles           | Rendering in main loop is done in 630.534 seconds.\n10:38.875  cycles           | Full path tracing report:\n                            | \n                            | Path tracing on: NVIDIA GeForce RTX 3080 (OptiX) [CUDA_NVIDIA GeForce RTX 3080_0000:2b:00_OptiX]\n                            |                      Hardware Ray-Tracing: Off\n                            | \n                            | Denoising on: NVIDIA GeForce RTX 3080 (OptiX) [CUDA_NVIDIA GeForce RTX 3080_0000:2b:00_OptiX]\n                            |                   Hardware Ray-Tracing: Off\n                            | \n                            | Render Scheduler Summary\n                            | \n                            | Mode: Headless\n                            | Resolution: 1175x500\n                            | \n                            | Adaptive sampling:\n                            |   Use: False\n                            | \n                            | Denoiser:\n                            |   Use: True\n                            |   Type: OpenImageDenoise\n                            |   Start Sample: 0\n                            |   Passes: Color, Albedo, Normal\n                            | \n                            | Time (in seconds):\n                            |                                        Wall              Average\n                            |           Path Tracing           630.358727             1.876068\n                            |               Denoiser             0.071241             0.071241\n                            |         Display Update             0.000049             0.000049\n                            | \n                            |   Total: 630.430018\n                            | \n                            | Rendered 336 samples in 630.533668 seconds\n                            | Average time per sample: 1.876588 seconds\n                            | \n10:38.875  cycles           | Deep output: export_workers=24\n",
+        "max_process_gpu_dedicated_bytes": 4007100416,
+        "process_gpu_samples": 771,
+        "process_gpu_memory_scope": "Windows GPU Process Memory dedicated counter, summed across adapters",
+        "process_gpu_monitor_errors": [],
+        "monitor_errors": [],
+        "exit_code": 0,
+        "wall_seconds": 822.1880000000237,
+        "passed_process": true,
+        "executable_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da"
+      }
+    }
+  }
+}

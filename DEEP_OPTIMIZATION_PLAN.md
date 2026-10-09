@@ -2380,3 +2380,30 @@ Production SHA remains `677aab08cfb6ffb02298f7d67f1e61a24801fd1b195436524a935871
 snapshot SHA `fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da`.
 [Every raw value, count mismatch list and source inspection](builds/validation/landscape-cloud/optimization-phase9/cuda-count-isolation.json).
 Large outputs: `D:/CyclesDeepScratch/optimization-phase9/cuda-count-diagnostic-20261010/`.
+
+#### Phase 9 - fixed-336 OptiX pair: renders complete, comparison harness failed
+
+User-approved diagnostic: exactly one full-frame OptiX off/on pair, existing
+snapshot executable, fixed 336 beauty samples/adaptive OFF, unchanged deep
+prefix64/IDs/error1e-3/default z/8192 MiB. Pair started October 10 Sydney; large
+outputs under `D:/CyclesDeepScratch/optimization-phase9/optix-fixed-count-diagnostic-20261010/`.
+Both renders exited 0; outputs and logs remain preserved. The comparison parser
+unconditionally requires an adaptive `Step` field, absent from the native summary
+when adaptive sampling is OFF. It failed before publishing the raw-pass comparison.
+No numerical failure is established. No retry, parser fix, extra comparison,
+root-cause fix or rebuild followed; stopped for review.
+
+| Run | Render/capture main loop | Export | Measurement wall | Result |
+|---|---:|---:|---:|---|
+| OptiX off, fixed336 | 221.042 s | — | 349.828 s | Render exit 0; comparison pending |
+| OptiX on, fixed336/prefix64/IDs | 630.534 s | 181.235 s | 822.188 s | Render exit 0; comparison pending |
+
+Earlier adaptive
+filter checkpoints reconstructed from batch ends and the scheduler rule are
+16,32,…1024 in all six runs, although batch boundaries differ. Effective scheduler
+threshold is 0.15 (scene setting 0.03 × native factor 5). The saved EXRs contain no
+checkpoint half-sample accumulation buffer; a numerical convergence metric at
+(986,61) cannot be recovered with this binary and no rebuild. Final sample counts
+alone do not separate local convergence from neighbour dilation. No scheduler-fix
+proposal can yet be justified from this fixed-pair comparison.
+[Failure evidence and preserved output paths](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-harness-failure.json).

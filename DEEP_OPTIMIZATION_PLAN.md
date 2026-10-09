@@ -2339,6 +2339,18 @@ nearest of the three full-frame controls, maximum raw differences are noisy RGB
 The unchanged snapshot executable (`fa9b6f99…f7da`) rejects deep-on camera borders
 in native preflight, including capture-only mode; a second full-frame guard also
 rejects cropped buffers. No environment bypass exists in these guards. Therefore
-the requested three-device on/off crop comparison is blocked under the no-build
-constraint. No new render/build, backend-specific attribution, audit or bisect.
+the requested three-device on/off crop comparison was blocked under the no-build
+constraint. No backend-specific attribution, audit or bisect was established.
 [Per-pixel counts and all raw values](builds/validation/landscape-cloud/optimization-phase9/crop-sampling-check.json).
+
+User-authorized next step (2026-10-10 Sydney): one full-frame CUDA deep-off/on
+pair with the existing snapshot executable and the count experiment settings,
+including error1e-3/prefix64/IDs/default z/8192 MiB. Report all raw passes at the
+eight pixels and every image-wide count mismatch. If the target pixels match,
+inspect the OptiX launch/SBT/queue ownership and write sites without rebuilding.
+If CUDA reproduces the effect, **one diagnostic-only rebuild** may add an external
+state snapshot buffer outside the deep memory reservation plus capture-only
+border support; retain 32-byte metadata and otherwise unchanged GPU capture.
+Stop before any root-cause fix. Queue and large outputs:
+`D:/CyclesDeepScratch/optimization-phase9/cuda-count-diagnostic-20261010/`;
+preflight hashes/settings and the comparison helper's self-check pass.

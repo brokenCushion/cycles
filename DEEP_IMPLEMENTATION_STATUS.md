@@ -4,7 +4,7 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–8 accepted.
 
-**Phase 9 stopped on a diagnostic build failure.** Both production deep outputs and all nine
+**Phase 9: full-frame CUDA isolation pair running.** Both production deep outputs and all nine
 beauty references completed. Independent oracles, exterior alpha, Gaffer depth
 cuts and native populations pass. The repaired beauty validator reports a
 calibrated count-rate failure: all-samples mean 488, prefix64 mean 470.6,
@@ -17,11 +17,13 @@ pixels in every on render. The debug-only audit enlarged metadata from 32 to
 8,228 bytes and failed the existing GPU staging reservation assertions; the
 comparison queue did not start. No retry or root-cause fix. Generated source/cache
 originals and both production/snapshot installs were restored and hash-verified.
-The user reordered step 3 first, with the existing snapshot install and no build.
-Its preserved 19×20 off crop matches all eight full-frame sample counts; raw
-rounding differences reach 7 ULP of Normal.Z (4.17e-7) and 1 ULP of depth.
-That install rejects deep-on borders before rendering, so CPU/CUDA/OptiX pairs
-cannot run without diagnostic border support. No new build or render started.
+The user authorized one full-frame CUDA off/on pair with the existing snapshot
+install, original sampling and prefix64/IDs/error1e-3/8192 MiB settings. If the
+eight target pixels match, inspect OptiX without building. If CUDA reproduces the
+effect, one diagnostic-only rebuild may add an external state snapshot buffer
+and capture-only borders; metadata remains 32 bytes. No root-cause fix before review.
+Current queue/large outputs: `D:/CyclesDeepScratch/optimization-phase9/cuda-count-diagnostic-20261010/`.
+No new build or production change; monitor every 30 minutes.
 Steps 2–3, conditional bisect, qualification and Gaffer review remain pending.
 [Crop sampling check](builds/validation/landscape-cloud/optimization-phase9/crop-sampling-check.json).
 [Investigation evidence](builds/validation/landscape-cloud/optimization-phase9/state-investigation-step1.json).

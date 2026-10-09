@@ -104,7 +104,7 @@ are not promised.
 
 ## Core footprint for rebases
 
-All 59 Cycles source/build files outside `src/deep/` and `src/kernel/deep/`, relative to
+All 68 Cycles source/build files outside `src/deep/` and `src/kernel/deep/`, relative to
 local `origin/main` (`a456b7610`). Shared deep headers remain in `src/kernel/deep/`.
 
 | Files | Reason |
@@ -121,6 +121,9 @@ local `origin/main` (`a456b7610`). Shared deep headers remain in `src/kernel/dee
 | `src/kernel/integrator/surface_shader.h` | Template switch disables closure storage for deep opacity evaluation; beauty uses the original default. |
 | `src/kernel/types.h` | KernelShader padding carries extinction constants without increasing its size; deep DeviceKernel enum. |
 | `src/kernel/util/nanovdb.h` | Optional uniform-tile dimension accessor for deep grid traversal; ordinary reads preserve defaults. |
+| `src/kernel/device/gpu/image.h`<br>`src/kernel/util/image_2d.h`<br>`src/kernel/svm/svm.h` | Guarded deterministic deep texture/attribute evaluation; native beauty specializations remain unchanged. |
+| `src/kernel/device/optix/kernel_deep_osl.cu`<br>`src/kernel/device/optix/kernel_deep_osl_services.cu`<br>`src/kernel/osl/closures.cpp`<br>`src/kernel/osl/services.cpp` | Separate deep OSL callables/services, initialized volume evaluation and scalar extinction extraction. |
+| `src/scene/osl.cpp`<br>`src/scene/osl.h` | Guarded shader-group feature queries for explicit deep preflight. |
 | `src/scene/object.cpp`<br>`src/scene/shader.cpp`<br>`src/scene/shader.h` | Object primitive ranges and preflight extinction constants uploaded for separate capture. |
 | `src/session/deep.cpp`<br>`src/session/deep.h`<br>`src/session/output_driver.h`<br>`src/session/session.cpp`<br>`src/session/session.h` | Public settings/preflight, camera/data contract and deep output-driver callback lifecycle. |
 

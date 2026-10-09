@@ -1946,7 +1946,7 @@ old references remain unchanged. [Promotion](builds/validation/landscape-cloud/o
 Connected review: `D:/CyclesDeepScratch/regression-tools/phase8a_review.gfr`.
 Phases 8a and 8b accepted by the user on 2026-10-09. Phase 8c results follow; Phase 9 remains unlaunched.
 
-### Phase 8b results (complete; awaiting acceptance review)
+### Phase 8b results (accepted)
 
 [Before measurements](builds/validation/landscape-cloud/optimization-phase8b/baseline.json):
 18 fixed CUDA/OptiX cases, accepted 8a executable, measured before implementation.
@@ -2027,123 +2027,89 @@ claim. After peaks: host working set <=5.38 GiB; device-wide GPU <=6750 MiB
 
 Phase 8b accepted. Phase 8c results follow; Phase 9 remains unlaunched.
 
-### Phase 8c - shader-evaluated volumes: stopped on acceptance failure
+### Phase 8c - stopped at final CUDA beauty gate
 
-Renderer `793cc18f7` (Blender SHA `bce7489b322d9e5efe7d726e42e325e96ed314b6a61362a641d1537f8f433b1e`), fixture/check commit `1d3c710d1`.
-Only OSL volumes or explicit SVM opt-in select the new method. Headers record
-method, actual step range/rule and stated stepping versus proven reconstruction
-allowances. The queue stopped at the textured CPU 1e-4 finer-step gate; no
-threshold changed. Remaining fixtures, 81/81 + 30/30 + OptiX 65/65 native replay,
-landscape replay, GPU beauty replay and nine CTests are pending, not qualified.
+Renderer `8137045eb` (Blender SHA `677aab08cfb6ffb02298f7d67f1e61a24801fd1b195436524a935871b85358a8`). Initialized deep shader storage/globals on CPU and GPU; deterministic native grid filters and native mip-selection expectation in the separate deep OptiX services module. Beauty remains unchanged. Adaptive midpoint step doubling reuses evaluations and fails explicitly on capacity/refinement/evaluation limits.
 
-[Fresh before baseline](builds/validation/landscape-cloud/optimization-phase8c/baseline.json),
-[partial qualification](builds/validation/landscape-cloud/optimization-phase8c/shader-volumes.json),
-[failure diagnosis](builds/validation/landscape-cloud/optimization-phase8c/finer-step-failure.json),
-[current result](builds/validation/landscape-cloud/optimization-phase8c/phase-results.json).
-Large evidence is `D:/CyclesDeepScratch/optimization-phase8c/`; the connected
-`D:/CyclesDeepScratch/regression-tools/phase8c_failure_review.gfr` shows actual
-constant and failing textured outputs, with a declared/finer-step switch and
-DeepSlice -> DeepToPointCloud. Native shader and beauty sources remain unchanged;
-source-boundary checks and the direct EXR-header unit check pass.
+Header method is `shader-eval-adaptive`; material step range means starting/maximum world-unit steps. E/2 is the **stated, not proven** stepping allowance; E/2 bounds representation/fitting/publication. Features narrower than the finest evaluated step can be missed. No gate, total bound or 8192-event cap changed.
 
-| Case | Metric | Before | After | Commit |
-| --- | --- | --- | --- | --- |
-| performance/CUDA/strict | render+capture / export wall s | 34.169 / 33.244 | Pending: queue stopped | 793cc18f7 |
-| performance/CUDA/1e-4 | render+capture / export wall s | 11.548 / 3.844 | Pending: queue stopped | 793cc18f7 |
-| performance/CUDA/1e-3 | render+capture / export wall s | 11.603 / 2.412 | Pending: queue stopped | 793cc18f7 |
-| performance/OPTIX/strict | render+capture / export wall s | 54.220 / 33.190 | Pending: queue stopped | 793cc18f7 |
-| performance/OPTIX/1e-4 | render+capture / export wall s | 10.908 / 3.755 | Pending: queue stopped | 793cc18f7 |
-| performance/OPTIX/1e-3 | render+capture / export wall s | 10.102 / 2.102 | Pending: queue stopped | 793cc18f7 |
-| CPU/constant/1e-4 | render+capture s | analytic 0.003921 s | 0.015275 | 793cc18f7 |
-| CPU/constant/1e-4 | max curve error vs 4x-finer | header 0.0001 | 0 (PASS) | 793cc18f7 |
-| CPU/constant/1e-4 | deep samples / EXR bytes / export wall s | New evaluated path | 153 / 2903 / 0.335711 | 793cc18f7 |
-| CPU/constant/1e-4 | aggregate CPU density / mixture fitting s | New evaluated path | 0.000000 / 0.085259 | 793cc18f7 |
-| CPU/constant/1e-3 | render+capture s | analytic 0.003986 s | 0.014386 | 793cc18f7 |
-| CPU/constant/1e-3 | max curve error vs 4x-finer | header 0.001 | 0 (PASS) | 793cc18f7 |
-| CPU/constant/1e-3 | deep samples / EXR bytes / export wall s | New evaluated path | 153 / 2903 / 0.352122 | 793cc18f7 |
-| CPU/constant/1e-3 | aggregate CPU density / mixture fitting s | New evaluated path | 0.000000 / 0.085120 | 793cc18f7 |
-| OPTIX/constant/1e-4 | render+capture s | analytic 0.029766 s | 0.094984 | 793cc18f7 |
-| OPTIX/constant/1e-4 | max curve error vs 4x-finer | header 0.0001 | 0 (PASS) | 793cc18f7 |
-| OPTIX/constant/1e-4 | deep samples / EXR bytes / export wall s | New evaluated path | 153 / 2903 / 0.339177 | 793cc18f7 |
-| OPTIX/constant/1e-4 | aggregate CPU density / mixture fitting s | New evaluated path | 0.000000 / 0.084531 | 793cc18f7 |
-| OPTIX/constant/1e-3 | render+capture s | analytic 0.029275 s | 0.091493 | 793cc18f7 |
-| OPTIX/constant/1e-3 | max curve error vs 4x-finer | header 0.001 | 0 (PASS) | 793cc18f7 |
-| OPTIX/constant/1e-3 | deep samples / EXR bytes / export wall s | New evaluated path | 153 / 2903 / 0.338661 | 793cc18f7 |
-| OPTIX/constant/1e-3 | aggregate CPU density / mixture fitting s | New evaluated path | 0.000000 / 0.081228 | 793cc18f7 |
-| CPU/texture/1e-4 | render+capture s | Analytic equivalent not run | 0.017322 | 793cc18f7 |
-| CPU/texture/1e-4 | max curve error vs 4x-finer | header 0.0001 | 0.0037129469 (FAIL) | 793cc18f7 |
-| CPU/texture/1e-4 | deep samples / EXR bytes / export wall s | New evaluated path | 10316 / 91860 / 0.375564 | 793cc18f7 |
-| CPU/texture/1e-4 | aggregate CPU density / mixture fitting s | New evaluated path | 0.000000 / 0.116435 | 793cc18f7 |
+Independent CPU h/64 integration samples the actual shader on selected accepted rays without event records/cap. Deterministic fixed midpoint converges at order 2; published curves plateau at their separately bounded fitting error.
 
-Failure: CPU texture at step 0.005 versus 0.00125 has maximum curve difference
-0.00371294690 (pixel 5,1), flattened-alpha difference 0.00359431859, versus
-header 0.0001. Own fitting/depth-cut oracles pass (coarse 1.59967e-5, fine
-1.67460e-5, each inside the proven 5e-5 reconstruction allowance). A selected
-raw camera ray already differs by 0.00579149 before fitting, pointing to
-shader sampling/capture rather than publication; the convergence diagnosis below identifies stochastic grid lookup and uninitialized local texture RNG.
-CPU saved raw passes and beauty are exact against deep-off for both steps.
-Four constant CPU/OptiX mode cases pass finer reference, identity and beauty;
-eight strict/step/capacity atomic rejections pass. No full Phase 8c acceptance
-is claimed. Phase 9 remains held for user confirmation after 8c.
+| Initial step | Raw curve vs h/64 | EXR curve vs h/64 | Observed order | Commit |
+| --- | ---: | ---: | ---: | --- |
+| 0.005 | 4.75544e-06 | 1.17926e-05 | 1.99996 | `3347aaca4` |
+| 0.0025 | 1.18889e-06 | 1.25428e-05 | 1.99988 | `3347aaca4` |
+| 0.00125 | 2.97246e-07 | 1.22462e-05 | 1.99971 | `3347aaca4` |
+| 0.000625 | 7.43266e-08 | 1.22358e-05 | 1.9961 | `3347aaca4` |
+| 0.0003125 | 1.8632e-08 | 1.22503e-05 | - | `3347aaca4` |
 
-#### Phase 8c deterministic convergence (3347aaca4)
+[Convergence](builds/validation/landscape-cloud/optimization-phase8c/deterministic-convergence.json). Same-step CPU/OptiX payloads and deterministic headers repeat exactly.
 
-Initialized deep shader data/globals, deterministic native grid filters, separate
-OptiX deep services; native evaluator bytes and all 75 common CUDA resources pass.
-CPU and OptiX textured same-step payload/deterministic headers repeat identically.
-Independent CPU h/64 reference evaluates the actual shader on 20 selected accepted
-rays without event records/cap. Raw convergence covers the eight rays on the
-existing diagnostic grid; exported EXRs cover all 20 selected rays.
+Shader fixtures: 17x9x4. **Before = diagnostic fixed midpoint; after = adaptive, same initial/max step.** Times exclude startup/export; CPU uses render+capture because capture is not separately timed. GPU capture/readback is separately recorded in JSON. Evaluation counts include GPU count and write passes. Fitting columns are aggregate worker seconds, not wall time.
 
-| World step | Raw max error vs h/64 | Published max error | Raw order | Commit |
-| --- | --- | --- | --- | --- |
-| 0.005 | 4.75544e-6 | 1.17926e-5 | 1.99996 | 3347aaca4 |
-| 0.0025 | 1.18889e-6 | 1.25428e-5 | 1.99988 | 3347aaca4 |
-| 0.00125 | 2.97246e-7 | 1.22462e-5 | 1.99971 | 3347aaca4 |
-| 0.000625 | 7.43266e-8 | 1.22358e-5 | 1.99610 | 3347aaca4 |
-| 0.0003125 | 1.86320e-8 | 1.22503e-5 | - | 3347aaca4 |
+| Case / error | Point evaluations before -> after | Render+capture s before -> after | Analytic render+capture s | Export s before -> after | Density/mixture fitting s before -> after | 4x-finer / CPU h64 error | Commit |
+| --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| CPU/constant/1e-4 | 246,500 -> 739,500 | 0.015344 -> 0.026447 | 0.007576 | 0.341948 -> 0.694736 | 0/0.087601 -> 0/0.159336 | 0 / 8.25415e-08 | `8137045eb` |
+| CPU/constant/1e-3 | 246,500 -> 739,500 | 0.018433 -> 0.022118 | 0.008929 | 0.354866 -> 0.693976 | 0/0.0855853 -> 0/0.164354 | 0 / 8.25415e-08 | `8137045eb` |
+| OPTIX/constant/1e-4 | 493,000 -> 1,479,000 | 0.122011 -> 0.212357 | 0.055611 | 0.353712 -> 0.891614 | 0/0.0888965 -> 0/0.212294 | 0 / 8.25415e-08 | `8137045eb` |
+| OPTIX/constant/1e-3 | 493,000 -> 1,479,000 | 0.124425 -> 0.205268 | 0.056693 | 0.353291 -> 0.72072 | 0/0.0859678 -> 0/0.179036 | 0 / 8.25415e-08 | `8137045eb` |
+| CPU/texture/1e-4 | 277,294 -> 835,402 | 0.022247 -> 0.042477 | 0.00992 | 0.426315 -> 0.794392 | 0/0.117889 -> 0/0.182677 | 1.3268e-05 / 1.30236e-05 | `8137045eb` |
+| CPU/texture/1e-3 | 277,294 -> 834,706 | 0.023115 -> 0.034245 | 0.010432 | 0.387738 -> 0.782 | 0/0.0939699 -> 0/0.17999 | 6.25286e-05 / 6.16785e-05 | `8137045eb` |
+| OPTIX/texture/1e-4 | 554,588 -> 1,670,804 | 0.169949 -> 0.398914 | 0.068472 | 0.396374 -> 1.08147 | 0/0.115169 -> 0/0.216528 | 1.32672e-05 / 1.30257e-05 | `8137045eb` |
+| OPTIX/texture/1e-3 | 554,588 -> 1,669,412 | 0.165544 -> 0.402868 | 0.064561 | 0.390139 -> 1.01416 | 0/0.0977551 -> 0/0.224874 | 6.25676e-05 / 6.16823e-05 | `8137045eb` |
+| CPU/grid/1e-4 | 11,628 -> 34,940 | 0.011667 -> 0.011155 | 0.010296 | 0.0312259 -> 0.0429792 | 0/0.0059173 -> 0/0.0104422 | 6.02518e-06 / 5.83067e-06 | `8137045eb` |
+| CPU/grid/1e-3 | 11,628 -> 34,924 | 0.011259 -> 0.010865 | 0.009715 | 0.0284086 -> 0.0423433 | 0/0.0044115 -> 0/0.0086695 | 1.13393e-05 / 3.13675e-05 | `8137045eb` |
+| OPTIX/grid/1e-4 | 23,254 -> 69,874 | 0.068277 -> 0.080363 | 0.063097 | 0.0246222 -> 0.0441991 | 0/0.0043375 -> 0/0.0097399 | 6.02518e-06 / 5.83067e-06 | `8137045eb` |
+| OPTIX/grid/1e-3 | 23,254 -> 69,842 | 0.071962 -> 0.073552 | 0.061749 | 0.0235309 -> 0.0410225 | 0/0.0042288 -> 0/0.0086006 | 1.13392e-05 / 3.13675e-05 | `8137045eb` |
+| CPU/svm_optin/1e-4 | 277,294 -> 957,346 | 0.019233 -> 0.025608 | 0.010504 | 0.418531 -> 0.896365 | 0/0.114862 -> 0/0.203724 | 6.14319e-06 / 6.19989e-06 | `8137045eb` |
+| CPU/svm_optin/1e-3 | 277,294 -> 834,426 | 0.020193 -> 0.026453 | 0.010343 | 0.417208 -> 0.815188 | 0/0.0979099 -> 0/0.182739 | 6.04393e-05 / 6.26186e-05 | `8137045eb` |
+| CUDA/svm_optin/1e-4 | 554,588 -> 1,914,692 | 0.093217 -> 0.184397 | 0.046775 | 0.419696 -> 0.906266 | 0/0.113441 -> 0/0.203663 | 6.14321e-06 / 6.20013e-06 | `8137045eb` |
+| CUDA/svm_optin/1e-3 | 554,588 -> 1,668,852 | 0.090359 -> 0.164768 | 0.041927 | 0.410956 -> 0.831823 | 0/0.095821 -> 0/0.185347 | 6.04379e-05 / 6.26185e-05 | `8137045eb` |
+| OPTIX/svm_optin/1e-4 | 554,588 -> 1,914,692 | 0.106362 -> 0.199363 | 0.065455 | 0.414513 -> 0.906904 | 0/0.114308 -> 0/0.207495 | 6.14321e-06 / 6.20013e-06 | `8137045eb` |
+| OPTIX/svm_optin/1e-3 | 554,588 -> 1,668,852 | 0.108145 -> 0.184386 | 0.064029 | 0.413309 -> 0.820901 | 0/0.0973145 -> 0/0.182712 | 6.04379e-05 / 6.26185e-05 | `8137045eb` |
 
-The approximately 4x error reduction confirms midpoint quadrature. Published
-errors include the separately bounded host fit, explaining its plateau. All
-five own header oracles pass; CPU raw beauty is exact.
-[Study](builds/validation/landscape-cloud/optimization-phase8c/deterministic-convergence.json).
-Adaptive implementation/qualification follows; Phase 8c is not yet accepted.
+All 18 shader cases pass their header bounds, finer reference, h64 oracle, same-build rerun and CPU exact/GPU calibrated beauty gates; 31 explicit/atomic rejection checks pass. Fixed vs adaptive readback/spill bytes, deep samples, EXR size and stage timings are in [results](builds/validation/landscape-cloud/optimization-phase8c/final-results.json) and [qualification](builds/validation/landscape-cloud/optimization-phase8c/final-shader-volumes.json).
 
-#### Superseded stochastic convergence diagnosis
+Adaptive adds work at an already small step. A larger starting cap allows refinement where needed; this is a measured speed gain on the textured fixture, not a universal speedup.
 
-[Study](builds/validation/landscape-cloud/optimization-phase8c/convergence.json):
-unchanged Blender SHA `bce7489b322d9e5efe7d726e42e325e96ed314b6a61362a641d1537f8f433b1e`,
-same CPU texture fixture, 4 samples, error 1e-4. Requested h/32 failed the existing
-8192-event limit and preserved the previous file. The table uses h/16 as a
-**provisional** reference; no h/32 difference or completed reference is claimed.
+| Texture / 1e-4 | Fixed .005 | Adaptive .005 | Adaptive .32 cap (voxel maximum .125) | Commit |
+| --- | ---: | ---: | ---: | --- |
+| CPU point evaluations | 277294 | 835402 | 111348 | `8137045eb` |
+| CPU export s | 0.426315 | 0.794392 | 0.0967644 | `8137045eb` |
+| CPU render+capture s | 0.022247 | 0.042477 | 0.013026 | `8137045eb` |
+| CPU h64 EXR error | - | 1.30236e-05 | 1.27354e-05 | `8137045eb` |
+| OPTIX point evaluations | 554588 | 1.6708e+06 | 245866 | `8137045eb` |
+| OPTIX export s | 0.396374 | 1.08147 | 0.104373 | `8137045eb` |
+| OPTIX render+capture s | 0.169949 | 0.398914 | 0.262459 | `8137045eb` |
+| OPTIX h64 EXR error | - | 1.30257e-05 | 1.27357e-05 | `8137045eb` |
 
-| Step (world units) | Max curve difference vs h/16 | Render+capture s | Successive-halving order |
-| --- | --- | --- | --- |
-| 0.005 | 0.0035991973 | 0.017322 | 0.615 |
-| 0.0025 | 0.00199930169 | 0.027273 | 0.340 |
-| 0.00125 | 0.00189634477 | 0.038573 | 0.643 |
-| 0.000625 | 0.001248244 | 0.069326 | - |
-| 0.0003125 | 0 | 0.139336 | - |
-| 0.00015625 (h/32) | Not produced: event-capacity failure | - | - |
+Native cases retain the fresh Phase 8b before baseline: 47x20/max16 adaptive small landscape and 587x250x4 performance landscape, CUDA/OptiX, all three error modes. Every payload/header is identical. Single-run warm measurements; timing differences are not asserted as speedups.
 
-Order = log2(max difference(h,h/2) / max difference(h/2,h/4)); expected
-midpoint order is 2 (4x reduction), measured 0.615, 0.340 and 0.643. Repeating
-exactly h=0.005 differs by 0.00383629120 with identical deterministic headers
-and exact raw beauty, confirming that this is not simply fixed-step quadrature
-of a deterministic field. Own fitting/depth-cut oracles pass for all five
-completed steps; their CPU raw beauty remains exact.
+| Native case | Render+capture s before -> after | Export s before -> after | Density/mixture aggregate s before -> after | Deep samples | EXR MiB before -> after | Commit |
+| --- | ---: | ---: | --- | ---: | ---: | --- |
+| small/CUDA/strict | 2.8898 -> 2.82126 | 6.74272 -> 8.11307 | 2.03987/17.4251 -> 2.35416/22.8935 | 561,860 | 4.24057 -> 4.24057 | `8137045eb` |
+| small/CUDA/1e-4 | 1.77967 -> 1.80548 | 3.38852 -> 3.54537 | 0.242265/0.833786 -> 0.25199/0.978533 | 89,072 | 0.584493 -> 0.584493 | `8137045eb` |
+| small/CUDA/1e-3 | 1.79925 -> 1.79567 | 3.3417 -> 3.54146 | 0.179784/0.36353 -> 0.181885/0.382722 | 53,481 | 0.343897 -> 0.343897 | `8137045eb` |
+| small/OPTIX/strict | 4.78539 -> 4.65984 | 6.93761 -> 7.82229 | 2.06886/17.8724 -> 2.33859/22.7283 | 561,628 | 4.23724 -> 4.23724 | `8137045eb` |
+| small/OPTIX/1e-4 | 1.71368 -> 1.71085 | 3.35147 -> 3.94624 | 0.242559/0.830978 -> 0.257833/0.988155 | 88,934 | 0.582538 -> 0.582538 | `8137045eb` |
+| small/OPTIX/1e-3 | 1.71285 -> 1.72238 | 3.25599 -> 3.48957 | 0.177653/0.3634 -> 0.183278/0.388969 | 53,356 | 0.341861 -> 0.341861 | `8137045eb` |
+| performance/CUDA/strict | 34.1692 -> 33.8201 | 33.2436 -> 33.0227 | 70.9172/247.944 -> 70.687/247.682 | 52,191,416 | 376.055 -> 376.055 | `8137045eb` |
+| performance/CUDA/1e-4 | 11.5481 -> 11.6942 | 3.84417 -> 3.6701 | 4.75664/17.4307 -> 4.71914/17.3338 | 6,828,290 | 56.5964 -> 56.5964 | `8137045eb` |
+| performance/CUDA/1e-3 | 11.603 -> 11.6299 | 2.41151 -> 2.14213 | 1.70778/6.9513 -> 1.70731/6.98326 | 3,090,807 | 21.5278 -> 21.5278 | `8137045eb` |
+| performance/OPTIX/strict | 54.2198 -> 54.3955 | 33.1896 -> 32.8239 | 70.7652/247.076 -> 70.114/244.542 | 52,183,415 | 375.982 -> 375.982 | `8137045eb` |
+| performance/OPTIX/1e-4 | 10.9084 -> 10.9132 | 3.75528 -> 3.62584 | 4.74091/17.3392 -> 4.70775/17.2395 | 6,823,509 | 56.5569 -> 56.5569 | `8137045eb` |
+| performance/OPTIX/1e-3 | 10.1024 -> 10.1665 | 2.10196 -> 2.11725 | 1.70201/6.94212 -> 1.70407/6.96747 | 3,086,077 | 21.4776 -> 21.4776 | `8137045eb` |
 
-Filter inspection: `shader_setup_from_volume` zeroes dP/dI/du/dv for both deep
-and ordinary volume evaluation. The fixture supplies no width/blur override,
-and no step-dependent derivative/filter-width path was found. OSL volume
-attribute service calls `primitive_volume_attribute(..., true)`;
-`kernel_image_interp_3d` therefore uses stochastic voxel selection and advances
-`sd->lcg_state`. The new `deep_volume_shader` loop never initializes that local
-state; ordinary beauty volume traversal does. Changing the number of steps
-changes the random draws, invalidating deterministic midpoint convergence.
+Final native identity **81/81 strict, 30/30 numeric, OptiX 65/65**; nine CTests, CPU beauty exactness, CPU/CUDA/OptiX matrices, boundaries and AO/Bevel pass. The separate native GPU beauty stage stopped after 21/64 passes at CUDA small-landscape 1e-4; 42 later targets and the fresh OSL surface replay were not run. Phase 8c is not accepted. Beauty source hash `002ab0fac1db9181633d6aefffb80e6c2a8af36a3e980e4a8947268d5b93d11e` and all 75 common kernel resource records are unchanged.
 
-No renderer source, limits or gates changed during diagnosis. Per the user's
-non-convergence instruction, stop and report before changing evaluation. The
-next fix must address deep-local texture RNG and deterministic grid evaluation
-without changing beauty or analytic VDB; adaptive control is conditional on a
-valid deterministic convergence study. Remaining 8c qualification is pending.
+Retained regression stopped at the beauty gate after: 1526.97 s. [Report](builds/validation/deep-regression/20261008T235713Z-283b08f9/results.json). [Resources](builds/validation/landscape-cloud/optimization-phase8c/mip-resources.json).
+
+CUDA failure: 47x20/max16 adaptive, file pixel (22,8), sample count 16. Only denoising Normal.X fails: absolute difference 1.11758708954e-8 versus allowance 9.76033028295e-9; difference/sigma 2.91433556678e-7 versus calibrated maximum 2.54520457093e-7. The 20-control fallback distribution is 0 / 1 / 3 (min/median/max); deep-on has 1 fallback pixel, so the count passes. Noisy RGBA matches a control. Image-wide bias passes (Normal.X signed mean -1.08510264682e-10, reference-mean FLOAT ULP 1.86264514923e-9). Denoised output passes. No compatible same-fixture majorant-snapshot evidence was supplied to this gate. No policy, tolerance or control range changed; no replacement render launched.
+
+Failure evidence: [CUDA report](builds/validation/landscape-cloud/optimization-phase8c/cuda-small-1e4-failure.json); raw passes remain at `D:/CyclesDeepScratch/regression/20261008T235713Z-283b08f9/landscape/small/1e-4/`. All raw output and reports are retained. Shader-fixture qualification is complete, but the full phase remains stopped as required by Section 2.
+
+The native mip selector unit integrates its two-level probabilities independently; the OptiX device unit repeats exactly and matches the known expected-density analytic curve within the header bound. [Device filter check](builds/validation/landscape-cloud/optimization-phase8c/device-mip-unit-v4.json). It is a filter unit, not a cross-backend scene qualification.
+
+Weak synthetic grids use native Blender clipping=0 so the intended geometry is present; an explicit nonempty-output assertion caught the original clipped fixture. Existing qualified VDB/landscape assets are unchanged.
+
+Large EXRs/CSV/spill/TEMP: `D:/CyclesDeepScratch/optimization-phase8c/qualified-mip/` and the regression D: root in its report. Connected Gaffer review: `D:/CyclesDeepScratch/regression-tools/phase8c_review.gfr` (actual deep inputs, alpha/beauty/fine-step selection, DeepSlice -> DeepToPointCloud). [Presentation checks](builds/validation/landscape-cloud/optimization-phase8c/gaffer-review.json). Phase 9 remains unlaunched, awaiting user confirmation.

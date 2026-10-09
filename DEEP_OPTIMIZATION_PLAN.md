@@ -2454,7 +2454,7 @@ Stopped for review, no renderer fix.
 [Raw values, maxima locations and every batch/checkpoint](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-isolation.json).
 [Previous harness failure](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-harness-failure.json).
 
-#### Phase 9 - scheduler timing fix: diagnostic stopped before renders
+#### Phase 9 - scheduler timing fix: module audit passed, diagnostics resuming
 
 Fix commit `47a8dffb0` measures the whole GPU capture interval after draining pending
 beauty work, including capture kernels, allocation, readback and spill. It removes
@@ -2467,22 +2467,31 @@ header hook; its native-byte equality rule and all numerical gates are unchanged
 
 `tools/test_deep_batch_schedule.py` rejects the former16 versus14/2 schedule and
 checks a saved small-scene off/on pair. Self-check and native-source hash proof pass.
-The diagnostic-only snapshot+fix build installed successfully, but an additional
-harness assertion requiring all installed GPU modules to reproduce their previous
-snapshot bytes stopped the queue. This is an extra binary-reproducibility guard,
-not a user numerical gate. Only `kernel_optix_osl_mnee.ptx.zst` differs; the other
-12 modules match, including CUDA, OptiX beauty and deep capture. No functional
-conclusion follows from the hash difference alone. No render started, no assertion
-was changed and no retry or production rebuild occurred. All 36 managed originals
-and 28 qualified executable/module hashes were verified preserved.
+The diagnostic-only snapshot+fix build installed successfully. An extra harness
+byte check stopped before renders on OSL MNEE; the user approved inspecting and
+rebuilding that module twice, then resuming if its difference was non-semantic.
+Decompressed PTX differs only at lines13158/13195/14122: `%f81782` becomes `%f81783`
+in one zero definition and two reads. All instructions/constants/order are unchanged.
+Both same-source rebuilds match each other and the old PTX byte-for-byte; this
+establishes reproducibility for the two measured runs, not a universal guarantee.
+`tools/compare_deep_ptx.py` strips comments and `.file`/`.loc` debug metadata, then
+renames numeric virtual registers bijectively by first occurrence per family.
+Quoted data, hardware registers, instructions/constants/symbols/labels, declarations
+and ordering stay checked. Non-PTX modules require exact bytes. Its self-check rejects
+changed operations, constants, register dependencies, quoted data and hardware reads.
+Renderer code and numerical gates are unchanged. The existing diagnostic executable
+is reused for the small117x50 test and full OptiX off/on/on, CUDA off/on comparisons.
+All 36 managed originals and 28 qualified executable/module hashes remain preserved.
 
 | Check | Result | Commit |
 |---|---|---|
 | Native-source proof; batch-comparator self-check | Pass; native SHA unchanged | `47a8dffb0` |
 | Diagnostic build/install | Pass; executable SHA `9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752` | `47a8dffb0` + diagnostic snapshot `9a017f055` |
-| Extra GPU-module byte guard | 12/13 identical; OSL MNEE module differs | Same diagnostic build |
-| Small117x50 and five full-frame comparisons | Not run; stopped for review | — |
+| Extra GPU-module byte guard | 12/13 identical; OSL MNEE register rename only; normalized comparison passes | Same diagnostic build |
+| Same-source OSL MNEE rebuilds | 25.875/24.532 s; byte-identical to each other and old PTX | Snapshot + `47a8dffb0` |
+| Small117x50 and five full-frame comparisons | Pending; approved render-only resume | — |
 
 [Measured hashes and preservation proof](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-fix-build-failure.json).
+[Module audit, rebuild hashes and normalization](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-module-check.json).
 Large artifacts/TEMP:
 `D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-fix-20261010/`.

@@ -4,7 +4,7 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–8 accepted.
 
-**Phase 9: scheduler timing diagnostic stopped before rendering.**
+**Phase 9: module difference resolved; scheduler timing diagnostic resuming.**
 Both production deep outputs pass the deep gates; the adaptive beauty count-rate
 failure remains unresolved. The isolated snapshot experiment reproduces the same
 8 count-mismatch pixels on OptiX. CUDA off/on has zero image-wide count mismatches.
@@ -24,13 +24,16 @@ so the convergence metric and exact first divergence cannot be recovered.
 The user accepted the differences as consistent with summation order and waived
 checkpoint instrumentation. Fix `47a8dffb0` excludes GPU capture kernels/readback/
 spill from scheduler timing, under deep guards. Native-source hash equality and
-the batch-comparator self-check pass. The separate snapshot+fix build installed,
-but an additional harness byte-reproducibility assertion failed: one of 13 GPU
-modules, `kernel_optix_osl_mnee.ptx.zst`, differs from the previous snapshot install.
-The other 12 modules match, including CUDA, OptiX beauty and deep capture.
-No small-scene or full-frame diagnostic render started; no functional failure is
-established. All 36 managed originals and 28 qualified executable/module hashes
-were verified preserved. No retry, guard change or production rebuild performed.
+the batch-comparator self-check pass. The separate snapshot+fix build installed.
+The OSL MNEE PTX difference is only a temporary register rename at three lines;
+instructions and constants match. Two same-source module rebuilds are byte-identical
+and match the old PTX. The user-approved module comparison now strips comments/debug
+paths and renames virtual registers bijectively; code/data/order remain checked.
+No renderer code or numerical gate changed. Source and qualified installs were
+verified preserved. The queue resumes using the existing diagnostic executable:
+small117x50 test, then full OptiX off/on/on and CUDA off/on. Stop after step 3.
+
+[Module audit and two rebuilds](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-module-check.json).
 
 [Build failure and preservation proof](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-fix-build-failure.json).
 

@@ -1,0 +1,86 @@
+{
+  "passed": true,
+  "classification": "Non-semantic virtual-register alpha-renaming only",
+  "changed_lines": [
+    13158,
+    13195,
+    14122
+  ],
+  "old_register": "%f81782",
+  "new_register": "%f81783",
+  "old_register_occurrences": 3,
+  "new_register_occurrences": 3,
+  "ptx_bytes": 4478033,
+  "code": "Same mov.f32 zero definition and two reads; no opcode, constant, symbol, branch, section-order or data change",
+  "rebuilds": [
+    {
+      "run": 1,
+      "seconds": 25.875,
+      "ptx_sha256": "7e9df3af3ee04bd5e466786e27584af40a16062d696f230e8e04135604d763a7"
+    },
+    {
+      "run": 2,
+      "seconds": 24.53200000000652,
+      "ptx_sha256": "7e9df3af3ee04bd5e466786e27584af40a16062d696f230e8e04135604d763a7"
+    }
+  ],
+  "two_rebuilds_byte_identical": true,
+  "determinism_scope": "Both measured rebuilds are byte-identical and match old PTX; no claim of universal build determinism",
+  "comparisons": {
+    "old-vs-new": {
+      "passed": true,
+      "ptx_identical": false,
+      "ptx_sha256": [
+        "7e9df3af3ee04bd5e466786e27584af40a16062d696f230e8e04135604d763a7",
+        "8ce494a6d70f72a29d6af68d273882370260b9a2f278cf9758e84cbe64c78fb8"
+      ],
+      "normalized_sha256": [
+        "a328be137660ee8b21d4649cf307f1a19612daf4a4ffeb4b96c1af31019c98bc",
+        "a328be137660ee8b21d4649cf307f1a19612daf4a4ffeb4b96c1af31019c98bc"
+      ]
+    },
+    "old-vs-rebuild-1": {
+      "passed": true,
+      "ptx_identical": true,
+      "ptx_sha256": [
+        "7e9df3af3ee04bd5e466786e27584af40a16062d696f230e8e04135604d763a7",
+        "7e9df3af3ee04bd5e466786e27584af40a16062d696f230e8e04135604d763a7"
+      ],
+      "normalized_sha256": [
+        "a328be137660ee8b21d4649cf307f1a19612daf4a4ffeb4b96c1af31019c98bc",
+        "a328be137660ee8b21d4649cf307f1a19612daf4a4ffeb4b96c1af31019c98bc"
+      ]
+    },
+    "new-vs-rebuild-1": {
+      "passed": true,
+      "ptx_identical": false,
+      "ptx_sha256": [
+        "8ce494a6d70f72a29d6af68d273882370260b9a2f278cf9758e84cbe64c78fb8",
+        "7e9df3af3ee04bd5e466786e27584af40a16062d696f230e8e04135604d763a7"
+      ],
+      "normalized_sha256": [
+        "a328be137660ee8b21d4649cf307f1a19612daf4a4ffeb4b96c1af31019c98bc",
+        "a328be137660ee8b21d4649cf307f1a19612daf4a4ffeb4b96c1af31019c98bc"
+      ]
+    },
+    "rebuild-1-vs-rebuild-2": {
+      "passed": true,
+      "ptx_identical": true,
+      "ptx_sha256": [
+        "7e9df3af3ee04bd5e466786e27584af40a16062d696f230e8e04135604d763a7",
+        "7e9df3af3ee04bd5e466786e27584af40a16062d696f230e8e04135604d763a7"
+      ],
+      "normalized_sha256": [
+        "a328be137660ee8b21d4649cf307f1a19612daf4a4ffeb4b96c1af31019c98bc",
+        "a328be137660ee8b21d4649cf307f1a19612daf4a4ffeb4b96c1af31019c98bc"
+      ]
+    }
+  },
+  "normalization": "Decompress PTX; strip comments and .file/.loc debug directives; rename numeric virtual registers bijectively by first occurrence per family. Preserve quoted data, special hardware registers, instructions, constants, symbols, labels, register declarations and ordering. Cubin and all non-PTX files require exact bytes.",
+  "renderer_code_changed": false,
+  "numerical_gates_changed": false,
+  "sources_restored": true,
+  "qualified_files_preserved": true,
+  "diagnostic_executable_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+  "artifacts": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-fix-20261010\\module-check"
+}

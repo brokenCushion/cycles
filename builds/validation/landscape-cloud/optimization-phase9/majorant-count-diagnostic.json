@@ -1,0 +1,1019 @@
+{
+  "diagnostic_only": true,
+  "settings": [
+    {
+      "renderer_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": false,
+      "device": "OPTIX",
+      "deep_volume": false,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": null,
+      "deep_z_tolerance": 0,
+      "deep_samples": null,
+      "deep_ids": false,
+      "deep_max_events": null,
+      "deep_memory_mb": null,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 455.49200420000125,
+      "beauty_exists": true
+    },
+    {
+      "renderer_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": false,
+      "device": "OPTIX",
+      "deep_volume": false,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": null,
+      "deep_z_tolerance": 0,
+      "deep_samples": null,
+      "deep_ids": false,
+      "deep_max_events": null,
+      "deep_memory_mb": null,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 340.8260486999643,
+      "beauty_exists": true
+    },
+    {
+      "renderer_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": false,
+      "device": "OPTIX",
+      "deep_volume": false,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": null,
+      "deep_z_tolerance": 0,
+      "deep_samples": null,
+      "deep_ids": false,
+      "deep_max_events": null,
+      "deep_memory_mb": null,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 341.076854599989,
+      "beauty_exists": true
+    },
+    {
+      "renderer_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": true,
+      "device": "OPTIX",
+      "deep_volume": true,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": 0.001,
+      "deep_z_tolerance": 0.0001,
+      "deep_samples": 64,
+      "deep_ids": true,
+      "deep_max_events": 8192,
+      "deep_memory_mb": 8192,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 1095.5515658999793,
+      "beauty_exists": true,
+      "deep_bytes": 705176401
+    },
+    {
+      "renderer_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": true,
+      "device": "OPTIX",
+      "deep_volume": true,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": 0.001,
+      "deep_z_tolerance": 0.0001,
+      "deep_samples": 64,
+      "deep_ids": true,
+      "deep_max_events": 8192,
+      "deep_memory_mb": 8192,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 1092.8726771000074,
+      "beauty_exists": true,
+      "deep_bytes": 705176401
+    },
+    {
+      "renderer_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": true,
+      "device": "OPTIX",
+      "deep_volume": true,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": 0.001,
+      "deep_z_tolerance": 0.0001,
+      "deep_samples": 64,
+      "deep_ids": true,
+      "deep_max_events": 8192,
+      "deep_memory_mb": 8192,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 1095.2362994999858,
+      "beauty_exists": true,
+      "deep_bytes": 705176401
+    }
+  ],
+  "build": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\snapshot-build.json",
+  "pixels": 587500,
+  "controls_leave_one_out": [
+    {
+      "name": "off-1",
+      "pixels": 587500,
+      "mismatch_pixels": 0,
+      "mismatch_rate": 0.0,
+      "fewer": 0,
+      "more": 0,
+      "modal_tie_pixels": 0,
+      "fewer_fraction": null,
+      "binomial_p": 1.0,
+      "sample_count_differences": {}
+    },
+    {
+      "name": "off-2",
+      "pixels": 587500,
+      "mismatch_pixels": 0,
+      "mismatch_rate": 0.0,
+      "fewer": 0,
+      "more": 0,
+      "modal_tie_pixels": 0,
+      "fewer_fraction": null,
+      "binomial_p": 1.0,
+      "sample_count_differences": {}
+    },
+    {
+      "name": "off-3",
+      "pixels": 587500,
+      "mismatch_pixels": 0,
+      "mismatch_rate": 0.0,
+      "fewer": 0,
+      "more": 0,
+      "modal_tie_pixels": 0,
+      "fewer_fraction": null,
+      "binomial_p": 1.0,
+      "sample_count_differences": {}
+    }
+  ],
+  "control_count_range": [
+    0,
+    0
+  ],
+  "control_direction_range": null,
+  "deep_on": [
+    {
+      "name": "on-1",
+      "against_three": {
+        "pixels": 587500,
+        "mismatch_pixels": 8,
+        "mismatch_rate": 1.3617021276595745e-05,
+        "fewer": 0,
+        "more": 8,
+        "modal_tie_pixels": 0,
+        "fewer_fraction": 0.0,
+        "binomial_p": 0.007812500000000002,
+        "sample_count_differences": {
+          "32": 1,
+          "112": 5,
+          "128": 2
+        }
+      },
+      "against_two_subsets": [
+        {
+          "omitted_control": "off-1",
+          "pixels": 587500,
+          "mismatch_pixels": 8,
+          "mismatch_rate": 1.3617021276595745e-05,
+          "fewer": 0,
+          "more": 8,
+          "modal_tie_pixels": 0,
+          "fewer_fraction": 0.0,
+          "binomial_p": 0.007812500000000002,
+          "sample_count_differences": {
+            "32": 1,
+            "112": 5,
+            "128": 2
+          }
+        },
+        {
+          "omitted_control": "off-2",
+          "pixels": 587500,
+          "mismatch_pixels": 8,
+          "mismatch_rate": 1.3617021276595745e-05,
+          "fewer": 0,
+          "more": 8,
+          "modal_tie_pixels": 0,
+          "fewer_fraction": 0.0,
+          "binomial_p": 0.007812500000000002,
+          "sample_count_differences": {
+            "32": 1,
+            "112": 5,
+            "128": 2
+          }
+        },
+        {
+          "omitted_control": "off-3",
+          "pixels": 587500,
+          "mismatch_pixels": 8,
+          "mismatch_rate": 1.3617021276595745e-05,
+          "fewer": 0,
+          "more": 8,
+          "modal_tie_pixels": 0,
+          "fewer_fraction": 0.0,
+          "binomial_p": 0.007812500000000002,
+          "sample_count_differences": {
+            "32": 1,
+            "112": 5,
+            "128": 2
+          }
+        }
+      ],
+      "two_subset_mean": 8.0,
+      "two_subset_mean_rate": 1.3617021276595745e-05,
+      "within_control_range": false,
+      "no_excess_over_control_max": false,
+      "direction_outside_range": false,
+      "direction_passed": true
+    },
+    {
+      "name": "on-2",
+      "against_three": {
+        "pixels": 587500,
+        "mismatch_pixels": 8,
+        "mismatch_rate": 1.3617021276595745e-05,
+        "fewer": 0,
+        "more": 8,
+        "modal_tie_pixels": 0,
+        "fewer_fraction": 0.0,
+        "binomial_p": 0.007812500000000002,
+        "sample_count_differences": {
+          "32": 1,
+          "112": 5,
+          "128": 2
+        }
+      },
+      "against_two_subsets": [
+        {
+          "omitted_control": "off-1",
+          "pixels": 587500,
+          "mismatch_pixels": 8,
+          "mismatch_rate": 1.3617021276595745e-05,
+          "fewer": 0,
+          "more": 8,
+          "modal_tie_pixels": 0,
+          "fewer_fraction": 0.0,
+          "binomial_p": 0.007812500000000002,
+          "sample_count_differences": {
+            "32": 1,
+            "112": 5,
+            "128": 2
+          }
+        },
+        {
+          "omitted_control": "off-2",
+          "pixels": 587500,
+          "mismatch_pixels": 8,
+          "mismatch_rate": 1.3617021276595745e-05,
+          "fewer": 0,
+          "more": 8,
+          "modal_tie_pixels": 0,
+          "fewer_fraction": 0.0,
+          "binomial_p": 0.007812500000000002,
+          "sample_count_differences": {
+            "32": 1,
+            "112": 5,
+            "128": 2
+          }
+        },
+        {
+          "omitted_control": "off-3",
+          "pixels": 587500,
+          "mismatch_pixels": 8,
+          "mismatch_rate": 1.3617021276595745e-05,
+          "fewer": 0,
+          "more": 8,
+          "modal_tie_pixels": 0,
+          "fewer_fraction": 0.0,
+          "binomial_p": 0.007812500000000002,
+          "sample_count_differences": {
+            "32": 1,
+            "112": 5,
+            "128": 2
+          }
+        }
+      ],
+      "two_subset_mean": 8.0,
+      "two_subset_mean_rate": 1.3617021276595745e-05,
+      "within_control_range": false,
+      "no_excess_over_control_max": false,
+      "direction_outside_range": false,
+      "direction_passed": true
+    },
+    {
+      "name": "on-3",
+      "against_three": {
+        "pixels": 587500,
+        "mismatch_pixels": 8,
+        "mismatch_rate": 1.3617021276595745e-05,
+        "fewer": 0,
+        "more": 8,
+        "modal_tie_pixels": 0,
+        "fewer_fraction": 0.0,
+        "binomial_p": 0.007812500000000002,
+        "sample_count_differences": {
+          "32": 1,
+          "112": 5,
+          "128": 2
+        }
+      },
+      "against_two_subsets": [
+        {
+          "omitted_control": "off-1",
+          "pixels": 587500,
+          "mismatch_pixels": 8,
+          "mismatch_rate": 1.3617021276595745e-05,
+          "fewer": 0,
+          "more": 8,
+          "modal_tie_pixels": 0,
+          "fewer_fraction": 0.0,
+          "binomial_p": 0.007812500000000002,
+          "sample_count_differences": {
+            "32": 1,
+            "112": 5,
+            "128": 2
+          }
+        },
+        {
+          "omitted_control": "off-2",
+          "pixels": 587500,
+          "mismatch_pixels": 8,
+          "mismatch_rate": 1.3617021276595745e-05,
+          "fewer": 0,
+          "more": 8,
+          "modal_tie_pixels": 0,
+          "fewer_fraction": 0.0,
+          "binomial_p": 0.007812500000000002,
+          "sample_count_differences": {
+            "32": 1,
+            "112": 5,
+            "128": 2
+          }
+        },
+        {
+          "omitted_control": "off-3",
+          "pixels": 587500,
+          "mismatch_pixels": 8,
+          "mismatch_rate": 1.3617021276595745e-05,
+          "fewer": 0,
+          "more": 8,
+          "modal_tie_pixels": 0,
+          "fewer_fraction": 0.0,
+          "binomial_p": 0.007812500000000002,
+          "sample_count_differences": {
+            "32": 1,
+            "112": 5,
+            "128": 2
+          }
+        }
+      ],
+      "two_subset_mean": 8.0,
+      "two_subset_mean_rate": 1.3617021276595745e-05,
+      "within_control_range": false,
+      "no_excess_over_control_max": false,
+      "direction_outside_range": false,
+      "direction_passed": true
+    }
+  ],
+  "all_deep_means_within_control_range": false,
+  "all_deep_means_no_excess": false,
+  "all_directions_passed": true,
+  "comparison": "Deep-on mean over three two-control subsets vs deep-off two-control leave-one-out range; full-three direction one observation per unmatched pixel, modal ties excluded.",
+  "gates_changed": false,
+  "new_renders": 6,
+  "stop_for_user_decision": true,
+  "provenance_verification": {
+    "diagnostic_executable_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+    "production_executable_sha256": "677aab08cfb6ffb02298f7d67f1e61a24801fd1b195436524a935871b85358a8",
+    "compiled_cycles_commit": "8137045eb3f8e62e012a251ea93c548970c48716",
+    "snapshot_commit": "9a017f055",
+    "toolchain": {
+      "clang_cl": "20.1.8",
+      "nvcc": "12.8.61",
+      "cuda_toolkit": "12.8.0",
+      "optix": "8.0.0",
+      "osl": "1.15.3.0",
+      "nvcc_host_msvc": "19.44 / 14.44.35207",
+      "ninja": "1.13.2",
+      "cmake": "3.31.2"
+    },
+    "restored_original_hashes_verified": true,
+    "production_executable_and_modules_hashes_verified": true,
+    "diagnostic_install_hashes_verified": true
+  },
+  "conclusion": "Deep-on rates are outside the race-fixed deep-off range (8 vs 0 unmatched pixels). The user-approved attribution condition is not met. Stop without further investigation or gate changes.",
+  "direction_note": "Controls have zero mismatch observations, so their fraction range is undefined. Each deep-on has 0/8 fewer samples, no ties, and two-sided p=0.0078125; the p<0.001 failure condition is not met."
+}

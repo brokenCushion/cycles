@@ -2260,7 +2260,7 @@ and [run 2 count report](builds/validation/landscape-cloud/optimization-phase9/d
 retain every unmatched pixel, subset, exclusion and histogram. This exceeds the
 control rate range; cause is uninvestigated as instructed. Phase 9 is incomplete.
 
-#### Phase 9 - approved majorant count diagnostic (running)
+#### Phase 9 - majorant count diagnostic complete; outside control range
 
 One user-approved experiment: production source/toolchain plus isolated snapshot
 patch `9a017f055`, full1175x500/max1024 adaptive/GPU OIDN/OptiX, three deep-off
@@ -2270,5 +2270,28 @@ The previous backup/build/install/restore procedure preserves production binary
 `677aab08…358a8`, installed modules and generated source/cache originals.
 Compare off leave-one-out (two references) with each on run's mean across three
 two-reference subsets; also report unmatched counts against all three controls,
-direction and tie exclusions. No gate change or acceptance; record the result
-and stop for the user's decision. No further investigation or retries.
+direction and tie exclusions. All six renders finished without retries. Verified
+the restored source/cache originals and unchanged installed production executable
+and modules by SHA-256. Diagnostic SHA-256:
+`fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da`.
+
+| Run | Off LOO unmatched / rate (2 refs) | On unmatched (3 refs) | On counts for 2-ref subsets / mean | Fewer samples / excluded ties | Binomial p |
+|---|---|---:|---|---|---:|
+| off-1 | 0 / 0% | — | — | No observations / 0 | 1 (empty convention) |
+| off-2 | 0 / 0% | — | — | No observations / 0 | 1 (empty convention) |
+| off-3 | 0 / 0% | — | — | No observations / 0 | 1 (empty convention) |
+| on-1 | — | 8 | 8, 8, 8 / 8 | 0/8 = 0% / 0 | 0.0078125 |
+| on-2 | — | 8 | 8, 8, 8 / 8 | 0/8 = 0% / 0 | 0.0078125 |
+| on-3 | — | 8 | 8, 8, 8 / 8 | 0/8 = 0% / 0 | 0.0078125 |
+
+All on rates are 8/587,500 = **0.0013617%**, outside the off min/max range
+**0–0** with matching reference-pool size. Every on histogram is +32: 1,
++112: 5, +128: 2. Controls have no mismatches, so their direction-fraction
+range is undefined; no ties were excluded. The on direction p does not meet
+the existing p < 0.001 failure condition. The requested attribution condition
+is **not met**: the snapshot diagnostic does not eliminate the rate excess.
+No attribution of the production failure solely to the majorant race, further
+investigation, gate change, acceptance or Gaffer presentation.
+[Diagnostic results](builds/validation/landscape-cloud/optimization-phase9/majorant-count-diagnostic.json)
+retain every subset, histogram, settings and verified build identity. Stop for
+the user's decision.

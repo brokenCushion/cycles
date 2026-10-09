@@ -12,6 +12,9 @@
 #include "integrator/path_trace_work.h"
 
 #include "util/vector.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "kernel/deep/types.h"
+#endif
 
 CCL_NAMESPACE_BEGIN
 
@@ -82,6 +85,10 @@ class PathTraceWorkCPU : public PathTraceWork {
   /* Pointer to device-owned kernel globals which is suitable for concurrent access from multiple
    * threads. This allows dynamic updates to image_info when textures are loaded on demand. */
   vector<ThreadKernelGlobalsCPU> *kernel_thread_globals_ = nullptr;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  vector<KernelDeepEvent> deep_grid_events_;
+  vector<KernelDeepDensity> deep_grid_density_;
+#endif
 };
 
 CCL_NAMESPACE_END

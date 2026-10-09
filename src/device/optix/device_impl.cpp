@@ -26,6 +26,9 @@
 
 #  define __KERNEL_OPTIX__
 #  include "kernel/device/optix/globals.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "kernel/deep/optix.h"
+#endif
 
 CCL_NAMESPACE_BEGIN
 
@@ -124,6 +127,22 @@ OptiXDevice::~OptiXDevice()
       optixModuleDestroy(builtin_modules[i]);
     }
   }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  deep_sbt_data.reset();
+  if (deep_pipeline) {
+    optixPipelineDestroy(deep_pipeline);
+    deep_pipeline = nullptr;
+  }
+  deep_osl_sbt_data.reset();
+  if (deep_osl_services_group) optixProgramGroupDestroy(deep_osl_services_group);
+  if (deep_osl_services_module) optixModuleDestroy(deep_osl_services_module);
+  deep_osl_services_group = nullptr;
+  deep_osl_services_module = nullptr;
+  if (deep_module) {
+    optixModuleDestroy(deep_module);
+    deep_module = nullptr;
+  }
+#endif
   for (int i = 0; i < NUM_PIPELINES; ++i) {
     if (pipelines[i] != nullptr) {
       optixPipelineDestroy(pipelines[i]);
@@ -331,6 +350,22 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
       builtin_modules[i] = nullptr;
     }
   }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  deep_sbt_data.reset();
+  if (deep_pipeline) {
+    optixPipelineDestroy(deep_pipeline);
+    deep_pipeline = nullptr;
+  }
+  deep_osl_sbt_data.reset();
+  if (deep_osl_services_group) optixProgramGroupDestroy(deep_osl_services_group);
+  if (deep_osl_services_module) optixModuleDestroy(deep_osl_services_module);
+  deep_osl_services_group = nullptr;
+  deep_osl_services_module = nullptr;
+  if (deep_module) {
+    optixModuleDestroy(deep_module);
+    deep_module = nullptr;
+  }
+#endif
   for (int i = 0; i < NUM_PIPELINES; ++i) {
     if (pipelines[i] != nullptr) {
       optixPipelineDestroy(pipelines[i]);
@@ -476,6 +511,12 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
     }
 #  endif
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    string deep_ptx_data;
+    if (!load_optional_module(use_osl_shading ? "kernel_optix_deep_osl" : "kernel_optix_deep", deep_ptx_data))
+      return false;
+    OptixResult deep_result = OPTIX_SUCCESS;
+#endif
     TaskPool pool;
     OptixResult base_result = OPTIX_SUCCESS;
     OptixResult mnee_result = OPTIX_SUCCESS;
@@ -486,6 +527,9 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
 #  endif
 
     create_optix_module(pool, module_options, base_ptx_data, optix_module, base_result);
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    create_optix_module(pool, module_options, deep_ptx_data, deep_module, deep_result);
+#endif
     if (use_mnee) {
       create_optix_module(pool, module_options, mnee_ptx_data, mnee_module, mnee_result);
     }
@@ -508,6 +552,12 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
 #  endif
     pool.wait_work();
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    if (deep_result != OPTIX_SUCCESS) {
+      set_error(string_printf("Failed to load OptiX deep kernel (%s)", optixGetErrorName(deep_result)));
+      return false;
+    }
+#endif
     if (base_result != OPTIX_SUCCESS) {
       set_error(string_printf("Failed to load OptiX kernel from '%s' (%s)",
                               ptx_filename.c_str(),
@@ -768,6 +818,17 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
   }
 #  endif
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  group_descs[PG_RGEN_DEEP_SURFACE].kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
+  group_descs[PG_RGEN_DEEP_SURFACE].raygen.module = deep_module;
+  group_descs[PG_RGEN_DEEP_SURFACE].raygen.entryFunctionName = "__raygen__kernel_optix_deep_surface";
+  group_descs[PG_HIT_DEEP_ALL].kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+  group_descs[PG_HIT_DEEP_ALL].hitgroup.moduleAH = deep_module;
+  group_descs[PG_HIT_DEEP_ALL].hitgroup.entryFunctionNameAH = "__anyhit__kernel_optix_deep_all_hit";
+  group_descs[PG_MISS_DEEP].kind = OPTIX_PROGRAM_GROUP_KIND_MISS;
+  group_descs[PG_MISS_DEEP].miss.module = deep_module;
+  group_descs[PG_MISS_DEEP].miss.entryFunctionName = "__miss__kernel_optix_deep";
+#endif
   optix_assert(optixProgramGroupCreate(
       context, group_descs, NUM_PROGRAM_GROUPS, &group_options, nullptr, nullptr, groups));
 
@@ -906,9 +967,112 @@ bool OptiXDevice::load_kernels(const uint kernel_features)
         pipelines[PIP_INTERSECT], 0, 0, css, pipeline_options.usesMotionBlur ? 3 : 2));
   }
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (!use_osl_shading)
+    load_deep_pipeline(false);
+#endif
   return !have_error();
 }
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+void OptiXDevice::load_deep_pipeline(const bool use_osl)
+{
+    static_assert(PG_HITV - PG_HITD == DEEP_OPTIX_ALL_HIT_OFFSET);
+    if (deep_pipeline) optix_assert(optixPipelineDestroy(deep_pipeline));
+    deep_pipeline = nullptr;
+    deep_osl_sbt_data.reset();
+    if (deep_osl_services_group) optix_assert(optixProgramGroupDestroy(deep_osl_services_group));
+    if (deep_osl_services_module) optix_assert(optixModuleDestroy(deep_osl_services_module));
+    deep_osl_services_group = nullptr;
+    deep_osl_services_module = nullptr;
+    vector<OptixProgramGroup> pipeline_groups = {
+      groups[PG_RGEN_DEEP_SURFACE], groups[PG_HIT_DEEP_ALL], groups[PG_MISS_DEEP]};
+    add_hit_miss_program_groups(groups, pipeline_groups);
+#ifdef WITH_OSL
+      if (use_osl) {
+        string ptx;
+        const string filename = path_get("lib/kernel_optix_deep_osl_services.ptx.zst");
+        if (!path_read_compressed_text(filename, ptx)) {
+          set_error("Failed to load deep OptiX OSL services: " + filename);
+          return;
+        }
+        OptixModuleCompileOptions options = {};
+        options.optLevel = OPTIX_COMPILE_OPTIMIZATION_LEVEL_3;
+        options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_NONE;
+        TaskPool pool;
+        OptixResult result;
+        create_optix_module(pool, options, ptx, deep_osl_services_module, result);
+        pool.wait_work();
+        if (result != OPTIX_SUCCESS) {
+          set_error(string("Failed to compile deep OptiX OSL services: ") + optixGetErrorName(result));
+          return;
+        }
+        OptixProgramGroupDesc desc = {};
+        desc.kind = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+        desc.callables.entryFunctionNameDC = "__direct_callable__dummy_services";
+        desc.callables.moduleDC = deep_osl_services_module;
+        OptixProgramGroupOptions group_options = {};
+        optix_assert(optixProgramGroupCreate(context, &desc, 1, &group_options,
+                                            nullptr, nullptr, &deep_osl_services_group));
+        pipeline_groups.push_back(groups[PG_CALL_SVM_AO]);
+        pipeline_groups.push_back(groups[PG_CALL_SVM_BEVEL]);
+        for (const auto &group : osl_groups)
+          if (group) pipeline_groups.push_back(group == osl_groups[osl_groups.size() - 2] ?
+                                                deep_osl_services_group : group);
+      }
+#endif
+    OptixPipelineLinkOptions link_options = {};
+    link_options.maxTraceDepth = 1;
+    optix_assert(optixPipelineCreate(context, &pipeline_options, &link_options,
+                                    pipeline_groups.data(), pipeline_groups.size(),
+                                    nullptr, nullptr, &deep_pipeline));
+    OptixStackSizes sizes[NUM_PROGRAM_GROUPS] = {};
+    for (int i = 0; i < NUM_PROGRAM_GROUPS; ++i)
+      if (groups[i] && std::find(pipeline_groups.begin(), pipeline_groups.end(), groups[i]) != pipeline_groups.end())
+        optix_assert(optixProgramGroupGetStackSize(groups[i], &sizes[i], deep_pipeline));
+    unsigned int dss = 0;
+#ifdef WITH_OSL
+    if (use_osl)
+      for (const auto &group : osl_groups)
+        if (group) {
+          OptixStackSizes stack = {};
+          const auto linked_group = group == osl_groups[osl_groups.size() - 2] ?
+                                        deep_osl_services_group : group;
+          optix_assert(optixProgramGroupGetStackSize(linked_group, &stack, deep_pipeline));
+          dss = std::max(dss, stack.dssDC);
+        }
+#endif
+    const unsigned int css = sizes[PG_RGEN_DEEP_SURFACE].cssRG +
+        std::max(hit_program_continuation_stack_size(sizes), sizes[PG_HIT_DEEP_ALL].cssAH);
+    optix_assert(optixPipelineSetStackSize(deep_pipeline, 0, dss, css,
+                                         pipeline_options.usesMotionBlur ? 3 : 2));
+    deep_sbt_data = make_unique<device_vector<SbtRecord>>(this, "deep_optix_sbt", MEM_READ_ONLY);
+    deep_sbt_data->alloc(NUM_HIT_PROGRAM_GROUPS);
+    memset(deep_sbt_data->host_pointer, 0, deep_sbt_data->memory_size());
+    for (int i = 0; i < NUM_HIT_PROGRAM_GROUPS; ++i)
+      if (groups[HIT_PROGAM_GROUP_OFFSET + i])
+        optix_assert(optixSbtRecordPackHeader(groups[HIT_PROGAM_GROUP_OFFSET + i], &(*deep_sbt_data)[i]));
+    optix_assert(optixSbtRecordPackHeader(groups[PG_HIT_DEEP_ALL], &(*deep_sbt_data)[DEEP_OPTIX_ALL_HIT_OFFSET]));
+    deep_sbt_data->copy_to_device();
+#ifdef WITH_OSL
+    if (use_osl) {
+      deep_osl_sbt_data = make_unique<device_vector<SbtRecord>>(this, "deep_osl_sbt", MEM_READ_ONLY);
+      deep_osl_sbt_data->alloc(sbt_data.size());
+      memcpy(deep_osl_sbt_data->host_pointer, sbt_data.host_pointer, sbt_data.memory_size());
+      const size_t services = osl_groups.size() - 2;
+      for (size_t i = 0; i < osl_groups.size(); ++i)
+        if (i == services || !osl_groups[i])
+          optix_assert(optixSbtRecordPackHeader(deep_osl_services_group,
+              &(*deep_osl_sbt_data)[NUM_PROGRAM_GROUPS + i]));
+      deep_osl_sbt_data->copy_to_device();
+    }
+#endif
+    LOG_INFO_IMPORTANT << "OptiX deep resources: raygen_stack=" << sizes[PG_RGEN_DEEP_SURFACE].cssRG
+                       << " anyhit_stack=" << sizes[PG_HIT_DEEP_ALL].cssAH
+                       << " continuation_stack=" << css << " callable_stack=" << dss
+                       << " queue_launch_bytes=" << sizeof(KernelParamsOptiX) + sizeof(KernelDeepParamsOptiX);
+}
+#endif
 bool OptiXDevice::load_osl_kernels()
 {
 #  ifdef WITH_OSL
@@ -979,6 +1143,12 @@ bool OptiXDevice::load_osl_kernels()
 
   const CUDAContextScope scope(this);
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (deep_pipeline) {
+    optix_assert(optixPipelineDestroy(deep_pipeline));
+    deep_pipeline = nullptr;
+  }
+#endif
   if (pipelines[PIP_SHADE]) {
     optixPipelineDestroy(pipelines[PIP_SHADE]);
   }
@@ -1219,6 +1389,9 @@ bool OptiXDevice::load_osl_kernels()
         pipelines[PIP_SHADE], 0, dss, css, pipeline_options.usesMotionBlur ? 3 : 2));
   }
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  load_deep_pipeline(osl_globals.use_shading);
+#endif
   /* Copy colorsystem data from OSL to the device. */
   {
     /* The interface here is somewhat complex, since the colorsystem contains strings whose

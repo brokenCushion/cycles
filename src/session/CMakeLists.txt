@@ -36,6 +36,11 @@ set(LIB
   PUBLIC cycles_util
 )
 
+if(WITH_CYCLES_DEEP_OPAQUE)
+  list(APPEND SRC deep.cpp)
+  list(APPEND SRC_HEADERS deep.h)
+endif()
+
 include_directories(${INC})
 include_directories(SYSTEM ${INC_SYS})
 

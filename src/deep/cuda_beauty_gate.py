@@ -1,0 +1,618 @@
+# SPDX-License-Identifier: Apache-2.0
+"""CUDA/OptiX beauty isolation: reproduced states, calibrated noise, and bias."""
+import csv
+import json
+import math
+import re
+from pathlib import Path
+import struct
+import statistics
+import hashlib
+import sys
+from collections import Counter
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tools'))
+from deep_exr import image_reader, image_format, image_channels, image_tile, image_tile_size
+
+SETTINGS_KEYS = ('source_sha256', 'samples', 'resolution', 'percentage', 'device',
+    'camera_world_matrix', 'camera_frame', 'frame', 'adaptive', 'adaptive_threshold',
+    'adaptive_min_samples', 'seed', 'use_animated_seed', 'denoising', 'denoiser',
+    'denoising_use_gpu', 'pixel_filter', 'threads', 'save_render_passes',
+    'diagnostic_sample_count_pass')
+
+
+def completed_sample_count(log, maximum):
+    """Single-tile PassAccessor normalization, from final scheduler statistics."""
+    counts = re.findall(r'Rendered (\d+) samples in [0-9.e+-]+ seconds\s*\n', log)
+    if len(counts) != 1 or not 0 < int(counts[0]) <= maximum:
+        raise ValueError('Need one valid completed tile for sample-count normalization')
+    return int(counts[0])
+
+
+def reference_pool(directory, root, builds):
+    """All completed deep-off controls with verified matching beauty/settings."""
+    settings = json.loads((Path(directory) / 'render.json').read_text())
+    registry = json.loads(Path(builds).read_text())['builds']
+    digest = settings['renderer_sha256']
+    result = []
+    for path in sorted(Path(root).rglob('render.json')):
+        other = json.loads(path.read_text())
+        sha = other.get('renderer_sha256')
+        same = sha == digest or (sha in registry and digest in registry and
+            registry[sha]['beauty_source_sha256'] == registry[digest]['beauty_source_sha256'])
+        if (same and not other.get('deep', True) and
+                all(other.get(k) == settings.get(k) for k in SETTINGS_KEYS) and
+                (path.parent / 'render-passes.exr').is_file()):
+            result.append(path.parent)
+    return result
+
+
+def float32_ulp(value):
+    """FLOAT spacing at |value|, including zero, subnormals and negative values."""
+    if not math.isfinite(value):
+        raise ValueError('Nonfinite FLOAT')
+    bits = struct.unpack('<I', struct.pack('<f', abs(value)))[0]
+    exponent = (bits >> 23) & 255
+    if exponent == 255:
+        raise ValueError('Outside finite FLOAT range')
+    return math.ldexp(1.0, -149 if exponent == 0 else exponent - 150)
+
+
+def exact_state_counts(values, populations):
+    """Exact whole-state duplicates prove a leave-one-out reproduced match."""
+    if len(values) != len(populations) or any(not math.isfinite(v) for row in values for v in row):
+        raise ValueError('Invalid pool raw states')
+    return Counter((n, tuple(row)) for n, row in zip(populations, values))
+
+
+def raw_pass_gate(values, population, references, populations, envelope=None):
+    """One matching-count reference must satisfy all components of this pass."""
+    if (not references or len(references) != len(populations) or
+            any(len(r) != len(values) for r in references)):
+        raise ValueError('Invalid reference shape')
+    if not all(math.isfinite(v) for row in [values] + references for v in row):
+        raise ValueError('Nonfinite denoiser input')
+    if envelope is None:
+        envelope = max(max(r[i] for r in references) - min(r[i] for r in references)
+                       for i in range(len(values)))
+    if not math.isfinite(envelope) or envelope < 0:
+        raise ValueError('Invalid ordinary-repeat envelope')
+    limits = [max(envelope, 4 * float32_ulp(v)) for v in values]
+    matched = [i for i, n in enumerate(populations) if n == population]
+    passing = [i for i in matched if all(abs(a-b) <= limit
+               for a, b, limit in zip(values, references[i], limits))]
+    return dict(passed=bool(passing), matched=matched, passing=passing,
+                envelope=[envelope]*len(values), limits=limits)
+
+
+def step2_ulp_floor(channel, reference):
+    """Bounded-term averages round at term magnitude, including cancellation."""
+    group = (channel or '').rsplit('.', 1)[0].rsplit('.', 1)[-1]
+    return 4 * float32_ulp(1.0 if group in ('Denoising Normal', 'Denoising Albedo') else reference)
+
+
+def monte_carlo_gate(value, references, seeds, ratio_limit=None, channel=None):
+    """Four independent pixel estimates; SE = sample SD / sqrt(4)."""
+    if len(seeds) != 4 or not all(math.isfinite(v) for v in [value] + references + seeds):
+        raise ValueError('Need four finite seed-varied pixel estimates')
+    sigma = statistics.stdev(seeds) / 2
+    if not references:
+        return dict(passed=False, difference=None, sigma=sigma, ratio=None)
+    nearest = min(range(len(references)), key=lambda i: abs(value-references[i]))
+    delta = value-references[nearest]
+    floor = step2_ulp_floor(channel, references[nearest])
+    limit = max((ratio_limit or 0) * sigma, floor)
+    return dict(passed=abs(delta) <= limit if ratio_limit is not None else True,
+                difference=delta, sigma=sigma,
+                ratio=abs(delta)/sigma if sigma else (0.0 if delta == 0 else None),
+                nearest=nearest, reference_value=references[nearest], four_ulp=floor)
+
+
+def bias_gate(differences, reference_mean):
+    """Reject only statistically significant bias above one reference-mean FLOAT ULP."""
+    if not differences or not all(math.isfinite(v) for v in differences):
+        raise ValueError('Need finite paired-pixel differences')
+    mean = statistics.mean(differences)
+    se = statistics.stdev(differences)/math.sqrt(len(differences)) if len(differences) > 1 else 0.0
+    ulp = float32_ulp(reference_mean)
+    return dict(passed=abs(mean) <= max(3*se, ulp), mean_signed_difference=mean,
+                standard_error=se, statistical_limit=3*se, limit=max(3*se, ulp),
+                reference_image_mean=reference_mean, reference_mean_float_ulp=ulp,
+                pixels=len(differences))
+
+
+def snapshot_raw_agreement(directory, off, on, manifest, pixels, channels, reader_backend="gaffer"):
+    """Resolve only an identical case in the isolated majorant diagnostic build."""
+    settings = json.loads((Path(directory)/'render.json').read_text())
+    build = json.loads(Path(manifest).read_text())
+    if not build.get('diagnostic_only') or build.get('snapshot_commit') != '9a017f055':
+        raise ValueError('Need the isolated majorant-snapshot diagnostic build')
+    sha = hashlib.sha256()
+    with Path(build['executable']).open('rb') as stream:
+        for block in iter(lambda: stream.read(1024*1024), b''):
+            sha.update(block)
+    if sha.hexdigest() != build['executable_sha256'] or sha.hexdigest() == settings['renderer_sha256']:
+        raise ValueError('Snapshot executable identity mismatch')
+    off, on = [Path(p).resolve() for p in off], [Path(p).resolve() for p in on]
+    if len(off) != 3 or len(on) != 3 or len(set(off+on)) != 6:
+        raise ValueError('Need three independent snapshot deep-off and three deep-on renders')
+    nodes, counts = [], []
+    for p in off+on:
+        s = json.loads((p/'render.json').read_text())
+        if s['renderer_sha256'] != build['executable_sha256'] or any(s.get(k) != settings.get(k) for k in SETTINGS_KEYS):
+            raise ValueError('Snapshot case/beauty settings mismatch: '+str(p))
+        if s['deep'] != (p in on):
+            raise ValueError('Snapshot on/off role mismatch')
+        node = image_reader((p/'render-passes.exr'),reader_backend)
+        nodes.append(node)
+        counts.append(s['samples'])
+    fmt = image_format(nodes[0])
+    if any(image_format(n) != fmt or
+           any(c not in image_channels(n) for c in channels) for n in nodes):
+        raise ValueError('Snapshot raw image/channel mismatch')
+    count_index = next(i for i, c in enumerate(channels) if 'Debug Sample Count' in c)
+    tile = image_tile_size(reader_backend)
+    results = []
+    for x, file_y in pixels:
+        y = fmt.height()-1-file_y
+        if not (0 <= x < fmt.width() and 0 <= y < fmt.height()):
+            raise ValueError('Snapshot pixel outside image')
+        origin = ((x//tile)*tile, (y//tile)*tile)
+        index = (y-origin[1])*tile+x-origin[0]
+        values = [[float(image_tile(n,c,origin)[index]) for c in channels] for n in nodes]
+        populations = [v[count_index]*maximum for v, maximum in zip(values, counts)]
+        if any(not math.isfinite(n) or abs(n-round(n)) > 1e-4 or n < 1 for n in populations):
+            raise ValueError('Invalid snapshot accepted sample count')
+        populations = [round(n) for n in populations]
+        checks = [raw_pass_gate(v, population, values[:3], populations[:3], envelope=0)
+                  for v, population in zip(values[3:], populations[3:])]
+        results.append(dict(file_pixel=[x,file_y], passed=all(c['passed'] for c in checks),
+            bit_identical=all(v == values[0] for v in values), channels=channels,
+            runs=[str(p) for p in off+on], values=values, sample_counts=populations,
+            checks=checks, snapshot_executable_sha256=build['executable_sha256'],
+            target_deep_settings={k: settings.get(k) for k in ('deep_error','deep_samples','deep_ids')},
+            diagnostic_deep_settings=[{k: json.loads((p/'render.json').read_text()).get(k)
+                                      for k in ('deep_error','deep_samples','deep_ids')} for p in on],
+            diagnostic_only=True, rule='Each deep-on matches ONE snapshot deep-off across ALL raw channels within unchanged 4 FLOAT ULP and exact counts'))
+    return results
+
+
+def validate_cuda_beauty(directory, references, qualification=True, output=None, pool=(), builds=None,
+                         seed_references=(), snapshot_off=(), snapshot_on=(), snapshot_build=None, reader_backend="gaffer"):
+    """Check all stored denoiser inputs; trace every denoised outlier at its pixel."""
+
+    directory = Path(directory).resolve()
+    references = [Path(p).resolve() for p in references]
+    if qualification and len(references) != 5:
+        raise ValueError('CUDA beauty qualification requires exactly five deep-off runs')
+    if len(set(references + [directory])) != len(references) + 1:
+        raise ValueError('Reference renders must be independent directories')
+    paths = [directory] + references
+    settings = [json.loads((p / 'render.json').read_text()) for p in paths]
+    if settings[0]['device'] not in ('CUDA', 'OPTIX') or not settings[0]['deep'] or any(s['deep'] for s in settings[1:]):
+        raise ValueError('Expected one CUDA/OptiX deep render and independent deep-off controls')
+    keys = SETTINGS_KEYS
+    def executable(p, s):
+        return s.get('renderer_sha256') or json.loads((p / 'measurement.json').read_text())['executable_sha256']
+    digest = executable(directory, settings[0])
+    identities = json.loads(Path(builds).read_text())['builds'] if builds else {}
+    for p, s in zip(paths, settings):
+        other = executable(p, s)
+        same_beauty = (other == digest or
+            (digest in identities and other in identities and
+             identities[digest]['beauty_source_sha256'] == identities[other]['beauty_source_sha256']))
+        if not same_beauty or any(s.get(k) != settings[0].get(k) for k in keys):
+            raise ValueError('Reference executable/settings mismatch: ' + str(p))
+        if not s.get('save_render_passes') or not s.get('diagnostic_sample_count_pass'):
+            raise ValueError('CUDA gate needs saved denoiser inputs and accepted sample counts')
+    pool = list(dict.fromkeys(Path(p).resolve() for p in list(references) + list(pool)))
+    for p in pool:
+        s = json.loads((p / 'render.json').read_text())
+        other = executable(p, s)
+        same_beauty = (other == digest or
+            (digest in identities and other in identities and
+             identities[digest]['beauty_source_sha256'] == identities[other]['beauty_source_sha256']))
+        if not same_beauty or s['deep'] or any(s.get(k) != settings[0].get(k) for k in keys):
+            raise ValueError('Pool beauty source/settings mismatch: ' + str(p))
+
+    seed_references = [Path(p).resolve() for p in seed_references]
+    if seed_references and (len(seed_references) != 4 or len(set(seed_references)) != 4):
+        raise ValueError('Need exactly four independent seed-varied deep-off renders')
+    seed_settings = []
+    for p in seed_references:
+        s = json.loads((p / 'render.json').read_text())
+        other = executable(p, s)
+        same_beauty = (other == digest or
+            (digest in identities and other in identities and
+             identities[digest]['beauty_source_sha256'] == identities[other]['beauty_source_sha256']))
+        if (not same_beauty or s['deep'] or
+                any(s.get(k) != settings[0].get(k) for k in keys if k != 'seed')):
+            raise ValueError('Seed control beauty source/settings mismatch: ' + str(p))
+        seed_settings.append(s)
+    if len({s['seed'] for s in seed_settings}) != len(seed_settings):
+        raise ValueError('Seed controls must use four distinct seeds')
+    # Keep old K=3 diagnostic evidence reproducible. Qualification uses the final
+    # user rule; seed controls are needed only when a state is not reproduced.
+    final_raw_rule = qualification or bool(seed_references)
+
+    def readers(filename):
+        result = []
+        for p in paths:
+            node = image_reader((p / filename),reader_backend)
+            result.append(node)
+        return result
+    raw, beauty = readers('render-passes.exr'), readers('beauty.exr')
+    # Retain qualified K-run denoised envelopes across unchanged beauty builds.
+    # Raw acceptance is calibrated using the entire compatible ordinary pool.
+    historical_groups = {}
+    for p in pool:
+        if (p / 'beauty.exr').is_file():
+            historical_groups.setdefault(p.parent, []).append(p)
+    historical = []
+    for parent, paths in historical_groups.items():
+        if len(paths) >= 5:
+            nodes = []
+            for p in paths:
+                node = image_reader((p / 'beauty.exr'),reader_backend)
+                nodes.append(node)
+            historical.append((parent, nodes))
+    pool_raw = []
+    for p in pool:
+        node = image_reader((p / 'render-passes.exr'),reader_backend)
+        pool_raw.append(node)
+    seed_raw = []
+    for p in seed_references:
+        node = image_reader((p / 'render-passes.exr'),reader_backend)
+        seed_raw.append(node)
+    fmt = image_format(raw[0])
+    if any(image_format(n) != fmt for n in raw + beauty):
+        raise ValueError('Reference image size mismatch')
+    names = list(image_channels(raw[0]))
+    if any(list(image_channels(n)) != names for n in raw):
+        raise ValueError('Denoiser input channel mismatch')
+    if any(image_format(n) != fmt or
+           list(image_channels(n)) != names for n in pool_raw + seed_raw):
+        raise ValueError('Pool image/channel mismatch')
+    counts = [c for c in names if 'Debug Sample Count' in c]
+    if len(counts) != 1:
+        raise ValueError('Missing accepted sample-count channel')
+    groups = {}
+    for c in names:
+        if any('.'+p+'.' in c for p in ('Noisy Image', 'Denoising Albedo',
+               'Denoising Normal', 'Denoising Depth')) or c in counts:
+            groups.setdefault(c.rsplit('.', 1)[0], []).append(c)
+    if settings[0]['denoising']:
+        for required in ('Noisy Image', 'Denoising Albedo', 'Denoising Normal', 'Denoising Depth'):
+            if not any(required in g for g in groups):
+                raise ValueError('Missing denoiser input: ' + required)
+    elif not any('Noisy Image' in g for g in groups):
+        combined = [c for c in names if '.Combined.' in c]
+        if not combined:
+            raise ValueError('Missing raw combined pass')
+        groups[combined[0].rsplit('.', 1)[0]] = combined
+    stats = {g: dict(channels=cs, violations=0, k5_violations=0, max_envelope=0.0, max_matching_error=0.0,
+                     max_four_ulp=0.0, worst=None, worst_violation=None) for g, cs in groups.items()}
+    report = dict(passed=False, qualification=qualification, K=len(references),
+                  renderer_sha256=digest, references=[str(p) for p in references],
+                  envelope_scope='one maximum per pass over all pixels/components and every ordinary pair',
+                  raw_rule='max(envelope, 4 FLOAT ULP); one count-matched reference per pass',
+                  input_passes=stats, unmatched_population_pixels=0,
+                  max_deep_on_off=0.0, max_ordinary_repeat=0.0, peak_absolute_value=0.0,
+                  denoised_outlier_pixels=0, explained_outlier_pixels=0,
+                  unexplained_outlier_pixels=0, worst_denoised_pixels=[])
+    report['pool'] = [str(p) for p in pool]
+    report['reproduced_pixels'] = []
+    report['seed_references'] = [str(p) for p in seed_references]
+    report['statistical_pixels'] = []
+    if final_raw_rule:
+        report['raw_rule'] = 'one reproduced state within reference 4 ULP; step 2 difference <= max(calibrated ratio * four-seed SE, 4 ULP of 1.0 for denoising normal/albedo, reference 4 ULP otherwise), with >=20 ordinary controls and calibrated fallback count; image bias <= max(3 SE, reference-mean 1 ULP)'
+    checked_channels = [c for cs in groups.values() for c in cs]
+    bias_differences = {c: [] for c in checked_channels}
+    bias_references = {c: [] for c in checked_channels}
+    calibration = [dict(reference=str(p), fallback_pixels=0,
+                        max_ratio={c: 0.0 for c in checked_channels},
+                        unmatched_population_pixels=0,
+                        zero_sigma_mismatches={c: 0 for c in checked_channels}) for p in pool]
+    output = Path(output) if output else directory / 'cuda_beauty_validation.json'
+    output.parent.mkdir(parents=True, exist_ok=True)
+    trace = output.with_suffix('.pixels.csv')
+    tile_size = image_tile_size(reader_backend)
+    width, height = fmt.width(), fmt.height()
+    channels = ('R', 'G', 'B', 'A')
+    maximum_samples = settings[0]['samples']
+    # range(K values) equals max over all K*(K-1)/2 pairs at a pixel.
+    # The plan's per-pass envelope is the maximum of those ranges over the image.
+    envelopes = {group:0.0 for group in groups}
+    denoised_envelope = 0.0
+    historical_envelopes = {str(parent):0.0 for parent, _ in historical}
+    for y in range(0, height, tile_size):
+        for x in range(0, width, tile_size):
+            origin = (x,y)
+            valid = [j*tile_size+i for j in range(min(tile_size,height-y))
+                     for i in range(min(tile_size,width-x))]
+            for group, cs in groups.items():
+                for c in cs:
+                    data = [image_tile(r,c,origin) for r in raw[1:]]
+                    for index in valid:
+                        values = [float(d[index]) for d in data]
+                        if not all(math.isfinite(v) for v in values):
+                            raise ValueError('Nonfinite reference denoiser input')
+                        envelopes[group] = max(envelopes[group],max(values)-min(values))
+            for c in channels:
+                data = [image_tile(r,c,origin) for r in beauty[1:]]
+                for index in valid:
+                    values = [float(d[index]) for d in data]
+                    if not all(math.isfinite(v) for v in values):
+                        raise ValueError('Nonfinite reference denoised beauty')
+                    denoised_envelope = max(denoised_envelope,max(values)-min(values))
+                for parent, nodes in historical:
+                    data = [image_tile(n,c,origin) for n in nodes]
+                    for index in valid:
+                        values = [float(d[index]) for d in data]
+                        if not all(math.isfinite(v) for v in values):
+                            raise ValueError('Nonfinite historical denoised beauty')
+                        key = str(parent)
+                        historical_envelopes[key] = max(historical_envelopes[key], max(values)-min(values))
+    report['current_K_denoised_envelope'] = denoised_envelope
+    report['historical_denoised_envelopes'] = historical_envelopes
+    denoised_envelope = max([denoised_envelope] + list(historical_envelopes.values()))
+    report['max_ordinary_repeat'] = denoised_envelope
+    with trace.open('w', newline='') as stream:
+        writer = csv.DictWriter(stream, fieldnames=('file_x', 'file_y', 'reference_index', 'sample_count',
+            'denoised_channel', 'difference', 'envelope', 'input_channel', 'deep_input',
+            'ordinary_input', 'input_difference', 'input_limit', 'explained'))
+        writer.writeheader()
+        for y in range(0, height, tile_size):
+            for x in range(0, width, tile_size):
+                origin = (x,y)
+                count_data = [image_tile(r,counts[0],origin) for r in raw]
+                raw_data = {c: [image_tile(r,c,origin) for r in raw]
+                            for cs in groups.values() for c in cs}
+                color_data = {c: [image_tile(r,c,origin) for r in beauty] for c in channels}
+                if final_raw_rule:
+                    pool_data = {c: [image_tile(r,c,origin) for r in pool_raw]
+                                 for c in checked_channels}
+                    seed_data = {c: [image_tile(r,c,origin) for r in seed_raw]
+                                 for c in checked_channels}
+                for j in range(min(tile_size, height-y)):
+                    for i in range(min(tile_size, width-x)):
+                        index = j * tile_size + i
+                        values = [float(d[index]) * maximum_samples for d in count_data]
+                        if not all(math.isfinite(v) and 1 <= round(v) <= maximum_samples and
+                                   abs(v-round(v)) <= 1e-4 for v in values):
+                            raise ValueError('Invalid accepted sample count')
+                        populations = [round(v) for v in values]
+                        matched = [r for r in range(len(references)) if populations[r+1] == populations[0]]
+                        report['unmatched_population_pixels'] += int(not matched)
+                        actual = [float(color_data[c][0][index]) for c in channels]
+                        native = [[float(color_data[c][r+1][index]) for c in channels]
+                                  for r in range(len(references))]
+                        if not all(math.isfinite(v) for row in [actual]+native for v in row):
+                            raise ValueError('Nonfinite denoised beauty')
+                        envelope = [denoised_envelope]*4
+                        report['max_deep_on_off'] = max(report['max_deep_on_off'],
+                                                      max(abs(v-n) for v, n in zip(actual, native[0])))
+                        report['max_ordinary_repeat'] = max(report['max_ordinary_repeat'], max(envelope))
+                        report['peak_absolute_value'] = max(report['peak_absolute_value'],
+                            max(abs(v) for row in [actual]+native for v in row))
+                        inside = [r for r in matched if all(abs(v-n) <= e for v,n,e in zip(actual,native[r],envelope))]
+                        candidates = inside or matched
+                        closest = min(candidates, key=lambda r: max(abs(v-n) for v, n in zip(actual, native[r]))) if candidates else 0
+                        differences = [abs(v-n) for v, n in zip(actual, native[closest])]
+                        outlier = bool(matched) and not inside
+                        changes, evidence, failed_groups = [], {}, []
+                        for group, cs in groups.items():
+                            v = [float(raw_data[c][0][index]) for c in cs]
+                            refs = [[float(raw_data[c][r+1][index]) for c in cs] for r in range(len(references))]
+                            gate = raw_pass_gate(v, populations[0], refs, populations[1:], envelopes[group])
+                            s = stats[group]
+                            s['violations'] += int(not gate['passed'])
+                            s['k5_violations'] += int(not gate['passed'])
+                            if not gate['passed']:
+                                failed_groups.append(group)
+                            s['max_envelope'] = max(s['max_envelope'], max(gate['envelope']))
+                            s['max_four_ulp'] = max(s['max_four_ulp'], max(4*float32_ulp(a) for a in v))
+                            error = min((max(abs(a-b) for a,b in zip(v, refs[r])) for r in gate['matched']), default=0)
+                            if not gate['passed'] and s['worst_violation'] is None:
+                                s['worst_violation'] = dict(file_pixel=[x+i,height-1-(y+j)], values=v,
+                                    references=refs, sample_counts=populations, limits=gate['limits'])
+                            if error >= s['max_matching_error']:
+                                s['max_matching_error'] = error
+                                s['worst'] = dict(file_pixel=[x+i, height-1-(y+j)], values=v, references=refs,
+                                    sample_counts=populations, envelopes=gate['envelope'], limits=gate['limits'],
+                                    passing_references=gate['passing'])
+                            if outlier:
+                                changed = []
+                                for k, c in enumerate(cs):
+                                    delta = abs(v[k]-refs[closest][k])
+                                    if delta:
+                                        detail = dict(channel=c, deep=v[k], reference=refs[closest][k],
+                                                      difference=delta, limit=gate['limits'][k])
+                                        changed.append(detail)
+                                        changes.append(detail)
+                                if changed:
+                                    evidence[group] = changed
+                        if final_raw_rule:
+                            pool_values = [[float(pool_data[c][r][index]) for c in checked_channels]
+                                           for r in range(len(pool))]
+                            pool_populations = []
+                            for row in pool_values:
+                                n = row[checked_channels.index(counts[0])]*maximum_samples
+                                if (not math.isfinite(n) or abs(n-round(n)) > 1e-4 or
+                                        not 1 <= round(n) <= maximum_samples):
+                                    raise ValueError('Invalid pool accepted sample count')
+                                pool_populations.append(round(n))
+                            # Every control is tested against the rest, never itself.
+                            # Use precisely the deep-on count and whole-state 4-ULP
+                            # match, then the same pixel SE and nearest-channel delta.
+                            duplicates = exact_state_counts(pool_values, pool_populations)
+                            for held, row in enumerate(pool_values):
+                                if duplicates[(pool_populations[held], tuple(row))] > 1:
+                                    continue
+                                others = [r for r, n in enumerate(pool_populations)
+                                          if r != held and n == pool_populations[held]]
+                                refs = [pool_values[r] for r in others]
+                                reproduced = raw_pass_gate(row, pool_populations[held], refs,
+                                    [pool_populations[held]]*len(refs), envelope=0) if refs else dict(passed=False)
+                                if reproduced['passed']:
+                                    continue
+                                cal = calibration[held]
+                                cal['fallback_pixels'] += 1
+                                cal['unmatched_population_pixels'] += int(not others)
+                                for k, c in enumerate(checked_channels):
+                                    seeds = [float(d[index]) for d in seed_data[c]]
+                                    if not seeds or not others:
+                                        continue
+                                    gate = monte_carlo_gate(row[k], [ref[k] for ref in refs], seeds, channel=c)
+                                    cal['zero_sigma_mismatches'][c] += int(gate['sigma'] == 0 and gate['difference'] != 0)
+                                    cal['max_ratio'][c] = max(cal['max_ratio'][c], gate['ratio'] or 0.0)
+                            same_count = []
+                            for r in range(len(pool)):
+                                if pool_populations[r] == populations[0]:
+                                    same_count.append(r)
+                            v = [float(raw_data[c][0][index]) for c in checked_channels]
+                            refs = [[float(pool_data[c][r][index]) for c in checked_channels]
+                                    for r in same_count]
+                            reproduced = raw_pass_gate(v, populations[0], refs,
+                                [populations[0]]*len(refs), envelope=0) if refs else dict(passed=False)
+                            final_failed = []
+                            if reproduced['passed']:
+                                if failed_groups or not matched:
+                                    r = same_count[reproduced['passing'][0]]
+                                    report['reproduced_pixels'].append(dict(file_pixel=[x+i,height-1-(y+j)],
+                                        sample_count=populations[0], checked_passes=list(groups),
+                                        k5_failed_passes=failed_groups, matching_pool_run=str(pool[r])))
+                            else:
+                                details = []
+                                for group, cs in groups.items():
+                                    for c in cs:
+                                        a = float(raw_data[c][0][index])
+                                        ref = [float(pool_data[c][r][index]) for r in same_count]
+                                        seeds = [float(d[index]) for d in seed_data[c]]
+                                        gate = monte_carlo_gate(a, ref, seeds, channel=c) if seeds else dict(
+                                            passed=False, difference=None, sigma=None, ratio=None,
+                                            reason='Missing four seed-varied controls')
+                                        details.append(dict(channel=c, **gate,
+                                            nearest_reference=str(pool[same_count[gate['nearest']]])
+                                            if 'nearest' in gate else None))
+                                        if not gate['passed'] and group not in final_failed:
+                                            final_failed.append(group)
+                                report['statistical_pixels'].append(dict(file_pixel=[x+i,height-1-(y+j)],
+                                    sample_count=populations[0], passed=not final_failed,
+                                    failed_passes=final_failed, channels=details))
+                            for group in groups:
+                                stats[group]['violations'] += int(group in final_failed)-int(group in failed_groups)
+                            # Counts remain exact, even when the statistical rule is used.
+                            report['unmatched_population_pixels'] -= int(not matched)
+                            report['unmatched_population_pixels'] += int(not same_count)
+                            if same_count:
+                                for c in checked_channels:
+                                    ref_mean = statistics.mean(float(pool_data[c][r][index]) for r in same_count)
+                                    bias_differences[c].append(float(raw_data[c][0][index])-ref_mean)
+                                    bias_references[c].append(ref_mean)
+                        elif failed_groups or not matched:
+                            cs = [c for group in groups for c in groups[group]]
+                            v = [float(raw_data[c][0][index]) for c in cs]
+                            for p, node in zip(pool, pool_raw):
+                                n = float(image_tile(node,counts[0],origin)[index]) * maximum_samples
+                                if not math.isfinite(n) or abs(n-round(n)) > 1e-4 or round(n) != populations[0]:
+                                    continue
+                                ref = [float(image_tile(node,c,origin)[index]) for c in cs]
+                                gate = raw_pass_gate(v, populations[0], [ref], [round(n)], envelope=0)
+                                if gate['passed']:
+                                    for group in failed_groups:
+                                        stats[group]['violations'] -= 1
+                                    report['unmatched_population_pixels'] -= int(not matched)
+                                    report['reproduced_pixels'].append(dict(file_pixel=[x+i,height-1-(y+j)],
+                                        sample_count=populations[0], checked_passes=list(groups),
+                                        k5_failed_passes=failed_groups, matching_pool_run=str(p),
+                                        channels=cs, values=v, reference=ref, limits=gate['limits']))
+                                    break
+                        if outlier:
+                            report['denoised_outlier_pixels'] += 1
+                            explained = bool(changes)
+                            report['explained_outlier_pixels'] += int(explained)
+                            report['unexplained_outlier_pixels'] += int(not explained)
+                            k = max(range(4), key=lambda k: differences[k]-envelope[k])
+                            strongest = max(changes, key=lambda c: c['difference']/c['limit']) if changes else {}
+                            writer.writerow(dict(file_x=x+i, file_y=height-1-(y+j), reference_index=closest,
+                                sample_count=populations[0], denoised_channel=channels[k], difference=differences[k],
+                                envelope=envelope[k], input_channel=strongest.get('channel'),
+                                deep_input=strongest.get('deep'), ordinary_input=strongest.get('reference'),
+                                input_difference=strongest.get('difference'), input_limit=strongest.get('limit'), explained=explained))
+                            detail = dict(file_pixel=[x+i,height-1-(y+j)], reference_index=closest,
+                                sample_counts=populations, denoised_values=actual, ordinary_values=native,
+                                differences=differences, envelopes=envelope, changed_inputs=evidence,
+                                explained_by_input_difference=explained)
+                            report['worst_denoised_pixels'].append(detail)
+                            report['worst_denoised_pixels'].sort(key=lambda p:max(p['differences']), reverse=True)
+                            del report['worst_denoised_pixels'][20:]
+    report['raw_passed'] = not report['unmatched_population_pixels'] and all(not s['violations'] for s in stats.values())
+    if final_raw_rule:
+        report['bias_estimator'] = 'mean paired-pixel residual to mean same-count pool references; sample SD / sqrt(pixel count)'
+        report['bias'] = {c: bias_gate(d, statistics.mean(bias_references[c]))
+                          for c, d in bias_differences.items() if d}
+        report['bias_passed'] = (all(len(d) == width*height for d in bias_differences.values()) and
+                                 all(r['passed'] for r in report['bias'].values()))
+        report['statistical_pixel_fraction'] = len(report['statistical_pixels'])/(width*height)
+        def distribution(values):
+            return dict(min=min(values), median=statistics.median(values), max=max(values))
+        count_distribution = distribution([r['fallback_pixels'] for r in calibration])
+        channel_distributions = {c: distribution([r['max_ratio'][c] for r in calibration])
+                                 for c in checked_channels}
+        requires_seeds = bool(report['statistical_pixels'] or count_distribution['max'])
+        report['calibration'] = dict(renders=calibration, fallback_pixels=count_distribution,
+                                    max_ratio=channel_distributions,
+                                    requires_seed_controls=requires_seeds,
+                                    ordinary_controls=len(pool), minimum_controls=20,
+                                    informational_only=len(pool) < 20,
+                                    complete=len(pool) >= 20 and (bool(seed_raw) or not requires_seeds))
+        report['statistical_count_limit'] = count_distribution['max']
+        report['statistical_count_passed'] = len(report['statistical_pixels']) <= count_distribution['max']
+        report['max_statistical_ratio'] = {c: 0.0 for c in checked_channels}
+        for pixel in report['statistical_pixels']:
+            failed = []
+            for detail in pixel['channels']:
+                c = detail['channel']
+                detail['calibrated_limit'] = channel_distributions[c]['max']
+                detail['absolute_limit'] = (max(detail['calibrated_limit'] * detail['sigma'],
+                                                detail['four_ulp']) if detail['sigma'] is not None else None)
+                detail['passed'] = (detail['difference'] is not None and
+                                   abs(detail['difference']) <= detail['absolute_limit'])
+                report['max_statistical_ratio'][c] = max(report['max_statistical_ratio'][c], detail['ratio'] or 0.0)
+                if not detail['passed'] and c.rsplit('.', 1)[0] not in failed:
+                    failed.append(c.rsplit('.', 1)[0])
+            pixel['failed_passes'] = failed
+            pixel['passed'] = not failed
+        for group in groups:
+            stats[group]['violations'] = sum(group in p['failed_passes'] for p in report['statistical_pixels'])
+        report['raw_passed'] = (not report['unmatched_population_pixels'] and
+            all(p['passed'] for p in report['statistical_pixels']) and
+            report['bias_passed'] and report['statistical_count_passed'] and
+            (not report['statistical_pixels'] or report['calibration']['complete']))
+        report['calibrated_raw_passed'] = report['raw_passed']
+        report['root_cause_resolutions'] = []
+        if any((snapshot_off, snapshot_on, snapshot_build)):
+            if not all((snapshot_off, snapshot_on, snapshot_build)):
+                raise ValueError('Need complete snapshot on/off/build evidence')
+            flagged = [p['file_pixel'] for p in report['statistical_pixels']
+                       if not p['passed'] or not report['statistical_count_passed']]
+            if flagged:
+                report['root_cause_resolutions'] = snapshot_raw_agreement(directory,
+                    snapshot_off, snapshot_on, snapshot_build, flagged, checked_channels, reader_backend)
+                resolved = {tuple(p['file_pixel']) for p in report['root_cause_resolutions'] if p['passed']}
+                for pixel in report['statistical_pixels']:
+                    pixel['resolved_by_majorant_snapshot'] = tuple(pixel['file_pixel']) in resolved
+                unresolved = [p for p in report['statistical_pixels'] if tuple(p['file_pixel']) not in resolved]
+                report['unresolved_statistical_pixels'] = len(unresolved)
+                for group in groups:
+                    stats[group]['violations'] = sum(group in p['failed_passes'] for p in unresolved)
+                report['raw_passed'] = (not report['unmatched_population_pixels'] and
+                    report['bias_passed'] and report['calibration']['complete'] and
+                    len(unresolved) <= report['statistical_count_limit'] and
+                    all(p['passed'] for p in unresolved))
+    report['outliers_explained'] = not report['unexplained_outlier_pixels']
+    report['passed'] = report['raw_passed'] and report['outliers_explained']
+    report['denoised_pixels_csv'] = str(trace)
+    output.write_text(json.dumps(report, indent=2)+'\n')
+    return report

@@ -231,6 +231,41 @@ void CUDADeviceQueue::copy_from_device(device_memory &mem)
           mem.host_pointer, (CUdeviceptr)mem.device_pointer, mem.memory_size(), cuda_stream_),
       "copy_from_device");
 }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+void CUDADeviceQueue::drain()
+{
+  /* synchronize() returns early on a prior error. Pending DMA must still finish
+   * before deep host storage is unregistered, resized or freed. */
+  const CUDAContextScope scope(cuda_device_);
+  assert_success(cuStreamSynchronize(cuda_stream_), "drain deep queue");
+}
+
+bool CUDADeviceQueue::pin_host_memory(device_memory &mem)
+{
+  const CUDAContextScope scope(cuda_device_);
+  assert_success(cuMemHostRegister(mem.host_pointer, mem.memory_size(), 0), "pin deep host buffer");
+  return !cuda_device_->have_error();
+}
+
+void CUDADeviceQueue::unpin_host_memory(device_memory &mem)
+{
+  const CUDAContextScope scope(cuda_device_);
+  assert_success(cuMemHostUnregister(mem.host_pointer), "unpin deep host buffer");
+}
+
+void CUDADeviceQueue::copy_from_device_prefix(device_memory &mem, const size_t bytes)
+{
+  if (bytes > mem.memory_size()) {
+    cuda_device_->set_error("Deep readback exceeds its allocated buffer");
+    return;
+  }
+  if (!bytes)
+    return;
+  const CUDAContextScope scope(cuda_device_);
+  assert_success(cuMemcpyDtoHAsync(mem.host_pointer, (CUdeviceptr)mem.device_pointer,
+                                 bytes, cuda_stream_), "deep readback");
+}
+#endif
 
 void *CUDADeviceQueue::copy_from_device_synchronized(device_memory &mem, vector<uint8_t> &storage)
 {

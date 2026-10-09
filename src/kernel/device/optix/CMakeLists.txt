@@ -30,6 +30,12 @@ if(WITH_CYCLES_OSL)
   )
 endif()
 
+if(WITH_CYCLES_DEEP_OPAQUE)
+  list(APPEND SRC_KERNEL_DEVICE_OPTIX kernel_deep.cu)
+  if(WITH_CYCLES_OSL)
+    list(APPEND SRC_KERNEL_DEVICE_OPTIX kernel_deep_osl.cu)
+  endif()
+endif()
 set(SRC_KERNEL_DEVICE_OPTIX_HEADERS
   bvh.h
   compat.h
@@ -117,6 +123,13 @@ if(WITH_CYCLES_CUDA_BINARIES AND WITH_CYCLES_DEVICE_OPTIX)
     kernel_optix_shader_raytrace
     "kernel_shader_raytrace.cu"
     "--keep-device-functions")
+  if(WITH_CYCLES_DEEP_OPAQUE)
+    cycles_optix_kernel_add(kernel_optix_deep "kernel_deep.cu" "")
+    if(WITH_CYCLES_OSL)
+      cycles_optix_kernel_add(kernel_optix_deep_osl "kernel_deep_osl.cu" "--relocatable-device-code=true")
+      cycles_optix_kernel_add(kernel_optix_deep_osl_services "kernel_deep_osl_services.cu" "--relocatable-device-code=true")
+    endif()
+  endif()
   if(WITH_CYCLES_OSL)
     cycles_optix_kernel_add(
       kernel_optix_osl

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "device/cpu/kernel_function.h"
+#include "kernel/deep/types.h"
 #include "util/half.h"
 
 CCL_NAMESPACE_BEGIN
@@ -30,6 +31,15 @@ class CPUKernels {
 
   IntegratorInitFunction integrator_init_from_camera;
   IntegratorInitFunction integrator_init_from_bake;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  IntegratorShadeFunction integrator_intersect_closest;
+  CPUKernelFunction<KernelDeepResult (*)(
+      const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *, KernelDeepEvent *, int, bool,
+      KernelDeepDensity *, double, unsigned int *)>
+      deep_surface;
+  CPUKernelFunction<bool (*)(const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *,
+      int, double, double, int, double *)> deep_volume_oracle;
+#endif
   IntegratorShadeFunction integrator_megakernel;
 
   /* Shader evaluation. */

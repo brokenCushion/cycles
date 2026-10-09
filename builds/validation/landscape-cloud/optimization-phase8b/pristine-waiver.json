@@ -1,0 +1,11 @@
+{
+  "executable": "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl\\blender\\blender.exe",
+  "sha256": "a65a724dad67b89da8597f4ce6f6bbdf3e9bcd5bbb7fa04eaa65c39feff2b681",
+  "revision": "749518deb2f0735a22361a07488b35f7ea5c2fdf",
+  "cases": {
+    "texture": {
+      "CPU": "D:/CyclesDeepScratch/optimization-phase8b/pristine-waiver-texture/CPU",
+      "OPTIX": "D:/CyclesDeepScratch/optimization-phase8b/pristine-waiver-texture/OPTIX"
+    }
+  }
+}

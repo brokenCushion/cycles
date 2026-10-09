@@ -1665,7 +1665,8 @@ struct KernelShader {
   float cryptomatte_id;
   int flags;
   int pass_id;
-  int pad2, pad3;
+  float deep_density_scale;
+  float deep_homogeneous_extinction;
 };
 static_assert_align(KernelShader, 16);
 
@@ -1816,6 +1817,10 @@ enum DeviceKernel : int {
   DEVICE_KERNEL_CRYPTOMATTE_POSTPROCESS,
 
   DEVICE_KERNEL_PREFIX_SUM,
+
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  DEVICE_KERNEL_DEEP_SURFACE,
+#endif
 
   DEVICE_KERNEL_NUM,
 };

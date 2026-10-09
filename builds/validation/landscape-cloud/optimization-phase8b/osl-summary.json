@@ -1,0 +1,192 @@
+{
+  "passed": true,
+  "renderer_sha256": "6314882b1b708072cddf328de86a27ec6726595055bc07a2d8b9d967a3e3f4c3",
+  "cases": 30,
+  "rejections": 26,
+  "max_native_alpha_error": 9.753382801402921e-08,
+  "max_nonwaived_cross_alpha": 2.7846120836949595e-07,
+  "same_build_identity": 30,
+  "optix_beauty": 15,
+  "cases_summary": {
+    "CPU/constant/strict": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3283
+    },
+    "CPU/constant/1e-4": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3319
+    },
+    "CPU/constant/1e-3": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3319
+    },
+    "OPTIX/constant/strict": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3215
+    },
+    "OPTIX/constant/1e-4": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3251
+    },
+    "OPTIX/constant/1e-3": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3251
+    },
+    "CPU/texture/strict": {
+      "samples": 1683,
+      "oracle": 2.2230868201855714e-08,
+      "native_alpha": 9.753382801402921e-08,
+      "exr_bytes": 10072
+    },
+    "CPU/texture/1e-4": {
+      "samples": 1683,
+      "oracle": 2.2230868201855714e-08,
+      "native_alpha": 9.753382801402921e-08,
+      "exr_bytes": 10108
+    },
+    "CPU/texture/1e-3": {
+      "samples": 1683,
+      "oracle": 2.2230868201855714e-08,
+      "native_alpha": 9.753382801402921e-08,
+      "exr_bytes": 10108
+    },
+    "OPTIX/texture/strict": {
+      "samples": 1683,
+      "oracle": 1.6147525094822868e-08,
+      "native_alpha": 9.05657470129384e-08,
+      "exr_bytes": 9785
+    },
+    "OPTIX/texture/1e-4": {
+      "samples": 1683,
+      "oracle": 1.6147525094822868e-08,
+      "native_alpha": 9.439848902559334e-08,
+      "exr_bytes": 9821
+    },
+    "OPTIX/texture/1e-3": {
+      "samples": 1683,
+      "oracle": 1.6147525094822868e-08,
+      "native_alpha": 9.05657470129384e-08,
+      "exr_bytes": 9821
+    },
+    "CPU/noise/strict": {
+      "samples": 1683,
+      "oracle": 1.995853970981898e-08,
+      "native_alpha": 6.85033141323288e-08,
+      "exr_bytes": 10204
+    },
+    "CPU/noise/1e-4": {
+      "samples": 1683,
+      "oracle": 1.995853970981898e-08,
+      "native_alpha": 6.85033141323288e-08,
+      "exr_bytes": 10240
+    },
+    "CPU/noise/1e-3": {
+      "samples": 1683,
+      "oracle": 1.995853970981898e-08,
+      "native_alpha": 6.85033141323288e-08,
+      "exr_bytes": 10240
+    },
+    "OPTIX/noise/strict": {
+      "samples": 1683,
+      "oracle": 1.9110113491649372e-08,
+      "native_alpha": 6.009447595101136e-08,
+      "exr_bytes": 10128
+    },
+    "OPTIX/noise/1e-4": {
+      "samples": 1683,
+      "oracle": 1.9110113491649372e-08,
+      "native_alpha": 6.009447595101136e-08,
+      "exr_bytes": 10164
+    },
+    "OPTIX/noise/1e-3": {
+      "samples": 1683,
+      "oracle": 1.9110113491649372e-08,
+      "native_alpha": 6.009447595101136e-08,
+      "exr_bytes": 10164
+    },
+    "CPU/camera/strict": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3283
+    },
+    "CPU/camera/1e-4": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3319
+    },
+    "CPU/camera/1e-3": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3319
+    },
+    "OPTIX/camera/strict": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3215
+    },
+    "OPTIX/camera/1e-4": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3251
+    },
+    "OPTIX/camera/1e-3": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3251
+    },
+    "CPU/mixed/strict": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3283
+    },
+    "CPU/mixed/1e-4": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3319
+    },
+    "CPU/mixed/1e-3": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3319
+    },
+    "OPTIX/mixed/strict": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3215
+    },
+    "OPTIX/mixed/1e-4": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3251
+    },
+    "OPTIX/mixed/1e-3": {
+      "samples": 1683,
+      "oracle": 0.0,
+      "native_alpha": 3.355741395871803e-08,
+      "exr_bytes": 3251
+    }
+  }
+}

@@ -71,6 +71,11 @@ enum {
   PG_HITV_POINTCLOUD,
   PG_HITL_POINTCLOUD,
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  PG_RGEN_DEEP_SURFACE,
+  PG_HIT_DEEP_ALL,
+  PG_MISS_DEEP,
+#endif
   /* Callable */
   PG_CALL_SVM_AO,
   PG_CALL_SVM_BEVEL,
@@ -84,6 +89,11 @@ static const int HIT_PROGAM_GROUP_OFFSET = PG_HITD;
 static const int NUM_HIT_PROGRAM_GROUPS = 24;
 static const int CALLABLE_PROGRAM_GROUPS_BASE = PG_CALL_SVM_AO;
 static const int NUM_CALLABLE_PROGRAM_GROUPS = 2;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+/* OSL groups append at NUM_PROGRAM_GROUPS; callable indices start at BASE.
+ * Deep records must not create a gap between the native and OSL callables. */
+static_assert(CALLABLE_PROGRAM_GROUPS_BASE + NUM_CALLABLE_PROGRAM_GROUPS == NUM_PROGRAM_GROUPS);
+#endif
 
 /* List of OptiX pipelines. */
 enum { PIP_SHADE, PIP_INTERSECT, NUM_PIPELINES };
@@ -116,6 +126,15 @@ class OptiXDevice : public CUDADevice {
 
   device_vector<SbtRecord> sbt_data;
   device_only_memory<KernelParamsOptiX> launch_params;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  OptixModule deep_module = nullptr;
+  OptixPipeline deep_pipeline = nullptr;
+  OptixModule deep_osl_services_module = nullptr;
+  OptixProgramGroup deep_osl_services_group = nullptr;
+  unique_ptr<device_vector<SbtRecord>> deep_osl_sbt_data;
+  void load_deep_pipeline(bool use_osl);
+  unique_ptr<device_vector<SbtRecord>> deep_sbt_data;
+#endif
 
  private:
   OptixTraversableHandle tlas_handle = 0;

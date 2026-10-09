@@ -72,13 +72,20 @@ ccl_device_forceinline bool kernel_image_tile_wrap(const ExtensionType extension
 }
 
 /* From UV coordinates in 0..1 range, compute tile and pixel coordinates. */
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+template<bool deep_mip = false>
+#endif
 ccl_device_forceinline KernelTileDescriptor
 kernel_image_tile_map(KernelGlobals kg,
                       ccl_private ShaderData *sd,
                       const ccl_global KernelImageTexture &tex,
                       const uint image_texture_id,
                       const dual2 uv,
-                      ccl_private float2 &xy)
+                      ccl_private float2 &xy
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+                      , const int deep_level = 0
+#endif
+                      )
 {
   /* Find mipmap level. Use squared lengths to avoid two sqrt operations,
    * compensating with 0.5 factor on the log2. */
@@ -110,7 +117,11 @@ kernel_image_tile_map(KernelGlobals kg,
     /* When not using stochastic interpolation, round to higher level. */
   }
   flevel += kernel_data.image.mip_bias;
-  const int level = clamp(int(flevel), 0, tex.tile_levels - 1);
+  const int level =
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+      deep_mip ? deep_level :
+#endif
+      clamp(int(flevel), 0, tex.tile_levels - 1);
 
   /* Compute width of this mipmap level. */
   const int width = max(1, tex.width >> level);

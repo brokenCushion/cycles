@@ -7,6 +7,7 @@
 /* CPU Kernel Interface */
 
 #include "kernel/types.h"
+#include "kernel/deep/types.h"
 
 #include "util/half.h"
 

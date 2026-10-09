@@ -27,6 +27,17 @@
 
 KERNEL_INTEGRATOR_INIT_FUNCTION(init_from_camera);
 KERNEL_INTEGRATOR_INIT_FUNCTION(init_from_bake);
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+KERNEL_INTEGRATOR_SHADE_FUNCTION(intersect_closest);
+KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGlobalsCPU *kg,
+                                            const IntegratorStateCPU *camera,
+                                            KernelDeepEvent *events,
+                                            int max_events,
+                                            bool volume,
+                                            KernelDeepDensity *density, double eps_ray, unsigned int *evaluations);
+bool KERNEL_FUNCTION_FULL_NAME(deep_volume_oracle)(const ThreadKernelGlobalsCPU *,
+    const IntegratorStateCPU *, int, double, double, int, double *);
+#endif
 KERNEL_INTEGRATOR_SHADE_FUNCTION(megakernel);
 
 #undef KERNEL_INTEGRATOR_FUNCTION

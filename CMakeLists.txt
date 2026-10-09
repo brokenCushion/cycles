@@ -262,5 +262,15 @@ include_directories(
 ###########################################################################
 # Sources.
 
+# Independent deep-opacity reference and optional CPU capture.
+option(WITH_CYCLES_DEEP_TESTS "Build experimental deep-opacity reference tests" OFF)
+option(WITH_CYCLES_DEEP_OPAQUE "Enable experimental CPU opaque camera capture" OFF)
+if(WITH_CYCLES_DEEP_OPAQUE)
+  add_compile_definitions(WITH_CYCLES_DEEP_OPAQUE)
+endif()
+if(WITH_CYCLES_DEEP_TESTS OR WITH_CYCLES_DEEP_OPAQUE)
+  add_subdirectory(src/deep)
+endif()
+
 add_subdirectory(src)
 add_subdirectory(third_party)

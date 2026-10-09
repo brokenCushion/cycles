@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <stdexcept>
 
 #include "graph/node_xml.h"
 
@@ -176,9 +177,41 @@ static bool xml_equal_string(const xml_node node, const char *name, const char *
 
 /* Camera */
 
+static void xml_validate_motion(const xml_node node)
+{
+  const xml_attribute attr = node.attribute("motion");
+  if (!attr) {
+    return;
+  }
+  vector<string> tokens;
+  string_split(tokens, attr.value());
+  if (tokens.size() < 24 || tokens.size() % 12 != 0) {
+    throw std::invalid_argument("Motion requires at least two complete 3x4 transforms");
+  }
+  for (const string &token : tokens) {
+    char *end = nullptr;
+    const float value = strtof(token.c_str(), &end);
+    if (end == token.c_str() || *end != '\0' || !isfinite_safe(value)) {
+      throw std::invalid_argument("Motion transforms must contain finite numbers");
+    }
+  }
+}
+
 static void xml_read_camera(XMLReadState &state, const xml_node node)
 {
+  xml_validate_motion(node);
   Camera *cam = state.scene->camera;
+
+  /* Check before node assignment/update: fast-math comparisons in property
+   * setters can discard NaNs as unchanged values, hiding invalid input. */
+  for (const SocketType &socket : cam->type->inputs) {
+    if (socket.type == SocketType::FLOAT) {
+      const xml_attribute attr = node.attribute(socket.name.c_str());
+      if (attr && !isfinite_safe(float(atof(attr.value())))) {
+        throw std::invalid_argument("Camera attribute must be finite: " + socket.name.string());
+      }
+    }
+  }
 
   int width = -1;
   int height = -1;
@@ -335,6 +368,24 @@ static void xml_read_shader_graph(XMLReadState &state, Shader *shader, const xml
       snode = graph->create_node(node_type);
     }
 
+    if (node_name == "absorption_volume" || node_name == "scatter_volume") {
+      /* Preserve invalid-input detection before fast-math socket setters. */
+      for (const char *name : {"density", "color", "anisotropy", "IOR", "backscatter", "alpha", "diameter"}) {
+        const xml_attribute attr = node.attribute(name);
+        if (!attr)
+          continue;
+        vector<string> tokens;
+        string_split(tokens, attr.value());
+        if (tokens.size() != (string(name) == "color" ? 3 : 1))
+          throw std::invalid_argument("Invalid scalar volume attribute");
+        for (const string &token : tokens) {
+          char *end = nullptr;
+          const float value = strtof(token.c_str(), &end);
+          if (end == token.c_str() || *end != '\0' || !isfinite_safe(value))
+            throw std::invalid_argument("Scalar volume attributes must be finite numbers");
+        }
+      }
+    }
     xml_read_node(graph_reader, snode, node);
 
     if (node_name == "image_texture") {
@@ -767,6 +818,7 @@ static void xml_read_state(XMLReadState &state, const xml_node node)
 
 static void xml_read_object(XMLReadState &state, const xml_node node)
 {
+  xml_validate_motion(node);
   Scene *scene = state.scene;
 
   /* create mesh */

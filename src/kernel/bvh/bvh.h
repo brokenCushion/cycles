@@ -377,9 +377,10 @@ ccl_device_intersect bool scene_intersect_volume(KernelGlobals kg,
 #  endif /* defined(__VOLUME__) && !defined(__VOLUME_RECORD_ALL__) */
 
 /* Volume BVH traversal, for initializing or updating the volume stack.
- * Variation that records multiple intersections at once. */
+ * With volume_only=false, retain the nearest bounded triangle batch for deep
+ * visibility, including surfaces. Ordinary volume-stack queries are unchanged. */
 
-#  if defined(__VOLUME__) && defined(__VOLUME_RECORD_ALL__)
+#  if defined(__VOLUME__) && (defined(__VOLUME_RECORD_ALL__) || defined(__KERNEL_CUDA__))
 
 #    define BVH_FUNCTION_NAME bvh_intersect_volume_all
 #    define BVH_FUNCTION_FEATURES BVH_HAIR
@@ -395,7 +396,8 @@ ccl_device_intersect uint scene_intersect_volume(KernelGlobals kg,
                                                  const ccl_private Ray *ray,
                                                  ccl_private Intersection *isect,
                                                  const uint max_hits,
-                                                 const uint visibility)
+                                                 const uint visibility,
+                                                 const bool volume_only = true)
 {
   if (!intersection_ray_valid(ray)) {
     return false;
@@ -405,7 +407,7 @@ ccl_device_intersect uint scene_intersect_volume(KernelGlobals kg,
   IF_USING_EMBREE
   {
     if (kernel_data.device_bvh) {
-      return kernel_embree_intersect_volume(kg, ray, isect, max_hits, visibility);
+      return kernel_embree_intersect_volume(kg, ray, isect, max_hits, visibility, volume_only);
     }
   }
 #    endif
@@ -414,18 +416,18 @@ ccl_device_intersect uint scene_intersect_volume(KernelGlobals kg,
   {
 #    ifdef __OBJECT_MOTION__
     if (kernel_data.bvh.have_motion) {
-      return bvh_intersect_volume_all_motion(kg, ray, isect, max_hits, visibility);
+      return bvh_intersect_volume_all_motion(kg, ray, isect, max_hits, visibility, volume_only);
     }
 #    endif /* __OBJECT_MOTION__ */
 
-    return bvh_intersect_volume_all(kg, ray, isect, max_hits, visibility);
+    return bvh_intersect_volume_all(kg, ray, isect, max_hits, visibility, volume_only);
   }
 
   kernel_assert(false);
   return false;
 }
 
-#  endif /* defined(__VOLUME__) && defined(__VOLUME_RECORD_ALL__) */
+#  endif /* Volume all-hit query on CPU and CUDA. */
 
 #  undef BVH_FEATURE
 #  undef BVH_NAME_JOIN

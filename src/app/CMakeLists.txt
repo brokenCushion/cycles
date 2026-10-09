@@ -77,6 +77,10 @@ if(WITH_CYCLES_STANDALONE)
     oiio_output_driver.h
   )
 
+  if(WITH_CYCLES_DEEP_OPAQUE)
+    list(APPEND SRC deep_output.cpp deep_output.h)
+  endif()
+
   if(WITH_CYCLES_STANDALONE_GUI)
     list(APPEND SRC
       opengl/display_driver.cpp
@@ -92,6 +96,21 @@ if(WITH_CYCLES_STANDALONE)
   unset(SRC)
 
   target_link_libraries(cycles PRIVATE ${LIB})
+  if(WITH_CYCLES_DEEP_OPAQUE)
+    target_link_libraries(cycles PRIVATE cycles_deep_exr)
+  endif()
+
+  if(WITH_CYCLES_DEEP_OPAQUE AND BUILD_TESTING)
+    add_executable(cycles_deep_output_driver_test deep_output_driver_test.cpp cycles_xml.cpp)
+    target_link_libraries(cycles_deep_output_driver_test PRIVATE ${LIB})
+    install(TARGETS cycles_deep_output_driver_test DESTINATION ${app_install_dir})
+    add_test(NAME cycles_deep_output_driver
+      COMMAND ${app_install_dir}/$<TARGET_FILE_NAME:cycles_deep_output_driver_test>
+        ${app_install_dir} ${CMAKE_CURRENT_SOURCE_DIR}/deep_output_driver_test.xml
+        ${CMAKE_CURRENT_SOURCE_DIR}/deep_output_driver_transparent_test.xml
+        ${CMAKE_CURRENT_SOURCE_DIR}/deep_output_driver_volume_test.xml)
+    set_tests_properties(cycles_deep_output_driver PROPERTIES TIMEOUT 90)
+  endif()
 
   if(APPLE)
     if(WITH_CYCLES_STANDALONE_GUI)

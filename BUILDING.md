@@ -97,6 +97,28 @@ The packages directory can be found (or needs to be created) under:
 
 ## Build System
 
+### Windows deep-output qualification toolchain
+
+Phase 8a uses clang-cl 20.1.8, Ninja 1.13.2, CMake 3.31.2, CUDA Toolkit
+12.8.0 (NVCC 12.8.61) and OptiX SDK 8.0.0, with Blender revision
+`749518deb2f0735a22361a07488b35f7ea5c2fdf`. Use an x64 Visual Studio 2022
+developer environment. Main C/C++ compilation uses clang-cl; NVCC's host
+compiler remains MSVC 19.44 (14.44.35207), explicitly selected with
+`CUDA_HOST_COMPILER` for the standalone build. Enable native precompiled CUDA
+and OptiX modules. Keep builds, validation images and TEMP/TMP on D:.
+
+OSL surface capture uses the bundled OSL 1.15.3.0 on CPU/OptiX. Its separate
+`kernel_optix_deep_osl` module uses native compiled OSL callables; optimized
+group `ShadingSystem::getattribute` queries and cached loaded OSO metadata
+provide preflight. CUDA OSL and OSL volumes are not qualified.
+
+See [Blender deep build commands](BLENDER_DEEP_INTEGRATION.md) and the
+[qualification plan](DEEP_OPTIMIZATION_PLAN.md). A recorded compiler change
+uses its own CPU/CUDA references after the one-time qualification in Section 2;
+retain the cl.exe/NVCC references for history. Within the same build and backend,
+payload and deterministic-header byte identity remains mandatory. Across builds,
+toolchains or backends, use the unified cross-comparison rule in Section 2.
+
 Cycles uses the CMake build system. As an alternative to the `make` wrapper, CMake can be manually configured.
 
 See the CMake configuration to enable and disable various features.

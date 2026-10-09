@@ -395,6 +395,33 @@ add_subdirectory(session)
 add_subdirectory(subd)
 add_subdirectory(util)
 
+if(WITH_CYCLES_DEEP_TESTS AND WITH_OPENVDB AND WITH_NANOVDB)
+  add_executable(cycles_deep_vdb_grid_test deep/vdb_grid_test.cpp)
+  target_include_directories(cycles_deep_vdb_grid_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_compile_definitions(cycles_deep_vdb_grid_test PRIVATE WITH_OPENVDB WITH_NANOVDB)
+  target_link_libraries(cycles_deep_vdb_grid_test PRIVATE cycles_util cycles_deep_reference)
+  if(WIN32)
+    add_custom_command(TARGET cycles_deep_vdb_grid_test POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_RUNTIME_DLLS:cycles_deep_vdb_grid_test> $<TARGET_FILE_DIR:cycles_deep_vdb_grid_test>
+      COMMAND_EXPAND_LISTS)
+    # The prebuilt OpenVDB dependency is linked by library path, so it is not
+    # included in TARGET_RUNTIME_DLLS like the imported dependency targets.
+    if(EXISTS "${OPENVDB_ROOT_DIR}/bin/openvdb.dll")
+      add_custom_command(TARGET cycles_deep_vdb_grid_test POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${OPENVDB_ROOT_DIR}/bin/openvdb$<$<CONFIG:Debug>:_d>.dll"
+          $<TARGET_FILE_DIR:cycles_deep_vdb_grid_test>)
+    endif()
+    if(EXISTS "${TBB_ROOT_DIR}/bin/tbb12.dll")
+      add_custom_command(TARGET cycles_deep_vdb_grid_test POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${TBB_ROOT_DIR}/bin/tbb12$<$<CONFIG:Debug>:_debug>.dll"
+          $<TARGET_FILE_DIR:cycles_deep_vdb_grid_test>)
+    endif()
+  endif()
+endif()
+
 # TODO(sergey): Make this to work with standalone repository.
 if(WITH_GTESTS)
   add_subdirectory(test)

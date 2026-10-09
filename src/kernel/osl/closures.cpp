@@ -226,6 +226,27 @@ void osl_eval_nodes<SHADER_TYPE_SURFACE, IntegratorBakeState>(
 }
 
 /* Volume */
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+/* Deep-only evaluation uses a completely initialized local ShaderGlobals.
+ * Native beauty keeps its original evaluator and thread globals. */
+void deep_osl_eval_volume(const ThreadKernelGlobalsCPU *kg, const IntegratorStateCPU *state,
+                         ShaderData *sd, PathRayVisibility visibility, uint32_t flag)
+{
+  ShaderGlobals local{};
+  shaderdata_to_shaderglobals(sd, visibility, flag, &local);
+  local.kg = kg;
+  local.path_state = state;
+  local.tracedata = &kg->osl.tracedata;
+  kg->osl.tracedata.init = false;
+  auto *ss = static_cast<OSL::ShadingSystem *>(kg->osl.ss);
+  const auto &group = kg->osl.globals->volume_state[sd->shader & SHADER_MASK];
+  if (group)
+    ss->execute(*kg->osl.context, *group, kg->osl.thread_index, 0,
+                *reinterpret_cast<OSL::ShaderGlobals *>(&local), nullptr, nullptr);
+  if (local.Ci)
+    flatten_closure_tree(kg, sd, visibility, flag, local.Ci);
+}
+#endif
 
 template<typename IntegratorGenericState>
 void osl_eval_nodes_volume(const ThreadKernelGlobalsCPU *kg,

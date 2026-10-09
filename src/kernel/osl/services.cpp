@@ -24,6 +24,9 @@
 #include "kernel/osl/services_shared.h"
 #include "kernel/osl/strings.h"
 #include "kernel/osl/types.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "kernel/deep/osl_attribute.h"
+#endif
 
 CCL_NAMESPACE_BEGIN
 
@@ -230,6 +233,10 @@ bool OSLRenderServices::get_attribute(ShaderGlobals *globals,
   /* find attribute on object */
   const AttributeDescriptor desc = find_attribute(kg, object, sd->prim, name.hash());
   if (is_attribute_found(desc)) {
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    if (sd->runtime_flag & (1 << 15))
+      return deep_osl_volume_attribute(kg, sd, desc, type, derivatives, val);
+#endif
     return osl_shared_get_object_attribute(kg, sd, desc, type, derivatives, val);
   }
 

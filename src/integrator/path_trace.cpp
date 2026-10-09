@@ -15,6 +15,15 @@
 #include "scene/pass.h"
 #include "scene/scene.h"
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "session/deep.h"
+#  include "integrator/path_trace_deep_tile.h"
+#  include "integrator/path_trace_work_gpu.h"
+#  include "deep/capture.h"
+#  include <cstdlib>
+#  include <cstring>
+#  include <stdexcept>
+#endif
 #include "session/display_driver.h"
 #include "session/tile.h"
 
@@ -22,6 +31,7 @@
 #include "util/progress.h"
 #include "util/scoped_defer.h"
 #include "util/tbb.h"
+#include "util/task.h"
 #include "util/time.h"
 
 CCL_NAMESPACE_BEGIN
@@ -170,15 +180,13 @@ void PathTrace::render(const RenderWork &render_work)
     render_cancel_.is_rendering = true;
   }
 
-  render_pipeline(render_work);
-
-  /* Indicate that rendering has finished, making it so thread which requested `cancel()` can carry
-   * on. */
-  {
+  SCOPED_DEFER([&]() {
     const thread_scoped_lock lock(render_cancel_.mutex);
     render_cancel_.is_rendering = false;
     render_cancel_.condition.notify_one();
-  }
+  }());
+
+  render_pipeline(render_work);
 }
 
 void PathTrace::render_pipeline(RenderWork render_work)
@@ -695,6 +703,121 @@ void PathTrace::set_output_driver(unique_ptr<OutputDriver> driver)
 {
   output_driver_ = std::move(driver);
 }
+
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &params,
+                            const int samples, const bool adaptive)
+{
+  /* Invalidate old capture before validation/allocation can fail. */
+  for (auto &work : path_trace_works_) {
+    work->set_deep_capture(nullptr);
+  }
+  deep_capture_.reset();
+  deep_written_ = false;
+  if (!settings.enabled) {
+    return;
+  }
+  if (!output_driver_ || !output_driver_->supports_deep_output()) {
+    throw std::invalid_argument("Deep render requires a deep-capable output driver");
+  }
+  if (path_trace_works_.size() != 1 || params.full_x != 0 || params.full_y != 0 ||
+      params.width != params.full_width || params.height != params.full_height ||
+      params.window_x != 0 || params.window_y != 0 ||
+      (params.window_width != 0 && params.window_width != params.width) ||
+      (params.window_height != 0 && params.window_height != params.height))
+  {
+    throw std::invalid_argument("Deep render requires a single-device full frame without crop");
+  }
+  size_t capture_bytes = settings.memory_bytes;
+  const int event_capacity = settings.volume_grid ?
+                                 max(int(DEEP_DEFAULT_VOLUME_EVENTS), settings.max_events) :
+                                 settings.max_events;
+  if (settings.volume_grid && device_->info.type == DEVICE_CPU) {
+    if (device_->info.cpu_threads <= 0 || event_capacity <= 0 ||
+        event_capacity > int(DEEP_MAX_VOLUME_EVENTS))
+      throw std::invalid_argument("Invalid native deep CPU worker capacity");
+    const uint64_t worker_bytes = uint64_t(device_->info.cpu_threads) * event_capacity *
+                                  (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity));
+    if (worker_bytes >= capture_bytes)
+      throw std::invalid_argument("Native deep CPU buffers exceed memory budget");
+    capture_bytes -= size_t(worker_bytes);
+  }
+  if (settings.volume_grid && device_->info.type != DEVICE_CPU) {
+    if (capture_bytes <= PathTraceWorkGPU::deep_grid_staging_bytes)
+      throw std::invalid_argument("Native deep GPU staging exceeds memory budget");
+    capture_bytes -= PathTraceWorkGPU::deep_grid_staging_bytes;
+  }
+  if (settings.samples < 0)
+    throw std::invalid_argument("Deep sample limit must be nonnegative");
+  const int capture_samples = settings.samples ? min(samples, settings.samples) : samples;
+  deep_capture_ = make_unique<deep::Capture>(
+      params.width, params.height, capture_samples, capture_bytes,
+      (settings.transparent || settings.volume) ? event_capacity : 0,
+      true, adaptive, settings.volume, settings.volume_grid, TaskScheduler::max_concurrency(),
+      settings.volume_shader_evaluation ? settings.error / 2 : settings.error,
+      settings.samples ? capture_samples : 0, settings.ids);
+  if (settings.volume_shader_evaluation) {
+    deep_capture_->volume_shader_error = settings.error;
+    deep_capture_->volume_shader_adaptive = !settings.volume_shader_fixed_step;
+    deep_capture_->volume_step_min = settings.volume_step_min;
+    deep_capture_->volume_step_max = settings.volume_step_max;
+  }
+  deep_capture_->z_tolerance = settings.error ? settings.z_tolerance : 0;
+  const char *baseline = std::getenv("CYCLES_DEEP_Z_BASELINE");
+  deep_capture_->retain_for_validation = deep_capture_->z_tolerance > 0 && baseline && baseline[0];
+  if (settings.ids)
+    deep_capture_->set_object_manifest(settings.object_manifest);
+  deep_capture_->holdout_manifest = settings.holdout_manifest;
+  for (auto &work : path_trace_works_) {
+    work->set_deep_capture(deep_capture_.get());
+  }
+}
+
+void PathTrace::write_deep_output()
+{
+  if (!deep_capture_ || deep_written_ || is_cancel_requested() || device_->have_error() ||
+      (progress_ && progress_->get_error())) {
+    return;
+  }
+  if (!deep_capture_->finalize()) {
+    throw std::runtime_error(deep_capture_->error_message());
+  }
+  if (!output_driver_ || !output_driver_->supports_deep_output()) {
+    throw std::runtime_error("Deep output driver was removed before delivery");
+  }
+  /* Explicit diagnostic mode: validate native capture/beauty before spending
+   * time on curve reconstruction. This does not publish or qualify deep output. */
+  const char *capture_only = std::getenv("CYCLES_DEEP_VALIDATE_CAPTURE_ONLY");
+  if (capture_only && std::strcmp(capture_only, "1") == 0) {
+    LOG_INFO_IMPORTANT << "Deep validation: capture finalized; capture-only mode, no deep EXR publication";
+    return;
+  }
+  const PathTraceDeepTile tile(*deep_capture_, full_params_.layer, full_params_.view,
+                               [this] { return is_cancel_requested(); });
+  const double export_start = time_dt();
+  LOG_INFO_IMPORTANT << "Deep output: export_workers=" << tile.volume_export_workers();
+  output_driver_->write_deep_render_tile(tile);
+  deep_written_ = true;
+  const auto &timing = deep_capture_->export_statistics;
+  using Stage = deep::ExportStatistics;
+  LOG_INFO_IMPORTANT << "Deep export timing: aggregate_worker_seconds"
+      << " read=" << timing.seconds(Stage::Read)
+      << " staging=" << timing.seconds(Stage::Staging)
+      << " density_fit=" << timing.seconds(Stage::DensityFit)
+      << " mixture_fit=" << timing.seconds(Stage::MixtureFit)
+      << " ledger_decode=" << timing.seconds(Stage::Pixel) - timing.seconds(Stage::Read) -
+                                   timing.seconds(Stage::DensityFit) - timing.seconds(Stage::MixtureFit)
+      << " quantize_coalesce=" << timing.seconds(Stage::Quantize)
+      << " serialize=" << timing.seconds(Stage::Serialize);
+  const deep::Capture::SpillStatistics spill = deep_capture_->spill_statistics();
+  LOG_INFO_IMPORTANT << "Deep output: export_seconds=" << time_dt() - export_start
+                     << " spill_read_bytes=" << spill.read_bytes
+                     << " spill_write_bytes=" << spill.write_bytes
+                     << " spill_file_bytes=" << spill.file_bytes;
+  if (deep_capture_->volume_shader_error)
+    LOG_INFO_IMPORTANT << "Deep output: shader_evaluations=" << deep_capture_->shader_evaluations.load();
+}
+#endif
 
 void PathTrace::set_display_driver(unique_ptr<DisplayDriver> driver)
 {

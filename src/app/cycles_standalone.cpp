@@ -30,6 +30,11 @@
 
 #include "app/cycles_xml.h"
 #include "app/oiio_output_driver.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "app/deep_output.h"
+#  include <filesystem>
+#  include <stdexcept>
+#endif
 
 #ifdef WITH_CYCLES_STANDALONE_GUI
 #  include "opengl/display_driver.h"
@@ -49,6 +54,21 @@ struct Options {
   bool show_help, interactive, pause;
   string output_filepath;
   string output_pass;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  string deep_output_filepath;
+  string deep_records_filepath;
+  int deep_memory_mb = 64;
+  string deep_error = "0.001";
+  string deep_z_tolerance = "0.0001";
+  bool deep_ids = false;
+  int deep_samples = 0;
+  bool deep_transparent = false;
+  bool deep_volume = false;
+  bool deep_volume_shader_eval = false;
+  string deep_volume_step = "0";
+  int deep_max_events = 16;
+  bool deep_reduce = false;
+#endif
 } options;
 
 static void session_print(const string &str)
@@ -139,9 +159,18 @@ static void session_init()
   }
 #endif
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (!options.deep_output_filepath.empty()) {
+    options.session->set_output_driver(make_unique<DeepOutputDriver>(
+        options.output_filepath, options.output_pass, session_print,
+        options.deep_output_filepath, options.deep_records_filepath, options.deep_reduce));
+  }
+  else
+#endif
   if (!options.output_filepath.empty()) {
-    options.session->set_output_driver(make_unique<OIIOOutputDriver>(
-        options.output_filepath, options.output_pass, session_print));
+    auto driver = make_unique<OIIOOutputDriver>(
+        options.output_filepath, options.output_pass, session_print);
+    options.session->set_output_driver(std::move(driver));
   }
 
   if (options.session_params.background && !options.quiet) {
@@ -156,10 +185,47 @@ static void session_init()
   /* load scene */
   scene_init();
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (!options.deep_output_filepath.empty()) {
+    if (options.deep_volume && options.deep_reduce)
+      throw std::invalid_argument("Deep: surface reduction is unsupported for volumes");
+    if (options.deep_memory_mb <= 0)
+      throw std::invalid_argument("Deep working memory budget must be positive");
+    DeepSettings &deep = options.session_params.deep;
+    deep.enabled = true;
+    deep.samples = options.deep_samples;
+    size_t z_consumed = 0;
+    deep.z_tolerance = std::stof(options.deep_z_tolerance, &z_consumed);
+    if (z_consumed != options.deep_z_tolerance.size())
+      throw std::invalid_argument("Invalid --deep-z-tolerance");
+    deep.ids = options.deep_ids;
+    deep.transparent = options.deep_transparent;
+    deep.volume = options.deep_volume;
+    deep.volume_shader_eval = options.deep_volume_shader_eval;
+    size_t step_consumed = 0;
+    deep.volume_step = std::stof(options.deep_volume_step, &step_consumed);
+    if (step_consumed != options.deep_volume_step.size())
+      throw std::invalid_argument("Invalid --deep-volume-step");
+    if (options.deep_error == "strict")
+      deep.error = 0;
+    else {
+      size_t consumed = 0;
+      deep.error = std::stof(options.deep_error, &consumed);
+      if (consumed != options.deep_error.size() || !(deep.error > 0))
+        throw std::invalid_argument("Deep error must be strict or a positive tolerance");
+    }
+    deep.max_events = options.deep_max_events;
+    deep.memory_bytes = size_t(options.deep_memory_mb) * 1024 * 1024;
+  }
+#endif
+
   /* add pass for output. */
   Pass *pass = options.scene->create_node<Pass>();
   pass->set_name(ustring(options.output_pass.c_str()));
   pass->set_type(PASS_COMBINED);
+  if (options.scene->integrator->get_use_denoise()) {
+    pass->set_mode(PassMode::DENOISED);
+  }
 
   options.session->reset(options.session_params, session_buffer_params());
   options.session->start();
@@ -428,6 +494,43 @@ static void options_parse(const int argc, const char **argv)
   ap.arg("--output %s:OUTPUT").help("File path to write output image").action([&](auto argv) {
     parse_string(argv, &options.output_filepath);
   });
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  ap.arg("--deep-output %s:DEEP_OUTPUT")
+      .help("Write experimental opaque Deep EXR")
+      .action([&](auto argv) { parse_string(argv, &options.deep_output_filepath); });
+  ap.arg("--deep-records %s:CSV")
+      .help("Optional raw camera sample CSV for validation")
+      .action([&](auto argv) { parse_string(argv, &options.deep_records_filepath); });
+  ap.arg("--deep-error %s:ERROR")
+      .help("Absolute transmittance error: strict or (1e-6,0.01], default 0.001")
+      .action([&](auto argv) { parse_string(argv, &options.deep_error); });
+  ap.arg("--deep-z-tolerance %s:TOLERANCE")
+      .help("Relative same-object surface depth span; default 0.0001, strict forces 0")
+      .action([&](auto argv) { parse_string(argv, &options.deep_z_tolerance); });
+  ap.arg("--deep-memory-mb %d:MIB")
+      .help("Deep working memory budget in MiB (default 64; raw capture spills to temp disk)")
+      .action([&](auto argv) { parse_int(argv, &options.deep_memory_mb); });
+  ap.arg("--deep-ids").help("Write per-sample UINT object IDs and name manifest")
+      .action([&](auto) { options.deep_ids = true; });
+  ap.arg("--deep-samples %d:SAMPLES")
+      .help("First N accepted camera samples for deep; 0 uses all beauty samples")
+      .action([&](auto argv) { parse_int(argv, &options.deep_samples); });
+  ap.arg("--deep-transparent", &options.deep_transparent)
+      .help("Enable experimental M4 scalar transparent visibility traversal (CPU SVM/OSL)");
+  ap.arg("--deep-volume-shader-eval", &options.deep_volume_shader_eval)
+      .help("Opt in to stated-error fixed-step volume extinction evaluation");
+  ap.arg("--deep-volume-step %s:STEP")
+      .help("World-unit shader step cap; 0 uses grid voxels, required without a grid")
+      .action([&](auto argv) { parse_string(argv, &options.deep_volume_step); });
+  ap.arg("--deep-volume", &options.deep_volume)
+      .help("Experimental CPU/CUDA homogeneous scalar absorption intervals");
+  ap.arg("--deep-max-events %d:EVENTS")
+      .help(
+          "Maximum intersections per M4 camera sample (1..64, default 16; overflow fails export)")
+      .action([&](auto argv) { parse_int(argv, &options.deep_max_events); });
+  ap.arg("--deep-reduce", &options.deep_reduce)
+      .help("Reduce surface samples within --deep-error (strict preserves legacy 0.001 reduction)");
+#endif
   ap.arg("--threads %d:THREADS").help("CPU Rendering Threads").action([&](auto argv) {
     parse_int(argv, &options.session_params.threads);
   });
@@ -545,29 +648,73 @@ int main(const int argc, const char **argv)
   system_max_open_files_ensure();
   options_parse(argc, argv);
 
-#ifdef WITH_CYCLES_STANDALONE_GUI
-  if (options.session_params.background) {
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  try {
+    if (!options.deep_output_filepath.empty()) {
+      if (!options.session_params.background)
+        throw std::invalid_argument("Deep M3 requires background rendering");
+      const vector<string> paths = {options.filepath,
+                                    options.output_filepath,
+                                    options.deep_output_filepath,
+                                    options.deep_records_filepath};
+      for (size_t i = 0; i < paths.size(); ++i) {
+        if (paths[i].empty())
+          continue;
+        const auto a = std::filesystem::weakly_canonical(paths[i]);
+        for (size_t j = i + 1; j < paths.size(); ++j) {
+          if (paths[j].empty())
+            continue;
+          const auto b = std::filesystem::weakly_canonical(paths[j]);
+          if (string_iequals(a.string(), b.string()) ||
+              (std::filesystem::exists(a) && std::filesystem::exists(b) &&
+               std::filesystem::equivalent(a, b)))
+            throw std::invalid_argument("Scene, beauty, deep and record paths must be distinct");
+        }
+      }
+    }
+    else if (!options.deep_records_filepath.empty())
+      throw std::invalid_argument("--deep-records requires --deep-output");
 #endif
-    session_init();
-    options.session->wait();
-    session_exit();
-#ifdef WITH_CYCLES_STANDALONE_GUI
-  }
-  else {
-    const string title = "Cycles: " + path_filename(options.filepath);
 
-    /* init/exit are callback so they run while GL is initialized */
-    window_main_loop(title.c_str(),
-                     options.width,
-                     options.height,
-                     session_init,
-                     session_exit,
-                     resize,
-                     display,
-                     keyboard,
-                     motion);
-  }
+#ifdef WITH_CYCLES_STANDALONE_GUI
+    if (options.session_params.background) {
+#endif
+      session_init();
+      options.session->wait();
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+      if (options.session_params.deep.enabled) {
+        if (options.session->progress.get_error())
+          throw std::runtime_error(options.session->progress.get_error_message());
+        if (options.session->progress.get_cancel())
+          throw std::runtime_error("Render cancelled; deep output was not published");
+      }
+#endif
+      session_exit();
+#ifdef WITH_CYCLES_STANDALONE_GUI
+    }
+    else {
+      const string title = "Cycles: " + path_filename(options.filepath);
+
+      /* init/exit are callback so they run while GL is initialized */
+      window_main_loop(title.c_str(),
+                       options.width,
+                       options.height,
+                       session_init,
+                       session_exit,
+                       resize,
+                       display,
+                       keyboard,
+                       motion);
+    }
 #endif
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  }
+  catch (const std::exception &error) {
+    fprintf(stderr, "Deep render failed: %s\n", error.what());
+    options.session.reset();
+    return EXIT_FAILURE;
+  }
+#endif
   return 0;
 }

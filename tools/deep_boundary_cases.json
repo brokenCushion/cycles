@@ -1,0 +1,1095 @@
+{
+  "cases": [
+    {
+      "name": "open_entry",
+      "media": [
+        [
+          [
+            -100,
+            -100,
+            2,
+            100,
+            100,
+            20
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4\" verts=\"0 3 2 1\"/></state></cycles>"
+    },
+    {
+      "name": "open_initial_inside",
+      "media": [
+        [
+          [
+            -100,
+            -100,
+            -2,
+            100,
+            100,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4\" verts=\"4 5 6 7\"/></state></cycles>"
+    },
+    {
+      "name": "open_side",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3\"/></state></cycles>"
+    },
+    {
+      "name": "open_sideways_initial_inside",
+      "media": [
+        [
+          [
+            -100,
+            -100,
+            -2,
+            100,
+            100,
+            20
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 1,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><transform rotate=\"90 0 1 0\"><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"1\"/></transform>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4\" verts=\"4 5 6 7\"/></state></cycles>"
+    },
+    {
+      "name": "concave_boundary",
+      "media": [
+        [
+          [
+            -2,
+            -2,
+            2,
+            0,
+            2,
+            5
+          ],
+          0.3
+        ],
+        [
+          [
+            0,
+            -2,
+            2,
+            2,
+            2,
+            5
+          ],
+          0.3
+        ],
+        [
+          [
+            -2,
+            -2,
+            5,
+            0,
+            2,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-2.0 -2.0 2.0 0.0 -2.0 2.0 0.0 2.0 2.0 -2.0 2.0 2.0 -2.0 -2.0 5.0 0.0 -2.0 5.0 0.0 2.0 5.0 -2.0 2.0 5.0 2.0 -2.0 2.0 2.0 2.0 2.0 2.0 -2.0 5.0 2.0 2.0 5.0 -2.0 -2.0 8.0 0.0 -2.0 8.0 0.0 2.0 8.0 -2.0 2.0 8.0\" nverts=\"4 4 4 4 4 4 4 4 4 4 4 4 4 4\" verts=\"0 3 2 1 0 1 5 4 3 7 6 2 0 4 7 3 1 2 9 8 5 10 11 6 1 8 10 5 2 6 11 9 8 9 11 10 12 13 14 15 4 5 13 12 7 15 14 6 4 12 15 7 5 6 14 13\"/></state></cycles>"
+    },
+    {
+      "name": "homogeneous",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "scattering_isotropic",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .5 .5\" anisotropy=\"0\" density=\"0.6\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "scattering_forward",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .5 .5\" anisotropy=\"0.8\" density=\"0.6\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "scattering_backward",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .5 .5\" anisotropy=\"-0.6\" density=\"0.6\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "scattering_surface",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": 0.4,
+      "near": 0.125,
+      "far": 20,
+      "samples": 4,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .5 .5\" anisotropy=\"0.5\" density=\"0.6\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"wall\"><emission name=\"e\" color=\"0.3 0.5 0.7\"/>\n<transparent_bsdf name=\"t\" color=\"1 1 1\"/><mix_closure name=\"m\" fac=\"0.6\"/>\n<connect from=\"e emission\" to=\"m closure1\"/><connect from=\"t bsdf\" to=\"m closure2\"/>\n<connect from=\"m closure\" to=\"output surface\"/></shader>\n<state shader=\"wall\"><mesh P=\"-10 -10 5 10 -10 5 10 10 5 -10 10 5\" nverts=\"4\" verts=\"0 1 2 3\"/></state></cycles>"
+    },
+    {
+      "name": "scattering_overlap",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            6
+          ],
+          0.3
+        ],
+        [
+          [
+            -10,
+            -10,
+            4,
+            10,
+            10,
+            8
+          ],
+          0.2
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .5 .5\" anisotropy=\"0.5\" density=\"0.6\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 6 10 -10 6 10 10 6 -10 10 6\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><scatter_volume name=\"v\" color=\".5 .5 .5\" anisotropy=\"0.5\" density=\"0.4\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog1\"><mesh P=\"-10 -10 4 10 -10 4 10 10 4 -10 10 4 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "camera_inside",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            -2,
+            10,
+            10,
+            4
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 -2 10 -10 -2 10 10 -2 -10 10 -2 -10 -10 4 10 -10 4 10 10 4 -10 10 4\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "near_clip_inside",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 3,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"3\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "far_clip_inside",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 3,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"3\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "overlap",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            6
+          ],
+          0.3
+        ],
+        [
+          [
+            -10,
+            -10,
+            4,
+            10,
+            10,
+            8
+          ],
+          0.2
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 6 10 -10 6 10 10 6 -10 10 6\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.2\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog1\"><mesh P=\"-10 -10 4 10 -10 4 10 10 4 -10 10 4 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "coincident_media",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ],
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.2
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.2\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog1\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "coincident_exits",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ],
+        [
+          [
+            -10,
+            -10,
+            4,
+            10,
+            10,
+            8
+          ],
+          0.2
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.2\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog1\"><mesh P=\"-10 -10 4 10 -10 4 10 10 4 -10 10 4 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "touching_media",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            4
+          ],
+          0.3
+        ],
+        [
+          [
+            -10,
+            -10,
+            4,
+            10,
+            10,
+            8
+          ],
+          0.2
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 4 10 -10 4 10 10 4 -10 10 4\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.2\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog1\"><mesh P=\"-10 -10 4 10 -10 4 10 10 4 -10 10 4 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "surface_on_volume_entry",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            5,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": 0.4,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 5 10 -10 5 10 10 5 -10 10 5 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"wall\"><emission name=\"e\" color=\"0.3 0.5 0.7\"/>\n<transparent_bsdf name=\"t\" color=\"1 1 1\"/><mix_closure name=\"m\" fac=\"0.6\"/>\n<connect from=\"e emission\" to=\"m closure1\"/><connect from=\"t bsdf\" to=\"m closure2\"/>\n<connect from=\"m closure\" to=\"output surface\"/></shader>\n<state shader=\"wall\"><mesh P=\"-10 -10 5 10 -10 5 10 10 5 -10 10 5\" nverts=\"4\" verts=\"0 1 2 3\"/></state></cycles>"
+    },
+    {
+      "name": "surface_on_volume_exit",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            5
+          ],
+          0.3
+        ]
+      ],
+      "surface": 0.4,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 5 10 -10 5 10 10 5 -10 10 5\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"wall\"><emission name=\"e\" color=\"0.3 0.5 0.7\"/>\n<transparent_bsdf name=\"t\" color=\"1 1 1\"/><mix_closure name=\"m\" fac=\"0.6\"/>\n<connect from=\"e emission\" to=\"m closure1\"/><connect from=\"t bsdf\" to=\"m closure2\"/>\n<connect from=\"m closure\" to=\"output surface\"/></shader>\n<state shader=\"wall\"><mesh P=\"-10 -10 5 10 -10 5 10 10 5 -10 10 5\" nverts=\"4\" verts=\"0 1 2 3\"/></state></cycles>"
+    },
+    {
+      "name": "surface_in_fog",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": true,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"wall\"><emission name=\"e\" color=\"0.3 0.5 0.7\"/>\n<transparent_bsdf name=\"t\" color=\"1 1 1\"/><mix_closure name=\"m\" fac=\"0.0\"/>\n<connect from=\"e emission\" to=\"m closure1\"/><connect from=\"t bsdf\" to=\"m closure2\"/>\n<connect from=\"m closure\" to=\"output surface\"/></shader>\n<state shader=\"wall\"><mesh P=\"-10 -10 5 10 -10 5 10 10 5 -10 10 5\" nverts=\"4\" verts=\"0 1 2 3\"/></state></cycles>"
+    },
+    {
+      "name": "transparent_in_fog",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": 0.4,
+      "near": 0.125,
+      "far": 20,
+      "samples": 4,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"wall\"><emission name=\"e\" color=\"0.3 0.5 0.7\"/>\n<transparent_bsdf name=\"t\" color=\"1 1 1\"/><mix_closure name=\"m\" fac=\"0.6\"/>\n<connect from=\"e emission\" to=\"m closure1\"/><connect from=\"t bsdf\" to=\"m closure2\"/>\n<connect from=\"m closure\" to=\"output surface\"/></shader>\n<state shader=\"wall\"><mesh P=\"-10 -10 5 10 -10 5 10 10 5 -10 10 5\" nverts=\"4\" verts=\"0 1 2 3\"/></state></cycles>"
+    },
+    {
+      "name": "surface_before_fog",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            6,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": true,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 6 10 -10 6 10 10 6 -10 10 6 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"wall\"><emission name=\"e\" color=\"0.3 0.5 0.7\"/>\n<transparent_bsdf name=\"t\" color=\"1 1 1\"/><mix_closure name=\"m\" fac=\"0.0\"/>\n<connect from=\"e emission\" to=\"m closure1\"/><connect from=\"t bsdf\" to=\"m closure2\"/>\n<connect from=\"m closure\" to=\"output surface\"/></shader>\n<state shader=\"wall\"><mesh P=\"-10 -10 5 10 -10 5 10 10 5 -10 10 5\" nverts=\"4\" verts=\"0 1 2 3\"/></state></cycles>"
+    },
+    {
+      "name": "surface_after_fog",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            4
+          ],
+          0.3
+        ]
+      ],
+      "surface": true,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 4 10 -10 4 10 10 4 -10 10 4\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"wall\"><emission name=\"e\" color=\"0.3 0.5 0.7\"/>\n<transparent_bsdf name=\"t\" color=\"1 1 1\"/><mix_closure name=\"m\" fac=\"0.0\"/>\n<connect from=\"e emission\" to=\"m closure1\"/><connect from=\"t bsdf\" to=\"m closure2\"/>\n<connect from=\"m closure\" to=\"output surface\"/></shader>\n<state shader=\"wall\"><mesh P=\"-10 -10 5 10 -10 5 10 10 5 -10 10 5\" nverts=\"4\" verts=\"0 1 2 3\"/></state></cycles>"
+    },
+    {
+      "name": "partial_coverage",
+      "media": [
+        [
+          [
+            -0.9,
+            -0.8,
+            3,
+            0.9,
+            0.8,
+            7
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 16,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-0.9 -0.8 3 0.9 -0.8 3 0.9 0.8 3 -0.9 0.8 3 -0.9 -0.8 7 0.9 -0.8 7 0.9 0.8 7 -0.9 0.8 7\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "partial_coverage_single",
+      "media": [
+        [
+          [
+            -0.9,
+            -0.8,
+            3,
+            0.9,
+            0.8,
+            7
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-0.9 -0.8 3 0.9 -0.8 3 0.9 0.8 3 -0.9 0.8 3 -0.9 -0.8 7 0.9 -0.8 7 0.9 0.8 7 -0.9 0.8 7\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "zero_extinction",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "exact_capacity",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [
+        "--deep-max-events",
+        "1"
+      ],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "overlap_camera_inside",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            -2,
+            10,
+            10,
+            6
+          ],
+          0.3
+        ],
+        [
+          [
+            -10,
+            -10,
+            -1,
+            10,
+            10,
+            8
+          ],
+          0.2
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 -2 10 -10 -2 10 10 -2 -10 10 -2 -10 -10 6 10 -10 6 10 10 6 -10 10 6\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.2\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog1\"><mesh P=\"-10 -10 -1 10 -10 -1 10 10 -1 -10 10 -1 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "both_clips_inside",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 3,
+      "far": 4,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"3\" farclip=\"4\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "volume_miss",
+      "media": [
+        [
+          [
+            20,
+            20,
+            2,
+            21,
+            21,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"20 20 2 21 20 2 21 21 2 20 21 2 20 20 8 21 20 8 21 21 8 20 21 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "odd_batch",
+      "media": [
+        [
+          [
+            -0.9,
+            -0.8,
+            3,
+            0.9,
+            0.8,
+            7
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 3,
+      "width": 19,
+      "height": 13,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-0.9 -0.8 3 0.9 -0.8 3 0.9 0.8 3 -0.9 0.8 3 -0.9 -0.8 7 0.9 -0.8 7 0.9 0.8 7 -0.9 0.8 7\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    },
+    {
+      "name": "reject_scatter_color",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .2 .5\" anisotropy=\"0.5\" density=\"0.6\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_scatter_anisotropy",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .5 .5\" anisotropy=\"2\" density=\"0.6\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_scatter_nan",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .5 .5\" anisotropy=\"nan\" density=\"0.6\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_scatter_infinity",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .5 .5\" anisotropy=\"0.5\" density=\"inf\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_scatter_phase",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .5 .5\" phase=\"Rayleigh\" density=\"0.6\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_colored",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 .2 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_negative",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"-1\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_nan",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"nan\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_dof",
+      "xml": "<cycles><camera camera_type=\"perspective\" aperturesize=\"0.1\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_motion",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" motion_blur=\"true\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_heterogeneous",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><checker_texture name=\"c\"/><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"c fac\" to=\"v density\"/><connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_osl",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [
+        "--shadingsys",
+        "osl"
+      ],
+      "rejection": true
+    },
+    {
+      "name": "reject_reduction",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [
+        "--deep-reduce"
+      ],
+      "rejection": true
+    },
+    {
+      "name": "reject_memory",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [
+        "--deep-memory-mb",
+        "1"
+      ],
+      "rejection": true
+    },
+    {
+      "name": "reject_capacity",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"wall\"><emission name=\"e\" color=\"0.3 0.5 0.7\"/>\n<transparent_bsdf name=\"t\" color=\"1 1 1\"/><mix_closure name=\"m\" fac=\"0.0\"/>\n<connect from=\"e emission\" to=\"m closure1\"/><connect from=\"t bsdf\" to=\"m closure2\"/>\n<connect from=\"m closure\" to=\"output surface\"/></shader>\n<state shader=\"wall\"><mesh P=\"-10 -10 5 10 -10 5 10 10 5 -10 10 5\" nverts=\"4\" verts=\"0 1 2 3\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [
+        "--deep-max-events",
+        "1"
+      ],
+      "rejection": true
+    },
+    {
+      "name": "reject_medium_capacity",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2.0 10 -10 2.0 10 10 2.0 -10 10 2.0 -10 -10 8.0 10 -10 8.0 10 10 8.0 -10 10 8.0\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog1\"><mesh P=\"-10 -10 2.01 10 -10 2.01 10 10 2.01 -10 10 2.01 -10 -10 8.01 10 -10 8.01 10 10 8.01 -10 10 8.01\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog2\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog2\"><mesh P=\"-10 -10 2.02 10 -10 2.02 10 10 2.02 -10 10 2.02 -10 -10 8.02 10 -10 8.02 10 10 8.02 -10 10 8.02\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog3\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog3\"><mesh P=\"-10 -10 2.03 10 -10 2.03 10 10 2.03 -10 10 2.03 -10 -10 8.03 10 -10 8.03 10 10 8.03 -10 10 8.03\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog4\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog4\"><mesh P=\"-10 -10 2.04 10 -10 2.04 10 10 2.04 -10 10 2.04 -10 -10 8.04 10 -10 8.04 10 10 8.04 -10 10 8.04\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog5\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog5\"><mesh P=\"-10 -10 2.05 10 -10 2.05 10 10 2.05 -10 10 2.05 -10 -10 8.05 10 -10 8.05 10 10 8.05 -10 10 8.05\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog6\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog6\"><mesh P=\"-10 -10 2.06 10 -10 2.06 10 10 2.06 -10 10 2.06 -10 -10 8.06 10 -10 8.06 10 10 8.06 -10 10 8.06\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog7\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog7\"><mesh P=\"-10 -10 2.07 10 -10 2.07 10 10 2.07 -10 10 2.07 -10 -10 8.07 10 -10 8.07 10 10 8.07 -10 10 8.07\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog8\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog8\"><mesh P=\"-10 -10 2.08 10 -10 2.08 10 10 2.08 -10 10 2.08 -10 -10 8.08 10 -10 8.08 10 10 8.08 -10 10 8.08\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog9\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog9\"><mesh P=\"-10 -10 2.09 10 -10 2.09 10 10 2.09 -10 10 2.09 -10 -10 8.09 10 -10 8.09 10 10 8.09 -10 10 8.09\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog10\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog10\"><mesh P=\"-10 -10 2.1 10 -10 2.1 10 10 2.1 -10 10 2.1 -10 -10 8.1 10 -10 8.1 10 10 8.1 -10 10 8.1\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog11\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog11\"><mesh P=\"-10 -10 2.11 10 -10 2.11 10 10 2.11 -10 10 2.11 -10 -10 8.11 10 -10 8.11 10 10 8.11 -10 10 8.11\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog12\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog12\"><mesh P=\"-10 -10 2.12 10 -10 2.12 10 10 2.12 -10 10 2.12 -10 -10 8.12 10 -10 8.12 10 10 8.12 -10 10 8.12\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog13\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog13\"><mesh P=\"-10 -10 2.13 10 -10 2.13 10 10 2.13 -10 10 2.13 -10 -10 8.13 10 -10 8.13 10 10 8.13 -10 10 8.13\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog14\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog14\"><mesh P=\"-10 -10 2.14 10 -10 2.14 10 10 2.14 -10 10 2.14 -10 -10 8.14 10 -10 8.14 10 10 8.14 -10 10 8.14\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog15\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog15\"><mesh P=\"-10 -10 2.15 10 -10 2.15 10 10 2.15 -10 10 2.15 -10 -10 8.15 10 -10 8.15 10 10 8.15 -10 10 8.15\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog16\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog16\"><mesh P=\"-10 -10 2.16 10 -10 2.16 10 10 2.16 -10 10 2.16 -10 -10 8.16 10 -10 8.16 10 10 8.16 -10 10 8.16\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog17\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog17\"><mesh P=\"-10 -10 2.17 10 -10 2.17 10 10 2.17 -10 10 2.17 -10 -10 8.17 10 -10 8.17 10 10 8.17 -10 10 8.17\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog18\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog18\"><mesh P=\"-10 -10 2.18 10 -10 2.18 10 10 2.18 -10 10 2.18 -10 -10 8.18 10 -10 8.18 10 10 8.18 -10 10 8.18\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog19\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog19\"><mesh P=\"-10 -10 2.19 10 -10 2.19 10 10 2.19 -10 10 2.19 -10 -10 8.19 10 -10 8.19 10 10 8.19 -10 10 8.19\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog20\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog20\"><mesh P=\"-10 -10 2.2 10 -10 2.2 10 10 2.2 -10 10 2.2 -10 -10 8.2 10 -10 8.2 10 10 8.2 -10 10 8.2\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog21\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog21\"><mesh P=\"-10 -10 2.21 10 -10 2.21 10 10 2.21 -10 10 2.21 -10 -10 8.21 10 -10 8.21 10 10 8.21 -10 10 8.21\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog22\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog22\"><mesh P=\"-10 -10 2.22 10 -10 2.22 10 10 2.22 -10 10 2.22 -10 -10 8.22 10 -10 8.22 10 10 8.22 -10 10 8.22\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog23\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog23\"><mesh P=\"-10 -10 2.23 10 -10 2.23 10 10 2.23 -10 10 2.23 -10 -10 8.23 10 -10 8.23 10 10 8.23 -10 10 8.23\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog24\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog24\"><mesh P=\"-10 -10 2.24 10 -10 2.24 10 10 2.24 -10 10 2.24 -10 -10 8.24 10 -10 8.24 10 10 8.24 -10 10 8.24\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog25\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog25\"><mesh P=\"-10 -10 2.25 10 -10 2.25 10 10 2.25 -10 10 2.25 -10 -10 8.25 10 -10 8.25 10 10 8.25 -10 10 8.25\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog26\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog26\"><mesh P=\"-10 -10 2.26 10 -10 2.26 10 10 2.26 -10 10 2.26 -10 -10 8.26 10 -10 8.26 10 10 8.26 -10 10 8.26\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog27\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog27\"><mesh P=\"-10 -10 2.27 10 -10 2.27 10 10 2.27 -10 10 2.27 -10 -10 8.27 10 -10 8.27 10 10 8.27 -10 10 8.27\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog28\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog28\"><mesh P=\"-10 -10 2.2800000000000002 10 -10 2.2800000000000002 10 10 2.2800000000000002 -10 10 2.2800000000000002 -10 -10 8.28 10 -10 8.28 10 10 8.28 -10 10 8.28\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog29\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog29\"><mesh P=\"-10 -10 2.29 10 -10 2.29 10 10 2.29 -10 10 2.29 -10 -10 8.29 10 -10 8.29 10 10 8.29 -10 10 8.29\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog30\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog30\"><mesh P=\"-10 -10 2.3 10 -10 2.3 10 10 2.3 -10 10 2.3 -10 -10 8.3 10 -10 8.3 10 10 8.3 -10 10 8.3\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog31\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog31\"><mesh P=\"-10 -10 2.31 10 -10 2.31 10 10 2.31 -10 10 2.31 -10 -10 8.31 10 -10 8.31 10 10 8.31 -10 10 8.31\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog32\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog32\"><mesh P=\"-10 -10 2.32 10 -10 2.32 10 10 2.32 -10 10 2.32 -10 -10 8.32 10 -10 8.32 10 10 8.32 -10 10 8.32\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog33\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog33\"><mesh P=\"-10 -10 2.33 10 -10 2.33 10 10 2.33 -10 10 2.33 -10 -10 8.33 10 -10 8.33 10 10 8.33 -10 10 8.33\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog34\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog34\"><mesh P=\"-10 -10 2.34 10 -10 2.34 10 10 2.34 -10 10 2.34 -10 -10 8.34 10 -10 8.34 10 10 8.34 -10 10 8.34\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog35\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog35\"><mesh P=\"-10 -10 2.35 10 -10 2.35 10 10 2.35 -10 10 2.35 -10 -10 8.35 10 -10 8.35 10 10 8.35 -10 10 8.35\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog36\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog36\"><mesh P=\"-10 -10 2.36 10 -10 2.36 10 10 2.36 -10 10 2.36 -10 -10 8.36 10 -10 8.36 10 10 8.36 -10 10 8.36\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog37\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog37\"><mesh P=\"-10 -10 2.37 10 -10 2.37 10 10 2.37 -10 10 2.37 -10 -10 8.37 10 -10 8.37 10 10 8.37 -10 10 8.37\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog38\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog38\"><mesh P=\"-10 -10 2.38 10 -10 2.38 10 10 2.38 -10 10 2.38 -10 -10 8.38 10 -10 8.38 10 10 8.38 -10 10 8.38\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog39\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog39\"><mesh P=\"-10 -10 2.39 10 -10 2.39 10 10 2.39 -10 10 2.39 -10 -10 8.39 10 -10 8.39 10 10 8.39 -10 10 8.39\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog40\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog40\"><mesh P=\"-10 -10 2.4 10 -10 2.4 10 10 2.4 -10 10 2.4 -10 -10 8.4 10 -10 8.4 10 10 8.4 -10 10 8.4\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog41\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog41\"><mesh P=\"-10 -10 2.41 10 -10 2.41 10 10 2.41 -10 10 2.41 -10 -10 8.41 10 -10 8.41 10 10 8.41 -10 10 8.41\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog42\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog42\"><mesh P=\"-10 -10 2.42 10 -10 2.42 10 10 2.42 -10 10 2.42 -10 -10 8.42 10 -10 8.42 10 10 8.42 -10 10 8.42\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog43\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog43\"><mesh P=\"-10 -10 2.43 10 -10 2.43 10 10 2.43 -10 10 2.43 -10 -10 8.43 10 -10 8.43 10 10 8.43 -10 10 8.43\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog44\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog44\"><mesh P=\"-10 -10 2.44 10 -10 2.44 10 10 2.44 -10 10 2.44 -10 -10 8.44 10 -10 8.44 10 10 8.44 -10 10 8.44\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog45\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog45\"><mesh P=\"-10 -10 2.45 10 -10 2.45 10 10 2.45 -10 10 2.45 -10 -10 8.45 10 -10 8.45 10 10 8.45 -10 10 8.45\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog46\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog46\"><mesh P=\"-10 -10 2.46 10 -10 2.46 10 10 2.46 -10 10 2.46 -10 -10 8.46 10 -10 8.46 10 10 8.46 -10 10 8.46\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog47\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog47\"><mesh P=\"-10 -10 2.47 10 -10 2.47 10 10 2.47 -10 10 2.47 -10 -10 8.47 10 -10 8.47 10 10 8.47 -10 10 8.47\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog48\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog48\"><mesh P=\"-10 -10 2.48 10 -10 2.48 10 10 2.48 -10 10 2.48 -10 -10 8.48 10 -10 8.48 10 10 8.48 -10 10 8.48\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog49\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog49\"><mesh P=\"-10 -10 2.49 10 -10 2.49 10 10 2.49 -10 10 2.49 -10 -10 8.49 10 -10 8.49 10 10 8.49 -10 10 8.49\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog50\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog50\"><mesh P=\"-10 -10 2.5 10 -10 2.5 10 10 2.5 -10 10 2.5 -10 -10 8.5 10 -10 8.5 10 10 8.5 -10 10 8.5\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog51\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog51\"><mesh P=\"-10 -10 2.51 10 -10 2.51 10 10 2.51 -10 10 2.51 -10 -10 8.51 10 -10 8.51 10 10 8.51 -10 10 8.51\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog52\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog52\"><mesh P=\"-10 -10 2.52 10 -10 2.52 10 10 2.52 -10 10 2.52 -10 -10 8.52 10 -10 8.52 10 10 8.52 -10 10 8.52\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog53\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog53\"><mesh P=\"-10 -10 2.5300000000000002 10 -10 2.5300000000000002 10 10 2.5300000000000002 -10 10 2.5300000000000002 -10 -10 8.53 10 -10 8.53 10 10 8.53 -10 10 8.53\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog54\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog54\"><mesh P=\"-10 -10 2.54 10 -10 2.54 10 10 2.54 -10 10 2.54 -10 -10 8.54 10 -10 8.54 10 10 8.54 -10 10 8.54\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog55\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog55\"><mesh P=\"-10 -10 2.55 10 -10 2.55 10 10 2.55 -10 10 2.55 -10 -10 8.55 10 -10 8.55 10 10 8.55 -10 10 8.55\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog56\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog56\"><mesh P=\"-10 -10 2.56 10 -10 2.56 10 10 2.56 -10 10 2.56 -10 -10 8.56 10 -10 8.56 10 10 8.56 -10 10 8.56\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog57\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog57\"><mesh P=\"-10 -10 2.5700000000000003 10 -10 2.5700000000000003 10 10 2.5700000000000003 -10 10 2.5700000000000003 -10 -10 8.57 10 -10 8.57 10 10 8.57 -10 10 8.57\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog58\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog58\"><mesh P=\"-10 -10 2.58 10 -10 2.58 10 10 2.58 -10 10 2.58 -10 -10 8.58 10 -10 8.58 10 10 8.58 -10 10 8.58\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog59\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog59\"><mesh P=\"-10 -10 2.59 10 -10 2.59 10 10 2.59 -10 10 2.59 -10 -10 8.59 10 -10 8.59 10 10 8.59 -10 10 8.59\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog60\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog60\"><mesh P=\"-10 -10 2.6 10 -10 2.6 10 10 2.6 -10 10 2.6 -10 -10 8.6 10 -10 8.6 10 10 8.6 -10 10 8.6\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog61\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog61\"><mesh P=\"-10 -10 2.61 10 -10 2.61 10 10 2.61 -10 10 2.61 -10 -10 8.61 10 -10 8.61 10 10 8.61 -10 10 8.61\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog62\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog62\"><mesh P=\"-10 -10 2.62 10 -10 2.62 10 10 2.62 -10 10 2.62 -10 -10 8.62 10 -10 8.62 10 10 8.62 -10 10 8.62\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog63\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog63\"><mesh P=\"-10 -10 2.63 10 -10 2.63 10 10 2.63 -10 10 2.63 -10 -10 8.63 10 -10 8.63 10 10 8.63 -10 10 8.63\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog64\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog64\"><mesh P=\"-10 -10 2.64 10 -10 2.64 10 10 2.64 -10 10 2.64 -10 -10 8.64 10 -10 8.64 10 10 8.64 -10 10 8.64\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "reject_coincident_capacity",
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog1\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog2\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog2\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog3\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog3\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog4\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog4\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog5\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog5\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog6\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog6\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog7\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog7\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog8\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog8\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog9\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog9\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog10\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog10\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog11\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog11\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog12\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog12\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog13\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog13\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog14\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog14\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog15\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog15\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog16\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog16\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog17\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog17\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog18\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog18\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog19\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog19\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog20\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog20\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog21\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog21\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog22\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog22\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog23\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog23\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog24\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog24\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog25\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog25\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog26\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog26\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog27\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog27\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog28\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog28\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog29\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog29\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog30\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog30\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog31\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog31\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog32\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog32\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog33\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog33\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog34\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog34\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog35\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog35\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog36\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog36\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog37\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog37\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog38\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog38\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog39\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog39\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog40\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog40\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog41\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog41\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog42\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog42\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog43\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog43\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog44\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog44\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog45\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog45\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog46\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog46\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog47\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog47\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog48\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog48\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog49\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog49\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog50\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog50\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog51\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog51\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog52\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog52\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog53\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog53\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog54\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog54\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog55\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog55\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog56\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog56\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog57\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog57\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog58\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog58\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog59\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog59\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog60\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog60\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog61\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog61\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog62\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog62\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog63\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog63\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog64\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog64\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "width": 16,
+      "height": 12,
+      "samples": 1,
+      "extra": [],
+      "rejection": true
+    },
+    {
+      "name": "review",
+      "media": [
+        [
+          [
+            -1.5,
+            -1,
+            3,
+            0.4,
+            1,
+            6
+          ],
+          0.35
+        ],
+        [
+          [
+            -0.3,
+            -0.8,
+            5,
+            1.5,
+            0.8,
+            8
+          ],
+          0.55
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 4,
+      "width": 160,
+      "height": 120,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.35\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-1.5 -1 3 0.4 -1 3 0.4 1 3 -1.5 1 3 -1.5 -1 6 0.4 -1 6 0.4 1 6 -1.5 1 6\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.55\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog1\"><mesh P=\"-0.3 -0.8 5 1.5 -0.8 5 1.5 0.8 5 -0.3 0.8 5 -0.3 -0.8 8 1.5 -0.8 8 1.5 0.8 8 -0.3 0.8 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
+    }
+  ]
+}

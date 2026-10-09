@@ -764,6 +764,9 @@ void ObjectManager::device_update_object_transform(UpdateObjectTransformState *s
 
 void ObjectManager::device_update_prim_offsets(Device *device, DeviceScene *dscene, Scene *scene)
 {
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  (void)device;
+#else
   if (!scene->integrator->get_use_light_tree()) {
     const BVHLayoutMask layout_mask = device->get_bvh_layout_mask(dscene->data.kernel_features);
     if (layout_mask != BVH_LAYOUT_METAL && layout_mask != BVH_LAYOUT_MULTI_METAL &&
@@ -773,9 +776,11 @@ void ObjectManager::device_update_prim_offsets(Device *device, DeviceScene *dsce
       return;
     }
   }
+#endif
 
   /* On MetalRT, primitive / curve segment offsets can't be baked at BVH build time. Intersection
-   * handlers need to apply the offset manually. */
+   * handlers need to apply the offset manually. Deep volume boundary refinement also
+   * needs the complete object's primitive range, independently of the light tree. */
   uint *object_prim_offset = dscene->object_prim_offset.alloc(scene->objects.size());
   for (Object *ob : scene->objects) {
     uint32_t prim_offset = 0;

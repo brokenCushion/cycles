@@ -19,6 +19,11 @@ CPUKernels::CPUKernels()
     : /* Integrator. */
       REGISTER_KERNEL(integrator_init_from_camera),
       REGISTER_KERNEL(integrator_init_from_bake),
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+      REGISTER_KERNEL(integrator_intersect_closest),
+      REGISTER_KERNEL(deep_surface),
+      REGISTER_KERNEL(deep_volume_oracle),
+#endif
       REGISTER_KERNEL(integrator_megakernel),
       /* Shader evaluation. */
       REGISTER_KERNEL(shader_eval_displace),

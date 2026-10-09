@@ -12,6 +12,14 @@
 #endif
 
 #include "kernel/integrator/path_state.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "deep/capture.h"
+#  include "kernel/deep/camera_depth.h"
+#  include "util/transform.h"
+#  include <cstdlib>
+#  include <fstream>
+#  include <iomanip>
+#endif
 
 #include "integrator/pass_accessor_cpu.h"
 #include "integrator/path_trace_display.h"
@@ -58,12 +66,23 @@ void PathTraceWorkCPU::init_execution()
 {
   /* Acquire thread globals, updating all data pointers. */
   kernel_thread_globals_ = device_->acquire_cpu_kernel_thread_globals();
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (deep_capture_ && deep_capture_->volume_grid()) {
+    const size_t slots = kernel_thread_globals_->size() * size_t(deep_capture_->max_events());
+    deep_grid_events_.resize(slots);
+    deep_grid_density_.resize(slots);
+  }
+#endif
 }
 
 void PathTraceWorkCPU::deinit_execution()
 {
   device_->release_cpu_kernel_thread_globals();
   kernel_thread_globals_ = nullptr;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  vector<KernelDeepEvent>().swap(deep_grid_events_);
+  vector<KernelDeepDensity>().swap(deep_grid_density_);
+#endif
 }
 
 void PathTraceWorkCPU::render_samples(RenderStatistics &statistics,
@@ -157,6 +176,85 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
       }
     }
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    if (deep::Capture *capture = deep_capture_;
+        capture && state->path.sample < capture->samples()) {
+      if (has_bake || (state->path.queued_kernel != DEVICE_KERNEL_INTEGRATOR_INTERSECT_CLOSEST &&
+                      !(capture->volume() && state->path.queued_kernel ==
+                          DEVICE_KERNEL_INTEGRATOR_INTERSECT_VOLUME_STACK)) ||
+          state->path.bounce != 0 || !(state->path.visibility & PATH_RAY_VISIBILITY_CAMERA))
+      {
+        capture->fail();
+      }
+      else if (capture->max_events()) {
+        KernelDeepEvent surface_events[DEEP_MAX_EVENTS];
+        KernelDeepEvent *events = surface_events;
+        KernelDeepDensity *density = nullptr;
+        if (capture->volume_grid()) {
+          const size_t worker = size_t(kernel_globals - kernel_thread_globals_->data());
+          const size_t offset = worker * size_t(capture->max_events());
+          events = deep_grid_events_.data() + offset;
+          density = deep_grid_density_.data() + offset;
+        }
+        unsigned evaluations = 0;
+        const KernelDeepResult result = kernels_.deep_surface(
+            kernel_globals, state, events, capture->max_events(), capture->volume(), density,
+            capture->volume_grid() ? (.5 * deep::error_budget(capture->error()).density) *
+                                        (capture->error() > 0) : 0, &evaluations);
+        capture->shader_evaluations.fetch_add(evaluations, std::memory_order_relaxed);
+        capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, events, density);
+        /* Opt-in diagnostic oracle: selected actual accepted CPU camera rays.
+         * All allocation/file access is host-side. One file per ray avoids a
+         * global lock and retains exact FLOAT shader samples for audit. */
+        const char *oracle_dir = std::getenv("CYCLES_DEEP_VOLUME_ORACLE_DIR");
+        const char *oracle_pixels = std::getenv("CYCLES_DEEP_VOLUME_ORACLE_PIXELS");
+        const string pixel = ";" + std::to_string(work_tile.x) + "," +
+                             std::to_string(work_tile.y) + ";";
+        if (oracle_dir && oracle_pixels && density && result.status == DEEP_COMPLETE &&
+            string(oracle_pixels).find(pixel) != string::npos && result.count) {
+          const int object = int(deep_event_object(events[0]));
+          double front = density[0].front, back = density[0].back;
+          for (unsigned i = 0; i < result.count; ++i) {
+            if (int(deep_event_object(events[i])) != object) {
+              throw std::runtime_error("CPU shader oracle requires a single volume object");
+            }
+            front = std::min(front, density[i].front);
+            back = std::max(back, density[i].back);
+          }
+          const char *step_text = std::getenv("CYCLES_DEEP_VOLUME_ORACLE_STEP");
+          const double step = step_text ? std::stod(step_text) : 0;
+          const float4 z = kernel_globals->data.cam.worldtocamera.z;
+          const auto direction = state->ray.D;
+          const double dz = double(z.x)*direction.x + double(z.y)*direction.y + double(z.z)*direction.z;
+          const double requested = std::ceil((back-front)*double(len(direction))/(step*dz));
+          if (!(step > 0 && requested > 0 && requested <= INT_MAX))
+            throw std::runtime_error("Invalid independent CPU shader oracle step");
+          const int steps = int(requested);
+          vector<double> sigma(steps);
+          if (!kernels_.deep_volume_oracle(kernel_globals, state, object, front, back, steps, sigma.data()))
+            throw std::runtime_error("Independent CPU shader oracle evaluation failed");
+          const string filename = string(oracle_dir) + "/" + std::to_string(work_tile.x) + "-" +
+              std::to_string(work_tile.y) + "-" + std::to_string(state->path.sample) + ".csv";
+          std::ofstream out(filename);
+          out.exceptions(std::ios::badbit | std::ios::failbit);
+          out << std::setprecision(17) << "front,back,sigma_per_z\n";
+          for (int i = 0; i < steps; ++i)
+            out << front+(back-front)*i/steps << ',' << front+(back-front)*(i+1)/steps
+                << ',' << sigma[i] << '\n';
+        }
+      }
+      else {
+        /* Independent opaque traversal also records surface facing. Beauty
+         * keeps its original queued intersection and unmodified path state. */
+        KernelDeepEvent event;
+        unsigned evaluations = 0;
+        const KernelDeepResult result = kernels_.deep_surface(
+            kernel_globals, state, &event, 1, false, nullptr, 0, &evaluations);
+        capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, &event);
+      }
+    }
+#endif
+
 #if defined(WITH_PATH_GUIDING)
     if (kernel_globals->data.integrator.train_guiding) {
       assert(kernel_globals->opgl_path_segment_storage);
@@ -193,6 +291,20 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
     }
     ++sample_work_tile.start_sample;
   }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (deep::Capture *capture = deep_capture_; capture && capture->adaptive()) {
+    const auto &film = kernel_globals->data.film;
+    if (film.pass_sample_count == PASS_UNUSED || is_cancel_requested()) {
+      capture->fail();
+    }
+    else {
+      const size_t pixel = work_tile.offset + work_tile.x + work_tile.y * work_tile.stride;
+      const uint32_t count = __float_as_uint(
+          render_buffer[pixel * film.pass_stride + film.pass_sample_count]);
+      capture->set_population(work_tile.x, work_tile.y, min(count, uint32_t(capture->samples())));
+    }
+  }
+#endif
 }
 
 void PathTraceWorkCPU::copy_to_display(PathTraceDisplay *display,

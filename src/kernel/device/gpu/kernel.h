@@ -53,6 +53,10 @@
 
 #include "kernel/film/read.h"
 
+#if defined(__KERNEL_CUDA__) && defined(WITH_CYCLES_DEEP_OPAQUE)
+#  include "kernel/deep/surface_cuda.h"
+#endif
+
 /* --------------------------------------------------------------------
  * Integrator.
  */

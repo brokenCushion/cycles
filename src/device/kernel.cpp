@@ -40,6 +40,12 @@ bool device_kernel_has_intersection(DeviceKernel kernel)
 
 bool device_kernel_has_gpu_function(DeviceKernel kernel)
 {
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  /* The first deep backend is loaded explicitly by CUDA. Other backends must
+   * not request a function they do not implement. */
+  if (kernel == DEVICE_KERNEL_DEEP_SURFACE)
+    return false;
+#endif
   return !(kernel == DEVICE_KERNEL_INTEGRATOR_MEGAKERNEL ||
            kernel == DEVICE_KERNEL_INTEGRATOR_SHADOW_PATH_MNEE_PENDING);
 }
@@ -47,6 +53,10 @@ bool device_kernel_has_gpu_function(DeviceKernel kernel)
 const char *device_kernel_as_string(DeviceKernel kernel)
 {
   switch (kernel) {
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    case DEVICE_KERNEL_DEEP_SURFACE:
+      return "deep_surface";
+#endif
     /* Integrator. */
     case DEVICE_KERNEL_INTEGRATOR_INIT_FROM_CAMERA:
       return "integrator_init_from_camera";

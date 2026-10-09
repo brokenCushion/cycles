@@ -1,0 +1,20 @@
+<cycles>
+  <camera camera_type="perspective" fov="0.9" nearclip="0.125" farclip="20"/>
+  <film filter_type="box" filter_width="1"/>
+  <integrator seed="123" use_adaptive_sampling="false"/>
+  <background transparent="true">
+    <background name="b" color="0.1 0.1 0.1"/>
+    <connect from="b background" to="output surface"/>
+  </background>
+  <shader name="surface">
+    <diffuse_bsdf name="d" color="0.5 0.5 0.5"/>
+    <transparent_bsdf name="t" color="1 1 1"/>
+    <mix_closure name="m" fac="0.5"/>
+    <connect from="d bsdf" to="m closure1"/>
+    <connect from="t bsdf" to="m closure2"/>
+    <connect from="m closure" to="output surface"/>
+  </shader>
+  <state shader="surface">
+    <mesh P="-10 -10 3 10 -10 3 10 10 3 -10 10 3" nverts="4" verts="0 3 2 1"/>
+  </state>
+</cycles>

@@ -49,6 +49,7 @@ set(SRC_HEADERS
   pass_accessor_gpu.h
   path_trace_display.h
   path_trace_tile.h
+  path_trace_deep_tile.h
   path_trace_work.h
   path_trace_work_cpu.h
   path_trace_work_gpu.h
@@ -74,3 +75,6 @@ include_directories(${INC})
 include_directories(SYSTEM ${INC_SYS})
 
 cycles_add_library(cycles_integrator "${LIB}" ${SRC} ${SRC_HEADERS})
+if(WITH_CYCLES_DEEP_OPAQUE)
+  target_link_libraries(cycles_integrator PRIVATE cycles_deep_capture)
+endif()

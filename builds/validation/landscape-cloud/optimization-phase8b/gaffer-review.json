@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "path": "D:\\CyclesDeepScratch\\regression-tools\\phase8b_review.gfr",
+  "cases": [
+    {
+      "case": "constant/CPU",
+      "points": 1683
+    },
+    {
+      "case": "constant/OPTIX",
+      "points": 1683
+    },
+    {
+      "case": "texture/CPU",
+      "points": 1683
+    },
+    {
+      "case": "texture/OPTIX",
+      "points": 1683
+    },
+    {
+      "case": "noise/CPU",
+      "points": 1683
+    },
+    {
+      "case": "noise/OPTIX",
+      "points": 1683
+    },
+    {
+      "case": "camera/CPU",
+      "points": 1683
+    },
+    {
+      "case": "camera/OPTIX",
+      "points": 1683
+    },
+    {
+      "case": "mixed/CPU",
+      "points": 1683
+    },
+    {
+      "case": "mixed/OPTIX",
+      "points": 1683
+    },
+    {
+      "case": "noise/OPTIX depth cut 2.5",
+      "points": 561
+    }
+  ]
+}

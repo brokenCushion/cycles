@@ -89,6 +89,7 @@ struct CCLLocalContext : public RTCRayQueryContext {
 struct CCLVolumeContext : public RTCRayQueryContext {
   KernelGlobals kg;
   const Ray *ray;
+  bool volume_only;
 #ifdef __VOLUME_RECORD_ALL__
   numhit_t max_hits;
 #endif
@@ -398,22 +399,32 @@ ccl_device_forceinline void kernel_embree_filter_occluded_volume_all_func_impl(
 
 #ifdef __VOLUME_RECORD_ALL__
   /* Append the intersection to the end of the array. */
-  if (ctx->num_hits < ctx->max_hits) {
+  if (ctx->num_hits < ctx->max_hits || !ctx->volume_only) {
 #endif
     Intersection current_isect;
     kernel_embree_convert_hit(
         kg, ray, hit, &current_isect, reinterpret_cast<intptr_t>(args->geometryUserPtr));
 
     if (bvh_volume_anyhit_triangle_filter<false>(
-            kg, current_isect.object, current_isect.prim, cray->self, 0))
+            kg, current_isect.object, current_isect.prim, cray->self, 0, ctx->volume_only))
     {
       *args->valid = 0;
       return;
     }
 
-    Intersection *isect = &ctx->vol_isect[ctx->num_hits];
-    ++ctx->num_hits;
-    *isect = current_isect;
+#ifdef __VOLUME_RECORD_ALL__
+    if (!ctx->volume_only) {
+      uint count = ctx->num_hits;
+      bvh_deep_record_intersection(ctx->vol_isect, count, ctx->max_hits, current_isect);
+      ctx->num_hits = numhit_t(count);
+    }
+    else
+#endif
+    {
+      Intersection *isect = &ctx->vol_isect[ctx->num_hits];
+      ++ctx->num_hits;
+      *isect = current_isect;
+    }
 #ifdef __VOLUME_RECORD_ALL__
     /* This tells Embree to continue tracing. */
     *args->valid = 0;
@@ -625,7 +636,8 @@ ccl_device_intersect uint kernel_embree_intersect_volume(KernelGlobals kg,
 #  ifdef __VOLUME_RECORD_ALL__
                                                          const uint max_hits,
 #  endif
-                                                         const uint visibility)
+                                                         const uint visibility,
+                                                         const bool volume_only = true)
 {
   CCLVolumeContext ctx;
   rtcInitRayQueryContext(&ctx);
@@ -639,6 +651,7 @@ ccl_device_intersect uint kernel_embree_intersect_volume(KernelGlobals kg,
   ctx.kg = kg;
 #  endif
   ctx.vol_isect = isect;
+  ctx.volume_only = volume_only;
 #  ifdef __VOLUME_RECORD_ALL__
   ctx.max_hits = numhit_t(max_hits);
 #  endif

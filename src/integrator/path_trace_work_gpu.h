@@ -14,6 +14,9 @@
 #include "integrator/work_tile_scheduler.h"
 
 #include "util/vector.h"
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+#  include "kernel/deep/types.h"
+#endif
 
 CCL_NAMESPACE_BEGIN
 
@@ -24,6 +27,26 @@ struct KernelWorkTile;
  * This implementation suits best devices which have a lot of integrator states, such as GPU. */
 class PathTraceWorkGPU : public PathTraceWork {
  public:
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  /* Host/device mirrors, medium tracking and contiguous readback scratch.
+   * Keep the reservation shared with PathTrace's allocation preflight. */
+  /* Strict retains its bounded plane retry path. */
+  static constexpr int deep_grid_batch_size = 62;
+  static constexpr int deep_surface_batch_size = 480;
+  static_assert(2 * size_t(deep_surface_batch_size) *
+                    (DEEP_MAX_EVENTS * sizeof(KernelDeepEvent) + sizeof(KernelDeepRecord) +
+                     DEEP_MAX_MEDIA * sizeof(KernelDeepMedium)) +
+                    DEEP_MAX_EVENTS * sizeof(KernelDeepEvent) < 2 * 1024 * 1024,
+                "Deep surface GPU staging exceeds its preflight reservation");
+  static constexpr size_t deep_grid_staging_bytes = 32 * 1024 * 1024;
+  static_assert(2 * size_t(deep_grid_batch_size) * DEEP_DEFAULT_VOLUME_EVENTS *
+                        (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) +
+                    2 * size_t(deep_grid_batch_size) * DEEP_DEFAULT_VOLUME_EVENTS / 64 *
+                        (sizeof(KernelDeepRecord) + DEEP_MAX_MEDIA * sizeof(KernelDeepMedium)) +
+                    DEEP_MAX_VOLUME_EVENTS * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) <=
+                deep_grid_staging_bytes,
+                "Native deep GPU staging exceeds its preflight reservation");
+#endif
   PathTraceWorkGPU(Device *device,
                    Film *film,
                    DeviceScene *device_scene,
@@ -149,6 +172,37 @@ class PathTraceWorkGPU : public PathTraceWork {
 
   /* Temporary buffer for passing work tiles to kernel. */
   device_vector<KernelWorkTile> work_tiles_;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  /* Bounded lane metadata and configured-capacity event planes, allocated lazily. */
+  device_vector<KernelDeepRecord> deep_records_;
+  device_vector<KernelDeepEvent> deep_events_;
+  device_vector<KernelDeepMedium> deep_media_;
+  device_vector<KernelDeepDensity> deep_density_;
+  struct DeepBatch {
+    explicit DeepBatch(Device *device);
+    ~DeepBatch();
+    void unpin();
+    unique_ptr<DeviceQueue> queue;
+    device_vector<KernelDeepRecord> records;
+    device_vector<KernelDeepRange> ranges;
+    device_vector<KernelDeepEvent> events;
+    device_vector<KernelDeepDensity> density;
+    device_only_memory<KernelDeepMedium> media;
+    device_memory *host_buffers[4];
+    int pinned = 0;
+    int count = 0;
+    size_t slots = 0, density_slots = 0;
+    bool pending = false;
+  };
+  unique_ptr<DeepBatch> deep_batches_[2];
+  void capture_deep_tiles(int num_tiles);
+  void capture_deep_flat(int num_tiles);
+  double deep_readback_seconds_ = 0, deep_spill_seconds_ = 0;
+  uint64_t deep_record_count_ = 0;
+  uint64_t deep_skipped_count_ = 0;
+  uint64_t deep_batch_count_ = 0, deep_readback_bytes_ = 0;
+  uint64_t deep_lane_event_writes_ = 0, deep_lane_density_writes_ = 0, deep_sync_count_ = 0;
+#endif
 
   /* Temporary buffer used by the copy_to_display() whenever graphics interoperability is not
    * available. Is allocated on-demand. */

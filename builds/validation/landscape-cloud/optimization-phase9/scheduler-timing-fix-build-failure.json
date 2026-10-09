@@ -1,0 +1,174 @@
+{
+  "status": "stopped-before-renders",
+  "failure": "Host-only timing fix changed installed GPU module bytes",
+  "timing_fix_commit": "47a8dffb0",
+  "diagnostic_root": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-fix-20261010",
+  "build_passed": true,
+  "executable": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-fix-20261010\\blender\\blender.exe",
+  "executable_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+  "toolchain": {
+    "clang_cl": "20.1.8",
+    "nvcc": "12.8.61",
+    "cuda_toolkit": "12.8.0",
+    "optix": "8.0.0",
+    "osl": "1.15.3.0",
+    "nvcc_host_msvc": "19.44 / 14.44.35207",
+    "ninja": "1.13.2",
+    "cmake": "3.31.2"
+  },
+  "snapshot_commit": "9a017f055",
+  "completed": [],
+  "small_render_test_run": false,
+  "full_render_comparisons_run": false,
+  "guard_origin": "Additional harness binary-reproducibility assertion; not a user numerical acceptance gate",
+  "native_sources_sha256": "002ab0fac1db9181633d6aefffb80e6c2a8af36a3e980e4a8947268d5b93d11e",
+  "modules": [
+    {
+      "file": "kernel_optix.ptx.zst",
+      "old_sha256": "cc9a7e229672202d669fbbff285ad80e687a5b8f79d4d02269a1142f80d575a7",
+      "new_sha256": "cc9a7e229672202d669fbbff285ad80e687a5b8f79d4d02269a1142f80d575a7",
+      "identical": true
+    },
+    {
+      "file": "kernel_optix_deep.ptx.zst",
+      "old_sha256": "67fb2d7f7683d46cc2ee1387b20a15db37ca0684fa75d1bd6424423200e69262",
+      "new_sha256": "67fb2d7f7683d46cc2ee1387b20a15db37ca0684fa75d1bd6424423200e69262",
+      "identical": true
+    },
+    {
+      "file": "kernel_optix_deep_osl.ptx.zst",
+      "old_sha256": "db26632a9a6c4446070dc7bb54bc944e9a786ebb0d68b787b9279f2a7f834476",
+      "new_sha256": "db26632a9a6c4446070dc7bb54bc944e9a786ebb0d68b787b9279f2a7f834476",
+      "identical": true
+    },
+    {
+      "file": "kernel_optix_deep_osl_services.ptx.zst",
+      "old_sha256": "459461689b80ee5ed42c5dfb0a7bcaec07178c388b919df77141174c375cb2a2",
+      "new_sha256": "459461689b80ee5ed42c5dfb0a7bcaec07178c388b919df77141174c375cb2a2",
+      "identical": true
+    },
+    {
+      "file": "kernel_optix_mnee.ptx.zst",
+      "old_sha256": "2f2838b4b2a1a9f4d951d0472be4a364fc5e6cda7b3deaee5d980a6634a6ac6e",
+      "new_sha256": "2f2838b4b2a1a9f4d951d0472be4a364fc5e6cda7b3deaee5d980a6634a6ac6e",
+      "identical": true
+    },
+    {
+      "file": "kernel_optix_osl.ptx.zst",
+      "old_sha256": "7ed2bd24ba2ab772d3d091ad3eeb4b17361f21c9c88fb9bdcd6ca8cde138af85",
+      "new_sha256": "7ed2bd24ba2ab772d3d091ad3eeb4b17361f21c9c88fb9bdcd6ca8cde138af85",
+      "identical": true
+    },
+    {
+      "file": "kernel_optix_osl_camera.ptx.zst",
+      "old_sha256": "3188ce8d51cdcba07db198f7f612956a4b0a787f27d1b82128fa02e5a39842c3",
+      "new_sha256": "3188ce8d51cdcba07db198f7f612956a4b0a787f27d1b82128fa02e5a39842c3",
+      "identical": true
+    },
+    {
+      "file": "kernel_optix_osl_mnee.ptx.zst",
+      "old_sha256": "86b516e5df66180897cd892a71485465235979417a9329cd41b19dc40a5674be",
+      "new_sha256": "b170610d9e773ad098037639bf4453e92bec54f40a0705b8c4abdbf470b05965",
+      "identical": false
+    },
+    {
+      "file": "kernel_optix_osl_services.ptx.zst",
+      "old_sha256": "6a773687ad10ce61011fe15b1f68c32efb7115baffafcd36c8c84125cf213b11",
+      "new_sha256": "6a773687ad10ce61011fe15b1f68c32efb7115baffafcd36c8c84125cf213b11",
+      "identical": true
+    },
+    {
+      "file": "kernel_optix_osl_shader_raytrace.ptx.zst",
+      "old_sha256": "18e4e9b7edcf82752aea3a57c8d6e6965fc1ce2b99ddd18df35a005ec86d68bb",
+      "new_sha256": "18e4e9b7edcf82752aea3a57c8d6e6965fc1ce2b99ddd18df35a005ec86d68bb",
+      "identical": true
+    },
+    {
+      "file": "kernel_optix_osl_volume.ptx.zst",
+      "old_sha256": "fcc09dd6fef82b3dc25c1ecede583e85a17f2a4d672be950c235643f2214e303",
+      "new_sha256": "fcc09dd6fef82b3dc25c1ecede583e85a17f2a4d672be950c235643f2214e303",
+      "identical": true
+    },
+    {
+      "file": "kernel_optix_shader_raytrace.ptx.zst",
+      "old_sha256": "b49a18db1067334d82e98dd0b744c00ff0d554cfa082fe62d149c5cbc8b65a05",
+      "new_sha256": "b49a18db1067334d82e98dd0b744c00ff0d554cfa082fe62d149c5cbc8b65a05",
+      "identical": true
+    },
+    {
+      "file": "kernel_sm_86.cubin.zst",
+      "old_sha256": "f02e5d03db16e31af864b096488cc1acaddb2629fcf620e3537e14c66ec9e2b5",
+      "new_sha256": "f02e5d03db16e31af864b096488cc1acaddb2629fcf620e3537e14c66ec9e2b5",
+      "identical": true
+    }
+  ],
+  "managed_originals_restored": {
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\kernel\\data_template.h": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\kernel\\film\\volume_guiding_denoise.h": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\kernel\\integrator\\shade_volume.h": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\kernel\\types.h": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\scene\\film.cpp": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\scene\\pass.cpp": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\integrator\\path_trace.cpp": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\integrator\\path_trace_work_gpu.cpp": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\integrator\\path_trace_work_gpu.h": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\integrator\\render_scheduler.h": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\cuda\\kernel_sm_86.cubin": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\cuda\\kernel_sm_86.cubin.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_deep.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_deep.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_deep_osl.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_deep_osl.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_deep_osl_services.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_deep_osl_services.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_mnee.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_mnee.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl_camera.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl_camera.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl_mnee.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl_mnee.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl_services.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl_services.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl_shader_raytrace.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl_shader_raytrace.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl_volume.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_osl_volume.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_shader_raytrace.ptx": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\build\\intern\\cycles\\kernel\\device\\optix\\kernel_optix_shader_raytrace.ptx.zst": true
+  },
+  "qualified_files_preserved": {
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\blender.exe": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\blender.exe": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_deep.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_deep_osl.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_deep_osl_services.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_mnee.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl_camera.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl_mnee.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl_services.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl_shader_raytrace.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl_volume.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_shader_raytrace.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_sm_86.cubin.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_deep.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_deep_osl.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_deep_osl_services.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_mnee.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl_camera.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl_mnee.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl_services.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl_shader_raytrace.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_osl_volume.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_optix_shader_raytrace.ptx.zst": true,
+    "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\blender\\5.3\\scripts\\addons_core\\cycles\\lib\\kernel_sm_86.cubin.zst": true
+  },
+  "interpretation": "Module hashes differ; no functional or semantic conclusion established. No retry, render, assertion change or production rebuild performed."
+}

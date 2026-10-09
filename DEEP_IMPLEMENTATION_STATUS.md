@@ -4,7 +4,7 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–8 accepted.
 
-**Phase 9: fixed-336 OptiX analysis complete; stopped for review.**
+**Phase 9: scheduler timing diagnostic stopped before rendering.**
 Both production deep outputs pass the deep gates; the adaptive beauty count-rate
 failure remains unresolved. The isolated snapshot experiment reproduces the same
 8 count-mismatch pixels on OptiX. CUDA off/on has zero image-wide count mismatches.
@@ -21,8 +21,18 @@ Batch sizes differ in fixed and adaptive pairs. Adaptive filter checkpoints matc
 At (986,61) the adaptive count is 336 off versus 464 on, with threshold 0.15. Its
 checkpoint combined/class-A accumulations and neighbour masks were not saved,
 so the convergence metric and exact first divergence cannot be recovered.
-The accumulation-order explanation remains unproven. Step 3 needs additional
-checkpoint evidence; no instrumentation, rebuild, new render or renderer fix.
+The user accepted the differences as consistent with summation order and waived
+checkpoint instrumentation. Fix `47a8dffb0` excludes GPU capture kernels/readback/
+spill from scheduler timing, under deep guards. Native-source hash equality and
+the batch-comparator self-check pass. The separate snapshot+fix build installed,
+but an additional harness byte-reproducibility assertion failed: one of 13 GPU
+modules, `kernel_optix_osl_mnee.ptx.zst`, differs from the previous snapshot install.
+The other 12 modules match, including CUDA, OptiX beauty and deep capture.
+No small-scene or full-frame diagnostic render started; no functional failure is
+established. All 36 managed originals and 28 qualified executable/module hashes
+were verified preserved. No retry, guard change or production rebuild performed.
+
+[Build failure and preservation proof](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-fix-build-failure.json).
 
 [Fixed comparison, every raw pass and schedules](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-isolation.json).
 [CUDA isolation](builds/validation/landscape-cloud/optimization-phase9/cuda-count-isolation.json).
@@ -30,7 +40,8 @@ checkpoint evidence; no instrumentation, rebuild, new render or renderer fix.
 [Production results](builds/validation/landscape-cloud/optimization-phase9/production-results.json).
 [Previous parser failure](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-harness-failure.json).
 Large fixed-pair outputs: `D:/CyclesDeepScratch/optimization-phase9/optix-fixed-count-diagnostic-20261010/`.
-Qualification and connected Gaffer review remain pending; monitor deleted.
+Current diagnostic: `D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-fix-20261010/`.
+Qualification and connected Gaffer review remain pending.
 
 [Toolchain](BUILDING.md): clang-cl 20.1.8 / NVCC 12.8.61, CUDA 12.8.0,
 OptiX 8.0.0, OSL 1.15.3.0. Snapshot patch is diagnostic only; production unchanged.

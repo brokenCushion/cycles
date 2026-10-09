@@ -55,6 +55,13 @@ Root causes, in code:
   analysis on preserved outputs and continue, reporting the repair. Renderer code,
   gates, thresholds, reference data or new renders still require stopping for review.
 
+- User decision (2026-10-10): fixed336 results are accepted as consistent with
+  reordered FLOAT accumulation; skip checkpoint-metric instrumentation. Exclude
+  GPU deep capture time from beauty scheduler timing in guarded integration code.
+  Verify small-scene batch equality, then snapshot+fix OptiX off/on/on and CUDA
+  off/on at full run-2 settings. Require equal batches and zero count mismatches;
+  report raw differences. Stop after these diagnostics before rebuilding production.
+
 - Do not change beauty kernels or beauty sampling. Deep must remain a
   side-channel. (See Phase 0 for the existing violation.)
 Phase 8c user decisions: initialize all deep shader inputs on every device.
@@ -2446,3 +2453,36 @@ order and proposing exclusion of capture time is not met; root cause unproven.
 Stopped for review, no renderer fix.
 [Raw values, maxima locations and every batch/checkpoint](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-isolation.json).
 [Previous harness failure](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-harness-failure.json).
+
+#### Phase 9 - scheduler timing fix: diagnostic stopped before renders
+
+Fix commit `47a8dffb0` measures the whole GPU capture interval after draining pending
+beauty work, including capture kernels, allocation, readback and spill. It removes
+that time from work-balance/path-tracing statistics and advances the scheduler's
+render/update/rebalance timestamps by the removed critical-path duration. Multiple
+devices use the difference of raw and beauty critical paths, not summed concurrent
+capture times. CPU capture timing is unchanged. All additions are deep-guarded;
+native bytes match. The existing source audit recognizes the new guarded scheduler
+header hook; its native-byte equality rule and all numerical gates are unchanged.
+
+`tools/test_deep_batch_schedule.py` rejects the former16 versus14/2 schedule and
+checks a saved small-scene off/on pair. Self-check and native-source hash proof pass.
+The diagnostic-only snapshot+fix build installed successfully, but an additional
+harness assertion requiring all installed GPU modules to reproduce their previous
+snapshot bytes stopped the queue. This is an extra binary-reproducibility guard,
+not a user numerical gate. Only `kernel_optix_osl_mnee.ptx.zst` differs; the other
+12 modules match, including CUDA, OptiX beauty and deep capture. No functional
+conclusion follows from the hash difference alone. No render started, no assertion
+was changed and no retry or production rebuild occurred. All 36 managed originals
+and 28 qualified executable/module hashes were verified preserved.
+
+| Check | Result | Commit |
+|---|---|---|
+| Native-source proof; batch-comparator self-check | Pass; native SHA unchanged | `47a8dffb0` |
+| Diagnostic build/install | Pass; executable SHA `9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752` | `47a8dffb0` + diagnostic snapshot `9a017f055` |
+| Extra GPU-module byte guard | 12/13 identical; OSL MNEE module differs | Same diagnostic build |
+| Small117x50 and five full-frame comparisons | Not run; stopped for review | — |
+
+[Measured hashes and preservation proof](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-fix-build-failure.json).
+Large artifacts/TEMP:
+`D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-fix-20261010/`.

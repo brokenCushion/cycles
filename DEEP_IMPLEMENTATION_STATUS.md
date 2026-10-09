@@ -4,17 +4,21 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–8 accepted.
 
-**Phase 9 stopped for user review.** Both production deep outputs and all nine
+**Phase 9 stopped on a diagnostic build failure.** Both production deep outputs and all nine
 beauty references completed. Independent oracles, exterior alpha, Gaffer depth
 cuts and native populations pass. The repaired beauty validator reports a
 calibrated count-rate failure: all-samples mean 488, prefix64 mean 470.6,
 control maximum 329. Direction passes for both. The approved isolated snapshot
 experiment completed: all three off leave-one-out counts are 0; each on render
 has 8 unmatched pixels against three controls and every two-control subset.
-This is outside the diagnostic off range, so the user's majorant-race attribution
-condition is not met. Matched-count raw/bias checks, further investigation and
-Gaffer presentation remain stopped. Production binaries/source and gates are
-preserved; no acceptance decision has been made.
+This is outside the diagnostic off range. The user approved state auditing and
+CPU/CUDA/OptiX crop comparisons. Step 1 identified the same eight cloud-over-castle
+pixels in every on render. The debug-only audit enlarged metadata from 32 to
+8,228 bytes and failed the existing GPU staging reservation assertions; the
+comparison queue did not start. No retry or root-cause fix. Generated source/cache
+originals and both production/snapshot installs were restored and hash-verified.
+Steps 2–3, conditional bisect, qualification and Gaffer review remain pending.
+[Investigation evidence](builds/validation/landscape-cloud/optimization-phase9/state-investigation-step1.json).
 [Production results](builds/validation/landscape-cloud/optimization-phase9/production-results.json),
 [run 1 count gate](builds/validation/landscape-cloud/optimization-phase9/deep-all-beauty-count-policy.json),
 [run 2 count gate](builds/validation/landscape-cloud/optimization-phase9/deep-64-beauty-count-policy.json).

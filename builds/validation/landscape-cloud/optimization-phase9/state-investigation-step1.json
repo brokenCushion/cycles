@@ -1,0 +1,1187 @@
+{
+  "status": "stopped-diagnostic-build-failure",
+  "step1": {
+    "renders": [
+      "off-1",
+      "off-2",
+      "off-3",
+      "on-1",
+      "on-2",
+      "on-3"
+    ],
+    "source": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009",
+    "width": 1175,
+    "height": 500,
+    "identical_mismatch_masks": true,
+    "checked_channels": [
+      "ViewLayer.Debug Sample Count.X",
+      "ViewLayer.Denoising Albedo.B",
+      "ViewLayer.Denoising Albedo.G",
+      "ViewLayer.Denoising Albedo.R",
+      "ViewLayer.Denoising Depth.Z",
+      "ViewLayer.Denoising Normal.X",
+      "ViewLayer.Denoising Normal.Y",
+      "ViewLayer.Denoising Normal.Z",
+      "ViewLayer.Noisy Image.A",
+      "ViewLayer.Noisy Image.B",
+      "ViewLayer.Noisy Image.G",
+      "ViewLayer.Noisy Image.R"
+    ],
+    "pixels": [
+      {
+        "file_pixel": [
+          986,
+          60
+        ],
+        "sample_counts": [
+          224,
+          224,
+          224,
+          256,
+          256,
+          256
+        ],
+        "raw_passes": {
+          "ViewLayer.Debug Sample Count.X": [
+            0.21875,
+            0.21875,
+            0.21875,
+            0.25,
+            0.25,
+            0.25
+          ],
+          "ViewLayer.Denoising Albedo.B": [
+            0.869162380695343,
+            0.8691623210906982,
+            0.8691623210906982,
+            0.8634501695632935,
+            0.8634501099586487,
+            0.8634502291679382
+          ],
+          "ViewLayer.Denoising Albedo.G": [
+            0.8548976182937622,
+            0.854897677898407,
+            0.854897677898407,
+            0.8491470813751221,
+            0.8491470217704773,
+            0.8491470217704773
+          ],
+          "ViewLayer.Denoising Albedo.R": [
+            0.8508010506629944,
+            0.8508009314537048,
+            0.8508009314537048,
+            0.8450112342834473,
+            0.8450110554695129,
+            0.845011293888092
+          ],
+          "ViewLayer.Denoising Depth.Z": [
+            900.9401245117188,
+            900.93994140625,
+            900.9400634765625,
+            900.8868408203125,
+            900.8868408203125,
+            900.8868408203125
+          ],
+          "ViewLayer.Denoising Normal.X": [
+            -0.0015152986161410809,
+            -0.0015152986161410809,
+            -0.0015152986161410809,
+            -0.001325878780335188,
+            -0.001325878780335188,
+            -0.001325878780335188
+          ],
+          "ViewLayer.Denoising Normal.Y": [
+            -0.00030528302886523306,
+            -0.00030528302886523306,
+            -0.00030528302886523306,
+            0.0008005269337445498,
+            0.0008005269337445498,
+            0.0008005269337445498
+          ],
+          "ViewLayer.Denoising Normal.Z": [
+            -0.9162030816078186,
+            -0.9162030816078186,
+            -0.9162030816078186,
+            -0.9197633862495422,
+            -0.9197633862495422,
+            -0.9197633862495422
+          ],
+          "ViewLayer.Noisy Image.A": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ViewLayer.Noisy Image.B": [
+            0.5399953126907349,
+            0.5399952530860901,
+            0.5399951934814453,
+            0.5847011208534241,
+            0.5847011208534241,
+            0.5847011208534241
+          ],
+          "ViewLayer.Noisy Image.G": [
+            0.6857880353927612,
+            0.6857880353927612,
+            0.685788094997406,
+            0.7438483238220215,
+            0.7438483238220215,
+            0.7438482046127319
+          ],
+          "ViewLayer.Noisy Image.R": [
+            0.9010428190231323,
+            0.9010428190231323,
+            0.9010428190231323,
+            0.9776932001113892,
+            0.9776931405067444,
+            0.9776931405067444
+          ]
+        },
+        "differing_channels": [
+          "ViewLayer.Debug Sample Count.X",
+          "ViewLayer.Denoising Albedo.B",
+          "ViewLayer.Denoising Albedo.G",
+          "ViewLayer.Denoising Albedo.R",
+          "ViewLayer.Denoising Depth.Z",
+          "ViewLayer.Denoising Normal.X",
+          "ViewLayer.Denoising Normal.Y",
+          "ViewLayer.Denoising Normal.Z",
+          "ViewLayer.Noisy Image.B",
+          "ViewLayer.Noisy Image.G",
+          "ViewLayer.Noisy Image.R"
+        ]
+      },
+      {
+        "file_pixel": [
+          985,
+          61
+        ],
+        "sample_counts": [
+          336,
+          336,
+          336,
+          448,
+          448,
+          448
+        ],
+        "raw_passes": {
+          "ViewLayer.Debug Sample Count.X": [
+            0.328125,
+            0.328125,
+            0.328125,
+            0.4375,
+            0.4375,
+            0.4375
+          ],
+          "ViewLayer.Denoising Albedo.B": [
+            0.8138647675514221,
+            0.8138647675514221,
+            0.8138647675514221,
+            0.7978812456130981,
+            0.7978812456130981,
+            0.7978810667991638
+          ],
+          "ViewLayer.Denoising Albedo.G": [
+            0.7995501160621643,
+            0.7995501160621643,
+            0.7995502352714539,
+            0.7834967970848083,
+            0.7834967970848083,
+            0.7834967374801636
+          ],
+          "ViewLayer.Denoising Albedo.R": [
+            0.7953853607177734,
+            0.7953853607177734,
+            0.795385479927063,
+            0.7792667746543884,
+            0.779266893863678,
+            0.7792667746543884
+          ],
+          "ViewLayer.Denoising Depth.Z": [
+            907.6599731445312,
+            907.6599731445312,
+            907.6600952148438,
+            905.7804565429688,
+            905.7805786132812,
+            905.780517578125
+          ],
+          "ViewLayer.Denoising Normal.X": [
+            -0.001186654670163989,
+            -0.001186654670163989,
+            -0.001186654670163989,
+            -0.0008899835520423949,
+            -0.0008899835520423949,
+            -0.0008899835520423949
+          ],
+          "ViewLayer.Denoising Normal.Y": [
+            0.000505346804857254,
+            0.000505346804857254,
+            0.000505346804857254,
+            0.001239472534507513,
+            0.001239472534507513,
+            0.001239472534507513
+          ],
+          "ViewLayer.Denoising Normal.Z": [
+            -0.9178950786590576,
+            -0.9178950786590576,
+            -0.9178950786590576,
+            -0.9212919473648071,
+            -0.9212919473648071,
+            -0.9212919473648071
+          ],
+          "ViewLayer.Noisy Image.A": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ViewLayer.Noisy Image.B": [
+            0.49562111496925354,
+            0.49562111496925354,
+            0.49562111496925354,
+            0.5220016241073608,
+            0.5220015645027161,
+            0.5220015645027161
+          ],
+          "ViewLayer.Noisy Image.G": [
+            0.6266166567802429,
+            0.6266166567802429,
+            0.6266167163848877,
+            0.6610066890716553,
+            0.6610066890716553,
+            0.6610066890716553
+          ],
+          "ViewLayer.Noisy Image.R": [
+            0.8223951458930969,
+            0.8223951458930969,
+            0.8223951458930969,
+            0.8661394715309143,
+            0.8661394715309143,
+            0.86613929271698
+          ]
+        },
+        "differing_channels": [
+          "ViewLayer.Debug Sample Count.X",
+          "ViewLayer.Denoising Albedo.B",
+          "ViewLayer.Denoising Albedo.G",
+          "ViewLayer.Denoising Albedo.R",
+          "ViewLayer.Denoising Depth.Z",
+          "ViewLayer.Denoising Normal.X",
+          "ViewLayer.Denoising Normal.Y",
+          "ViewLayer.Denoising Normal.Z",
+          "ViewLayer.Noisy Image.B",
+          "ViewLayer.Noisy Image.G",
+          "ViewLayer.Noisy Image.R"
+        ]
+      },
+      {
+        "file_pixel": [
+          986,
+          61
+        ],
+        "sample_counts": [
+          336,
+          336,
+          336,
+          464,
+          464,
+          464
+        ],
+        "raw_passes": {
+          "ViewLayer.Debug Sample Count.X": [
+            0.328125,
+            0.328125,
+            0.328125,
+            0.453125,
+            0.453125,
+            0.453125
+          ],
+          "ViewLayer.Denoising Albedo.B": [
+            0.8104207515716553,
+            0.8104206323623657,
+            0.8104206323623657,
+            0.8228351473808289,
+            0.8228352069854736,
+            0.8228352069854736
+          ],
+          "ViewLayer.Denoising Albedo.G": [
+            0.7958349585533142,
+            0.7958349585533142,
+            0.7958349585533142,
+            0.8082449436187744,
+            0.8082450032234192,
+            0.8082450032234192
+          ],
+          "ViewLayer.Denoising Albedo.R": [
+            0.7913739681243896,
+            0.7913739681243896,
+            0.7913739681243896,
+            0.8037934899330139,
+            0.8037935495376587,
+            0.8037935495376587
+          ],
+          "ViewLayer.Denoising Depth.Z": [
+            896.632080078125,
+            896.632080078125,
+            896.6318969726562,
+            897.525634765625,
+            897.5256958007812,
+            897.525634765625
+          ],
+          "ViewLayer.Denoising Normal.X": [
+            2.8725473555368808e-08,
+            2.8725473555368808e-08,
+            2.8725473555368808e-08,
+            2.553809430594356e-08,
+            2.553809430594356e-08,
+            2.553809430594356e-08
+          ],
+          "ViewLayer.Denoising Normal.Y": [
+            0.004892335738986731,
+            0.004892335738986731,
+            0.004892335738986731,
+            0.004412212409079075,
+            0.004412212409079075,
+            0.004412212409079075
+          ],
+          "ViewLayer.Denoising Normal.Z": [
+            -0.9297141432762146,
+            -0.9297141432762146,
+            -0.9297141432762146,
+            -0.9304423928260803,
+            -0.9304423928260803,
+            -0.9304423928260803
+          ],
+          "ViewLayer.Noisy Image.A": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ViewLayer.Noisy Image.B": [
+            0.6684821844100952,
+            0.66848224401474,
+            0.66848224401474,
+            0.6598865985870361,
+            0.6598866581916809,
+            0.6598865389823914
+          ],
+          "ViewLayer.Noisy Image.G": [
+            0.862514078617096,
+            0.862514078617096,
+            0.862514078617096,
+            0.8456915020942688,
+            0.8456915020942688,
+            0.8456915020942688
+          ],
+          "ViewLayer.Noisy Image.R": [
+            1.1191365718841553,
+            1.1191365718841553,
+            1.1191365718841553,
+            1.098710060119629,
+            1.098710060119629,
+            1.0987099409103394
+          ]
+        },
+        "differing_channels": [
+          "ViewLayer.Debug Sample Count.X",
+          "ViewLayer.Denoising Albedo.B",
+          "ViewLayer.Denoising Albedo.G",
+          "ViewLayer.Denoising Albedo.R",
+          "ViewLayer.Denoising Depth.Z",
+          "ViewLayer.Denoising Normal.X",
+          "ViewLayer.Denoising Normal.Y",
+          "ViewLayer.Denoising Normal.Z",
+          "ViewLayer.Noisy Image.B",
+          "ViewLayer.Noisy Image.G",
+          "ViewLayer.Noisy Image.R"
+        ]
+      },
+      {
+        "file_pixel": [
+          985,
+          62
+        ],
+        "sample_counts": [
+          336,
+          336,
+          336,
+          448,
+          448,
+          448
+        ],
+        "raw_passes": {
+          "ViewLayer.Debug Sample Count.X": [
+            0.328125,
+            0.328125,
+            0.328125,
+            0.4375,
+            0.4375,
+            0.4375
+          ],
+          "ViewLayer.Denoising Albedo.B": [
+            0.8294225335121155,
+            0.8294225335121155,
+            0.8294225335121155,
+            0.8049842119216919,
+            0.8049842119216919,
+            0.8049842119216919
+          ],
+          "ViewLayer.Denoising Albedo.G": [
+            0.814801812171936,
+            0.814801812171936,
+            0.814801812171936,
+            0.7903662323951721,
+            0.7903662919998169,
+            0.7903662919998169
+          ],
+          "ViewLayer.Denoising Albedo.R": [
+            0.810376763343811,
+            0.810376763343811,
+            0.810376763343811,
+            0.7859405875205994,
+            0.7859405279159546,
+            0.7859405875205994
+          ],
+          "ViewLayer.Denoising Depth.Z": [
+            901.2241821289062,
+            901.2241821289062,
+            901.2241821289062,
+            902.3427734375,
+            902.3427734375,
+            902.3427734375
+          ],
+          "ViewLayer.Denoising Normal.X": [
+            4.544486387203506e-08,
+            4.544486387203506e-08,
+            4.544486387203506e-08,
+            4.614601678554209e-08,
+            4.614601678554209e-08,
+            4.614601678554209e-08
+          ],
+          "ViewLayer.Denoising Normal.Y": [
+            0.008045070804655552,
+            0.008045070804655552,
+            0.008045070804655552,
+            0.00816635973751545,
+            0.00816635973751545,
+            0.00816635973751545
+          ],
+          "ViewLayer.Denoising Normal.Z": [
+            -0.9293911457061768,
+            -0.9293911457061768,
+            -0.9293911457061768,
+            -0.9265201091766357,
+            -0.9265201091766357,
+            -0.9265201091766357
+          ],
+          "ViewLayer.Noisy Image.A": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ViewLayer.Noisy Image.B": [
+            0.6281607151031494,
+            0.6281607747077942,
+            0.6281607151031494,
+            0.6434320211410522,
+            0.6434320211410522,
+            0.6434320211410522
+          ],
+          "ViewLayer.Noisy Image.G": [
+            0.8206296563148499,
+            0.8206295967102051,
+            0.8206295967102051,
+            0.8353677988052368,
+            0.8353678584098816,
+            0.8353678584098816
+          ],
+          "ViewLayer.Noisy Image.R": [
+            1.0771363973617554,
+            1.0771363973617554,
+            1.0771363973617554,
+            1.0960593223571777,
+            1.0960593223571777,
+            1.0960593223571777
+          ]
+        },
+        "differing_channels": [
+          "ViewLayer.Debug Sample Count.X",
+          "ViewLayer.Denoising Albedo.B",
+          "ViewLayer.Denoising Albedo.G",
+          "ViewLayer.Denoising Albedo.R",
+          "ViewLayer.Denoising Depth.Z",
+          "ViewLayer.Denoising Normal.X",
+          "ViewLayer.Denoising Normal.Y",
+          "ViewLayer.Denoising Normal.Z",
+          "ViewLayer.Noisy Image.B",
+          "ViewLayer.Noisy Image.G",
+          "ViewLayer.Noisy Image.R"
+        ]
+      },
+      {
+        "file_pixel": [
+          986,
+          62
+        ],
+        "sample_counts": [
+          336,
+          336,
+          336,
+          464,
+          464,
+          464
+        ],
+        "raw_passes": {
+          "ViewLayer.Debug Sample Count.X": [
+            0.328125,
+            0.328125,
+            0.328125,
+            0.453125,
+            0.453125,
+            0.453125
+          ],
+          "ViewLayer.Denoising Albedo.B": [
+            0.8193886280059814,
+            0.8193885684013367,
+            0.8193884491920471,
+            0.8166157007217407,
+            0.8166157007217407,
+            0.8166157007217407
+          ],
+          "ViewLayer.Denoising Albedo.G": [
+            0.8047835826873779,
+            0.8047835826873779,
+            0.8047835826873779,
+            0.8020837306976318,
+            0.8020837306976318,
+            0.8020837306976318
+          ],
+          "ViewLayer.Denoising Albedo.R": [
+            0.8002100586891174,
+            0.8002100586891174,
+            0.8002100586891174,
+            0.7976036667823792,
+            0.7976036667823792,
+            0.7976036667823792
+          ],
+          "ViewLayer.Denoising Depth.Z": [
+            902.8709106445312,
+            902.8710327148438,
+            902.8710327148438,
+            901.4385986328125,
+            901.4386596679688,
+            901.4386596679688
+          ],
+          "ViewLayer.Denoising Normal.X": [
+            4.624567395694612e-08,
+            4.624567395694612e-08,
+            4.624567395694612e-08,
+            -0.0003432158555369824,
+            -0.0003432158555369824,
+            -0.0003432158555369824
+          ],
+          "ViewLayer.Denoising Normal.Y": [
+            0.005932557862251997,
+            0.005932557862251997,
+            0.005932557862251997,
+            0.0041684177704155445,
+            0.0041684177704155445,
+            0.0041684177704155445
+          ],
+          "ViewLayer.Denoising Normal.Z": [
+            -0.9276134371757507,
+            -0.9276134371757507,
+            -0.9276134371757507,
+            -0.921929121017456,
+            -0.921929121017456,
+            -0.921929121017456
+          ],
+          "ViewLayer.Noisy Image.A": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ViewLayer.Noisy Image.B": [
+            0.6188092827796936,
+            0.6188092827796936,
+            0.6188092827796936,
+            0.6081362962722778,
+            0.6081362962722778,
+            0.6081362366676331
+          ],
+          "ViewLayer.Noisy Image.G": [
+            0.7827066779136658,
+            0.7827066779136658,
+            0.7827066779136658,
+            0.7682552933692932,
+            0.7682552933692932,
+            0.7682552933692932
+          ],
+          "ViewLayer.Noisy Image.R": [
+            1.0296690464019775,
+            1.0296690464019775,
+            1.029668927192688,
+            1.0044043064117432,
+            1.0044041872024536,
+            1.0044043064117432
+          ]
+        },
+        "differing_channels": [
+          "ViewLayer.Debug Sample Count.X",
+          "ViewLayer.Denoising Albedo.B",
+          "ViewLayer.Denoising Albedo.G",
+          "ViewLayer.Denoising Albedo.R",
+          "ViewLayer.Denoising Depth.Z",
+          "ViewLayer.Denoising Normal.X",
+          "ViewLayer.Denoising Normal.Y",
+          "ViewLayer.Denoising Normal.Z",
+          "ViewLayer.Noisy Image.B",
+          "ViewLayer.Noisy Image.G",
+          "ViewLayer.Noisy Image.R"
+        ]
+      },
+      {
+        "file_pixel": [
+          985,
+          63
+        ],
+        "sample_counts": [
+          336,
+          336,
+          336,
+          448,
+          448,
+          448
+        ],
+        "raw_passes": {
+          "ViewLayer.Debug Sample Count.X": [
+            0.328125,
+            0.328125,
+            0.328125,
+            0.4375,
+            0.4375,
+            0.4375
+          ],
+          "ViewLayer.Denoising Albedo.B": [
+            0.8044869899749756,
+            0.8044869899749756,
+            0.8044869899749756,
+            0.803358256816864,
+            0.8033581972122192,
+            0.803358256816864
+          ],
+          "ViewLayer.Denoising Albedo.G": [
+            0.7898693084716797,
+            0.7898693084716797,
+            0.7898693084716797,
+            0.7887489199638367,
+            0.7887489795684814,
+            0.7887488007545471
+          ],
+          "ViewLayer.Denoising Albedo.R": [
+            0.7854509949684143,
+            0.7854511141777039,
+            0.7854509949684143,
+            0.7843288779258728,
+            0.7843289971351624,
+            0.7843287587165833
+          ],
+          "ViewLayer.Denoising Depth.Z": [
+            899.6535034179688,
+            899.6533813476562,
+            899.6533813476562,
+            897.7735595703125,
+            897.7735595703125,
+            897.7735595703125
+          ],
+          "ViewLayer.Denoising Normal.X": [
+            3.642753299004653e-08,
+            3.642753299004653e-08,
+            3.642753299004653e-08,
+            3.9398614148922206e-08,
+            3.9398614148922206e-08,
+            3.9398614148922206e-08
+          ],
+          "ViewLayer.Denoising Normal.Y": [
+            0.006484493147581816,
+            0.006484493147581816,
+            0.006484493147581816,
+            0.006998647004365921,
+            0.006998647004365921,
+            0.006998647004365921
+          ],
+          "ViewLayer.Denoising Normal.Z": [
+            -0.9251016974449158,
+            -0.9251016974449158,
+            -0.9251016974449158,
+            -0.9277697205543518,
+            -0.9277697205543518,
+            -0.9277697205543518
+          ],
+          "ViewLayer.Noisy Image.A": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ViewLayer.Noisy Image.B": [
+            0.6774010062217712,
+            0.677401065826416,
+            0.6774010062217712,
+            0.6737579703330994,
+            0.6737580895423889,
+            0.6737580895423889
+          ],
+          "ViewLayer.Noisy Image.G": [
+            0.8729208111763,
+            0.8729207515716553,
+            0.8729208111763,
+            0.8686642646789551,
+            0.8686642646789551,
+            0.8686642646789551
+          ],
+          "ViewLayer.Noisy Image.R": [
+            1.1560919284820557,
+            1.1560919284820557,
+            1.1560919284820557,
+            1.1501336097717285,
+            1.150133728981018,
+            1.1501336097717285
+          ]
+        },
+        "differing_channels": [
+          "ViewLayer.Debug Sample Count.X",
+          "ViewLayer.Denoising Albedo.B",
+          "ViewLayer.Denoising Albedo.G",
+          "ViewLayer.Denoising Albedo.R",
+          "ViewLayer.Denoising Depth.Z",
+          "ViewLayer.Denoising Normal.X",
+          "ViewLayer.Denoising Normal.Y",
+          "ViewLayer.Denoising Normal.Z",
+          "ViewLayer.Noisy Image.B",
+          "ViewLayer.Noisy Image.G",
+          "ViewLayer.Noisy Image.R"
+        ]
+      },
+      {
+        "file_pixel": [
+          986,
+          63
+        ],
+        "sample_counts": [
+          336,
+          336,
+          336,
+          448,
+          448,
+          448
+        ],
+        "raw_passes": {
+          "ViewLayer.Debug Sample Count.X": [
+            0.328125,
+            0.328125,
+            0.328125,
+            0.4375,
+            0.4375,
+            0.4375
+          ],
+          "ViewLayer.Denoising Albedo.B": [
+            0.8769140839576721,
+            0.8769142031669617,
+            0.8769142031669617,
+            0.8661965131759644,
+            0.8661965131759644,
+            0.8661965131759644
+          ],
+          "ViewLayer.Denoising Albedo.G": [
+            0.8623083233833313,
+            0.8623083233833313,
+            0.8623083233833313,
+            0.8515952825546265,
+            0.8515952825546265,
+            0.8515952825546265
+          ],
+          "ViewLayer.Denoising Albedo.R": [
+            0.8578900098800659,
+            0.8578900098800659,
+            0.8578900098800659,
+            0.8471753597259521,
+            0.8471753001213074,
+            0.8471753597259521
+          ],
+          "ViewLayer.Denoising Depth.Z": [
+            903.2643432617188,
+            903.264404296875,
+            903.2643432617188,
+            902.7684326171875,
+            902.7683715820312,
+            902.7683715820312
+          ],
+          "ViewLayer.Denoising Normal.X": [
+            4.824862287478027e-08,
+            4.824862287478027e-08,
+            4.824862287478027e-08,
+            3.938311010642792e-08,
+            3.938311010642792e-08,
+            3.938311010642792e-08
+          ],
+          "ViewLayer.Denoising Normal.Y": [
+            0.00853029452264309,
+            0.00853029452264309,
+            0.00853029452264309,
+            0.006995925214141607,
+            0.006995925214141607,
+            0.006995925214141607
+          ],
+          "ViewLayer.Denoising Normal.Z": [
+            -0.9297996163368225,
+            -0.9297996163368225,
+            -0.9297996163368225,
+            -0.9277673959732056,
+            -0.9277673959732056,
+            -0.9277673959732056
+          ],
+          "ViewLayer.Noisy Image.A": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ViewLayer.Noisy Image.B": [
+            0.6446864604949951,
+            0.6446864604949951,
+            0.6446864604949951,
+            0.6283615827560425,
+            0.6283615827560425,
+            0.6283615827560425
+          ],
+          "ViewLayer.Noisy Image.G": [
+            0.8231781721115112,
+            0.823178231716156,
+            0.8231781721115112,
+            0.7900248169898987,
+            0.7900248169898987,
+            0.7900246977806091
+          ],
+          "ViewLayer.Noisy Image.R": [
+            1.0826903581619263,
+            1.0826903581619263,
+            1.0826903581619263,
+            1.0346665382385254,
+            1.0346665382385254,
+            1.0346665382385254
+          ]
+        },
+        "differing_channels": [
+          "ViewLayer.Debug Sample Count.X",
+          "ViewLayer.Denoising Albedo.B",
+          "ViewLayer.Denoising Albedo.G",
+          "ViewLayer.Denoising Albedo.R",
+          "ViewLayer.Denoising Depth.Z",
+          "ViewLayer.Denoising Normal.X",
+          "ViewLayer.Denoising Normal.Y",
+          "ViewLayer.Denoising Normal.Z",
+          "ViewLayer.Noisy Image.B",
+          "ViewLayer.Noisy Image.G",
+          "ViewLayer.Noisy Image.R"
+        ]
+      },
+      {
+        "file_pixel": [
+          987,
+          63
+        ],
+        "sample_counts": [
+          336,
+          336,
+          336,
+          448,
+          448,
+          448
+        ],
+        "raw_passes": {
+          "ViewLayer.Debug Sample Count.X": [
+            0.328125,
+            0.328125,
+            0.328125,
+            0.4375,
+            0.4375,
+            0.4375
+          ],
+          "ViewLayer.Denoising Albedo.B": [
+            0.8493445515632629,
+            0.8493443727493286,
+            0.8493443727493286,
+            0.8288816809654236,
+            0.8288816809654236,
+            0.8288816809654236
+          ],
+          "ViewLayer.Denoising Albedo.G": [
+            0.8347308039665222,
+            0.8347308039665222,
+            0.834730863571167,
+            0.8142634034156799,
+            0.8142634034156799,
+            0.8142634034156799
+          ],
+          "ViewLayer.Denoising Albedo.R": [
+            0.8303123712539673,
+            0.8303123712539673,
+            0.8303124904632568,
+            0.8098421692848206,
+            0.8098421692848206,
+            0.8098421692848206
+          ],
+          "ViewLayer.Denoising Depth.Z": [
+            905.888671875,
+            905.8886108398438,
+            905.888671875,
+            905.3989868164062,
+            905.39892578125,
+            905.39892578125
+          ],
+          "ViewLayer.Denoising Normal.X": [
+            4.8248747219759025e-08,
+            4.8248747219759025e-08,
+            4.8248747219759025e-08,
+            4.8248924855442965e-08,
+            4.8248924855442965e-08,
+            4.8248924855442965e-08
+          ],
+          "ViewLayer.Denoising Normal.Y": [
+            0.00853031501173973,
+            0.00853031501173973,
+            0.00853031501173973,
+            0.00853029079735279,
+            0.00853029079735279,
+            0.00853029079735279
+          ],
+          "ViewLayer.Denoising Normal.Z": [
+            -0.929799497127533,
+            -0.929799497127533,
+            -0.929799497127533,
+            -0.9268263578414917,
+            -0.9268263578414917,
+            -0.9268263578414917
+          ],
+          "ViewLayer.Noisy Image.A": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ViewLayer.Noisy Image.B": [
+            0.7035635709762573,
+            0.7035635113716125,
+            0.7035635113716125,
+            0.6865246891975403,
+            0.6865245699882507,
+            0.6865246891975403
+          ],
+          "ViewLayer.Noisy Image.G": [
+            0.9076232314109802,
+            0.9076232314109802,
+            0.9076231122016907,
+            0.8816307187080383,
+            0.8816307187080383,
+            0.8816306591033936
+          ],
+          "ViewLayer.Noisy Image.R": [
+            1.1914145946502686,
+            1.1914145946502686,
+            1.1914145946502686,
+            1.1581952571868896,
+            1.1581951379776,
+            1.1581951379776
+          ]
+        },
+        "differing_channels": [
+          "ViewLayer.Debug Sample Count.X",
+          "ViewLayer.Denoising Albedo.B",
+          "ViewLayer.Denoising Albedo.G",
+          "ViewLayer.Denoising Albedo.R",
+          "ViewLayer.Denoising Depth.Z",
+          "ViewLayer.Denoising Normal.X",
+          "ViewLayer.Denoising Normal.Y",
+          "ViewLayer.Denoising Normal.Z",
+          "ViewLayer.Noisy Image.B",
+          "ViewLayer.Noisy Image.G",
+          "ViewLayer.Noisy Image.R"
+        ]
+      }
+    ],
+    "coordinate_convention": "EXR file coordinates, top row y=0",
+    "border_file": [
+      977,
+      52,
+      996,
+      72
+    ]
+  },
+  "contents": {
+    "cloud_01_variant_0000": {
+      "type": "VOLUME",
+      "materials": [
+        {
+          "name": "Cloud",
+          "nodes": [
+            "ShaderNodeOutputMaterial",
+            "ShaderNodeVolumeScatter",
+            "ShaderNodeAttribute",
+            "ShaderNodeLightPath",
+            "ShaderNodeMath",
+            "ShaderNodeMath",
+            "ShaderNodeMath",
+            "ShaderNodeMath",
+            "ShaderNodeMath"
+          ]
+        }
+      ]
+    },
+    "Cube.042": {
+      "type": "MESH",
+      "materials": [
+        {
+          "name": "Material.033",
+          "nodes": [
+            "ShaderNodeBsdfPrincipled",
+            "ShaderNodeOutputMaterial",
+            "ShaderNodeTexImage",
+            "ShaderNodeTexCoord",
+            "ShaderNodeMapping"
+          ]
+        },
+        {
+          "name": "castle.014",
+          "nodes": [
+            "ShaderNodeBsdfPrincipled",
+            "ShaderNodeRGBCurve",
+            "ShaderNodeMapping",
+            "ShaderNodeTexImage",
+            "ShaderNodeBsdfPrincipled",
+            "ShaderNodeValToRGB",
+            "ShaderNodeSeparateColor",
+            "ShaderNodeNormalMap",
+            "ShaderNodeBsdfPrincipled",
+            "ShaderNodeHueSaturation",
+            "ShaderNodeRGBCurve",
+            "ShaderNodeMixShader",
+            "ShaderNodeMixShader",
+            "ShaderNodeAmbientOcclusion",
+            "ShaderNodeAmbientOcclusion",
+            "ShaderNodeValToRGB",
+            "ShaderNodeBsdfPrincipled",
+            "ShaderNodeHueSaturation",
+            "ShaderNodeRGBCurve",
+            "ShaderNodeValToRGB",
+            "ShaderNodeTexCoord",
+            "ShaderNodeMapping",
+            "ShaderNodeTexImage",
+            "ShaderNodeTexCoord",
+            "ShaderNodeTexImage",
+            "ShaderNodeMapping",
+            "ShaderNodeOutputMaterial",
+            "ShaderNodeMixShader",
+            "ShaderNodeTexCoord"
+          ]
+        },
+        {
+          "name": "Material.034",
+          "nodes": [
+            "ShaderNodeOutputMaterial",
+            "ShaderNodeTexCoord",
+            "ShaderNodeMapping",
+            "ShaderNodeTexImage",
+            "ShaderNodeRGBCurve",
+            "ShaderNodeBsdfPrincipled",
+            "ShaderNodeHueSaturation"
+          ]
+        }
+      ]
+    },
+    "separator": {
+      "type": "MESH",
+      "materials": [
+        {
+          "name": "Material.017",
+          "nodes": [
+            "ShaderNodeOutputMaterial",
+            "ShaderNodeBsdfPrincipled"
+          ]
+        }
+      ]
+    },
+    "round2.013": {
+      "type": "MESH",
+      "materials": [
+        {
+          "name": "castle.004",
+          "nodes": [
+            "ShaderNodeBsdfPrincipled",
+            "ShaderNodeRGBCurve",
+            "ShaderNodeMapping",
+            "ShaderNodeTexImage",
+            "ShaderNodeBsdfPrincipled",
+            "ShaderNodeValToRGB",
+            "ShaderNodeSeparateColor",
+            "ShaderNodeNormalMap",
+            "ShaderNodeBsdfPrincipled",
+            "ShaderNodeHueSaturation",
+            "ShaderNodeRGBCurve",
+            "ShaderNodeMixShader",
+            "ShaderNodeMixShader",
+            "ShaderNodeAmbientOcclusion",
+            "ShaderNodeAmbientOcclusion",
+            "ShaderNodeValToRGB",
+            "ShaderNodeBsdfPrincipled",
+            "ShaderNodeHueSaturation",
+            "ShaderNodeRGBCurve",
+            "ShaderNodeValToRGB",
+            "ShaderNodeTexCoord",
+            "ShaderNodeMapping",
+            "ShaderNodeTexImage",
+            "ShaderNodeTexCoord",
+            "ShaderNodeTexImage",
+            "ShaderNodeMapping",
+            "ShaderNodeOutputMaterial",
+            "ShaderNodeMixShader",
+            "ShaderNodeTexCoord"
+          ]
+        }
+      ]
+    }
+  },
+  "step2": "not run; build failed",
+  "step3": "original OptiX off crop only; new six-pair queue did not start",
+  "compile_errors": [
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\integrator\\..\\integrator/path_trace_work_gpu.h(36,17): error: static assertion failed due to requirement '2 * unsigned long long(deep_surface_batch_size) * (DEEP_MAX_EVENTS * sizeof(KernelDeepEvent) + sizeof(KernelDeepRecord) + DEEP_MAX_MEDIA * sizeof(KernelDeepMedium)) + DEEP_MAX_EVENTS * sizeof(KernelDeepEvent) < 2 * 1024 * 1024': Deep surface GPU staging exceeds its preflight reservation",
+    "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\source\\intern\\cycles\\integrator\\..\\integrator/path_trace_work_gpu.h(42,17): error: static assertion failed due to requirement '2 * unsigned long long(deep_grid_batch_size) * DEEP_DEFAULT_VOLUME_EVENTS * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) + 2 * unsigned long long(deep_grid_batch_size) * DEEP_DEFAULT_VOLUME_EVENTS / 64 * (sizeof(KernelDeepRecord) + DEEP_MAX_MEDIA * sizeof(KernelDeepMedium)) + DEEP_MAX_VOLUME_EVENTS * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) <= deep_grid_staging_bytes': Native deep GPU staging exceeds its preflight reservation"
+  ],
+  "diagnostic_record_bytes": 8228,
+  "production_record_bytes": 32,
+  "restored_originals_verified": true,
+  "qualified_binaries_and_modules_verified": true,
+  "production_sha256": "677aab08cfb6ffb02298f7d67f1e61a24801fd1b195436524a935871b85358a8",
+  "debug_root": "D:\\CyclesDeepScratch\\optimization-phase9\\deep-beauty-state-diagnostic-20261009",
+  "fix_implemented": false,
+  "retried": false
+}

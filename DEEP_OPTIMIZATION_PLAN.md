@@ -2295,3 +2295,37 @@ investigation, gate change, acceptance or Gaffer presentation.
 [Diagnostic results](builds/validation/landscape-cloud/optimization-phase9/majorant-count-diagnostic.json)
 retain every subset, histogram, settings and verified build identity. Stop for
 the user's decision.
+
+#### Phase 9 - state investigation: step 1 complete, audit build stopped
+
+User-approved steps 1–3 and conditional diagnostic crop bisect; no root-cause fix
+before review. Coordinates below use EXR top-row origin; mismatch masks and counts
+are identical across all three on and three off runs respectively.
+
+| Pixel(s) | Off samples | On samples |
+|---|---:|---:|
+| (986,60) | 224 | 256 |
+| (985,61), (985,62), (985,63), (986,63), (987,63) | 336 | 448 |
+| (986,61), (986,62) | 336 | 464 |
+
+At every pixel, noisy RGB and denoising albedo/normal/depth differ; noisy alpha
+is unchanged. Actual deep IDs contain `cloud_01_variant_0000`, `Cube.042`,
+`separator`, and sometimes `round2.013`: cloud over SVM castle geometry with AO,
+no contributing water/OSL. Feature-pass differences alone do not locate the first
+divergent camera sample because the passes average different sample populations.
+
+The preserved OptiX off border crop rendered; on was rejected before rendering by
+the existing border preflight. A separate debug-only build permits capture-only
+border diagnostics and snapshots all allocated main/shadow state, queue counters,
+film pixel and global sorting arrays. Its metadata expansion (32 → 8,228 bytes)
+failed both existing GPU staging reservation assertions. No audit render, backend
+comparison, bisect or retry followed; no assertion, budget or gate was relaxed.
+All generated modified source/cache originals and both qualified production and
+prior snapshot installs were verified unchanged by SHA-256. Production executable
+remains `677aab08…358a8`. Steps 2–3 are incomplete; no suspected root cause is yet
+supported by the audit. A separate debug snapshot buffer is needed to retain the
+original metadata layout and staging limits.
+
+[Small evidence report](builds/validation/landscape-cloud/optimization-phase9/state-investigation-step1.json).
+Debug scripts/logs remain at `D:/CyclesDeepScratch/optimization-phase9/deep-beauty-state-diagnostic-20261009/`;
+no snapshot or instrumented C++ was added to the deep branch.

@@ -98,6 +98,21 @@ reference = 1 - float32_ulp(.5)
 assert not monte_carlo_gate(reference + 5*float32_ulp(reference), [reference],
                             [reference]*4, ratio_limit=0)['passed']
 assert not monte_carlo_gate(1, [], [1]*4)['passed']
+# Step 2 uses bounded term magnitude for normals/albedo; step 1 and colour stay unchanged.
+for channel in ('ViewLayer.Denoising Normal.X', 'ViewLayer.Denoising Albedo.R'):
+    reference = .012346575036644936
+    gate = monte_carlo_gate(reference - 1.1175870895385742e-8, [reference],
+                            [reference]*4, ratio_limit=0, channel=channel)
+    assert gate['passed'] and gate['four_ulp'] == 4*float32_ulp(1)
+    assert monte_carlo_gate(4*float32_ulp(1), [0], [0]*4,
+                            ratio_limit=0, channel=channel)['passed']
+    assert not monte_carlo_gate(5*float32_ulp(1), [0], [0]*4,
+                                ratio_limit=0, channel=channel)['passed']
+assert not monte_carlo_gate(reference - 1.1175870895385742e-8, [reference],
+                            [reference]*4, ratio_limit=0,
+                            channel='ViewLayer.Noisy Image.R')['passed']
+assert not raw_pass_gate([reference - 1.1175870895385742e-8], 16,
+                         [[reference]], [16], envelope=0)['passed']
 assert bias_gate([0]*100, 1)['passed']
 assert bias_gate([-1, 1]*50, 1)['passed']
 assert not bias_gate([0.001]*100, 1)['passed']

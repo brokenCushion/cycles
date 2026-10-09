@@ -156,9 +156,12 @@ comparisons are informational, never a blocker. Do not revisit this scope.
    each pass/channel's absolute nearest same-count difference / sigma_pixel,
    using the same four distinct-seed deep-off controls. sigma_pixel is their
    pixel sample SD / 2. Each channel's allowed absolute difference is
-   max(calibrated channel limit * sigma_pixel, 4 FLOAT ULP of the nearest
-   same-count reference value). Zero sigma uses the same reference ULP floor
-   as step 1, never a stricter exact-equality requirement. Missing same-count
+   max(calibrated channel limit * sigma_pixel, step-2 ULP floor).
+   User decision (2026-10-09): denoising normal and albedo average per-sample
+   components bounded by 1, so their step-2 floor is 4 FLOAT ULP of 1.0
+   (4.76837158203125e-7), even when cancellation makes the average near zero.
+   Noisy colour and other passes retain 4 FLOAT ULP of the nearest same-count
+   reference value. Zero sigma uses this floor. Step 1 remains unchanged. Missing same-count
    references or nonfinite input fail. Seed-varied counts may differ only for
    estimating sigma. Record each control's fallback count and channel maxima.
    Deep-on's fallback count must be <= the largest leave-one-out count;

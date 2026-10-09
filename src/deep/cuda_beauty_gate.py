@@ -85,7 +85,13 @@ def raw_pass_gate(values, population, references, populations, envelope=None):
                 envelope=[envelope]*len(values), limits=limits)
 
 
-def monte_carlo_gate(value, references, seeds, ratio_limit=None):
+def step2_ulp_floor(channel, reference):
+    """Bounded-term averages round at term magnitude, including cancellation."""
+    group = (channel or '').rsplit('.', 1)[0].rsplit('.', 1)[-1]
+    return 4 * float32_ulp(1.0 if group in ('Denoising Normal', 'Denoising Albedo') else reference)
+
+
+def monte_carlo_gate(value, references, seeds, ratio_limit=None, channel=None):
     """Four independent pixel estimates; SE = sample SD / sqrt(4)."""
     if len(seeds) != 4 or not all(math.isfinite(v) for v in [value] + references + seeds):
         raise ValueError('Need four finite seed-varied pixel estimates')
@@ -94,7 +100,7 @@ def monte_carlo_gate(value, references, seeds, ratio_limit=None):
         return dict(passed=False, difference=None, sigma=sigma, ratio=None)
     nearest = min(range(len(references)), key=lambda i: abs(value-references[i]))
     delta = value-references[nearest]
-    floor = 4 * float32_ulp(references[nearest])
+    floor = step2_ulp_floor(channel, references[nearest])
     limit = max((ratio_limit or 0) * sigma, floor)
     return dict(passed=abs(delta) <= limit if ratio_limit is not None else True,
                 difference=delta, sigma=sigma,
@@ -299,7 +305,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     report['seed_references'] = [str(p) for p in seed_references]
     report['statistical_pixels'] = []
     if final_raw_rule:
-        report['raw_rule'] = 'one reproduced state within 4 ULP; otherwise difference <= max(calibrated ratio * four-seed SE, reference 4 ULP), with >=20 ordinary controls and calibrated fallback count; image bias <= 3 SE'
+        report['raw_rule'] = 'one reproduced state within reference 4 ULP; step 2 difference <= max(calibrated ratio * four-seed SE, 4 ULP of 1.0 for denoising normal/albedo, reference 4 ULP otherwise), with >=20 ordinary controls and calibrated fallback count; image bias <= max(3 SE, reference-mean 1 ULP)'
     checked_channels = [c for cs in groups.values() for c in cs]
     bias_differences = {c: [] for c in checked_channels}
     bias_references = {c: [] for c in checked_channels}
@@ -457,7 +463,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                                     seeds = [float(d[index]) for d in seed_data[c]]
                                     if not seeds or not others:
                                         continue
-                                    gate = monte_carlo_gate(row[k], [ref[k] for ref in refs], seeds)
+                                    gate = monte_carlo_gate(row[k], [ref[k] for ref in refs], seeds, channel=c)
                                     cal['zero_sigma_mismatches'][c] += int(gate['sigma'] == 0 and gate['difference'] != 0)
                                     cal['max_ratio'][c] = max(cal['max_ratio'][c], gate['ratio'] or 0.0)
                             same_count = []
@@ -483,7 +489,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                                         a = float(raw_data[c][0][index])
                                         ref = [float(pool_data[c][r][index]) for r in same_count]
                                         seeds = [float(d[index]) for d in seed_data[c]]
-                                        gate = monte_carlo_gate(a, ref, seeds) if seeds else dict(
+                                        gate = monte_carlo_gate(a, ref, seeds, channel=c) if seeds else dict(
                                             passed=False, difference=None, sigma=None, ratio=None,
                                             reason='Missing four seed-varied controls')
                                         details.append(dict(channel=c, **gate,

@@ -2,15 +2,14 @@
 
 Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
 and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-7 are accepted.
-Phases 8a and 8b are accepted. Phase 8c shader fixtures pass, but final qualification
-is stopped at the native CUDA small-landscape beauty gate (see Section 6 of the plan).
+Phases 8a and 8b are accepted; Phase 8c qualification passes and awaits review.
 Qualification covers the named fixtures; arbitrary feature combinations and the
 full-resolution landscape are not implied. Phase 9 remains unlaunched.
 
 | Feature | Qualified scope |
 | --- | --- |
-| Devices | Single CPU/CUDA/OptiX with SVM; CPU/OptiX OSL scalar surfaces, background render. CUDA OSL is unsupported. Shader-evaluated volumes remain unqualified pending the unresolved Phase 8c CUDA beauty gate. |
-| Shading | Native SVM scalar camera opacity/extinction; OSL constant/texture/noise/camera-query surfaces and Script/native-node materials, within preflight. OSL trace/@ao/@bevel, unsafe ray/path/unknown queries, dynamic textures and unprovable closure capacity fail explicitly. Runtime rejects coloured/invalid extinction and cache misses. |
+| Devices | Single CPU/CUDA/OptiX with SVM; CPU/OptiX OSL scalar surfaces and named volume fixtures, background render. CUDA OSL is unsupported. Explicit SVM shader-volume evaluation passes on CPU/CUDA/OptiX. |
+| Shading | Native SVM scalar camera opacity/extinction; OSL constant/texture/noise/camera-query surfaces and Script/native-node materials, within preflight. Shader volumes cover constant, textured and grid-reading extinction with stated adaptive stepping error. OSL trace/@ao/@bevel, unsafe ray/path/unknown queries, dynamic textures and unprovable closure capacity fail explicitly. Runtime rejects coloured/invalid extinction and cache misses. |
 | Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
 | Camera | Surface-only perspective/orthographic, DOF and rigid motion; volumes require static mono perspective without DOF/motion. |
 | Samples | Fixed/native adaptive accepted populations; `--deep-samples 0` uses all, positive N retains the first N without changing beauty. |

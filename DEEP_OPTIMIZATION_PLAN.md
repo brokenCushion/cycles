@@ -2030,11 +2030,11 @@ claim. After peaks: host working set <=5.38 GiB; device-wide GPU <=6750 MiB
 
 Phase 8b accepted. Phase 8c results follow; Phase 9 remains unlaunched.
 
-### Phase 8c - stopped at final CUDA beauty gate
+### Phase 8c - qualification complete; stop for acceptance review
 
 Renderer `8137045eb` (Blender SHA `677aab08cfb6ffb02298f7d67f1e61a24801fd1b195436524a935871b85358a8`). Initialized deep shader storage/globals on CPU and GPU; deterministic native grid filters and native mip-selection expectation in the separate deep OptiX services module. Beauty remains unchanged. Adaptive midpoint step doubling reuses evaluations and fails explicitly on capacity/refinement/evaluation limits.
 
-Header method is `shader-eval-adaptive`; material step range means starting/maximum world-unit steps. E/2 is the **stated, not proven** stepping allowance; E/2 bounds representation/fitting/publication. Features narrower than the finest evaluated step can be missed. No gate, total bound or 8192-event cap changed.
+Header method is `shader-eval-adaptive`; material step range means starting/maximum world-unit steps. E/2 is the **stated, not proven** stepping allowance; E/2 bounds representation/fitting/publication. Features narrower than the finest evaluated step can be missed. Shader error bounds and the 8192-event cap are unchanged; the user-approved beauty-floor update is recorded below.
 
 Independent CPU h/64 integration samples the actual shader on selected accepted rays without event records/cap. Deterministic fixed midpoint converges at order 2; published curves plateau at their separately bounded fitting error.
 
@@ -2103,16 +2103,23 @@ Native cases retain the fresh Phase 8b before baseline: 47x20/max16 adaptive sma
 | performance/OPTIX/1e-4 | 10.9084 -> 10.9132 | 3.75528 -> 3.62584 | 4.74091/17.3392 -> 4.70775/17.2395 | 6,823,509 | 56.5569 -> 56.5569 | `8137045eb` |
 | performance/OPTIX/1e-3 | 10.1024 -> 10.1665 | 2.10196 -> 2.11725 | 1.70201/6.94212 -> 1.70407/6.96747 | 3,086,077 | 21.4776 -> 21.4776 | `8137045eb` |
 
-Final native identity **81/81 strict, 30/30 numeric, OptiX 65/65**; nine CTests, CPU beauty exactness, CPU/CUDA/OptiX matrices, boundaries and AO/Bevel pass. The separate native GPU beauty stage stopped after 21/64 passes at CUDA small-landscape 1e-4; 42 later targets and the fresh OSL surface replay were not run. Phase 8c is not accepted. Beauty source hash `002ab0fac1db9181633d6aefffb80e6c2a8af36a3e980e4a8947268d5b93d11e` and all 75 common kernel resource records are unchanged.
+Final native identity **81/81 strict, 30/30 numeric, OptiX 65/65**; nine CTests, CPU beauty exactness, CPU/CUDA/OptiX matrices, boundaries, AO/Bevel and full calibrated CUDA/OptiX beauty all pass. Native OSL surface payload/header replay is 30/30 unchanged. Beauty source hash `002ab0fac1db9181633d6aefffb80e6c2a8af36a3e980e4a8947268d5b93d11e` and all 75 common kernel resource records are unchanged.
 
-Retained regression stopped at the beauty gate after: 1526.97 s. [Report](builds/validation/deep-regression/20261008T235713Z-283b08f9/results.json). [Resources](builds/validation/landscape-cloud/optimization-phase8c/mip-resources.json).
+Full regression (including optional OptiX/GPU beauty stages): 2012.73 s. [Report](builds/validation/deep-regression/20261008T235713Z-283b08f9/results.json). [OSL surfaces](builds/validation/landscape-cloud/optimization-phase8c/mip/osl-surface-replay.json). [Resources](builds/validation/landscape-cloud/optimization-phase8c/mip-resources.json).
 
-CUDA failure: 47x20/max16 adaptive, file pixel (22,8), sample count 16. Only denoising Normal.X fails: absolute difference 1.11758708954e-8 versus allowance 9.76033028295e-9; difference/sigma 2.91433556678e-7 versus calibrated maximum 2.54520457093e-7. The 20-control fallback distribution is 0 / 1 / 3 (min/median/max); deep-on has 1 fallback pixel, so the count passes. Noisy RGBA matches a control. Image-wide bias passes (Normal.X signed mean -1.08510264682e-10, reference-mean FLOAT ULP 1.86264514923e-9). Denoised output passes. No compatible same-fixture majorant-snapshot evidence was supplied to this gate. No policy, tolerance or control range changed; no replacement render launched.
+User-approved step-2 accumulation floor is recorded in Section 2 and applied by `a549dd619`; step 1, colour/reference floors, calibration, count and bias rules are unchanged.
 
-Failure evidence: [CUDA report](builds/validation/landscape-cloud/optimization-phase8c/cuda-small-1e4-failure.json); raw passes remain at `D:/CyclesDeepScratch/regression/20261008T235713Z-283b08f9/landscape/small/1e-4/`. All raw output and reports are retained. Shader-fixture qualification is complete, but the full phase remains stopped as required by Section 2.
+| Saved step-2 case | Absolute difference | Previous allowance / result | Accumulation-aware allowance / result | Commit |
+| --- | ---: | --- | --- | --- |
+| CUDA small / 1e-4, (22,8), Normal.X | 1.11758708954e-8 | 9.76033028295e-9 / FAIL | 4.76837158203e-7 / PASS | `a549dd619` |
+| Earlier OptiX opaque foreground / 1e-3, (0,5), Normal.X | 2.22044604925e-16 | result-magnitude floor / flagged | 4.76837158203e-7 / PASS | `a549dd619` |
+
+The historical audit checks 1,656 bounded normal/albedo step-2 observations in 55 saved reports; four changed report occurrences represent these two pixel/channel cases, with no new failures. Original reports remain unchanged. [Audit](builds/validation/landscape-cloud/optimization-phase8c/accumulation-ulp-audit.json).
+
+All 64 native CUDA/OptiX beauty targets pass the updated policy. The completed numerical/identity/CTest stages and native renders were retained; only GPU beauty was re-evaluated, with zero native renders repeated. Original stopped evidence remains in [the preserved report](builds/validation/deep-regression/20261008T235713Z-283b08f9/results-before-accumulation-ulp.json). The fresh 30-case OSL surface replay passes identity, own oracles and CPU exact/OptiX beauty.
 
 The native mip selector unit integrates its two-level probabilities independently; the OptiX device unit repeats exactly and matches the known expected-density analytic curve within the header bound. [Device filter check](builds/validation/landscape-cloud/optimization-phase8c/device-mip-unit-v4.json). It is a filter unit, not a cross-backend scene qualification.
 
 Weak synthetic grids use native Blender clipping=0 so the intended geometry is present; an explicit nonempty-output assertion caught the original clipped fixture. Existing qualified VDB/landscape assets are unchanged.
 
-Large EXRs/CSV/spill/TEMP: `D:/CyclesDeepScratch/optimization-phase8c/qualified-mip/` and the regression D: root in its report. Connected Gaffer review: `D:/CyclesDeepScratch/regression-tools/phase8c_review.gfr` (actual deep inputs, alpha/beauty/fine-step selection, DeepSlice -> DeepToPointCloud). [Presentation checks](builds/validation/landscape-cloud/optimization-phase8c/gaffer-review.json). Phase 9 remains unlaunched, awaiting user confirmation.
+Large EXRs/CSV/spill/TEMP: `D:/CyclesDeepScratch/optimization-phase8c/qualified-mip/` and the regression D: root in its report. Connected Gaffer review: `D:/CyclesDeepScratch/regression-tools/phase8c_final_review.gfr` (actual deep inputs, alpha/beauty/fine-step selection, DeepSlice -> DeepToPointCloud). [Presentation checks](builds/validation/landscape-cloud/optimization-phase8c/gaffer-review.json). Phase 9 remains unlaunched, awaiting user confirmation.

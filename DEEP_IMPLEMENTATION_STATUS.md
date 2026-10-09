@@ -15,7 +15,10 @@ The historical step-2 audit, all 64 CUDA/OptiX beauty targets and the fresh
 [Measurements](builds/validation/landscape-cloud/optimization-phase8c/final-results.json)
 and the plan's Section 6 retain both original and completed evidence. Gaffer:
 `D:/CyclesDeepScratch/regression-tools/phase8c_final_review.gfr`. Phase 9 run 1 rendered and passed oracle, exterior, Gaffer cuts and native-population checks.
-Run 2 / nine beauty references are queued; both beauty gates remain pending.
+Both deep runs and nine beauty references completed; oracle/exterior/cuts/populations pass.
+**Phase 9 stopped:** beauty validator `KeyError: four_ulp` on an empty same-count
+reference set. Stored counts have 460/439 unresolved pixels; no retry or review.
+[Production results](builds/validation/landscape-cloud/optimization-phase9/production-results.json).
 [Run 1 checks](builds/validation/landscape-cloud/optimization-phase9/run1-checks.json).
 
 [Toolchain](BUILDING.md): clang-cl 20.1.8 / NVCC 12.8.61, CUDA 12.8.0,

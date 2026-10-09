@@ -2188,3 +2188,42 @@ and four seed-varied deep-off references, then the unchanged beauty policy.
 Same qualified executable and 8192 MiB deep-memory setting; all large files/TEMP
 remain under D:/CyclesDeepScratch/optimization-phase9/production-20261009/.
 Failure stops the queue without retry. No production Gaffer review created yet.
+
+#### Phase 9 - eleven renders complete; stopped on beauty-validator exception
+
+[Results](builds/validation/landscape-cloud/optimization-phase9/production-results.json)
+retain per-run counters, fitting times, all nine references and projection comparisons.
+No render/export repeated. Both independent camera oracles, full-image exterior,
+Gaffer cuts and native populations pass. The final beauty validator raised
+`KeyError: four_ulp` before writing a result for run 1; run 2's beauty invocation
+was not reached. No retry, policy revision, extra render or Gaffer review.
+
+| OptiX, IDs, error 1e-3, z=1e-4 | All deep samples | Deep prefix 64 |
+|---|---:|---:|
+| Render + capture | 71.06 min | 15.39 min |
+| Production export | 28.68 min | 2.89 min |
+| Validation companion export | 34.66 min | 3.01 min |
+| Peak host / total GPU | 5.79 GiB / 6723 MiB | 5.24 GiB / 6308 MiB |
+| Peak process GPU | 3.74 GiB | 3.74 GiB |
+| Spill / EXR | 167.87 / 1.99 GB | 20.10 / 0.705 GB |
+| GPU lane writes / copied | 148.11 / 174.45 GB | 18.38 / 38.72 GB |
+| Deep records | 281,802,862 | 86,125,949 |
+| Oracle max error | 8.22990e-5 | 8.22990e-5 |
+| Gaffer cut max error | 2.60427e-6 | 2.84080e-7 |
+| Exterior max / flattened alpha | 2.68281e-8 / 0 | 2.68261e-8 / 0 |
+| Native accepted min / median / max | 16 / 288 / 1024 | 16 / 288 / 1024 |
+| Beauty policy | Validator exception | Not reached |
+
+Phase 5 projected render+capture/export: all 190.98/187.43 min; prefix64
+68.55/24.80 min. These are CUDA IDs-off z=0 estimates, not controlled speedups.
+The shader/host/device budgets are unchanged; numerical prefix checks evaluate
+the captured prefix, not an approximation bound against all beauty rays.
+
+[Stored count diagnosis](builds/validation/landscape-cloud/optimization-phase9/beauty-count-diagnosis.json):
+460 all-samples pixels and 439 prefix64 pixels have no same-count reference
+among the five ordinary controls. Example file pixel (985,35): deep count 592,
+all controls 608. This is an unresolved population mismatch, not proof of a
+renderer defect or ordinary variation. The empty-reference branch returns no
+`four_ulp`; the calibrated caller assumes it exists and crashes. This branch
+was not exercised by the accepted small dry-run. Fixing the exception alone
+will not establish the mandatory same-count beauty proof. Phase 9 is incomplete.

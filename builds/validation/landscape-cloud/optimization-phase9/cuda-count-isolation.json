@@ -1,0 +1,1277 @@
+{
+  "device": "CUDA",
+  "build": "existing isolated majorant-snapshot diagnostic",
+  "new_build": false,
+  "new_renders": 2,
+  "full_camera": [
+    1175,
+    500
+  ],
+  "settings": {
+    "renderer_sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+    "blender": "5.3.0 Alpha",
+    "build_hash": "749518deb2f0",
+    "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+    "camera": "Camera",
+    "camera_type": "PERSP",
+    "ortho_scale": 7.314285755157471,
+    "frame": 0,
+    "samples": 1024,
+    "threads": 24,
+    "resolution": [
+      2350,
+      1000
+    ],
+    "percentage": 50,
+    "dof": false,
+    "adaptive": true,
+    "adaptive_threshold": 0.029999999329447746,
+    "adaptive_min_samples": 8,
+    "seed": 0,
+    "use_animated_seed": true,
+    "denoising": true,
+    "denoiser": "OPENIMAGEDENOISE",
+    "denoising_use_gpu": true,
+    "save_render_passes": true,
+    "capture_only": false,
+    "diagnostic_sample_count_pass": true,
+    "kernel_source_override": null,
+    "materials": 110,
+    "objects": 376,
+    "compositing": false,
+    "deep": true,
+    "device": "CUDA",
+    "deep_volume": true,
+    "deep_volume_shader_eval": false,
+    "deep_volume_step": 0,
+    "deep_volume_fixed_step": false,
+    "deep_error": 0.001,
+    "deep_z_tolerance": 0.0001,
+    "deep_samples": 64,
+    "deep_ids": true,
+    "deep_max_events": 8192,
+    "deep_memory_mb": 8192,
+    "view_layers": [
+      "ViewLayer"
+    ],
+    "pixel_filter": "BLACKMAN_HARRIS",
+    "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+    "camera_world_matrix": [
+      [
+        3.319657325744629,
+        -0.6532265543937683,
+        0.7761955857276917,
+        563.4478149414062
+      ],
+      [
+        1.0144872665405273,
+        2.137481212615967,
+        -2.53994083404541,
+        -556.8704223632812
+      ],
+      [
+        1.539787626825273e-05,
+        2.655895233154297,
+        2.2350683212280273,
+        697.09521484375
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "camera_frame": [
+      [
+        0.5,
+        0.21276596188545227,
+        -1.6666666269302368
+      ],
+      [
+        0.5,
+        -0.21276596188545227,
+        -1.6666666269302368
+      ],
+      [
+        -0.5,
+        -0.21276596188545227,
+        -1.6666666269302368
+      ],
+      [
+        -0.5,
+        0.21276596188545227,
+        -1.6666666269302368
+      ]
+    ],
+    "camera_translation": [
+      563.4478149414062,
+      -556.8704223632812,
+      697.09521484375
+    ],
+    "camera_rotation_degrees": [
+      49.91771354898617,
+      -0.0002541571951613384,
+      16.993152070060297
+    ],
+    "camera_scale": [
+      3.4712114334106445,
+      3.4712116718292236,
+      3.4712116718292236
+    ],
+    "pixel_aspect": [
+      1.0,
+      1.0
+    ],
+    "seconds": 915.7699423000449,
+    "beauty_exists": true,
+    "deep_bytes": 707974109
+  },
+  "targets": [
+    {
+      "pixel": [
+        986,
+        60
+      ],
+      "off_samples": 224,
+      "on_samples": 224,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.838860273361206,
+          "on": 0.838860273361206,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.8245831727981567,
+          "on": 0.824583113193512,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.8204754590988159,
+          "on": 0.8204754590988159,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 900.7335205078125,
+          "on": 900.7334594726562,
+          "signed_difference": -6.103515625e-05,
+          "abs_difference": 6.103515625e-05,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": -0.0014894946943968534,
+          "on": -0.0014894946943968534,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": -0.0003135334700345993,
+          "on": -0.0003135334700345993,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9162032008171082,
+          "on": -0.9162032008171082,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.544096827507019,
+          "on": 0.544096827507019,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.6894091963768005,
+          "on": 0.6894091367721558,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 0.9228211641311646,
+          "on": 0.9228211045265198,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Noisy Image.G",
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        985,
+        61
+      ],
+      "off_samples": 512,
+      "on_samples": 512,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.796855628490448,
+          "on": 0.796855628490448,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.7827206254005432,
+          "on": 0.7827206254005432,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.7787041068077087,
+          "on": 0.7787041068077087,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 905.7650146484375,
+          "on": 905.764892578125,
+          "signed_difference": -0.0001220703125,
+          "abs_difference": 0.0001220703125,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": -0.0019278356339782476,
+          "on": -0.0019278356339782476,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": -0.000549311691429466,
+          "on": -0.000549311691429466,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9207860827445984,
+          "on": -0.9207860827445984,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.5061065554618835,
+          "on": 0.5061064958572388,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.6409244537353516,
+          "on": 0.6409244537353516,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 0.8397221565246582,
+          "on": 0.839722216129303,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        986,
+        61
+      ],
+      "off_samples": 512,
+      "on_samples": 512,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8228985667228699,
+          "on": 0.8228985071182251,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.8083087801933289,
+          "on": 0.8083088397979736,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.8038591742515564,
+          "on": 0.8038591146469116,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 897.2852783203125,
+          "on": 897.2852172851562,
+          "signed_difference": -6.103515625e-05,
+          "abs_difference": 6.103515625e-05,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 2.7671269720030978e-08,
+          "on": 2.7671269720030978e-08,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.004799245856702328,
+          "on": 0.004799245856702328,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9278727173805237,
+          "on": -0.9278727173805237,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6733969449996948,
+          "on": 0.67339688539505,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.8643940091133118,
+          "on": 0.8643940091133118,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.1267651319503784,
+          "on": 1.126765251159668,
+          "signed_difference": 1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 1.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Noisy Image.B",
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        985,
+        62
+      ],
+      "off_samples": 512,
+      "on_samples": 512,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8273237943649292,
+          "on": 0.8273237943649292,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.8127079606056213,
+          "on": 0.8127079606056213,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.8082816004753113,
+          "on": 0.8082816004753113,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 901.6078491210938,
+          "on": 901.60791015625,
+          "signed_difference": 6.103515625e-05,
+          "abs_difference": 6.103515625e-05,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 4.6403112463622165e-08,
+          "on": 4.6403112463622165e-08,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.008210832253098488,
+          "on": 0.008210832253098488,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9268375635147095,
+          "on": -0.9268375039100647,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6374186277389526,
+          "on": 0.6374186277389526,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.8300813436508179,
+          "on": 0.8300814032554626,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.093143343925476,
+          "on": 1.093143343925476,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.G"
+      ]
+    },
+    {
+      "pixel": [
+        986,
+        62
+      ],
+      "off_samples": 512,
+      "on_samples": 512,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8443442583084106,
+          "on": 0.8443442583084106,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.8297398090362549,
+          "on": 0.8297398090362549,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.8251736164093018,
+          "on": 0.8251736164093018,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 901.5492553710938,
+          "on": 901.5491333007812,
+          "signed_difference": -0.0001220703125,
+          "abs_difference": 0.0001220703125,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 4.0032741566164987e-08,
+          "on": 4.0032741566164987e-08,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.004559379070997238,
+          "on": 0.004559379070997238,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9218115210533142,
+          "on": -0.9218115210533142,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6215619444847107,
+          "on": 0.6215619444847107,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.7841864824295044,
+          "on": 0.7841865420341492,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.0202536582946777,
+          "on": 1.0202535390853882,
+          "signed_difference": -1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 1.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Noisy Image.G",
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        985,
+        63
+      ],
+      "off_samples": 512,
+      "on_samples": 512,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.7725363969802856,
+          "on": 0.7725363969802856,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.7579138278961182,
+          "on": 0.7579138278961182,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.7534915804862976,
+          "on": 0.7534915804862976,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 898.2661743164062,
+          "on": 898.2661743164062,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 4.045457657753104e-08,
+          "on": 4.045457657753104e-08,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.007181370165199041,
+          "on": 0.007181370165199041,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.929877519607544,
+          "on": -0.929877519607544,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6862543821334839,
+          "on": 0.6862543821334839,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.8880082964897156,
+          "on": 0.8880082964897156,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.1771388053894043,
+          "on": 1.1771389245986938,
+          "signed_difference": 1.1920928955078125e-07,
+          "abs_difference": 1.1920928955078125e-07,
+          "ulp_difference": 1.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Noisy Image.R"
+      ]
+    },
+    {
+      "pixel": [
+        986,
+        63
+      ],
+      "off_samples": 512,
+      "on_samples": 512,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8551741242408752,
+          "on": 0.8551740646362305,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.8405748605728149,
+          "on": 0.8405748605728149,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.8361539840698242,
+          "on": 0.8361539840698242,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 903.8728637695312,
+          "on": 903.872802734375,
+          "signed_difference": -6.103515625e-05,
+          "abs_difference": 6.103515625e-05,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 4.0499266162896674e-08,
+          "on": 4.0499266162896674e-08,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.007189072668552399,
+          "on": 0.007189072668552399,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9298840165138245,
+          "on": -0.9298839569091797,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6537625789642334,
+          "on": 0.6537625789642334,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.8354752063751221,
+          "on": 0.8354752063751221,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.1020309925079346,
+          "on": 1.1020309925079346,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Denoising Normal.Z"
+      ]
+    },
+    {
+      "pixel": [
+        987,
+        63
+      ],
+      "off_samples": 512,
+      "on_samples": 512,
+      "raw": {
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.8078764081001282,
+          "on": 0.8078763484954834,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.7932577133178711,
+          "on": 0.7932577729225159,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.7888355255126953,
+          "on": 0.7888354659080505,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 906.862060546875,
+          "on": 906.8621826171875,
+          "signed_difference": 0.0001220703125,
+          "abs_difference": 0.0001220703125,
+          "ulp_difference": 2.0
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": 4.824305221973191e-08,
+          "on": 4.824305221973191e-08,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": 0.008529255166649818,
+          "on": 0.008529255166649818,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.9271054863929749,
+          "on": -0.9271054267883301,
+          "signed_difference": 5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.6760877370834351,
+          "on": 0.6760877370834351,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.8667184710502625,
+          "on": 0.8667184114456177,
+          "signed_difference": -5.960464477539063e-08,
+          "abs_difference": 5.960464477539063e-08,
+          "ulp_difference": 1.0
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 1.1338330507278442,
+          "on": 1.1338330507278442,
+          "signed_difference": 0.0,
+          "abs_difference": 0.0,
+          "ulp_difference": 0.0
+        }
+      },
+      "differing_raw_passes": [
+        "ViewLayer.Denoising Albedo.B",
+        "ViewLayer.Denoising Albedo.G",
+        "ViewLayer.Denoising Albedo.R",
+        "ViewLayer.Denoising Depth.Z",
+        "ViewLayer.Denoising Normal.Z",
+        "ViewLayer.Noisy Image.G"
+      ]
+    }
+  ],
+  "target_counts_identical": true,
+  "target_raw_bit_identical": false,
+  "image_count_mismatches": 0,
+  "other_count_mismatches": 0,
+  "count_difference_histogram": {},
+  "count_mismatch_pixels": [],
+  "raw_image_summary": {
+    "ViewLayer.Denoising Albedo.B": {
+      "differing_pixels": 284871,
+      "max_abs": 2.086162567138672e-06
+    },
+    "ViewLayer.Denoising Albedo.G": {
+      "differing_pixels": 276406,
+      "max_abs": 1.8477439880371094e-06
+    },
+    "ViewLayer.Denoising Albedo.R": {
+      "differing_pixels": 276227,
+      "max_abs": 6.854534149169922e-07
+    },
+    "ViewLayer.Denoising Depth.Z": {
+      "differing_pixels": 321494,
+      "max_abs": 0.0008544921875
+    },
+    "ViewLayer.Denoising Normal.X": {
+      "differing_pixels": 261641,
+      "max_abs": 4.172325134277344e-07
+    },
+    "ViewLayer.Denoising Normal.Y": {
+      "differing_pixels": 260212,
+      "max_abs": 4.172325134277344e-07
+    },
+    "ViewLayer.Denoising Normal.Z": {
+      "differing_pixels": 210978,
+      "max_abs": 7.748603820800781e-07
+    },
+    "ViewLayer.Noisy Image.A": {
+      "differing_pixels": 0,
+      "max_abs": 0.0
+    },
+    "ViewLayer.Noisy Image.B": {
+      "differing_pixels": 239185,
+      "max_abs": 1.52587890625e-05
+    },
+    "ViewLayer.Noisy Image.G": {
+      "differing_pixels": 222757,
+      "max_abs": 3.0517578125e-05
+    },
+    "ViewLayer.Noisy Image.R": {
+      "differing_pixels": 205619,
+      "max_abs": 4.57763671875e-05
+    }
+  },
+  "prior_optix_counts": [
+    {
+      "pixel": [
+        986,
+        60
+      ],
+      "off": 224,
+      "on": 256
+    },
+    {
+      "pixel": [
+        985,
+        61
+      ],
+      "off": 336,
+      "on": 448
+    },
+    {
+      "pixel": [
+        986,
+        61
+      ],
+      "off": 336,
+      "on": 464
+    },
+    {
+      "pixel": [
+        985,
+        62
+      ],
+      "off": 336,
+      "on": 448
+    },
+    {
+      "pixel": [
+        986,
+        62
+      ],
+      "off": 336,
+      "on": 464
+    },
+    {
+      "pixel": [
+        985,
+        63
+      ],
+      "off": 336,
+      "on": 448
+    },
+    {
+      "pixel": [
+        986,
+        63
+      ],
+      "off": 336,
+      "on": 448
+    },
+    {
+      "pixel": [
+        987,
+        63
+      ],
+      "off": 336,
+      "on": 448
+    }
+  ],
+  "queue": {
+    "queue_pid": 37368,
+    "status": "pair-complete-next-step-pending",
+    "completed": [
+      {
+        "name": "off-1",
+        "finished_utc": "2026-10-09T13:35:34Z"
+      },
+      {
+        "name": "on-1",
+        "finished_utc": "2026-10-09T13:50:56Z"
+      }
+    ],
+    "started_utc": "2026-10-09T13:29:13Z",
+    "scope": "Exactly one CUDA deep-off and one CUDA deep-on; existing full-frame snapshot build",
+    "current": null,
+    "command": [
+      "D:\\CyclesDeepScratch\\regression-tools\\Scripts\\python.exe",
+      "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\measure_deep_render.py",
+      "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\on-1",
+      "--",
+      "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\blender.exe",
+      "--factory-startup",
+      "--background",
+      "--disable-autoexec",
+      "--log",
+      "cycles",
+      "--log-level",
+      "info",
+      "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "--python-exit-code",
+      "1",
+      "--python",
+      "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\render_blender_deep_scene.py",
+      "--",
+      "--output",
+      "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\on-1",
+      "--samples",
+      "1024",
+      "--percentage",
+      "50",
+      "--threads",
+      "24",
+      "--device",
+      "CUDA",
+      "--save-render-passes",
+      "--diagnostic-sample-count",
+      "--deep",
+      "--deep-volume",
+      "--deep-ids",
+      "--deep-error",
+      "1e-3",
+      "--deep-samples",
+      "64",
+      "--deep-max-events",
+      "8192",
+      "--deep-memory-mb",
+      "8192"
+    ],
+    "started_current_utc": "2026-10-09T13:35:34Z",
+    "measurement_pid": 28492,
+    "result": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\pair-results.json"
+  },
+  "preflight": {
+    "executable": "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\blender.exe",
+    "sha256": "fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da",
+    "toolchain": {
+      "clang_cl": "20.1.8",
+      "nvcc": "12.8.61",
+      "cuda_toolkit": "12.8.0",
+      "optix": "8.0.0",
+      "osl": "1.15.3.0",
+      "nvcc_host_msvc": "19.44 / 14.44.35207",
+      "ninja": "1.13.2",
+      "cmake": "3.31.2"
+    },
+    "snapshot_commit": "9a017f055",
+    "scene": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+    "scene_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+    "commands": {
+      "off-1": [
+        "D:\\CyclesDeepScratch\\regression-tools\\Scripts\\python.exe",
+        "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\measure_deep_render.py",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\off-1",
+        "--",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\blender.exe",
+        "--factory-startup",
+        "--background",
+        "--disable-autoexec",
+        "--log",
+        "cycles",
+        "--log-level",
+        "info",
+        "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+        "--python-exit-code",
+        "1",
+        "--python",
+        "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\render_blender_deep_scene.py",
+        "--",
+        "--output",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\off-1",
+        "--samples",
+        "1024",
+        "--percentage",
+        "50",
+        "--threads",
+        "24",
+        "--device",
+        "CUDA",
+        "--save-render-passes",
+        "--diagnostic-sample-count"
+      ],
+      "on-1": [
+        "D:\\CyclesDeepScratch\\regression-tools\\Scripts\\python.exe",
+        "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\measure_deep_render.py",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\on-1",
+        "--",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\majorant-count-diagnostic-20261009\\blender\\blender.exe",
+        "--factory-startup",
+        "--background",
+        "--disable-autoexec",
+        "--log",
+        "cycles",
+        "--log-level",
+        "info",
+        "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+        "--python-exit-code",
+        "1",
+        "--python",
+        "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\render_blender_deep_scene.py",
+        "--",
+        "--output",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\on-1",
+        "--samples",
+        "1024",
+        "--percentage",
+        "50",
+        "--threads",
+        "24",
+        "--device",
+        "CUDA",
+        "--save-render-passes",
+        "--diagnostic-sample-count",
+        "--deep",
+        "--deep-volume",
+        "--deep-ids",
+        "--deep-error",
+        "1e-3",
+        "--deep-samples",
+        "64",
+        "--deep-max-events",
+        "8192",
+        "--deep-memory-mb",
+        "8192"
+      ]
+    },
+    "paths": {
+      "TEMP": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\temp",
+      "TMP": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\temp",
+      "BLENDER_USER_RESOURCES": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\blender-resources",
+      "CUDA_CACHE_PATH": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\cuda-cache",
+      "OPTIX_CACHE_PATH": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-count-diagnostic-20261010\\optix-cache"
+    }
+  },
+  "source_inspection": {
+    "launch_parameters": "queue.cpp:243-315: initialized 104-byte deep arguments, argument count/type/size checked; queue-private copy of KernelParamsOptiX; only private path_index_array replaced. Shared integrator pointers are copied, not duplicated.",
+    "sbt": "device_impl.cpp:978-1075: separate deep pipeline and private hit-group SBT; native headers copied, slot 3 replaced only in deep SBT. Scene is SVM; OSL callables are inactive. Beauty SBT and ABI unchanged.",
+    "write_sites": "kernel_deep.cu forwards arguments. volume_optix.h writes bounded local boundary intersections and ray payloads; write.h writes bounded private events/density; volume.h writes private media scratch. surface_cuda.h writes record metadata, temporarily changes path.flag/rng_offset/transparent_bounce in surface-only traversal, and restores those three after either branch. Native volume branch has no explicit integrator-state writes. render buffer and adaptive/sample-count passes are read only in capture; SVM evaluation receives null render buffer.",
+    "rays_and_queues": "Camera ray/differentials read from integrator state; local deep ray and self fields initialized, local media represent initial stack. Host capture batches synchronize/drain before beauty resumes. Source inspection is not a runtime all-state audit and cannot rule out an unexpected device write.",
+    "scheduler_evidence": {
+      "OPTIX/off-1": {
+        "first_ten_batch_sizes": [
+          1,
+          1,
+          2,
+          4,
+          8,
+          16,
+          16,
+          16,
+          16,
+          16
+        ]
+      },
+      "OPTIX/off-2": {
+        "first_ten_batch_sizes": [
+          1,
+          1,
+          2,
+          4,
+          8,
+          16,
+          16,
+          16,
+          16,
+          16
+        ]
+      },
+      "OPTIX/off-3": {
+        "first_ten_batch_sizes": [
+          1,
+          1,
+          2,
+          4,
+          8,
+          16,
+          16,
+          16,
+          16,
+          16
+        ]
+      },
+      "OPTIX/on-1": {
+        "first_ten_batch_sizes": [
+          1,
+          1,
+          2,
+          4,
+          8,
+          14,
+          2,
+          8,
+          8,
+          16
+        ]
+      },
+      "OPTIX/on-2": {
+        "first_ten_batch_sizes": [
+          1,
+          1,
+          2,
+          4,
+          8,
+          14,
+          2,
+          8,
+          8,
+          16
+        ]
+      },
+      "OPTIX/on-3": {
+        "first_ten_batch_sizes": [
+          1,
+          1,
+          2,
+          4,
+          8,
+          14,
+          2,
+          8,
+          8,
+          16
+        ]
+      },
+      "CUDA/off-1": {
+        "first_ten_batch_sizes": [
+          1,
+          1,
+          2,
+          4,
+          8,
+          16,
+          16,
+          16,
+          16,
+          16
+        ]
+      },
+      "CUDA/on-1": {
+        "first_ten_batch_sizes": [
+          1,
+          1,
+          2,
+          4,
+          8,
+          14,
+          2,
+          8,
+          8,
+          16
+        ]
+      }
+    },
+    "suspected_route": "Additional deep launch/copy/wait time is included in reported path-trace time and changes subsequent beauty batch scheduling. Identical initial five batches are followed by off 16/16 versus on 14/2/8/8 on both devices. This can change execution/atomic accumulation order near an adaptive threshold; it is a hypothesis for the OptiX-specific count response, not an established root cause. Both schedules reach the same power-of-two guiding epochs; no evidence for skipped majorant updates. No parameter/SBT/queue overwrite identified by source inspection.",
+    "limits": "One CUDA pair isolates the repeated eight-pixel count effect to OptiX in this snapshot experiment. It does not prove all raw channels bit-identical, full CUDA beauty qualification, or absence of state corruption. No rebuild, audit, bisect, fix or new render after this pair."
+  }
+}

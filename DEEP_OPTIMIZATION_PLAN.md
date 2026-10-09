@@ -2343,14 +2343,40 @@ the requested three-device on/off crop comparison was blocked under the no-build
 constraint. No backend-specific attribution, audit or bisect was established.
 [Per-pixel counts and all raw values](builds/validation/landscape-cloud/optimization-phase9/crop-sampling-check.json).
 
-User-authorized next step (2026-10-10 Sydney): one full-frame CUDA deep-off/on
-pair with the existing snapshot executable and the count experiment settings,
-including error1e-3/prefix64/IDs/default z/8192 MiB. Report all raw passes at the
-eight pixels and every image-wide count mismatch. If the target pixels match,
-inspect the OptiX launch/SBT/queue ownership and write sites without rebuilding.
-If CUDA reproduces the effect, **one diagnostic-only rebuild** may add an external
-state snapshot buffer outside the deep memory reservation plus capture-only
-border support; retain 32-byte metadata and otherwise unchanged GPU capture.
-Stop before any root-cause fix. Queue and large outputs:
-`D:/CyclesDeepScratch/optimization-phase9/cuda-count-diagnostic-20261010/`;
-preflight hashes/settings and the comparison helper's self-check pass.
+#### Phase 9 - full-frame CUDA isolation complete (2026-10-10 Sydney)
+
+One off/on pair used the existing snapshot executable, original full camera and
+sampling, error1e-3/prefix64/IDs/default z/8192 MiB. Off finished 13:35:34 UTC;
+on finished 13:50:56 UTC on October 9. Zero count mismatches across all 587,500
+pixels, including every target. The repeated count effect is OptiX-specific in
+this experiment. All checked raw target channels differ by at most 2 FLOAT ULP;
+noisy alpha is exact. This pair is not a full beauty-policy replay.
+
+| Pixel | OptiX off → on (prior 3/3) | CUDA off → on | CUDA maximum raw difference (ULP) |
+|---|---:|---:|---:|
+| (986,60) | 224 → 256 | 224 → 224 | 1 |
+| (985,61) | 336 → 448 | 512 → 512 | 2 |
+| (986,61) | 336 → 464 | 512 → 512 | 1 |
+| (985,62) | 336 → 448 | 512 → 512 | 1 |
+| (986,62) | 336 → 464 | 512 → 512 | 2 |
+| (985,63) | 336 → 448 | 512 → 512 | 1 |
+| (986,63) | 336 → 448 | 512 → 512 | 1 |
+| (987,63) | 336 → 448 | 512 → 512 | 2 |
+
+No-build OptiX inspection: each capture queue owns its launch-parameter snapshot;
+only its private argument pointer is replaced. The deep pipeline uses a private
+hit-group SBT. Capture writes bounded private records/events/density/media and
+local intersection payloads; the three temporary surface path fields are restored.
+No beauty launch/SBT overwrite was found in source. Shared integrator pointers
+still reference beauty state, so inspection is not an all-state runtime audit.
+
+The strongest observed suspect is capture timing feeding the beauty scheduler:
+off batches after sample 16 are 16/16; on batches are 14/2/8/8, consistently in
+all three OptiX pairs and also CUDA. That can change execution/accumulation order
+near convergence, but does not alone explain the OptiX-only response. Both reach
+the same power-of-two guiding epochs; skipped guiding updates are not supported.
+Root cause remains unproven. No rebuild, audit, bisect or fix; stopped for review.
+Production SHA remains `677aab08cfb6ffb02298f7d67f1e61a24801fd1b195436524a935871b85358a8`;
+snapshot SHA `fa9b6f99e3e170d0110efc121b8a0e8a3ba3eb3988319bdbe93d874190a0f7da`.
+[Every raw value, count mismatch list and source inspection](builds/validation/landscape-cloud/optimization-phase9/cuda-count-isolation.json).
+Large outputs: `D:/CyclesDeepScratch/optimization-phase9/cuda-count-diagnostic-20261010/`.

@@ -10,6 +10,7 @@ import statistics
 import hashlib
 import sys
 from collections import Counter
+from array import array
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tools'))
 from deep_exr import image_reader, image_format, image_channels, image_tile, image_tile_size
@@ -97,7 +98,8 @@ def monte_carlo_gate(value, references, seeds, ratio_limit=None, channel=None):
         raise ValueError('Need four finite seed-varied pixel estimates')
     sigma = statistics.stdev(seeds) / 2
     if not references:
-        return dict(passed=False, difference=None, sigma=sigma, ratio=None)
+        return dict(passed=False, category='count-mismatch', difference=None,
+                    sigma=sigma, ratio=None, four_ulp=None)
     nearest = min(range(len(references)), key=lambda i: abs(value-references[i]))
     delta = value-references[nearest]
     floor = step2_ulp_floor(channel, references[nearest])
@@ -106,6 +108,78 @@ def monte_carlo_gate(value, references, seeds, ratio_limit=None, channel=None):
                 difference=delta, sigma=sigma,
                 ratio=abs(delta)/sigma if sigma else (0.0 if delta == 0 else None),
                 nearest=nearest, reference_value=references[nearest], four_ulp=floor)
+
+
+def binomial_two_sided(fewer, total):
+    """Exact two-sided Binomial(total, 0.5) tail, evaluated in FLOAT64."""
+    if not 0 <= fewer <= total:
+        raise ValueError('Invalid binomial counts')
+    if total == 0:
+        return 1.0
+    k = min(fewer, total - fewer)
+    log_probability = (math.lgamma(total + 1) - math.lgamma(k + 1) -
+                       math.lgamma(total - k + 1) - total * math.log(2))
+    term = tail = 1.0
+    for i in range(k, 0, -1):
+        term *= i / (total - i + 1)
+        tail += term
+    return min(1.0, 2 * math.exp(log_probability) * tail)
+
+
+def count_mismatch_summary(values, references):
+    """Each pixel contributes once. Modal ties are reported, never broken by order."""
+    if not references or any(len(r) != len(values) for r in references):
+        raise ValueError('Invalid count reference shape')
+    mismatch = fewer = more = tied = 0
+    differences = Counter()
+    for row in zip(values, *references):
+        if any(not math.isfinite(v) or v < 1 or v != round(v) for v in row):
+            raise ValueError('Invalid accepted sample count')
+        value, refs = row[0], row[1:]
+        if value in refs:
+            continue
+        mismatch += 1
+        frequencies = Counter(refs)
+        maximum = max(frequencies.values())
+        modes = [n for n, count in frequencies.items() if count == maximum]
+        if len(modes) != 1:
+            tied += 1
+            continue
+        delta = int(value - modes[0])
+        differences[delta] += 1
+        fewer += delta < 0
+        more += delta > 0
+    return dict(pixels=len(values), mismatch_pixels=mismatch,
+                mismatch_rate=mismatch / len(values) if values else 0.0,
+                fewer=fewer, more=more, modal_tie_pixels=tied,
+                fewer_fraction=fewer / (fewer + more) if fewer + more else None,
+                binomial_p=binomial_two_sided(fewer, fewer + more),
+                sample_count_differences=dict(sorted(differences.items())))
+
+
+def calibrated_count_mismatch(values, controls):
+    """Five ordinary controls: four-reference rate; full-pool direction per pixel."""
+    if len(controls) != 5:
+        raise ValueError('Count calibration requires five ordinary controls')
+    subsets = [controls[:i] + controls[i+1:] for i in range(5)]
+    ordinary = [count_mismatch_summary(c, refs) for c, refs in zip(controls, subsets)]
+    deep_subsets = [count_mismatch_summary(values, refs) for refs in subsets]
+    deep = count_mismatch_summary(values, controls)
+    counts = [r['mismatch_pixels'] for r in ordinary]
+    fractions = [r['fewer_fraction'] for r in ordinary if r['fewer_fraction'] is not None]
+    mean = statistics.mean(r['mismatch_pixels'] for r in deep_subsets)
+    fraction = deep['fewer_fraction']
+    outside = bool(fractions and fraction is not None and
+                   not min(fractions) <= fraction <= max(fractions))
+    direction_failed = outside and deep['binomial_p'] < .001
+    return dict(passed=mean <= max(counts) and not direction_failed,
+                category='count-mismatch', ordinary_leave_one_out=ordinary,
+                deep_four_control_subsets=deep_subsets, deep_five_control=deep,
+                ordinary_count_distribution=dict(min=min(counts), median=statistics.median(counts), max=max(counts)),
+                deep_mean_mismatch_pixels=mean, rate_passed=mean <= max(counts),
+                ordinary_direction_range=[min(fractions), max(fractions)] if fractions else None,
+                direction_outside_range=outside, direction_passed=not direction_failed,
+                direction_rule='One observation per full-pool mismatch pixel; unique modal reference count; modal ties reported separately')
 
 
 def bias_gate(differences, reference_mean):
@@ -320,6 +394,33 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
     width, height = fmt.width(), fmt.height()
     channels = ('R', 'G', 'B', 'A')
     maximum_samples = settings[0]['samples']
+    if qualification:
+        populations = [array('I') for _ in raw]
+        mismatch_pixels = []
+        for y in range(0, height, tile_size):
+            for x in range(0, width, tile_size):
+                data = [image_tile(r, counts[0], (x,y)) for r in raw]
+                for j in range(min(tile_size, height-y)):
+                    for i in range(min(tile_size, width-x)):
+                        values = [float(d[j*tile_size+i])*maximum_samples for d in data]
+                        if not all(math.isfinite(v) and 1 <= round(v) <= maximum_samples and
+                                   abs(v-round(v)) <= 1e-4 for v in values):
+                            raise ValueError('Invalid accepted sample count')
+                        values = [round(v) for v in values]
+                        for target, value in zip(populations, values):
+                            target.append(value)
+                        if values[0] not in values[1:]:
+                            mismatch_pixels.append(dict(file_pixel=[x+i,height-1-(y+j)],
+                                sample_count=values[0], reference_counts=values[1:]))
+        report['count_mismatch'] = calibrated_count_mismatch(populations[0], populations[1:])
+        report['count_mismatch']['pixels'] = mismatch_pixels
+        del populations
+        if not report['count_mismatch']['passed']:
+            report.update(raw_passed=False, stopped_at='count-mismatch',
+                          unmatched_population_pixels=len(mismatch_pixels),
+                          matched_count_policy='Not run: count gate failed')
+            output.write_text(json.dumps(report, indent=2)+'\n')
+            return report
     # range(K values) equals max over all K*(K-1)/2 pairs at a pixel.
     # The plan's per-pass envelope is the maximum of those ranges over the image.
     envelopes = {group:0.0 for group in groups}
@@ -457,11 +558,13 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                                 if reproduced['passed']:
                                     continue
                                 cal = calibration[held]
-                                cal['fallback_pixels'] += 1
                                 cal['unmatched_population_pixels'] += int(not others)
+                                if not others:
+                                    continue  # Count mismatches have their own calibrated gate.
+                                cal['fallback_pixels'] += 1
                                 for k, c in enumerate(checked_channels):
                                     seeds = [float(d[index]) for d in seed_data[c]]
-                                    if not seeds or not others:
+                                    if not seeds:
                                         continue
                                     gate = monte_carlo_gate(row[k], [ref[k] for ref in refs], seeds, channel=c)
                                     cal['zero_sigma_mismatches'][c] += int(gate['sigma'] == 0 and gate['difference'] != 0)
@@ -482,7 +585,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                                     report['reproduced_pixels'].append(dict(file_pixel=[x+i,height-1-(y+j)],
                                         sample_count=populations[0], checked_passes=list(groups),
                                         k5_failed_passes=failed_groups, matching_pool_run=str(pool[r])))
-                            else:
+                            elif same_count:
                                 details = []
                                 for group, cs in groups.items():
                                     for c in cs:
@@ -502,7 +605,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                                     failed_passes=final_failed, channels=details))
                             for group in groups:
                                 stats[group]['violations'] += int(group in final_failed)-int(group in failed_groups)
-                            # Counts remain exact, even when the statistical rule is used.
+                            # Unmatched counts are separate from matched raw fallback/bias.
                             report['unmatched_population_pixels'] -= int(not matched)
                             report['unmatched_population_pixels'] += int(not same_count)
                             if same_count:
@@ -549,10 +652,14 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                             del report['worst_denoised_pixels'][20:]
     report['raw_passed'] = not report['unmatched_population_pixels'] and all(not s['violations'] for s in stats.values())
     if final_raw_rule:
-        report['bias_estimator'] = 'mean paired-pixel residual to mean same-count pool references; sample SD / sqrt(pixel count)'
+        report['bias_estimator'] = 'mean paired-pixel residual to mean same-count pool references; sample SD / sqrt(matched pixel count)'
         report['bias'] = {c: bias_gate(d, statistics.mean(bias_references[c]))
                           for c, d in bias_differences.items() if d}
-        report['bias_passed'] = (all(len(d) == width*height for d in bias_differences.values()) and
+        matched_pixels = width*height-report['unmatched_population_pixels']
+        count_passed = (report['count_mismatch']['passed'] if qualification else
+                        not report['unmatched_population_pixels'])
+        report['bias_passed'] = (matched_pixels > 0 and
+                                 all(len(d) == matched_pixels for d in bias_differences.values()) and
                                  all(r['passed'] for r in report['bias'].values()))
         report['statistical_pixel_fraction'] = len(report['statistical_pixels'])/(width*height)
         def distribution(values):
@@ -586,7 +693,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
             pixel['passed'] = not failed
         for group in groups:
             stats[group]['violations'] = sum(group in p['failed_passes'] for p in report['statistical_pixels'])
-        report['raw_passed'] = (not report['unmatched_population_pixels'] and
+        report['raw_passed'] = (count_passed and
             all(p['passed'] for p in report['statistical_pixels']) and
             report['bias_passed'] and report['statistical_count_passed'] and
             (not report['statistical_pixels'] or report['calibration']['complete']))
@@ -607,7 +714,7 @@ def validate_cuda_beauty(directory, references, qualification=True, output=None,
                 report['unresolved_statistical_pixels'] = len(unresolved)
                 for group in groups:
                     stats[group]['violations'] = sum(group in p['failed_passes'] for p in unresolved)
-                report['raw_passed'] = (not report['unmatched_population_pixels'] and
+                report['raw_passed'] = (count_passed and
                     report['bias_passed'] and report['calibration']['complete'] and
                     len(unresolved) <= report['statistical_count_limit'] and
                     all(p['passed'] for p in unresolved))

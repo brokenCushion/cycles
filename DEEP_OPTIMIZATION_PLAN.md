@@ -161,8 +161,10 @@ comparisons are informational, never a blocker. Do not revisit this scope.
    components bounded by 1, so their step-2 floor is 4 FLOAT ULP of 1.0
    (4.76837158203125e-7), even when cancellation makes the average near zero.
    Noisy colour and other passes retain 4 FLOAT ULP of the nearest same-count
-   reference value. Zero sigma uses this floor. Step 1 remains unchanged. Missing same-count
-   references or nonfinite input fail. Seed-varied counts may differ only for
+   reference value. Zero sigma uses this floor. Step 1 remains unchanged. Pixels
+   without a same-count reference use the separate count-mismatch rule below;
+   exclude them from matched raw fallback calibration and bias. Nonfinite input
+   fails. Seed-varied counts may differ only for
    estimating sigma. Record each control's fallback count and channel maxima.
    Deep-on's fallback count must be <= the largest leave-one-out count;
    every channel must obey the absolute bound above. Record ratios, ULP floors
@@ -175,10 +177,26 @@ comparisons are informational, never a blocker. Do not revisit this scope.
    only when abs(mean signed difference) > 3 standard errors AND exceeds
    1 FLOAT ULP of that channel's image-mean reference value. Subtract the
    MEAN of each pixel's same-count pool references (not nearest); compute
-   signed mean and sample SD / sqrt(image pixel count) of these paired
+   signed mean and sample SD / sqrt(matched pixel count) of these paired
    residuals. The reference image mean averages those same per-pixel reference
-   means. Record both limits, the reference mean and its FLOAT ULP. Missing
-   counts/nonfinite data fail. CPU exact equality is unchanged.
+   means. Record both limits, the reference mean and its FLOAT ULP. Nonfinite
+   data fail. CPU exact equality is unchanged.
+
+   Count-mismatch rule (user decision, 2026-10-09): report missing same-count
+   references separately, never as a validator exception. For each of the five
+   ordinary controls, count unmatched pixels against the other four. For
+   deep-on, count against each four-control subset and average the five counts.
+   This mean must not exceed the maximum control leave-one-out count.
+   Direction uses one observation per deep-on pixel unmatched against all five,
+   compared with their modal sample count. Controls use the other four's mode;
+   exclude 2-2 ties (and any other modal ties), reporting exclusions. Report the
+   fraction taking fewer samples, the control fraction range, and count-difference
+   histograms. Direction fails only if deep-on is outside that range AND its
+   two-sided binomial test against 50% has p < 0.001. Matched-count pixels retain
+   all existing raw gates, including the 20-control requirement for statistical
+   fallback. If either count gate fails, stop and report without investigation
+   or additional renders. This calibration uses five controls, independently
+   of the matched raw fallback calibration.
 
 4. Root-cause resolution (user decision, 2026-10-07): a pixel flagged by the
    calibrated rule is resolved if deep-on and deep-off in the separate
@@ -2189,14 +2207,17 @@ Same qualified executable and 8192 MiB deep-memory setting; all large files/TEMP
 remain under D:/CyclesDeepScratch/optimization-phase9/production-20261009/.
 Failure stops the queue without retry. No production Gaffer review created yet.
 
-#### Phase 9 - eleven renders complete; stopped on beauty-validator exception
+#### Phase 9 - eleven renders complete; stopped on calibrated count rate
 
 [Results](builds/validation/landscape-cloud/optimization-phase9/production-results.json)
 retain per-run counters, fitting times, all nine references and projection comparisons.
 No render/export repeated. Both independent camera oracles, full-image exterior,
-Gaffer cuts and native populations pass. The final beauty validator raised
-`KeyError: four_ulp` before writing a result for run 1; run 2's beauty invocation
-was not reached. No retry, policy revision, extra render or Gaffer review.
+Gaffer cuts and native populations pass. The empty-reference validator crash is
+fixed: missing counts have a separate calibrated category. Both preserved runs
+fail the user-approved count-rate rule; direction passes. Matched-count raw/bias
+checks were not run after this failure. No investigation, extra render or Gaffer
+review. Runnable validator tests cover count-rate boundaries, direction rejection,
+ties, exact binomial tails, and an allowed unmatched-count pixel end to end.
 
 | OptiX, IDs, error 1e-3, z=1e-4 | All deep samples | Deep prefix 64 |
 |---|---:|---:|
@@ -2212,18 +2233,29 @@ was not reached. No retry, policy revision, extra render or Gaffer review.
 | Gaffer cut max error | 2.60427e-6 | 2.84080e-7 |
 | Exterior max / flattened alpha | 2.68281e-8 / 0 | 2.68261e-8 / 0 |
 | Native accepted min / median / max | 16 / 288 / 1024 | 16 / 288 / 1024 |
-| Beauty policy | Validator exception | Not reached |
+| Beauty policy | Count-rate FAIL; direction PASS | Count-rate FAIL; direction PASS |
 
 Phase 5 projected render+capture/export: all 190.98/187.43 min; prefix64
 68.55/24.80 min. These are CUDA IDs-off z=0 estimates, not controlled speedups.
 The shader/host/device budgets are unchanged; numerical prefix checks evaluate
 the captured prefix, not an approximation bound against all beauty rays.
 
-[Stored count diagnosis](builds/validation/landscape-cloud/optimization-phase9/beauty-count-diagnosis.json):
-460 all-samples pixels and 439 prefix64 pixels have no same-count reference
-among the five ordinary controls. Example file pixel (985,35): deep count 592,
-all controls 608. This is an unresolved population mismatch, not proof of a
-renderer defect or ordinary variation. The empty-reference branch returns no
-`four_ulp`; the calibrated caller assumes it exists and crashes. This branch
-was not exercised by the accepted small dry-run. Fixing the exception alone
-will not establish the mandatory same-count beauty proof. Phase 9 is incomplete.
+Count calibration (587,500 pixels; five existing ordinary controls):
+
+| Metric | Controls (leave one out) | All deep samples | Deep prefix 64 |
+|---|---|---:|---:|
+| Unmatched count, min / median / max | 252 / 295 / 329 | Four-subset mean 488: FAIL | Four-subset mean 470.6: FAIL |
+| Five four-reference counts | 329, 278, 307, 252, 295 | 489, 490, 501, 480, 480 | 462, 483, 473, 460, 475 |
+| Unmatched against all five | — | 460 | 439 |
+| Fewer-sample direction | Range 39.749%–56.771% | 151/377 = 40.053%: PASS | 157/363 = 43.251%: PASS |
+| Modal ties excluded from direction | 90, 86, 81, 89, 102 | 83 | 76 |
+| Two-sided binomial p | Recorded per control | 0.000131972 | 0.0116538 |
+| Count differences from unique mode | Full histograms in reports | -560 to +544; -16: 53, +16: 100 | -608 to +496; -16: 56, +16: 59 |
+
+Differences are multiples of 16, including multiple adaptive steps. Ties are
+excluded only from direction, not from the count-rate test. Run 1's small
+binomial p alone does not fail: its direction is inside the calibrated range.
+[Run 1 count report](builds/validation/landscape-cloud/optimization-phase9/deep-all-beauty-count-policy.json)
+and [run 2 count report](builds/validation/landscape-cloud/optimization-phase9/deep-64-beauty-count-policy.json)
+retain every unmatched pixel, subset, exclusion and histogram. This exceeds the
+control rate range; cause is uninvestigated as instructed. Phase 9 is incomplete.

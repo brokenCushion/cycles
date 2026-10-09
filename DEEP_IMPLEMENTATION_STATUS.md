@@ -14,7 +14,9 @@ The historical step-2 audit, all 64 CUDA/OptiX beauty targets and the fresh
 30-case OSL surface identity/oracle/beauty replay pass. No native render repeated.
 [Measurements](builds/validation/landscape-cloud/optimization-phase8c/final-results.json)
 and the plan's Section 6 retain both original and completed evidence. Gaffer:
-`D:/CyclesDeepScratch/regression-tools/phase8c_final_review.gfr`. Phase 9 preflight records the qualified executable and D: paths; production results pending.
+`D:/CyclesDeepScratch/regression-tools/phase8c_final_review.gfr`. Phase 9 run 1 rendered and passed oracle, exterior, Gaffer cuts and native-population checks.
+Run 2 / nine beauty references are queued; both beauty gates remain pending.
+[Run 1 checks](builds/validation/landscape-cloud/optimization-phase9/run1-checks.json).
 
 [Toolchain](BUILDING.md): clang-cl 20.1.8 / NVCC 12.8.61, CUDA 12.8.0,
 OptiX 8.0.0, OSL 1.15.3.0. Large evidence/TEMP stay on D:.

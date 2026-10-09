@@ -2156,3 +2156,35 @@ Includes exterior comparison, curve extraction, isolated oracle, Gaffer cuts,
 raw/native population checks, all five control/four seed command validations,
 and the full beauty-policy invocation. User authorized continuation from run 2
 only after preserved run-1 checks pass; deep-memory remains 8192 MiB.
+
+#### Phase 9 - preserved run 1 checks passed; run 2 resumed (2026-10-09)
+
+[Run 1 checks](builds/validation/landscape-cloud/optimization-phase9/run1-checks.json)
+and [measurements](builds/validation/landscape-cloud/optimization-phase9/run1-metrics.json).
+119,223,274 independent probes across 81 diagnostic pixels pass. Oracle plus
+full-image exterior error is 8.23258e-5, below the unchanged 1e-3 header bound.
+Five Gaffer depth cuts pass; deep/native accepted populations match exactly.
+No run-1 render or export repeated. Beauty remains pending the requested controls.
+
+| OptiX, IDs, 1e-3, all samples | Phase 5 projection | Measured run 1 |
+|---|---:|---:|
+| Render + capture | 190.98 min | 71.06 min |
+| Production export | 187.43 min | 28.68 min |
+| Same-capture z=0 validation export | Not projected | 34.66 min |
+| Spill | 181.32 GB | 167.87 GB |
+| Production EXR | 4.39 GB | 1.99 GB |
+| Peak host | 13.93 GiB budget estimate | 5.79 GiB |
+| Peak total GPU | 5925 MiB estimate | 6723 MiB |
+| Production deep records | Not projected | 281,802,862 |
+| Max independent oracle error | <=1e-3 gate | 8.22990e-5 |
+| Max exterior / flattened-alpha difference | <=1e-3 gate | 2.68281e-8 / 0 |
+| Max Gaffer cut error | <=1e-3 gate | 2.60427e-6 |
+| Native accepted samples, min / median / max | Not projected | 16 / 288 / 1024 |
+
+Projection used CUDA, IDs off and z=0; differences are informational, not a
+controlled speedup claim. Production timing excludes the extra validation export.
+The explicitly authorized resume starts at deep-samples 64, then five ordinary
+and four seed-varied deep-off references, then the unchanged beauty policy.
+Same qualified executable and 8192 MiB deep-memory setting; all large files/TEMP
+remain under D:/CyclesDeepScratch/optimization-phase9/production-20261009/.
+Failure stops the queue without retry. No production Gaffer review created yet.

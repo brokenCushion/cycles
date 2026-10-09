@@ -202,6 +202,19 @@ class RenderScheduler {
 
   /* Report time (in seconds) which corresponding part of work took. */
   void report_path_trace_time(const RenderWork &render_work, const double time, bool is_cancelled);
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  /* Pause elapsed scheduling clocks while the deep side channel is running.
+   * The caller separately removes this interval from path-tracing statistics. */
+  void skip_deep_capture_time(const double seconds)
+  {
+    if (state_.start_render_time != 0.0)
+      state_.start_render_time += seconds;
+    if (state_.last_display_update_time != 0.0)
+      state_.last_display_update_time += seconds;
+    if (state_.last_rebalance_time != 0.0)
+      state_.last_rebalance_time += seconds;
+  }
+#endif
   void report_path_trace_occupancy(const RenderWork &render_work, const float occupancy);
   void report_adaptive_filter_time(const RenderWork &render_work,
                                    const double time,

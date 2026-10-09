@@ -52,6 +52,11 @@ def beauty_identity(commit):
             source = re.sub(rb'(?ms)^set\(SRC_KERNEL_DEEP_HEADERS\n.*?^\)\n', b'',
                             git('show', commit + ':' + path))
             files[path] = hashlib.sha256(source).hexdigest()
+        elif path == 'src/integrator/render_scheduler.h':
+            # Only the guarded deep clock hook is excluded; retain the native
+            # Git blob identity and every byte of the scheduler declarations.
+            source = without_deep_blocks(git('show', commit + ':' + path))
+            files[path] = hashlib.sha1(b'blob '+str(len(source)).encode()+b'\0'+source).hexdigest()
         elif path in ('src/integrator/path_trace.cpp', 'src/app/cycles_standalone.cpp',
                     'src/device/cpu/kernel.cpp',
                     'src/integrator/path_trace_work_cpu.cpp', 'src/integrator/path_trace_work_gpu.cpp',

@@ -20,6 +20,7 @@
 #  include "integrator/path_trace_deep_tile.h"
 #  include "integrator/path_trace_work_gpu.h"
 #  include "deep/capture.h"
+#  include "util/algorithm.h"
 #  include <cstdlib>
 #  include <cstring>
 #  include <stdexcept>
@@ -433,6 +434,10 @@ void PathTrace::path_trace(RenderWork &render_work)
   const int num_works = path_trace_works_.size();
 
   thread_capture_fp_settings();
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  vector<double> deep_raw_times(deep_capture_ ? num_works : 0, 0.0);
+  vector<double> deep_beauty_times(deep_capture_ ? num_works : 0, 0.0);
+#endif
 
   parallel_for(0, num_works, [&](int i) {
     const double work_start_time = time_dt();
@@ -454,6 +459,16 @@ void PathTrace::path_trace(RenderWork &render_work)
     const double work_time = time_dt() - work_start_time;
     work_balance_infos_[i].time_spent += work_time;
     work_balance_infos_[i].occupancy = statistics.occupancy;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    if (deep_capture_) {
+      const double capture_seconds = path_trace_work->get_device()->info.type == DEVICE_CPU ?
+                                         0.0 :
+                                         static_cast<PathTraceWorkGPU *>(path_trace_work)->deep_capture_seconds();
+      deep_raw_times[i] = work_time;
+      deep_beauty_times[i] = max(0.0, work_time - capture_seconds);
+      work_balance_infos_[i].time_spent -= capture_seconds;
+    }
+#endif
 
     LOG_INFO << "Rendered " << num_samples << " samples in " << work_time << " seconds ("
              << work_time / num_samples
@@ -467,6 +482,19 @@ void PathTrace::path_trace(RenderWork &render_work)
   const float occupancy = occupancy_accum / num_works;
   render_scheduler_.report_path_trace_occupancy(render_work, occupancy);
 
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (deep_capture_) {
+    /* Remove the difference between raw and beauty critical paths, not the
+     * sum of concurrent devices' capture times. Keep wall time in render logs. */
+    const double excluded = max(0.0, *std::max_element(deep_raw_times.begin(), deep_raw_times.end()) -
+                                        *std::max_element(deep_beauty_times.begin(), deep_beauty_times.end()));
+    render_scheduler_.skip_deep_capture_time(excluded);
+    render_scheduler_.report_path_trace_time(
+        render_work, max(0.0, time_dt() - start_time - excluded), is_cancel_requested());
+    LOG_DEBUG << "Deep scheduler excluded capture seconds: " << excluded;
+    return;
+  }
+#endif
   render_scheduler_.report_path_trace_time(
       render_work, time_dt() - start_time, is_cancel_requested());
 }

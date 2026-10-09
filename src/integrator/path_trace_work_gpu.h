@@ -28,6 +28,7 @@ struct KernelWorkTile;
 class PathTraceWorkGPU : public PathTraceWork {
  public:
 #ifdef WITH_CYCLES_DEEP_OPAQUE
+  double deep_capture_seconds() const { return deep_capture_seconds_; }
   /* Host/device mirrors, medium tracking and contiguous readback scratch.
    * Keep the reservation shared with PathTrace's allocation preflight. */
   /* Strict retains its bounded plane retry path. */
@@ -198,6 +199,7 @@ class PathTraceWorkGPU : public PathTraceWork {
   void capture_deep_tiles(int num_tiles);
   void capture_deep_flat(int num_tiles);
   double deep_readback_seconds_ = 0, deep_spill_seconds_ = 0;
+  double deep_capture_seconds_ = 0;
   uint64_t deep_record_count_ = 0;
   uint64_t deep_skipped_count_ = 0;
   uint64_t deep_batch_count_ = 0, deep_readback_bytes_ = 0;

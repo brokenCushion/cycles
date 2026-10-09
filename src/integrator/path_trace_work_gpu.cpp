@@ -21,6 +21,7 @@
 #  include "deep/capture.h"
 #  include "scene/film.h"
 #  include "util/time.h"
+#  include "util/scoped_defer.h"
 #endif
 
 CCL_NAMESPACE_BEGIN
@@ -379,6 +380,7 @@ void PathTraceWorkGPU::render_samples(RenderStatistics &statistics,
   int num_iterations = 0;
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   deep_readback_seconds_ = deep_spill_seconds_ = 0;
+  deep_capture_seconds_ = 0;
   deep_record_count_ = 0;
   deep_skipped_count_ = 0;
   deep_batch_count_ = deep_readback_bytes_ = 0;
@@ -1272,6 +1274,15 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
 
 void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
 {
+  /* Finish camera initialization/previous beauty work before starting the
+   * capture-only interval. Both capture paths drain their deep queues before
+   * returning, so this includes kernels, allocation, readback and spill. */
+  if (!queue_->synchronize()) {
+    deep_capture_->fail(DEEP_ERROR_STATE);
+    return;
+  }
+  const double capture_start = time_dt();
+  SCOPED_DEFER(deep_capture_seconds_ += time_dt() - capture_start);
   deep::Capture *capture = deep_capture_;
   if (capture->volume_grid() && capture->error() > 0 &&
       !getenv("CYCLES_DEEP_VALIDATE_PLANE_LAYOUT")) {

@@ -4,7 +4,7 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–8 accepted.
 
-**Phase 9: 15 additional full-frame OptiX controls authorized and running.**
+**Phase 9 stopped: run2 passes; all-samples run1 fails one calibrated raw-beauty channel.**
 Fresh standalone install destinations, manifest and hashes pass; all 1,059
 protected files remain unchanged. Old standalone binaries are superseded as
 directed; reference outputs remain preserved. Production has the timing fix,
@@ -12,21 +12,17 @@ no snapshot/debug patch, and the accepted [toolchain](BUILDING.md).
 
 Regression: strict81/81, numeric30/30, OptiX65/65, nine CTests, CPU beauty
 exactness, native beauty-source proof and 75 kernel resource records pass.
-Added 15 CUDA and 15 OptiX small-scene controls, 20 ordinary controls per backend.
-Both calibrated beauty gates pass. Retained regression completed in 721.844 s
-(12.03 min), reusing completed renders and rejection evidence. A shared TEMP/TMP
-directory startup error was fixed and tested before any production render began;
-the guarded resume preserves the failure record. Replacement OptiX run2 and all
-five ordinary/four seed references finished. Deep oracle/cuts pass; count, bias
-and denoised beauty pass. Raw beauty has 4,411 fallback pixels and needs 20
-ordinary full-frame controls. The user approved 15 more controls (20 total), then
-saved run2 qualification including the provisional pixel `(978,81)`. Only if it
-passes, the queue re-renders all-samples run1 with the production executable and
-qualifies it against the same pool/four seeds. Both passing permits the connected
-Gaffer review and Phase9 acceptance. Stop on any failure, without retry.
+Added the approved 15 full-frame controls: 20 ordinary controls/four seeds now
+qualify run2, including `(978,81)`. The conditional all-samples render completed;
+both outputs pass deep oracle, exterior, cuts and native sample populations.
+Both beauty count, bias and denoised gates pass. Run1 Normal.Z at `(992,78)`
+differs by 0.00950998, above its calibrated allowance 0.00894315. Phase9 is not
+accepted. No retry, further investigation or Gaffer presentation.
+Retained regression completed in 721.844 s (12.03 min), without repeating
+completed renders. Harness repairs preserved prior outputs and changed no gates.
 
 [Calibration/regression evidence](builds/validation/landscape-cloud/optimization-phase9/production-timing-calibration-pass.json),
-[production stop and metrics](builds/validation/landscape-cloud/optimization-phase9/replacement-production-stop.json),
+[20-control results and stop evidence](builds/validation/landscape-cloud/optimization-phase9/twenty-controls-stop.json),
 [install/hash proof](builds/validation/landscape-cloud/optimization-phase9/production-timing-build.json).
 Large artifacts remain on D:. Stop on failure; no Gaffer before gates pass.
 

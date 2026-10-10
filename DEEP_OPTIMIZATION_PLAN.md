@@ -2776,3 +2776,54 @@ of a deep defect. No further investigation, renders, gate changes or Gaffer
 presentation. Stop for user decision; full-frame extra controls are not authorized.
 
 [Actual metrics, complete count histograms, provisional pixel and preserved report paths](builds/validation/landscape-cloud/optimization-phase9/replacement-production-stop.json).
+
+#### Phase 9 - 20-control completion: run2 passes; run1 raw-beauty stop (2026-10-11 Sydney)
+
+Exactly 15 additional full-frame OptiX deep-off controls completed with the
+unchanged production executable/toolchain. The full 20-control/four-seed policy
+passes run2, including `(978,81)`; the authorized conditional all-samples run1
+then rendered once. Installed/qualified preservation hashes pass. No renderer,
+gate, threshold or reference changes; all large outputs/TEMP remain on D:.
+
+| Metric, OptiX IDs/error1e-3/default z | Run1 all samples | Run2 prefix64 |
+| --- | ---: | ---: |
+| Render + capture | 67.91 min | 17.44 min |
+| Production export | 28.44 min | 3.01 min |
+| Same-capture z0 validation export | 34.44 min | 3.20 min |
+| Peak host / process GPU | 5.72 / 3.74 GiB | 5.69 / 3.74 GiB |
+| Peak device-wide GPU | 5738 MiB | 6217 MiB |
+| Spill disk / EXR | 167.868 / 1.994 GB | 20.101 / 0.705 GB |
+| GPU lane bytes / copied bytes | 148.108 / 174.454 GB | 18.385 / 38.721 GB |
+| Deep records | 281,796,920 | 86,125,949 |
+| Oracle max + exterior max | 8.22990e-5 + 2.68281e-8, PASS | 8.22990e-5 + 2.68261e-8, PASS |
+| Gaffer cuts / flattened difference to z0 | 2.60427e-6 / 0, PASS | 2.84080e-7 / 0, PASS |
+| Native accepted samples min/median/max | 16 / 288 / 1024 | 16 / 288 / 1024 |
+| Beauty count / bias / denoised | PASS / PASS / PASS | PASS / PASS / PASS |
+| Matched raw beauty | FAIL, one channel/pixel | PASS |
+
+Both raw calibrations are complete (20 controls): control leave-one-out fallback
+min/median/max 1,763/1,859.5/1,925; deep fallback run1=1,871, run2=1,824, both
+within the count allowance. Original-five count-rate control min/median/max
+262/279/326; run1 mean309.8 and run2 mean264.4 pass. Fewer-sample fractions
+0.39614/0.34503 are within control range [0.29221,0.46746]; excluded modal ties
+66/60, binomial p0.00340961/6.16904e-5. Bias passes; zero denoised outliers.
+All 20 per-control/channel calibration values and count histograms are recorded
+in the linked evidence; neither primary count references nor thresholds changed.
+
+Run1 fails Normal.Z at file-top-origin `(992,78)`, accepted count368: nearest
+same-count difference -0.00950998068, sigma0.000476133470, ratio19.9733505 versus
+calibrated maximum18.7828688, absolute allowance0.00894315249. Every other checked
+raw channel passes. `(978,81)` passes both runs; run2 noisy G/B nearest differences
+0.000300575/-0.000102043 versus allowances0.0277356/0.0189493.
+
+Phase5 estimates all/prefix64 render+capture190.98/68.55min, export187.43/24.80min,
+spill181.316/20.370GB and EXR4.392/0.734GB were CUDA IDs-off z0 with startup-scaled
+upper-bound timing. Current results are OptiX IDs-on, not controlled speedups.
+Retained regression81/81+30/30+OptiX65/65, nine CTests, CPU exact/source/75resource
+proofs remain passing; prior harness fixes reused saved rejection evidence and
+repaired shared TEMP/TMP directory creation without changing output gates.
+
+**Stopped on the measured run1 raw gate as instructed. Phase9 is not accepted.**
+No further investigation, retry, additional render or Gaffer review. All results
+are preserved; the completion monitor is removed.
+[Measured results, 20-control calibration and failing pixel](builds/validation/landscape-cloud/optimization-phase9/twenty-controls-stop.json).

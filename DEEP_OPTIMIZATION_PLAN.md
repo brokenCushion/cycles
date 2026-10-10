@@ -2691,8 +2691,34 @@ controls, retries, investigation or production renders; stopped for user decisio
 Large artifacts remain under the production D: root and regression root recorded
 in the reports. The user subsequently approved 15 additional small CUDA controls
 and pre-authorized small-fixture controls/seeds required by the existing policy.
-Retained regression resumes after calibration; replacement production and Gaffer
-remain pending. Harness-only resume repair `7ef6fde96` rechecks completed rejection
+Harness-only resume repair `7ef6fde96` rechecks completed rejection
 sentinel/log/no-partial evidence without repeating their render commands. The shared
 helper covers native, boundary and bevel cases; the corruption/partial-output
 regression check passes. Renderer code, gates and golden references are unchanged.
+
+#### Phase 9 - small calibration and retained regression passed (2026-10-10)
+
+| Case/check | Before | After |
+| --- | --- | --- |
+| CUDA47x20 ordinary controls | 5; incomplete calibration | 20 (15 added), beauty PASS |
+| CUDA fallback pixels / control min/median/max | 3 / 2/4/7 | 2 / 0/1/3, PASS |
+| OptiX47x20 ordinary controls | 5; incomplete calibration | 20 (15 added), beauty PASS |
+| OptiX fallback pixels / control min/median/max | Informational | 1 / 0/1/3, PASS |
+| Retained regression | Stopped on insufficient calibration | PASS, 721.844 s (12.03 min) |
+| Identity / CPU beauty / nine CTests / source and resources | Existing passing evidence | 81/81 + 30/30 + OptiX65/65; all PASS |
+
+CUDA `(39,13)` now reproduces a pool state. Remaining CUDA normal differences
+are -8.73115e-11 at `(0,11)` and -1.11759e-8 at `(26,10)`; OptiX Normal.Y is
+-7.45058e-9 at `(8,10)`. All fit the unchanged 4.76837e-7 accumulation floor.
+Both count and bias gates pass; denoised outlier counts are zero. No completed
+regression render was repeated.
+
+Replacement production initially stopped before any render: TEMP and TMP share
+one directory, and the harness attempted to create it twice. `mkdir(exist_ok=True)`
+fixes this. A tested, one-time preflight resume accepts only that exact failure,
+an empty completed list and empty temp directory; it rejects render evidence or
+duplicate resumes and preserves the original state. The authorized replacement
+queue resumes with unchanged executable, settings and gates. Gaffer remains
+pending all production gates.
+
+[Measured calibration, regression and harness repair](builds/validation/landscape-cloud/optimization-phase9/production-timing-calibration-pass.json).

@@ -2579,19 +2579,38 @@ is 151.047/54.438 s, affected by first-run startup; not a speed comparison.
 Step 3 stopped for review; the user accepted OptiX and authorized the CUDA control
 experiment below. Production remains unchanged pending its result.
 
-#### Phase 9 - CUDA repeatability calibration: running
+#### Phase 9 - CUDA repeatability calibration passed (2026-10-10)
 
 Reuse snapshot+fix SHA `9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752`;
-no rebuild. Exactly three new CUDA deep-off renders and one new CUDA deep-on,
-full1175x500 original1024 adaptive/GPUOIDN, deep1e-3/prefix64/IDs/z1e-4,
-memory8192MiB. The previous CUDA off/on outputs stay preserved. The accumulated
-pool has four ordinary controls; report its leave-one-out counts against three
-references and each deep-on's mean across four three-reference subsets. Also
-report the three new controls alone with two-reference comparisons. Reuse
-`count_mismatch_summary`; do not change the production five-control validator.
-The analysis self-check covers rate boundaries, ties and the binomial statistic.
-An incorrect synthetic rejection example was repaired before rendering; no
-renderer, policy or reference changed.
+exactly three new off controls and one on, unchanged full1175x500 original1024
+adaptive/GPUOIDN, CUDA, deep1e-3/prefix64/IDs/z1e-4/memory8192MiB. No rebuild.
 
+| Comparison | Control leave-one-out unmatched pixels | On 1 / on 2 matched-size subset mean | On full-pool unmatched | Result |
+| --- | --- | --- | --- | --- |
+| Three new controls, two references | 5 / 0 / 0 | 0 / 0 | 0 / 0 | PASS |
+| Accumulated four compatible controls, three references | 0 / 0 / 0 / 0 | 0 / 0 | 0 / 0 | PASS |
+
+The accumulated pool repeats both ordinary states twice; its zero leave-one-out
+counts do not imply deterministic rendering. At `(606,439),(607,439),(608,439),
+(606,440),(606,441)` (top origin), prior off and new off2 have counts
+`720,688,688,720,720`; new off3/off4 and both on renders have
+`704,672,672,704,704`. Ordinary CUDA nondeterminism reproduces the entire
+five-pixel, one-adaptive-step cluster. No unmatched on direction observations
+(p=1); the new off2 control has five +16 differences, fewer fraction=0,
+binomial p=0.0625, no modal ties. Dilation correlates these pixels.
+
+[Measured report](builds/validation/landscape-cloud/optimization-phase9/cuda-repeatability.json).
+The existing `count_mismatch_summary` was reused; production five-control gates
+are unchanged. An incorrect synthetic self-check example was repaired before
+rendering; no renderer, policy or reference changed. All 36 managed originals
+and 28 qualified executable/module hashes remain preserved.
 Large outputs/TEMP: `D:/CyclesDeepScratch/optimization-phase9/cuda-repeatability-20261010/`.
-Results pending. Conditional step-4 authorization applies only after measured pass.
+
+User-authorized step 4 now proceeds: separate production Blender/standalone
+builds with timing fix `47a8dffb0`, without snapshot/debug patches, followed by
+the unchanged 81/30/65 regression and fresh CUDA/OptiX small-fixture beauty
+controls. Build/regression workspace:
+`D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-production-20261010/`.
+Only after regression passes: replacement OptiX run2 and five fresh ordinary
+plus four seed-varied controls. Preserve run1 and previous run2. Stop on failure;
+no Gaffer review until the production gates pass.

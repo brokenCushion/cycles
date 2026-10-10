@@ -1,0 +1,1283 @@
+{
+  "passed": true,
+  "diagnostic_only": true,
+  "new_renders": 4,
+  "settings": [
+    {
+      "renderer_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": false,
+      "device": "CUDA",
+      "deep_volume": false,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": null,
+      "deep_z_tolerance": 0,
+      "deep_samples": null,
+      "deep_ids": false,
+      "deep_max_events": null,
+      "deep_memory_mb": null,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 405.0447181999916,
+      "beauty_exists": true
+    },
+    {
+      "renderer_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": false,
+      "device": "CUDA",
+      "deep_volume": false,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": null,
+      "deep_z_tolerance": 0,
+      "deep_samples": null,
+      "deep_ids": false,
+      "deep_max_events": null,
+      "deep_memory_mb": null,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 389.9230007000151,
+      "beauty_exists": true
+    },
+    {
+      "renderer_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": false,
+      "device": "CUDA",
+      "deep_volume": false,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": null,
+      "deep_z_tolerance": 0,
+      "deep_samples": null,
+      "deep_ids": false,
+      "deep_max_events": null,
+      "deep_memory_mb": null,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 386.9121097000316,
+      "beauty_exists": true
+    },
+    {
+      "renderer_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": false,
+      "device": "CUDA",
+      "deep_volume": false,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": null,
+      "deep_z_tolerance": 0,
+      "deep_samples": null,
+      "deep_ids": false,
+      "deep_max_events": null,
+      "deep_memory_mb": null,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 388.57816909998655,
+      "beauty_exists": true
+    },
+    {
+      "renderer_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": true,
+      "device": "CUDA",
+      "deep_volume": true,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": 0.001,
+      "deep_z_tolerance": 0.0001,
+      "deep_samples": 64,
+      "deep_ids": true,
+      "deep_max_events": 8192,
+      "deep_memory_mb": 8192,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 992.1048511000117,
+      "beauty_exists": true,
+      "deep_bytes": 707974109
+    },
+    {
+      "renderer_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": true,
+      "device": "CUDA",
+      "deep_volume": true,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": 0.001,
+      "deep_z_tolerance": 0.0001,
+      "deep_samples": 64,
+      "deep_ids": true,
+      "deep_max_events": 8192,
+      "deep_memory_mb": 8192,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 953.6110123000108,
+      "beauty_exists": true,
+      "deep_bytes": 707974109
+    }
+  ],
+  "results": {
+    "accumulated_four": {
+      "control_directories": [
+        "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-fix-20261010\\cuda-off",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-off-2",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-off-3",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-off-4"
+      ],
+      "on_directories": [
+        "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-fix-20261010\\cuda-on",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-on-2"
+      ],
+      "deep_on": [
+        {
+          "passed": true,
+          "ordinary_leave_one_out": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            }
+          ],
+          "ordinary_count_distribution": {
+            "min": 0,
+            "median": 0.0,
+            "max": 0
+          },
+          "deep_subsets": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            }
+          ],
+          "deep_full_pool": {
+            "pixels": 587500,
+            "mismatch_pixels": 0,
+            "mismatch_rate": 0.0,
+            "fewer": 0,
+            "more": 0,
+            "modal_tie_pixels": 0,
+            "fewer_fraction": null,
+            "binomial_p": 1.0,
+            "sample_count_differences": {}
+          },
+          "deep_mean_mismatch_pixels": 0,
+          "rate_passed": true,
+          "ordinary_direction_range": null,
+          "direction_outside_range": false,
+          "direction_passed": true
+        },
+        {
+          "passed": true,
+          "ordinary_leave_one_out": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            }
+          ],
+          "ordinary_count_distribution": {
+            "min": 0,
+            "median": 0.0,
+            "max": 0
+          },
+          "deep_subsets": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            }
+          ],
+          "deep_full_pool": {
+            "pixels": 587500,
+            "mismatch_pixels": 0,
+            "mismatch_rate": 0.0,
+            "fewer": 0,
+            "more": 0,
+            "modal_tie_pixels": 0,
+            "fewer_fraction": null,
+            "binomial_p": 1.0,
+            "sample_count_differences": {}
+          },
+          "deep_mean_mismatch_pixels": 0,
+          "rate_passed": true,
+          "ordinary_direction_range": null,
+          "direction_outside_range": false,
+          "direction_passed": true
+        }
+      ],
+      "passed": true,
+      "all_control_leave_one_out_zero": true
+    },
+    "new_three_only": {
+      "control_directories": [
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-off-2",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-off-3",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-off-4"
+      ],
+      "on_directories": [
+        "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-fix-20261010\\cuda-on",
+        "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-on-2"
+      ],
+      "deep_on": [
+        {
+          "passed": true,
+          "ordinary_leave_one_out": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 5,
+              "mismatch_rate": 8.510638297872341e-06,
+              "fewer": 0,
+              "more": 5,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": 0.0,
+              "binomial_p": 0.0625,
+              "sample_count_differences": {
+                "16": 5
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            }
+          ],
+          "ordinary_count_distribution": {
+            "min": 0,
+            "median": 0,
+            "max": 5
+          },
+          "deep_subsets": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            }
+          ],
+          "deep_full_pool": {
+            "pixels": 587500,
+            "mismatch_pixels": 0,
+            "mismatch_rate": 0.0,
+            "fewer": 0,
+            "more": 0,
+            "modal_tie_pixels": 0,
+            "fewer_fraction": null,
+            "binomial_p": 1.0,
+            "sample_count_differences": {}
+          },
+          "deep_mean_mismatch_pixels": 0,
+          "rate_passed": true,
+          "ordinary_direction_range": [
+            0.0,
+            0.0
+          ],
+          "direction_outside_range": false,
+          "direction_passed": true
+        },
+        {
+          "passed": true,
+          "ordinary_leave_one_out": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 5,
+              "mismatch_rate": 8.510638297872341e-06,
+              "fewer": 0,
+              "more": 5,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": 0.0,
+              "binomial_p": 0.0625,
+              "sample_count_differences": {
+                "16": 5
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            }
+          ],
+          "ordinary_count_distribution": {
+            "min": 0,
+            "median": 0,
+            "max": 5
+          },
+          "deep_subsets": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 0,
+              "mismatch_rate": 0.0,
+              "fewer": 0,
+              "more": 0,
+              "modal_tie_pixels": 0,
+              "fewer_fraction": null,
+              "binomial_p": 1.0,
+              "sample_count_differences": {}
+            }
+          ],
+          "deep_full_pool": {
+            "pixels": 587500,
+            "mismatch_pixels": 0,
+            "mismatch_rate": 0.0,
+            "fewer": 0,
+            "more": 0,
+            "modal_tie_pixels": 0,
+            "fewer_fraction": null,
+            "binomial_p": 1.0,
+            "sample_count_differences": {}
+          },
+          "deep_mean_mismatch_pixels": 0,
+          "rate_passed": true,
+          "ordinary_direction_range": [
+            0.0,
+            0.0
+          ],
+          "direction_outside_range": false,
+          "direction_passed": true
+        }
+      ],
+      "passed": true,
+      "all_control_leave_one_out_zero": false
+    }
+  },
+  "primary_pool": "accumulated_four",
+  "pool_reason": "Existing rule accumulates every compatible ordinary deep-off render; new-three results are also reported without selecting a favorable pool.",
+  "policy": "Same-size leave-one-out control counts versus deep-on mean over omitted-control subsets; full-pool unique-modal direction, ties excluded, outside range AND binomial p<0.001 fails. Existing production five-control gate unchanged.",
+  "direction_caution": "Adjacent pixels are correlated by adaptive dilation; per-pixel binomial is reported as required, not evidence of independent events.",
+  "artifacts": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010",
+  "next_step": "production-step4-authorized",
+  "original_cluster": {
+    "pixels": [
+      [
+        606,
+        439
+      ],
+      [
+        607,
+        439
+      ],
+      [
+        608,
+        439
+      ],
+      [
+        606,
+        440
+      ],
+      [
+        606,
+        441
+      ]
+    ],
+    "runs": [
+      {
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-fix-20261010\\cuda-off",
+        "counts": [
+          720,
+          688,
+          688,
+          720,
+          720
+        ]
+      },
+      {
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-off-2",
+        "counts": [
+          720,
+          688,
+          688,
+          720,
+          720
+        ]
+      },
+      {
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-off-3",
+        "counts": [
+          704,
+          672,
+          672,
+          704,
+          704
+        ]
+      },
+      {
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-off-4",
+        "counts": [
+          704,
+          672,
+          672,
+          704,
+          704
+        ]
+      },
+      {
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-fix-20261010\\cuda-on",
+        "counts": [
+          704,
+          672,
+          672,
+          704,
+          704
+        ]
+      },
+      {
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\cuda-repeatability-20261010\\cuda-on-2",
+        "counts": [
+          704,
+          672,
+          672,
+          704,
+          704
+        ]
+      }
+    ]
+  },
+  "interpretation": "Ordinary CUDA count variation reproduced by deep-off: new-three LOO5/0/0, both on matched-size means0; accumulated-four LOO0/0/0/0 represents repeated states, not bit-determinism. Direction no unmatched on observations, p1; control5 more samples p0.0625, spatially correlated.",
+  "preservation": {
+    "managed_originals_restored": true,
+    "qualified_files_preserved": true
+  }
+}

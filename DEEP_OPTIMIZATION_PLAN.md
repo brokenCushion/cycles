@@ -2454,7 +2454,7 @@ Stopped for review, no renderer fix.
 [Raw values, maxima locations and every batch/checkpoint](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-isolation.json).
 [Previous harness failure](builds/validation/landscape-cloud/optimization-phase9/optix-fixed-count-harness-failure.json).
 
-#### Phase 9 - scheduler timing fix: module audit passed, diagnostics resuming
+#### Phase 9 - scheduler timing fix: OptiX passes; CUDA count failure
 
 Fix commit `47a8dffb0` measures the whole GPU capture interval after draining pending
 beauty work, including capture kernels, allocation, readback and spill. It removes
@@ -2480,7 +2480,7 @@ Quoted data, hardware registers, instructions/constants/symbols/labels, declarat
 and ordering stay checked. Non-PTX modules require exact bytes. Its self-check rejects
 changed operations, constants, register dependencies, quoted data and hardware reads.
 Renderer code and numerical gates are unchanged. The existing diagnostic executable
-is reused for the small117x50 test and full OptiX off/on/on, CUDA off/on comparisons.
+was reused for the small117x50 test and full OptiX off/on/on, CUDA off/on comparisons.
 All 36 managed originals and 28 qualified executable/module hashes remain preserved.
 
 | Check | Result | Commit |
@@ -2489,9 +2489,79 @@ All 36 managed originals and 28 qualified executable/module hashes remain preser
 | Diagnostic build/install | Pass; executable SHA `9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752` | `47a8dffb0` + diagnostic snapshot `9a017f055` |
 | Extra GPU-module byte guard | 12/13 identical; OSL MNEE register rename only; normalized comparison passes | Same diagnostic build |
 | Same-source OSL MNEE rebuilds | 25.875/24.532 s; byte-identical to each other and old PTX | Snapshot + `47a8dffb0` |
-| Small117x50 and five full-frame comparisons | Pending; approved render-only resume | — |
+| Small117x50 and five full-frame comparisons | Complete; small and both OptiX pairs pass, CUDA count criterion fails | `47a8dffb0` + snapshot |
 
 [Measured hashes and preservation proof](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-fix-build-failure.json).
 [Module audit, rebuild hashes and normalization](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-module-check.json).
 Large artifacts/TEMP:
 `D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-fix-20261010/`.
+
+
+Diagnostic steps 1–3 finished on 2026-10-10 Sydney. All seven processes exited 0.
+The small saved-pair batch test passes. Every full run has the same 68 batches:
+`1,1,2,4,8`, then 63×16; adaptive filters run at 16,32,…1024, directly confirmed
+by DEBUG invocation logs. Both OptiX pairs have zero mismatches over 587,500 pixels.
+CUDA has five count mismatches, so the required zero-mismatch criterion fails.
+No further investigation, renderer change, retry, production rebuild or regression
+was performed. All 36 managed originals and 28 qualified file hashes are preserved.
+
+| Comparison | Batch/checkpoint identity | Count mismatches | Result |
+|---|---|---:|---|
+| Small117x50 OptiX | Pass | Not part of this saved-pair test | Pass |
+| Full OptiX off / on1 | Pass | 0 | Pass |
+| Full OptiX off / on2 | Pass | 0 | Pass |
+| Full CUDA off / on | Pass | 5 | Fail; stop for review |
+
+CUDA mismatches (file top origin): (606,439), (606,440), (606,441) are 720→704;
+(607,439), (608,439) are 688→672. All have 16 fewer samples on. Their cause is
+uninvestigated; identical scheduling alone does not establish the remaining cause.
+
+| Original target | OptiX off=on1=on2 count | CUDA off=on count | Max target raw ULP: OptiX1 / OptiX2 / CUDA |
+|---|---:|---:|---|
+| (986,60) | 224 | 224 | 2 / 1 / 1 |
+| (985,61) | 336 | 512 | 3 / 2 / 1 |
+| (986,61) | 336 | 512 | 2 / 3 / 1 |
+| (985,62) | 336 | 512 | 2 / 2 / 1 |
+| (986,62) | 336 | 512 | 2 / 2 / 2 |
+| (985,63) | 336 | 512 | 2 / 2 / 1 |
+| (986,63) | 336 | 512 | 2 / 2 / 2 |
+| (987,63) | 336 | 512 | 1 / 2 / 1 |
+
+Raw image-wide maxima below are `absolute / reference FLOAT ULP`; these maxima
+can occur at different pixels. CUDA maxima include the five count-mismatch pixels
+and are not a same-count rounding measurement. Noisy alpha is exact in all pairs.
+
+| Raw channel | OptiX1 | OptiX2 | CUDA |
+|---|---|---|---|
+| Noisy Image.R | 6.10352e-05 / 29 | 3.05176e-05 / 13 | 0.000868224 / 198457 |
+| Noisy Image.G | 3.05176e-05 / 6 | 3.05176e-05 / 6 | 0.00361151 / 182811 |
+| Noisy Image.B | 1.52588e-05 / 7 | 1.52588e-05 / 7 | 0.00371557 / 124674 |
+| Noisy Image.A | 0 / 0 | 0 / 0 | 0 / 0 |
+| Denoising Albedo.R | 4.76837e-07 / 7 | 4.17233e-07 / 9 | 0.000544973 / 73145 |
+| Denoising Albedo.G | 4.17233e-07 / 8 | 4.76837e-07 / 8 | 0.00110731 / 37155 |
+| Denoising Albedo.B | 4.17233e-07 / 9 | 4.76837e-07 / 8 | 0.00101048 / 33906 |
+| Denoising Normal.X | 3.57628e-07 / 46812 | 4.17233e-07 / 218008 | 0.000376303 / 2.78455e+06 |
+| Denoising Normal.Y | 5.36442e-07 / 6162 | 4.76837e-07 / 7019 | 0.00318891 / 214004 |
+| Denoising Normal.Z | 7.15256e-07 / 64 | 9.53674e-07 / 96 | 0.00274438 / 46043 |
+| Denoising Depth.Z | 0.000610352 / 10 | 0.000610352 / 9 | 0.608521 / 9970 |
+
+Near-zero normal cancellation inflates reference ULP. Normal X/Y/Z absolute maxima
+in ULP(1.0) are 3/4.5/6 for OptiX1, 3.5/4/8 for OptiX2; CUDA includes count changes.
+Every pass's maxima location, raw values at all eight targets and counts are in the
+report. This diagnostic reports raw differences; it does not replace full beauty
+policy qualification.
+
+| Run | Physical render/capture batches (s) | Excluded capture (s) | Export (s) | Measurement wall (s) | Host peak GiB | Process GPU peak GiB | Device-wide peak MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| optix-off | 339.223 | 0.000 | — | 349.672 | 4.768 | 3.716 | 6243 |
+| optix-on-1 | 934.879 | 587.065 | 181.675 | 1128.610 | 5.191 | 3.744 | 7013 |
+| optix-on-2 | 991.914 | 627.493 | 194.222 | 1198.985 | 5.209 | 3.744 | 6704 |
+| cuda-off | 396.305 | 0.000 | — | 410.765 | 5.247 | 3.685 | 6660 |
+| cuda-on | 785.043 | 389.197 | 197.336 | 997.687 | 5.687 | 3.835 | 6712 |
+
+Render/capture is the sum of logged physical batch times; excluded capture includes
+kernel/readback/spill and capture overhead after beauty drain. Wall includes loading,
+export and saving. Native path-time statistics exclude capture. Small off/on wall
+is 151.047/54.438 s, affected by first-run startup; not a speed comparison.
+[All measured results and preservation proof](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-fix.json).
+Stopped after step 3 for user review; monitor removed. Production remains unchanged.

@@ -5,6 +5,14 @@ Cycles is a path tracing renderer focused on interactivity and ease of use, whil
 
 https://www.cycles-renderer.org
 
+## Deep output
+
+This fork adds deep alpha output for surfaces and volumes, per-object IDs, holdouts,
+OptiX and OSL support. See the [support matrix](src/deep/RELEASE_MATRIX.md).
+
+The [final landscape render evidence](docs/deep/evidence/README.md) includes previews
+from both accepted production runs, measured results and output checksums.
+
 ## Building
 
 Cycles can be built as a standalone application or a Hydra render delegate. See [BUILDING.md](BUILDING.md) for instructions.

@@ -1,0 +1,385 @@
+{
+  "accepted_evidence_commit": "1fe60fe2f",
+  "render_date_utc": "2026-10-10",
+  "executable_sha256": "68e972491e66834ccdb0e61a183924e5fbee80d249eb4ef93fd7258fce844a64",
+  "toolchain": {
+    "clang_cl": "20.1.8",
+    "nvcc": "12.8.61",
+    "cuda_toolkit": "12.8.0",
+    "optix": "8.0.0",
+    "osl": "1.15.3.0",
+    "nvcc_host_msvc": "19.44 / 14.44.35207",
+    "ninja": "1.13.2",
+    "cmake": "3.31.2"
+  },
+  "compiled_cycles_base": "8137045eb3f8e62e012a251ea93c548970c48716",
+  "timing_fix": "47a8dffb0",
+  "snapshot_in_production": false,
+  "regression": {
+    "passed": true,
+    "identity_counts": {
+      "strict": 81,
+      "1e-4": 15,
+      "1e-3": 15
+    },
+    "optix_identity_count": 65
+  },
+  "runs": {
+    "all": {
+      "settings": {
+        "device": "OPTIX",
+        "samples": 1024,
+        "adaptive": true,
+        "adaptive_threshold": 0.029999999329447746,
+        "adaptive_min_samples": 8,
+        "seed": 0,
+        "threads": 24,
+        "denoiser": "OPENIMAGEDENOISE",
+        "denoising_use_gpu": true,
+        "deep_error": 0.001,
+        "deep_z_tolerance": 0.0001,
+        "deep_samples": 0,
+        "deep_ids": true,
+        "deep_memory_mb": 8192,
+        "deep_volume_shader_eval": false,
+        "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902"
+      },
+      "output_resolution": [
+        1175,
+        500
+      ],
+      "metrics": {
+        "render_capture_seconds": 4074.768722400032,
+        "production_export_seconds": 1706.2699702,
+        "companion_export_seconds": 2066.1900298,
+        "deep_sample_count": 281796920,
+        "exr_bytes": 1994272718,
+        "spill_file_bytes": 167867578500,
+        "lane_written_bytes": 148108343556,
+        "readback_bytes": 174453990148,
+        "peak_host_bytes": 6138413056,
+        "peak_gpu_device_mib": 5738,
+        "peak_gpu_process_bytes": 4013391872,
+        "oracle_max_error": 8.229895820188737e-05,
+        "max_exterior_error": 2.6828092108965862e-08
+      },
+      "max_depth_cut_error": 2.6042666665393455e-06,
+      "deep_exr": {
+        "bytes": 1994272718,
+        "sha256": "1bec674a385af2c8fcc133afdf97f1936c59a0c19d4bb9be12fba386c76561c9",
+        "published": false
+      },
+      "beauty_exr": {
+        "bytes": 6598981,
+        "sha256": "25e19259bf1b7885e048c061ab4711921ec9bcecc80f3f1cf64e0883b121855d",
+        "published": false
+      },
+      "beauty_policy": {
+        "accepted": true,
+        "original_raw_report_passed": false,
+        "root_cause_resolution_required": true,
+        "ordinary_controls": 20,
+        "seed_references": 4,
+        "primary_count_controls": 5,
+        "ordinary_fallback_pixels": {
+          "min": 1763,
+          "median": 1859.5,
+          "max": 1925
+        },
+        "deep_fallback_pixels": 1871,
+        "count_mismatch": {
+          "ordinary_count_distribution": {
+            "min": 262,
+            "median": 279,
+            "max": 326
+          },
+          "deep_mean_mismatch_pixels": 309.8,
+          "rate_passed": true,
+          "ordinary_direction_range": [
+            0.2922077922077922,
+            0.46745562130177515
+          ],
+          "direction_outside_range": false,
+          "direction_passed": true
+        }
+      }
+    },
+    "64": {
+      "settings": {
+        "device": "OPTIX",
+        "samples": 1024,
+        "adaptive": true,
+        "adaptive_threshold": 0.029999999329447746,
+        "adaptive_min_samples": 8,
+        "seed": 0,
+        "threads": 24,
+        "denoiser": "OPENIMAGEDENOISE",
+        "denoising_use_gpu": true,
+        "deep_error": 0.001,
+        "deep_z_tolerance": 0.0001,
+        "deep_samples": 64,
+        "deep_ids": true,
+        "deep_memory_mb": 8192,
+        "deep_volume_shader_eval": false,
+        "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902"
+      },
+      "output_resolution": [
+        1175,
+        500
+      ],
+      "metrics": {
+        "render_capture_seconds": 1046.4158715000422,
+        "production_export_seconds": 180.5708546,
+        "companion_export_seconds": 191.8091454,
+        "deep_sample_count": 86125949,
+        "exr_bytes": 705176082,
+        "spill_file_bytes": 20101054836,
+        "lane_written_bytes": 18384917748,
+        "readback_bytes": 38721100532,
+        "peak_host_bytes": 6104449024,
+        "peak_gpu_device_mib": 6217,
+        "peak_gpu_process_bytes": 4013391872,
+        "oracle_max_error": 8.229895820188737e-05,
+        "max_exterior_error": 2.682607158632777e-08
+      },
+      "max_depth_cut_error": 2.8407978713840265e-07,
+      "deep_exr": {
+        "bytes": 705176082,
+        "sha256": "4bf6ed92b5bbd4bd0a8940b7af17cb1abc8a1bcda6e5206ea9e1dc79dc3dd44c",
+        "published": false
+      },
+      "beauty_exr": {
+        "bytes": 6595675,
+        "sha256": "6231ace864bd5ba17eb60ba88487b8d7cafcb7a052b850e87baab0e9d40b4368",
+        "published": false
+      },
+      "beauty_policy": {
+        "accepted": true,
+        "original_raw_report_passed": true,
+        "root_cause_resolution_required": false,
+        "ordinary_controls": 20,
+        "seed_references": 4,
+        "primary_count_controls": 5,
+        "ordinary_fallback_pixels": {
+          "min": 1763,
+          "median": 1859.5,
+          "max": 1925
+        },
+        "deep_fallback_pixels": 1824,
+        "count_mismatch": {
+          "ordinary_count_distribution": {
+            "min": 262,
+            "median": 279,
+            "max": 326
+          },
+          "deep_mean_mismatch_pixels": 264.4,
+          "rate_passed": true,
+          "ordinary_direction_range": [
+            0.2922077922077922,
+            0.46745562130177515
+          ],
+          "direction_outside_range": false,
+          "direction_passed": true
+        }
+      }
+    }
+  },
+  "previews": {
+    "beauty-all.png": {
+      "bytes": 1215320,
+      "sha256": "b432409c9db4652dbb3d4f6ec01c0af88a356e5209afc94371dd201fa107b504",
+      "method": "Saved beauty EXR; source scene Filmic view transform"
+    },
+    "beauty-64.png": {
+      "bytes": 1215348,
+      "sha256": "f49faccfe3bf151879394ce077a37102c754dded7ff6673104818c77458e7f60",
+      "method": "Saved beauty EXR; source scene Filmic view transform"
+    },
+    "alpha-all-z759.322.png": {
+      "bytes": 40746,
+      "sha256": "6630802d3bed1549497edcf40a6513bb56f25f798acbec5ba9ed8dc95229cfc3",
+      "method": "Gaffer DeepSlice, flattened A copied to RGB; no display transform",
+      "far_clip": 759.322265625
+    },
+    "alpha-all-z1028.196.png": {
+      "bytes": 46035,
+      "sha256": "67c7278747ed97b229fc0f0a1461f7bfc6fec0bb281d1c9ab8ddf51c676aa4eb",
+      "method": "Gaffer DeepSlice, flattened A copied to RGB; no display transform",
+      "far_clip": 1028.1962890625
+    },
+    "alpha-64-z759.322.png": {
+      "bytes": 40802,
+      "sha256": "99b58c592b5cc141ad21be6009df5b3ee43885c8c1f423853c3d7556dce0b31f",
+      "method": "Gaffer DeepSlice, flattened A copied to RGB; no display transform",
+      "far_clip": 759.322265625
+    },
+    "alpha-64-z1028.196.png": {
+      "bytes": 45134,
+      "sha256": "9beff41cb73b3de6733af9ae01450ac0aa6efecf2669f0f2ca07fd96b66bcf88",
+      "method": "Gaffer DeepSlice, flattened A copied to RGB; no display transform",
+      "far_clip": 1028.1962890625
+    }
+  },
+  "run1_root_cause_resolution": {
+    "passed": true,
+    "diagnostic_only": true,
+    "rule": "User-approved single existing snapshot+timing-fix pair; all checked target passes within recorded ULP floors, exact counts. Also passes reference-value reproduced-state rule. Image-wide comparison informational.",
+    "target": {
+      "file_pixel": [
+        992,
+        78
+      ],
+      "off_samples": 352,
+      "on_samples": 352,
+      "raw": {
+        "ViewLayer.Debug Sample Count.X": {
+          "off": 0.34375,
+          "on": 0.34375,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 1.1920928955078125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.20758332312107086,
+          "on": 0.20758332312107086,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.19763000309467316,
+          "on": 0.19763000309467316,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.20745456218719482,
+          "on": 0.20745456218719482,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 964.9638061523438,
+          "on": 964.9637451171875,
+          "difference": -6.103515625e-05,
+          "absolute_difference": 6.103515625e-05,
+          "recorded_floor": 0.000244140625,
+          "passed": true,
+          "bit_identical": false
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": -0.348583847284317,
+          "on": -0.348583847284317,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": -0.1683930903673172,
+          "on": -0.1683930903673172,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.624632716178894,
+          "on": -0.6246326565742493,
+          "difference": 5.960464477539063e-08,
+          "absolute_difference": 5.960464477539063e-08,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": false
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.028433751314878464,
+          "on": 0.028433751314878464,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 7.450580596923828e-09,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.016107140108942986,
+          "on": 0.016107141971588135,
+          "difference": 1.862645149230957e-09,
+          "absolute_difference": 1.862645149230957e-09,
+          "recorded_floor": 7.450580596923828e-09,
+          "passed": true,
+          "bit_identical": false
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 0.01543409377336502,
+          "on": 0.015434096567332745,
+          "difference": 2.7939677238464355e-09,
+          "absolute_difference": 2.7939677238464355e-09,
+          "recorded_floor": 3.725290298461914e-09,
+          "passed": true,
+          "bit_identical": false
+        }
+      },
+      "passed": true,
+      "bit_identical": false,
+      "reference_4ulp_reproduced_state": {
+        "passed": true,
+        "matched": [
+          0
+        ],
+        "passing": [
+          0
+        ],
+        "envelope": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "limits": [
+          1.1920928955078125e-07,
+          5.960464477539063e-08,
+          5.960464477539063e-08,
+          5.960464477539063e-08,
+          0.000244140625,
+          1.1920928955078125e-07,
+          5.960464477539063e-08,
+          2.384185791015625e-07,
+          4.76837158203125e-07,
+          7.450580596923828e-09,
+          7.450580596923828e-09,
+          3.725290298461914e-09
+        ]
+      }
+    }
+  }
+}

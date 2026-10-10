@@ -26,6 +26,22 @@ SCRATCH=Path('D:/CyclesDeepScratch/regression')
 GPU_PATHS=['src/kernel','src/device','src/integrator/path_trace_work_gpu.cpp','src/integrator/path_trace_work_gpu.h']
 
 
+def retained_rejection(previous, result, key, directory, expected_message=None):
+    if not previous or key not in previous.get('cases', {}):return False
+    record=previous['cases'][key]
+    if record.get('passed') is not True or record.get('rejection') is not True:
+        raise ValueError('Retained rejection did not pass: '+key)
+    directory=Path(directory)
+    log=(directory/'rejection.log').read_text(errors='replace')
+    if ((directory/'scene.deep.exr').read_bytes()!=b'preserve' or
+        any('.partial-' in p.name for p in directory.iterdir()) or
+        (expected_message and expected_message not in log)):
+        raise ValueError('Retained atomic rejection evidence changed: '+key)
+    result['cases'][key]=dict(record)
+    result.setdefault('reused_rejections',[]).append(key)
+    return True
+
+
 def cleanup(root):
     root=Path(root)
     if root.resolve().parent!=SCRATCH.resolve() or not re.fullmatch(r'[A-Za-z0-9_-]+',root.name):
@@ -216,6 +232,7 @@ def main():
             for name,case in cases.items():
                 base=root/'matrix'/device/name
                 if name.startswith('reject_'):
+                    if retained_rejection(previous,result,f'matrix/{device}/{name}',base/'rejection',rejected[name]):continue
                     d=base/'rejection';d.mkdir(parents=True,exist_ok=bool(previous));target=d/'scene.deep.exr';target.write_bytes(b'preserve')
                     cmd=[config['blender'],'--factory-startup','--background','--disable-autoexec',case['scene'],'--python-exit-code',1,
                          '--python',REPO/'tools/render_blender_deep_scene.py','--','--output',d,'--samples',case['samples'],
@@ -244,6 +261,7 @@ def main():
                         '--deep-records',d/'scene.csv','--deep-memory-mb',64,'--deep-max-events',16]+case['extra']+[source]
                 label='boundary-'+device+'-'+case['name']
                 if case['rejection']:
+                    if retained_rejection(previous,result,label,d):continue
                     (d/'scene.deep.exr').write_bytes(b'preserve')
                     with (d/'rejection.log').open('w') as log:p=subprocess.run(list(map(str,c)),env=env,stdout=log,stderr=subprocess.STDOUT)
                     if not p.returncode or (d/'scene.deep.exr').read_bytes()!=b'preserve' or any('.partial-' in f.name for f in d.iterdir()):raise ValueError('Boundary atomic rejection failed')
@@ -273,7 +291,8 @@ def main():
             return
         # Additional surface/adaptive/lens/motion and exact-ID fixtures are shared below.
         from run_deep_smokes import run_smokes
-        run_smokes(root,config,env,run,verify,native,numerical,ids_compare,backend_compare,result,optix=args.optix)
+        run_smokes(root,config,env,run,verify,native,numerical,ids_compare,backend_compare,result,optix=args.optix,
+                   rejection_cached=lambda key,d,message:retained_rejection(previous,result,key,d,message))
         if args.optix:
             result['optix_identity_count']=len(result.get('optix_identity',{}))
             if result['optix_identity_count']!=65:raise ValueError('Expected OptiX SVM identity 65/65')

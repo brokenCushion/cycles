@@ -61,6 +61,9 @@ Root causes, in code:
   flag only. If resolved, record both production runs accepted, create their
   connected Gaffer review and stop for final review. Otherwise stop without
   further investigation. Preserve the original calibrated flag and results.
+  **Completed: the target passes all 12 channels, including reference-value
+  reproduced-state agreement. Both production runs are accepted under this
+  conditional approval; stop after their connected Gaffer presentation.**
 
 - User approval (2026-10-10): add exactly 15 full-resolution OptiX deep-off
   controls with the current production executable and existing settings, making
@@ -2835,7 +2838,66 @@ Retained regression81/81+30/30+OptiX65/65, nine CTests, CPU exact/source/75resou
 proofs remain passing; prior harness fixes reused saved rejection evidence and
 repaired shared TEMP/TMP directory creation without changing output gates.
 
-**Stopped on the measured run1 raw gate as instructed. Phase9 is not accepted.**
-No further investigation, retry, additional render or Gaffer review. All results
-are preserved; the completion monitor is removed.
+This was the historical calibrated stop. The original failing report remains
+unchanged; the subsequently approved diagnostic resolution below accepts it.
 [Measured results, 20-control calibration and failing pixel](builds/validation/landscape-cloud/optimization-phase9/twenty-controls-stop.json).
+
+#### Phase 9 - final root-cause resolution and acceptance (2026-10-11 Sydney)
+
+The approved ONE full-frame OptiX diagnostic pair used the existing snapshot+
+timing-fix executable `9754e361…8752`, without rebuilding. Original run1 settings:
+all samples, IDs, error1e-3, z1e-4, memory8192MiB. Snapshot stayed diagnostic-only;
+production `68e97249…4a64` and all protected installed files remain unchanged.
+The pair finished at 22:39 UTC on October10. `(992,78)` accepted352 samples in
+both diagnostic renders (production accepted368). Each diagnostic side uses the
+same camera/sampling settings; counts across different builds are informational.
+
+| Checked pass at (992,78) | Deep-off | Deep-on | Absolute difference | Recorded floor | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Accepted sample count | 352 | 352 | 0 | Exact | PASS |
+| Noisy R | 0.0154340937734 | 0.0154340965673 | 2.79397e-9 (3 ULP) | 3.72529e-9 | PASS |
+| Noisy G | 0.0161071401089 | 0.0161071419716 | 1.86265e-9 (1 ULP) | 7.45058e-9 | PASS |
+| Noisy B | 0.0284337513149 | Same | 0 | 7.45058e-9 | PASS |
+| Noisy A | 1 | 1 | 0 | 4.76837e-7 | PASS |
+| Albedo R/G/B | 0.207454562 / 0.197630003 / 0.207583323 | Same | 0 / 0 / 0 | 4.76837e-7 each | PASS |
+| Normal X/Y | -0.348583847 / -0.168393090 | Same | 0 / 0 | 4.76837e-7 each | PASS |
+| Normal Z | -0.624632716179 | -0.624632656574 | 5.96046e-8 (1 ULP) | 4.76837e-7 | PASS |
+| Denoising depth | 964.963806152 | 964.963745117 | 6.10352e-5 (1 ULP) | 2.44141e-4 | PASS |
+
+All 12 checked raw channels pass, including normalized sample-count X. The
+stricter whole-state 4-reference-ULP test also passes. This is agreement within
+the recorded bounds, not bit identity. The original Normal.Z calibrated flag is
+resolved by the user's root-cause rule; no policy, threshold or reference changed.
+
+| Image-wide diagnostic, 587,500 pixels | Max absolute difference | Max reference-value ULP | Pixels outside recorded floor |
+| --- | ---: | ---: | ---: |
+| Accepted counts / noisy alpha | 0 / 0 | 0 / 0 | 0 / 0 |
+| Noisy R/G/B | 4.57764e-5 / 1.52588e-5 / 2.28882e-5 | 14 / 7 / 7 | 56 / 69 / 110 |
+| Albedo R/G/B | 4.76837e-7 / 4.76837e-7 / 4.17233e-7 | 8 / 7 / 7 | 0 / 0 / 0 |
+| Normal X/Y/Z | 4.17233e-7 / 5.36442e-7 / 5.96046e-7 | 105660 / 10767 / 224 | 0 / 1 / 5 |
+| Denoising depth | 6.10352e-4 | 9 | 1309 |
+
+Normal maxima are 3.5/4.5/5 ULP of1; reference-value ULPs amplify cancellation
+near zero. Image-wide results are informational for this target resolution;
+they do not claim every pixel is within4ULP. Other saved channels are reported
+separately: denoised Combined RGB max1.55721/1.37140/0.495926; Combined alpha and
+motion channels exact. Denoised RGB is not a raw pass. The unchanged production
+denoised policy already passes both runs; this pair does not replace that gate.
+
+**Phase9 ACCEPTED for both actual production runs under the user's conditional
+approval.** Both independent deep-alpha gates, cuts, sample populations,
+count/bias/denoised gates and run2 raw policy pass; run1's sole raw flag is
+resolved above. Regression remains81/81 strict,30/30 numeric,65/65 OptiX, nine
+CTests, CPU beauty exactness, unchanged source/75-resource proof. Actual production
+timing/storage and Phase5 comparisons are in the preceding table. Original
+calibration reports remain intact. All large artifacts stay on D:.
+
+[Diagnostic target and image-wide results](builds/validation/landscape-cloud/optimization-phase9/run1-root-cause-pair.json),
+[final acceptance and actual production paths](builds/validation/landscape-cloud/optimization-phase9/phase9-acceptance.json).
+
+Connected Gaffer review saved and opened: both actual production deep inputs,
+linked beauty, full/cut alpha, DeepSlice and matching-camera DeepToPointCloud.
+Saved-graph checks pass for both selections:52,261/36,989 preview points at
+stride32, limit100,000 and farClip759.322; complete EXRs remain unchanged.
+[Graph checks and review path](builds/validation/landscape-cloud/optimization-phase9/gaffer-production-review.json).
+Final user visual review is pending; the render monitor is stopped.

@@ -1,0 +1,4975 @@
+{
+  "passed": true,
+  "status": "accepted-final-user-review",
+  "phase9_accepted": true,
+  "qualified_files_preserved": true,
+  "additional_full_controls": 15,
+  "ordinary_pool": 20,
+  "seed_references_reused": 4,
+  "primary_count_references": 5,
+  "gaffer_review_created": true,
+  "no_retry": true,
+  "no_further_investigation": true,
+  "runs": {
+    "run1": {
+      "metrics": {
+        "name": "deep-all",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\deep-all",
+        "render_call_seconds": 7847.228722400032,
+        "peak_host_bytes": 6138413056,
+        "peak_gpu_device_mib": 5738,
+        "peak_gpu_process_bytes": 4013391872,
+        "gates": "PASS, with recorded root-cause resolution at (992,78)",
+        "export_seconds": 3772.46,
+        "spill_file_bytes": 167867578500,
+        "spill_read_bytes": 540196638516,
+        "spill_write_bytes": 339193602312,
+        "companion_export_seconds": 2066.1900298,
+        "production_export_seconds": 1706.2699702,
+        "render_capture_seconds": 4074.768722400032,
+        "exr_bytes": 1994272718,
+        "z0_companion_bytes": 3531341682,
+        "deep_sample_count": 281796920,
+        "max_exterior_error": 2.6828092108965862e-08,
+        "max_flatten_error": 0.0,
+        "oracle_max_error": 8.229895820188737e-05,
+        "finished_utc": "2026-10-10T17:27:00Z",
+        "lane_written_bytes": 148108343556,
+        "readback_bytes": 174453990148,
+        "peak_host_gib": 5.7168426513671875,
+        "peak_process_gpu_gib": 3.737762451171875
+      },
+      "oracle": {
+        "passed": true,
+        "deep_error": 0.0010000000474974513,
+        "max_accepted_camera_error": 8.229895820188737e-05,
+        "accepted_camera_probes": 119223274,
+        "accepted_camera_pixels": 81,
+        "accepted_populations": [
+          112,
+          48,
+          416,
+          496,
+          480,
+          48,
+          352,
+          192,
+          960,
+          640,
+          592,
+          288,
+          32,
+          64,
+          480,
+          48,
+          144,
+          608,
+          256,
+          496,
+          48,
+          416,
+          16,
+          16,
+          384,
+          912,
+          192,
+          368,
+          736,
+          752,
+          144,
+          160,
+          736,
+          400,
+          896,
+          384,
+          448,
+          848,
+          80,
+          16,
+          80,
+          16,
+          128,
+          192,
+          432,
+          240,
+          544,
+          48,
+          16,
+          192,
+          32,
+          256,
+          464,
+          80,
+          304,
+          672,
+          32,
+          1024,
+          256,
+          240,
+          64,
+          112,
+          256,
+          48,
+          464,
+          32,
+          560,
+          96,
+          224,
+          448,
+          560,
+          960,
+          32,
+          832,
+          496,
+          464,
+          1008,
+          112,
+          432,
+          1024,
+          16
+        ],
+        "camera_populations": [
+          {
+            "x": 0,
+            "y": 0,
+            "count": 112
+          },
+          {
+            "x": 146,
+            "y": 0,
+            "count": 48
+          },
+          {
+            "x": 293,
+            "y": 0,
+            "count": 416
+          },
+          {
+            "x": 440,
+            "y": 0,
+            "count": 496
+          },
+          {
+            "x": 587,
+            "y": 0,
+            "count": 480
+          },
+          {
+            "x": 733,
+            "y": 0,
+            "count": 48
+          },
+          {
+            "x": 880,
+            "y": 0,
+            "count": 352
+          },
+          {
+            "x": 1027,
+            "y": 0,
+            "count": 192
+          },
+          {
+            "x": 1174,
+            "y": 0,
+            "count": 960
+          },
+          {
+            "x": 0,
+            "y": 62,
+            "count": 640
+          },
+          {
+            "x": 146,
+            "y": 62,
+            "count": 592
+          },
+          {
+            "x": 293,
+            "y": 62,
+            "count": 288
+          },
+          {
+            "x": 440,
+            "y": 62,
+            "count": 32
+          },
+          {
+            "x": 587,
+            "y": 62,
+            "count": 64
+          },
+          {
+            "x": 733,
+            "y": 62,
+            "count": 480
+          },
+          {
+            "x": 880,
+            "y": 62,
+            "count": 48
+          },
+          {
+            "x": 1027,
+            "y": 62,
+            "count": 144
+          },
+          {
+            "x": 1174,
+            "y": 62,
+            "count": 608
+          },
+          {
+            "x": 0,
+            "y": 124,
+            "count": 256
+          },
+          {
+            "x": 146,
+            "y": 124,
+            "count": 496
+          },
+          {
+            "x": 293,
+            "y": 124,
+            "count": 48
+          },
+          {
+            "x": 440,
+            "y": 124,
+            "count": 416
+          },
+          {
+            "x": 587,
+            "y": 124,
+            "count": 16
+          },
+          {
+            "x": 733,
+            "y": 124,
+            "count": 16
+          },
+          {
+            "x": 880,
+            "y": 124,
+            "count": 384
+          },
+          {
+            "x": 1027,
+            "y": 124,
+            "count": 912
+          },
+          {
+            "x": 1174,
+            "y": 124,
+            "count": 192
+          },
+          {
+            "x": 0,
+            "y": 187,
+            "count": 368
+          },
+          {
+            "x": 146,
+            "y": 187,
+            "count": 736
+          },
+          {
+            "x": 293,
+            "y": 187,
+            "count": 752
+          },
+          {
+            "x": 440,
+            "y": 187,
+            "count": 144
+          },
+          {
+            "x": 587,
+            "y": 187,
+            "count": 160
+          },
+          {
+            "x": 733,
+            "y": 187,
+            "count": 736
+          },
+          {
+            "x": 880,
+            "y": 187,
+            "count": 400
+          },
+          {
+            "x": 1027,
+            "y": 187,
+            "count": 896
+          },
+          {
+            "x": 1174,
+            "y": 187,
+            "count": 384
+          },
+          {
+            "x": 0,
+            "y": 249,
+            "count": 448
+          },
+          {
+            "x": 146,
+            "y": 249,
+            "count": 848
+          },
+          {
+            "x": 293,
+            "y": 249,
+            "count": 80
+          },
+          {
+            "x": 440,
+            "y": 249,
+            "count": 16
+          },
+          {
+            "x": 587,
+            "y": 249,
+            "count": 80
+          },
+          {
+            "x": 733,
+            "y": 249,
+            "count": 16
+          },
+          {
+            "x": 880,
+            "y": 249,
+            "count": 128
+          },
+          {
+            "x": 1027,
+            "y": 249,
+            "count": 192
+          },
+          {
+            "x": 1174,
+            "y": 249,
+            "count": 432
+          },
+          {
+            "x": 0,
+            "y": 311,
+            "count": 240
+          },
+          {
+            "x": 146,
+            "y": 311,
+            "count": 544
+          },
+          {
+            "x": 293,
+            "y": 311,
+            "count": 48
+          },
+          {
+            "x": 440,
+            "y": 311,
+            "count": 16
+          },
+          {
+            "x": 587,
+            "y": 311,
+            "count": 192
+          },
+          {
+            "x": 733,
+            "y": 311,
+            "count": 32
+          },
+          {
+            "x": 880,
+            "y": 311,
+            "count": 256
+          },
+          {
+            "x": 1027,
+            "y": 311,
+            "count": 464
+          },
+          {
+            "x": 1174,
+            "y": 311,
+            "count": 80
+          },
+          {
+            "x": 0,
+            "y": 374,
+            "count": 304
+          },
+          {
+            "x": 146,
+            "y": 374,
+            "count": 672
+          },
+          {
+            "x": 293,
+            "y": 374,
+            "count": 32
+          },
+          {
+            "x": 440,
+            "y": 374,
+            "count": 1024
+          },
+          {
+            "x": 587,
+            "y": 374,
+            "count": 256
+          },
+          {
+            "x": 733,
+            "y": 374,
+            "count": 240
+          },
+          {
+            "x": 880,
+            "y": 374,
+            "count": 64
+          },
+          {
+            "x": 1027,
+            "y": 374,
+            "count": 112
+          },
+          {
+            "x": 1174,
+            "y": 374,
+            "count": 256
+          },
+          {
+            "x": 0,
+            "y": 436,
+            "count": 48
+          },
+          {
+            "x": 146,
+            "y": 436,
+            "count": 464
+          },
+          {
+            "x": 293,
+            "y": 436,
+            "count": 32
+          },
+          {
+            "x": 440,
+            "y": 436,
+            "count": 560
+          },
+          {
+            "x": 587,
+            "y": 436,
+            "count": 96
+          },
+          {
+            "x": 733,
+            "y": 436,
+            "count": 224
+          },
+          {
+            "x": 880,
+            "y": 436,
+            "count": 448
+          },
+          {
+            "x": 1027,
+            "y": 436,
+            "count": 560
+          },
+          {
+            "x": 1174,
+            "y": 436,
+            "count": 960
+          },
+          {
+            "x": 0,
+            "y": 499,
+            "count": 32
+          },
+          {
+            "x": 146,
+            "y": 499,
+            "count": 832
+          },
+          {
+            "x": 293,
+            "y": 499,
+            "count": 496
+          },
+          {
+            "x": 440,
+            "y": 499,
+            "count": 464
+          },
+          {
+            "x": 587,
+            "y": 499,
+            "count": 1008
+          },
+          {
+            "x": 733,
+            "y": 499,
+            "count": 112
+          },
+          {
+            "x": 880,
+            "y": 499,
+            "count": 432
+          },
+          {
+            "x": 1027,
+            "y": 499,
+            "count": 1024
+          },
+          {
+            "x": 1174,
+            "y": 499,
+            "count": 16
+          }
+        ],
+        "oracle": "Independent NumPy extinction sweep; one pixel at a time"
+      },
+      "cuts": {
+        "passed": true,
+        "max_slice_error": 2.6042666665393455e-06,
+        "header_bound": 0.0010000000474974513,
+        "diagnostic_pixels": 81,
+        "cuts": [
+          490.4482116699219,
+          624.88525390625,
+          759.322265625,
+          893.75927734375,
+          1028.1962890625
+        ],
+        "scope": "Gaffer DeepSlice vs independent stored-curve evaluation; no review scene"
+      },
+      "raw_inputs": {
+        "passed": true,
+        "accepted_samples": {
+          "min": 16,
+          "median": 288.0,
+          "max": 1024
+        },
+        "channels": 26,
+        "dimensions": [
+          1175,
+          500
+        ]
+      },
+      "beauty": {
+        "passed": false,
+        "raw_passed": false,
+        "bias_passed": true,
+        "denoised_outlier_pixels": 0,
+        "fallback_pixels": 1871,
+        "calibration": {
+          "renders": [
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+              "fallback_pixels": 1849,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 18.48913111198074,
+                "ViewLayer.Denoising Albedo.G": 18.487035787999552,
+                "ViewLayer.Denoising Albedo.B": 18.509358380599547,
+                "ViewLayer.Denoising Depth.Z": 3.965367512443502,
+                "ViewLayer.Denoising Normal.X": 532995.9905010487,
+                "ViewLayer.Denoising Normal.Y": 27.332803472359476,
+                "ViewLayer.Denoising Normal.Z": 7.043756346517258,
+                "ViewLayer.Noisy Image.R": 15.549130866985054,
+                "ViewLayer.Noisy Image.G": 12.400412423378766,
+                "ViewLayer.Noisy Image.B": 21.472202228367106,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 120,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+              "fallback_pixels": 1822,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 8.246389935464801,
+                "ViewLayer.Denoising Albedo.G": 8.227592837577056,
+                "ViewLayer.Denoising Albedo.B": 8.230721379496496,
+                "ViewLayer.Denoising Depth.Z": 4.135757836809195,
+                "ViewLayer.Denoising Normal.X": 272461.05366870825,
+                "ViewLayer.Denoising Normal.Y": 27.332803472359476,
+                "ViewLayer.Denoising Normal.Z": 5.556738788770476,
+                "ViewLayer.Noisy Image.R": 15.002376832433335,
+                "ViewLayer.Noisy Image.G": 14.10447822283115,
+                "ViewLayer.Noisy Image.B": 13.513196811611177,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 117,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-3",
+              "fallback_pixels": 1852,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 7.624223571792551,
+                "ViewLayer.Denoising Albedo.G": 7.76031461406359,
+                "ViewLayer.Denoising Albedo.B": 7.765405769514888,
+                "ViewLayer.Denoising Depth.Z": 10.868099162778321,
+                "ViewLayer.Denoising Normal.X": 112023.30878485453,
+                "ViewLayer.Denoising Normal.Y": 5.754892676561108,
+                "ViewLayer.Denoising Normal.Z": 5.975213514058982,
+                "ViewLayer.Noisy Image.R": 12.032709085832137,
+                "ViewLayer.Noisy Image.G": 24.549670734281086,
+                "ViewLayer.Noisy Image.B": 30.173574762316406,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 106,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-4",
+              "fallback_pixels": 1818,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 5.055051617514405,
+                "ViewLayer.Denoising Albedo.G": 5.068067935004904,
+                "ViewLayer.Denoising Albedo.B": 5.0669123306109425,
+                "ViewLayer.Denoising Depth.Z": 7.6102011059503285,
+                "ViewLayer.Denoising Normal.X": 66544.89959098112,
+                "ViewLayer.Denoising Normal.Y": 11.874291439166647,
+                "ViewLayer.Denoising Normal.Z": 4.50041662790268,
+                "ViewLayer.Noisy Image.R": 5.537481029879795,
+                "ViewLayer.Noisy Image.G": 7.031808452836941,
+                "ViewLayer.Noisy Image.B": 19.9731608188545,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 67,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-5",
+              "fallback_pixels": 1921,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 10.715635277902466,
+                "ViewLayer.Denoising Albedo.G": 11.06187341120668,
+                "ViewLayer.Denoising Albedo.B": 11.146888614844084,
+                "ViewLayer.Denoising Depth.Z": 5.655282657727259,
+                "ViewLayer.Denoising Normal.X": 112.53595210791921,
+                "ViewLayer.Denoising Normal.Y": 8.900866077353681,
+                "ViewLayer.Denoising Normal.Z": 18.78286878821263,
+                "ViewLayer.Noisy Image.R": 8.412108562461171,
+                "ViewLayer.Noisy Image.G": 16.053102895415105,
+                "ViewLayer.Noisy Image.B": 21.380305101560957,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 114,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-6",
+              "fallback_pixels": 1840,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 11.470988747299442,
+                "ViewLayer.Denoising Albedo.G": 11.446500837782528,
+                "ViewLayer.Denoising Albedo.B": 11.443146305390211,
+                "ViewLayer.Denoising Depth.Z": 6.303497514411427,
+                "ViewLayer.Denoising Normal.X": 825807.8688476377,
+                "ViewLayer.Denoising Normal.Y": 10.802432857182788,
+                "ViewLayer.Denoising Normal.Z": 6.034134012905147,
+                "ViewLayer.Noisy Image.R": 7.384031521276092,
+                "ViewLayer.Noisy Image.G": 6.08020738878106,
+                "ViewLayer.Noisy Image.B": 5.1429968167284335,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 118,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-7",
+              "fallback_pixels": 1860,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 13.817330244176578,
+                "ViewLayer.Denoising Albedo.G": 13.24975504963746,
+                "ViewLayer.Denoising Albedo.B": 13.108987089817498,
+                "ViewLayer.Denoising Depth.Z": 9.37162455625441,
+                "ViewLayer.Denoising Normal.X": 25415.090036905633,
+                "ViewLayer.Denoising Normal.Y": 10.524849554982694,
+                "ViewLayer.Denoising Normal.Z": 6.917638375475355,
+                "ViewLayer.Noisy Image.R": 8.222185840708349,
+                "ViewLayer.Noisy Image.G": 8.31219892639122,
+                "ViewLayer.Noisy Image.B": 8.380120821097522,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 72,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-8",
+              "fallback_pixels": 1874,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 10.112090447836492,
+                "ViewLayer.Denoising Albedo.G": 10.10855870852478,
+                "ViewLayer.Denoising Albedo.B": 10.092411994486481,
+                "ViewLayer.Denoising Depth.Z": 22.94285695440647,
+                "ViewLayer.Denoising Normal.X": 248836.5857814611,
+                "ViewLayer.Denoising Normal.Y": 13.693622068856328,
+                "ViewLayer.Denoising Normal.Z": 4.01309523717033,
+                "ViewLayer.Noisy Image.R": 8.412108562461171,
+                "ViewLayer.Noisy Image.G": 16.053102895415105,
+                "ViewLayer.Noisy Image.B": 21.380305101560957,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 108,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-9",
+              "fallback_pixels": 1896,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 10.112090447836492,
+                "ViewLayer.Denoising Albedo.G": 10.10855870852478,
+                "ViewLayer.Denoising Albedo.B": 10.092411994486481,
+                "ViewLayer.Denoising Depth.Z": 3.718622993623618,
+                "ViewLayer.Denoising Normal.X": 238883.0095768686,
+                "ViewLayer.Denoising Normal.Y": 13.693622068856328,
+                "ViewLayer.Denoising Normal.Z": 2.2421038739403123,
+                "ViewLayer.Noisy Image.R": 6.4308373715515055,
+                "ViewLayer.Noisy Image.G": 10.331855589747645,
+                "ViewLayer.Noisy Image.B": 9.588975359734933,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 97,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-10",
+              "fallback_pixels": 1882,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 13.817330244176578,
+                "ViewLayer.Denoising Albedo.G": 13.24975504963746,
+                "ViewLayer.Denoising Albedo.B": 13.108987089817498,
+                "ViewLayer.Denoising Depth.Z": 3.3983868883445103,
+                "ViewLayer.Denoising Normal.X": 58721.51514564824,
+                "ViewLayer.Denoising Normal.Y": 10.524849554982694,
+                "ViewLayer.Denoising Normal.Z": 5.959646331604395,
+                "ViewLayer.Noisy Image.R": 8.47341796150587,
+                "ViewLayer.Noisy Image.G": 9.003584020684428,
+                "ViewLayer.Noisy Image.B": 21.582016875290698,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 129,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-11",
+              "fallback_pixels": 1867,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 11.35629177952007,
+                "ViewLayer.Denoising Albedo.G": 11.39392650449217,
+                "ViewLayer.Denoising Albedo.B": 11.389730902099732,
+                "ViewLayer.Denoising Depth.Z": 9.37162455625441,
+                "ViewLayer.Denoising Normal.X": 238883.0095768686,
+                "ViewLayer.Denoising Normal.Y": 11.874291439166647,
+                "ViewLayer.Denoising Normal.Z": 9.75305212896897,
+                "ViewLayer.Noisy Image.R": 11.776972057944189,
+                "ViewLayer.Noisy Image.G": 17.50515376084577,
+                "ViewLayer.Noisy Image.B": 17.072507026562818,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 107,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-12",
+              "fallback_pixels": 1859,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 19.846694391162465,
+                "ViewLayer.Denoising Albedo.G": 19.844996789763712,
+                "ViewLayer.Denoising Albedo.B": 19.86883788626938,
+                "ViewLayer.Denoising Depth.Z": 6.303497514411427,
+                "ViewLayer.Denoising Normal.X": 558900.4967908907,
+                "ViewLayer.Denoising Normal.Y": 9.780342984990424,
+                "ViewLayer.Denoising Normal.Z": 6.656328401578297,
+                "ViewLayer.Noisy Image.R": 7.01013555280918,
+                "ViewLayer.Noisy Image.G": 14.421656275145017,
+                "ViewLayer.Noisy Image.B": 13.74600042031401,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 89,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-13",
+              "fallback_pixels": 1826,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 5.143220256416522,
+                "ViewLayer.Denoising Albedo.G": 6.051626950940657,
+                "ViewLayer.Denoising Albedo.B": 6.851930694272202,
+                "ViewLayer.Denoising Depth.Z": 5.627614375336051,
+                "ViewLayer.Denoising Normal.X": 333008.74186648306,
+                "ViewLayer.Denoising Normal.Y": 8.544992523210725,
+                "ViewLayer.Denoising Normal.Z": 6.973791511801948,
+                "ViewLayer.Noisy Image.R": 8.815489536355791,
+                "ViewLayer.Noisy Image.G": 9.526552179979491,
+                "ViewLayer.Noisy Image.B": 19.9731608188545,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 111,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-14",
+              "fallback_pixels": 1807,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 9.961182701509031,
+                "ViewLayer.Denoising Albedo.G": 5.772854260780872,
+                "ViewLayer.Denoising Albedo.B": 5.21446174217427,
+                "ViewLayer.Denoising Depth.Z": 6.057874232255853,
+                "ViewLayer.Denoising Normal.X": 196073.08623018765,
+                "ViewLayer.Denoising Normal.Y": 10.157210523041043,
+                "ViewLayer.Denoising Normal.Z": 6.034134012905147,
+                "ViewLayer.Noisy Image.R": 7.384031521276092,
+                "ViewLayer.Noisy Image.G": 8.13976240492157,
+                "ViewLayer.Noisy Image.B": 3.807680269753093,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 107,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-15",
+              "fallback_pixels": 1763,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 19.846694391162465,
+                "ViewLayer.Denoising Albedo.G": 19.844996789763712,
+                "ViewLayer.Denoising Albedo.B": 19.86883788626938,
+                "ViewLayer.Denoising Depth.Z": 5.655282657727259,
+                "ViewLayer.Denoising Normal.X": 6.995905275299831,
+                "ViewLayer.Denoising Normal.Y": 6.438887691530212,
+                "ViewLayer.Denoising Normal.Z": 6.777083331200814,
+                "ViewLayer.Noisy Image.R": 12.032709085832137,
+                "ViewLayer.Noisy Image.G": 24.549670734281086,
+                "ViewLayer.Noisy Image.B": 30.173574762316406,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 116,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-16",
+              "fallback_pixels": 1925,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 10.108788770903816,
+                "ViewLayer.Denoising Albedo.G": 10.027038838336802,
+                "ViewLayer.Denoising Albedo.B": 9.961368468136996,
+                "ViewLayer.Denoising Depth.Z": 5.204803003067829,
+                "ViewLayer.Denoising Normal.X": 885047.7881954636,
+                "ViewLayer.Denoising Normal.Y": 10.802432857182788,
+                "ViewLayer.Denoising Normal.Z": 3.4521612015570984,
+                "ViewLayer.Noisy Image.R": 15.002376832433335,
+                "ViewLayer.Noisy Image.G": 14.10447822283115,
+                "ViewLayer.Noisy Image.B": 21.582016875290698,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 109,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-17",
+              "fallback_pixels": 1879,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 9.961182701509031,
+                "ViewLayer.Denoising Albedo.G": 10.497116955793127,
+                "ViewLayer.Denoising Albedo.B": 10.956654932113194,
+                "ViewLayer.Denoising Depth.Z": 17.80570532007065,
+                "ViewLayer.Denoising Normal.X": 38.58547835485807,
+                "ViewLayer.Denoising Normal.Y": 8.544992523210725,
+                "ViewLayer.Denoising Normal.Z": 12.553589199637292,
+                "ViewLayer.Noisy Image.R": 8.893401998725222,
+                "ViewLayer.Noisy Image.G": 9.173266017769029,
+                "ViewLayer.Noisy Image.B": 9.285833545449192,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 103,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-18",
+              "fallback_pixels": 1829,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 8.246389935464801,
+                "ViewLayer.Denoising Albedo.G": 8.227592837577056,
+                "ViewLayer.Denoising Albedo.B": 8.230721379496496,
+                "ViewLayer.Denoising Depth.Z": 2.678210288292659,
+                "ViewLayer.Denoising Normal.X": 23145.479111612305,
+                "ViewLayer.Denoising Normal.Y": 6.515423906592649,
+                "ViewLayer.Denoising Normal.Z": 3.8402567127550955,
+                "ViewLayer.Noisy Image.R": 3.6545162096661366,
+                "ViewLayer.Noisy Image.G": 3.705269882227773,
+                "ViewLayer.Noisy Image.B": 3.070917783085974,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 132,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-19",
+              "fallback_pixels": 1860,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 10.110095007101801,
+                "ViewLayer.Denoising Albedo.G": 10.497116955793127,
+                "ViewLayer.Denoising Albedo.B": 10.956654932113194,
+                "ViewLayer.Denoising Depth.Z": 10.868099162778321,
+                "ViewLayer.Denoising Normal.X": 885047.7881954636,
+                "ViewLayer.Denoising Normal.Y": 8.08018337410617,
+                "ViewLayer.Denoising Normal.Z": 12.553589199637292,
+                "ViewLayer.Noisy Image.R": 6.7517198392715,
+                "ViewLayer.Noisy Image.G": 6.947947869987984,
+                "ViewLayer.Noisy Image.B": 15.991289470303835,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 91,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-20",
+              "fallback_pixels": 1865,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 18.48913111198074,
+                "ViewLayer.Denoising Albedo.G": 18.487035787999552,
+                "ViewLayer.Denoising Albedo.B": 18.509358380599547,
+                "ViewLayer.Denoising Depth.Z": 17.80570532007065,
+                "ViewLayer.Denoising Normal.X": 276860.4965050722,
+                "ViewLayer.Denoising Normal.Y": 6.102156328681836,
+                "ViewLayer.Denoising Normal.Z": 5.959646331604395,
+                "ViewLayer.Noisy Image.R": 7.77366756816315,
+                "ViewLayer.Noisy Image.G": 12.400412423378766,
+                "ViewLayer.Noisy Image.B": 21.472202228367106,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 82,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            }
+          ],
+          "fallback_pixels": {
+            "min": 1763,
+            "median": 1859.5,
+            "max": 1925
+          },
+          "max_ratio": {
+            "ViewLayer.Debug Sample Count.X": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Denoising Albedo.R": {
+              "min": 5.055051617514405,
+              "median": 10.112090447836492,
+              "max": 19.846694391162465
+            },
+            "ViewLayer.Denoising Albedo.G": {
+              "min": 5.068067935004904,
+              "median": 10.497116955793127,
+              "max": 19.844996789763712
+            },
+            "ViewLayer.Denoising Albedo.B": {
+              "min": 5.0669123306109425,
+              "median": 10.956654932113194,
+              "max": 19.86883788626938
+            },
+            "ViewLayer.Denoising Depth.Z": {
+              "min": 2.678210288292659,
+              "median": 6.1806858733336405,
+              "max": 22.94285695440647
+            },
+            "ViewLayer.Denoising Normal.X": {
+              "min": 6.995905275299831,
+              "median": 238883.0095768686,
+              "max": 885047.7881954636
+            },
+            "ViewLayer.Denoising Normal.Y": {
+              "min": 5.754892676561108,
+              "median": 10.34103003901187,
+              "max": 27.332803472359476
+            },
+            "ViewLayer.Denoising Normal.Z": {
+              "min": 2.2421038739403123,
+              "median": 6.034134012905147,
+              "max": 18.78286878821263
+            },
+            "ViewLayer.Noisy Image.R": {
+              "min": 3.6545162096661366,
+              "median": 8.412108562461171,
+              "max": 15.549130866985054
+            },
+            "ViewLayer.Noisy Image.G": {
+              "min": 3.705269882227773,
+              "median": 11.366134006563206,
+              "max": 24.549670734281086
+            },
+            "ViewLayer.Noisy Image.B": {
+              "min": 3.070917783085974,
+              "median": 18.522833922708656,
+              "max": 30.173574762316406
+            },
+            "ViewLayer.Noisy Image.A": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "requires_seed_controls": true,
+          "ordinary_controls": 20,
+          "minimum_controls": 20,
+          "informational_only": false,
+          "complete": true
+        },
+        "count_mismatch": {
+          "passed": true,
+          "category": "count-mismatch",
+          "ordinary_leave_one_out": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 279,
+              "mismatch_rate": 0.00047489361702127657,
+              "fewer": 79,
+              "more": 90,
+              "modal_tie_pixels": 110,
+              "fewer_fraction": 0.46745562130177515,
+              "binomial_p": 0.44185016848815495,
+              "sample_count_differences": {
+                "-272": 2,
+                "-256": 1,
+                "-224": 2,
+                "-192": 1,
+                "-160": 1,
+                "-144": 1,
+                "-128": 3,
+                "-112": 2,
+                "-96": 4,
+                "-80": 7,
+                "-64": 5,
+                "-48": 6,
+                "-32": 14,
+                "-16": 30,
+                "16": 23,
+                "32": 17,
+                "48": 3,
+                "64": 9,
+                "96": 4,
+                "112": 12,
+                "128": 2,
+                "144": 3,
+                "160": 2,
+                "176": 2,
+                "208": 1,
+                "224": 1,
+                "240": 2,
+                "272": 3,
+                "288": 1,
+                "368": 3,
+                "464": 1,
+                "480": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 326,
+              "mismatch_rate": 0.0005548936170212766,
+              "fewer": 83,
+              "more": 124,
+              "modal_tie_pixels": 119,
+              "fewer_fraction": 0.40096618357487923,
+              "binomial_p": 0.005306333695933721,
+              "sample_count_differences": {
+                "-304": 1,
+                "-272": 1,
+                "-208": 2,
+                "-176": 1,
+                "-160": 1,
+                "-128": 2,
+                "-112": 2,
+                "-96": 6,
+                "-80": 8,
+                "-64": 9,
+                "-48": 4,
+                "-32": 27,
+                "-16": 19,
+                "16": 26,
+                "32": 20,
+                "48": 6,
+                "64": 14,
+                "80": 7,
+                "96": 7,
+                "112": 6,
+                "128": 1,
+                "144": 5,
+                "160": 6,
+                "176": 1,
+                "192": 1,
+                "208": 7,
+                "224": 1,
+                "256": 4,
+                "304": 3,
+                "336": 8,
+                "512": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 304,
+              "mismatch_rate": 0.0005174468085106383,
+              "fewer": 80,
+              "more": 127,
+              "modal_tie_pixels": 97,
+              "fewer_fraction": 0.3864734299516908,
+              "binomial_p": 0.001330560053406875,
+              "sample_count_differences": {
+                "-352": 1,
+                "-192": 1,
+                "-176": 1,
+                "-112": 3,
+                "-80": 4,
+                "-64": 13,
+                "-48": 9,
+                "-32": 12,
+                "-16": 36,
+                "16": 45,
+                "32": 14,
+                "48": 20,
+                "64": 7,
+                "80": 4,
+                "96": 2,
+                "112": 3,
+                "128": 2,
+                "160": 4,
+                "176": 6,
+                "208": 1,
+                "240": 3,
+                "256": 1,
+                "272": 4,
+                "304": 1,
+                "320": 2,
+                "336": 1,
+                "368": 1,
+                "400": 2,
+                "416": 1,
+                "432": 1,
+                "448": 2
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 262,
+              "mismatch_rate": 0.0004459574468085106,
+              "fewer": 45,
+              "more": 109,
+              "modal_tie_pixels": 108,
+              "fewer_fraction": 0.2922077922077922,
+              "binomial_p": 2.615376985326203e-07,
+              "sample_count_differences": {
+                "-416": 1,
+                "-224": 2,
+                "-160": 4,
+                "-128": 1,
+                "-112": 1,
+                "-80": 2,
+                "-64": 6,
+                "-48": 6,
+                "-32": 6,
+                "-16": 16,
+                "16": 35,
+                "32": 8,
+                "48": 6,
+                "64": 3,
+                "80": 9,
+                "96": 1,
+                "112": 6,
+                "128": 2,
+                "144": 2,
+                "160": 3,
+                "176": 2,
+                "192": 4,
+                "208": 1,
+                "224": 4,
+                "240": 1,
+                "272": 2,
+                "304": 3,
+                "320": 1,
+                "336": 5,
+                "352": 2,
+                "368": 5,
+                "416": 1,
+                "432": 2,
+                "576": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 278,
+              "mismatch_rate": 0.0004731914893617021,
+              "fewer": 81,
+              "more": 101,
+              "modal_tie_pixels": 96,
+              "fewer_fraction": 0.44505494505494503,
+              "binomial_p": 0.15883333227243546,
+              "sample_count_differences": {
+                "-336": 1,
+                "-256": 1,
+                "-240": 1,
+                "-224": 2,
+                "-192": 2,
+                "-176": 3,
+                "-144": 1,
+                "-128": 1,
+                "-96": 2,
+                "-80": 4,
+                "-64": 13,
+                "-48": 8,
+                "-32": 10,
+                "-16": 32,
+                "16": 29,
+                "32": 18,
+                "48": 7,
+                "64": 8,
+                "80": 4,
+                "96": 5,
+                "112": 1,
+                "144": 2,
+                "160": 6,
+                "176": 1,
+                "192": 2,
+                "224": 8,
+                "288": 3,
+                "320": 1,
+                "336": 3,
+                "352": 2,
+                "512": 1
+              }
+            }
+          ],
+          "deep_four_control_subsets": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 325,
+              "mismatch_rate": 0.0005531914893617022,
+              "fewer": 84,
+              "more": 144,
+              "modal_tie_pixels": 97,
+              "fewer_fraction": 0.3684210526315789,
+              "binomial_p": 8.556420101302973e-05,
+              "sample_count_differences": {
+                "-496": 1,
+                "-384": 3,
+                "-352": 1,
+                "-320": 2,
+                "-240": 1,
+                "-224": 1,
+                "-192": 3,
+                "-176": 1,
+                "-144": 3,
+                "-128": 1,
+                "-112": 2,
+                "-96": 3,
+                "-80": 3,
+                "-64": 1,
+                "-48": 8,
+                "-32": 14,
+                "-16": 36,
+                "16": 43,
+                "32": 25,
+                "48": 4,
+                "64": 5,
+                "80": 4,
+                "96": 8,
+                "112": 17,
+                "128": 1,
+                "144": 2,
+                "160": 1,
+                "176": 1,
+                "208": 2,
+                "224": 2,
+                "240": 1,
+                "256": 4,
+                "272": 3,
+                "288": 2,
+                "304": 6,
+                "320": 3,
+                "336": 3,
+                "368": 2,
+                "400": 2,
+                "432": 2,
+                "544": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 310,
+              "mismatch_rate": 0.0005276595744680851,
+              "fewer": 81,
+              "more": 149,
+              "modal_tie_pixels": 80,
+              "fewer_fraction": 0.3521739130434783,
+              "binomial_p": 8.649652801163757e-06,
+              "sample_count_differences": {
+                "-384": 3,
+                "-368": 1,
+                "-352": 1,
+                "-320": 2,
+                "-288": 1,
+                "-240": 1,
+                "-224": 2,
+                "-192": 3,
+                "-176": 1,
+                "-144": 3,
+                "-112": 1,
+                "-96": 3,
+                "-80": 2,
+                "-64": 1,
+                "-48": 8,
+                "-32": 14,
+                "-16": 34,
+                "16": 30,
+                "32": 26,
+                "48": 8,
+                "64": 5,
+                "80": 3,
+                "96": 8,
+                "112": 9,
+                "144": 3,
+                "160": 2,
+                "176": 2,
+                "208": 5,
+                "224": 4,
+                "240": 1,
+                "256": 2,
+                "272": 4,
+                "288": 5,
+                "304": 8,
+                "320": 5,
+                "336": 11,
+                "368": 2,
+                "416": 1,
+                "432": 2,
+                "544": 2,
+                "656": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 315,
+              "mismatch_rate": 0.0005361702127659574,
+              "fewer": 93,
+              "more": 145,
+              "modal_tie_pixels": 77,
+              "fewer_fraction": 0.3907563025210084,
+              "binomial_p": 0.0009081891284416889,
+              "sample_count_differences": {
+                "-496": 1,
+                "-384": 2,
+                "-368": 1,
+                "-352": 2,
+                "-320": 3,
+                "-288": 2,
+                "-256": 2,
+                "-240": 1,
+                "-192": 4,
+                "-144": 3,
+                "-128": 1,
+                "-96": 1,
+                "-80": 1,
+                "-64": 2,
+                "-48": 6,
+                "-32": 18,
+                "-16": 43,
+                "16": 37,
+                "32": 30,
+                "48": 8,
+                "64": 5,
+                "80": 4,
+                "96": 5,
+                "112": 10,
+                "144": 4,
+                "160": 4,
+                "176": 1,
+                "208": 2,
+                "224": 1,
+                "240": 3,
+                "272": 4,
+                "288": 4,
+                "304": 8,
+                "320": 4,
+                "336": 4,
+                "368": 2,
+                "432": 3,
+                "528": 1,
+                "592": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 302,
+              "mismatch_rate": 0.0005140425531914894,
+              "fewer": 83,
+              "more": 122,
+              "modal_tie_pixels": 97,
+              "fewer_fraction": 0.40487804878048783,
+              "binomial_p": 0.007799358592169722,
+              "sample_count_differences": {
+                "-496": 1,
+                "-384": 3,
+                "-368": 1,
+                "-320": 2,
+                "-240": 1,
+                "-192": 2,
+                "-144": 3,
+                "-128": 2,
+                "-112": 1,
+                "-96": 2,
+                "-80": 2,
+                "-64": 4,
+                "-48": 8,
+                "-32": 14,
+                "-16": 37,
+                "16": 34,
+                "32": 27,
+                "48": 4,
+                "64": 4,
+                "80": 4,
+                "96": 4,
+                "112": 9,
+                "128": 1,
+                "144": 2,
+                "160": 2,
+                "176": 2,
+                "208": 2,
+                "224": 2,
+                "240": 1,
+                "256": 2,
+                "272": 3,
+                "288": 1,
+                "304": 4,
+                "320": 4,
+                "336": 2,
+                "368": 2,
+                "416": 1,
+                "432": 2,
+                "528": 1,
+                "544": 1,
+                "656": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 297,
+              "mismatch_rate": 0.0005055319148936171,
+              "fewer": 84,
+              "more": 134,
+              "modal_tie_pixels": 79,
+              "fewer_fraction": 0.3853211009174312,
+              "binomial_p": 0.0008633647470831845,
+              "sample_count_differences": {
+                "-496": 2,
+                "-384": 2,
+                "-352": 1,
+                "-320": 3,
+                "-288": 2,
+                "-256": 2,
+                "-240": 1,
+                "-224": 1,
+                "-192": 4,
+                "-144": 3,
+                "-128": 2,
+                "-112": 1,
+                "-96": 2,
+                "-64": 1,
+                "-48": 7,
+                "-32": 17,
+                "-16": 33,
+                "16": 35,
+                "32": 27,
+                "48": 8,
+                "64": 6,
+                "80": 5,
+                "96": 3,
+                "112": 9,
+                "144": 4,
+                "160": 3,
+                "208": 2,
+                "240": 3,
+                "256": 3,
+                "272": 3,
+                "288": 2,
+                "304": 5,
+                "320": 3,
+                "336": 3,
+                "368": 2,
+                "400": 2,
+                "432": 3,
+                "528": 1,
+                "544": 1,
+                "592": 1
+              }
+            }
+          ],
+          "deep_five_control": {
+            "pixels": 587500,
+            "mismatch_pixels": 273,
+            "mismatch_rate": 0.0004646808510638298,
+            "fewer": 82,
+            "more": 125,
+            "modal_tie_pixels": 66,
+            "fewer_fraction": 0.3961352657004831,
+            "binomial_p": 0.0034096100371894663,
+            "sample_count_differences": {
+              "-496": 2,
+              "-384": 3,
+              "-368": 1,
+              "-352": 1,
+              "-320": 2,
+              "-288": 1,
+              "-240": 1,
+              "-224": 1,
+              "-192": 3,
+              "-176": 1,
+              "-144": 3,
+              "-128": 2,
+              "-112": 1,
+              "-96": 3,
+              "-80": 1,
+              "-64": 1,
+              "-48": 6,
+              "-32": 13,
+              "-16": 36,
+              "16": 30,
+              "32": 24,
+              "48": 5,
+              "64": 6,
+              "80": 4,
+              "96": 6,
+              "112": 9,
+              "144": 4,
+              "160": 3,
+              "176": 1,
+              "208": 2,
+              "224": 1,
+              "240": 3,
+              "256": 3,
+              "272": 3,
+              "288": 2,
+              "304": 7,
+              "320": 4,
+              "336": 2,
+              "368": 2,
+              "432": 2,
+              "528": 1,
+              "544": 1
+            }
+          },
+          "ordinary_count_distribution": {
+            "min": 262,
+            "median": 279,
+            "max": 326
+          },
+          "deep_mean_mismatch_pixels": 309.8,
+          "rate_passed": true,
+          "ordinary_direction_range": [
+            0.2922077922077922,
+            0.46745562130177515
+          ],
+          "direction_outside_range": false,
+          "direction_passed": true,
+          "direction_rule": "One observation per full-pool mismatch pixel; unique modal reference count; modal ties reported separately"
+        },
+        "flagged_pixels": [
+          {
+            "file_pixel": [
+              992,
+              78
+            ],
+            "sample_count": 368,
+            "passed": false,
+            "failed_passes": [
+              "ViewLayer.Denoising Normal"
+            ],
+            "channels": [
+              {
+                "channel": "ViewLayer.Debug Sample Count.X",
+                "passed": true,
+                "difference": 0.0,
+                "sigma": 0.10106045787464717,
+                "ratio": 0.0,
+                "nearest": 0,
+                "reference_value": 0.359375,
+                "four_ulp": 1.1920928955078125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 0.0,
+                "absolute_limit": 1.1920928955078125e-07
+              },
+              {
+                "channel": "ViewLayer.Denoising Albedo.R",
+                "passed": true,
+                "difference": -0.0017185211181640625,
+                "sigma": 0.002568778457327256,
+                "ratio": 0.6690032428690394,
+                "nearest": 0,
+                "reference_value": 0.21085967123508453,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 19.846694391162465,
+                "absolute_limit": 0.05098176100117582
+              },
+              {
+                "channel": "ViewLayer.Denoising Albedo.G",
+                "passed": true,
+                "difference": -0.001158401370048523,
+                "sigma": 0.002440832518192145,
+                "ratio": 0.474592730723908,
+                "nearest": 0,
+                "reference_value": 0.2010194957256317,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 19.844996789763712,
+                "absolute_limit": 0.048438313487873995
+              },
+              {
+                "channel": "ViewLayer.Denoising Albedo.B",
+                "passed": true,
+                "difference": -0.0009860247373580933,
+                "sigma": 0.002510697194149426,
+                "ratio": 0.3927294536576478,
+                "nearest": 0,
+                "reference_value": 0.2108815759420395,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 19.86883788626938,
+                "absolute_limit": 0.04988463553206634
+              },
+              {
+                "channel": "ViewLayer.Denoising Depth.Z",
+                "passed": true,
+                "difference": -2.24017333984375,
+                "sigma": 2.3465473531561285,
+                "ratio": 0.9546678599222366,
+                "nearest": 0,
+                "reference_value": 966.2247924804688,
+                "four_ulp": 0.000244140625,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 22.94285695440647,
+                "absolute_limit": 53.83650026020218
+              },
+              {
+                "channel": "ViewLayer.Denoising Normal.X",
+                "passed": true,
+                "difference": 0.01145625114440918,
+                "sigma": 0.0031819753287891683,
+                "ratio": 3.600358255690376,
+                "nearest": 0,
+                "reference_value": -0.35937538743019104,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 885047.7881954636,
+                "absolute_limit": 2816.2002268373863
+              },
+              {
+                "channel": "ViewLayer.Denoising Normal.Y",
+                "passed": true,
+                "difference": 0.005602136254310608,
+                "sigma": 0.0011299344694925006,
+                "ratio": 4.957930221233763,
+                "nearest": 0,
+                "reference_value": -0.17354008555412292,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 27.332803472359476,
+                "absolute_limit": 0.030884276791283284
+              },
+              {
+                "channel": "ViewLayer.Denoising Normal.Z",
+                "passed": false,
+                "difference": -0.00950998067855835,
+                "sigma": 0.0004761334699392947,
+                "ratio": 19.973350497226836,
+                "nearest": 0,
+                "reference_value": -0.6161149144172668,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 18.78286878821263,
+                "absolute_limit": 0.008943152491546156
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.R",
+                "passed": true,
+                "difference": -0.0013025524094700813,
+                "sigma": 0.005324140927089913,
+                "ratio": 0.24465025011688313,
+                "nearest": 0,
+                "reference_value": 0.01645001210272312,
+                "four_ulp": 7.450580596923828e-09,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 15.549130866985054,
+                "absolute_limit": 0.08278576402959219
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.G",
+                "passed": true,
+                "difference": -0.001056099310517311,
+                "sigma": 0.003935813508273462,
+                "ratio": 0.26833062803846974,
+                "nearest": 0,
+                "reference_value": 0.017201362177729607,
+                "four_ulp": 7.450580596923828e-09,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 24.549670734281086,
+                "absolute_limit": 0.09662292569964918
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.B",
+                "passed": true,
+                "difference": -0.001087833195924759,
+                "sigma": 0.0030950325442862126,
+                "ratio": 0.35147714292472454,
+                "nearest": 0,
+                "reference_value": 0.02908162586390972,
+                "four_ulp": 7.450580596923828e-09,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 30.173574762316406,
+                "absolute_limit": 0.0933881958668224
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.A",
+                "passed": true,
+                "difference": 0.0,
+                "sigma": 0.0,
+                "ratio": 0.0,
+                "nearest": 0,
+                "reference_value": 1.0,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+                "calibrated_limit": 0.0,
+                "absolute_limit": 4.76837158203125e-07
+              }
+            ]
+          }
+        ],
+        "previous_pixel_978_81": [
+          {
+            "file_pixel": [
+              978,
+              81
+            ],
+            "sample_count": 1024,
+            "passed": true,
+            "failed_passes": [],
+            "channels": [
+              {
+                "channel": "ViewLayer.Debug Sample Count.X",
+                "passed": true,
+                "difference": 0.0,
+                "sigma": 0.07557693677568464,
+                "ratio": 0.0,
+                "nearest": 0,
+                "reference_value": 1.0,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+                "calibrated_limit": 0.0,
+                "absolute_limit": 4.76837158203125e-07
+              },
+              {
+                "channel": "ViewLayer.Denoising Albedo.R",
+                "passed": true,
+                "difference": -0.0007151663303375244,
+                "sigma": 0.003340962855222345,
+                "ratio": 0.21405994658684382,
+                "nearest": 1,
+                "reference_value": 0.3163386583328247,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-4",
+                "calibrated_limit": 19.846694391162465,
+                "absolute_limit": 0.06630706875982345
+              },
+              {
+                "channel": "ViewLayer.Denoising Albedo.G",
+                "passed": true,
+                "difference": 0.0036568939685821533,
+                "sigma": 0.007432521465814187,
+                "ratio": 0.4920125673907574,
+                "nearest": 1,
+                "reference_value": 0.49114474654197693,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-4",
+                "calibrated_limit": 19.844996789763712,
+                "absolute_limit": 0.14749836462893243
+              },
+              {
+                "channel": "ViewLayer.Denoising Albedo.B",
+                "passed": true,
+                "difference": 0.005031585693359375,
+                "sigma": 0.009074978072330283,
+                "ratio": 0.554446044194943,
+                "nearest": 1,
+                "reference_value": 0.554996132850647,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-4",
+                "calibrated_limit": 19.86883788626938,
+                "absolute_limit": 0.1803092681405798
+              },
+              {
+                "channel": "ViewLayer.Denoising Depth.Z",
+                "passed": true,
+                "difference": -0.29119873046875,
+                "sigma": 1.5051158295132965,
+                "ratio": 0.19347263829051203,
+                "nearest": 2,
+                "reference_value": 933.1339721679688,
+                "four_ulp": 0.000244140625,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-6",
+                "calibrated_limit": 22.94285695440647,
+                "absolute_limit": 34.531657176336395
+              },
+              {
+                "channel": "ViewLayer.Denoising Normal.X",
+                "passed": true,
+                "difference": -5.9165991842746735e-05,
+                "sigma": 0.0001512618162705046,
+                "ratio": 0.3911495531492163,
+                "nearest": 4,
+                "reference_value": -0.005159205757081509,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-19",
+                "calibrated_limit": 885047.7881954636,
+                "absolute_limit": 133.8739359286387
+              },
+              {
+                "channel": "ViewLayer.Denoising Normal.Y",
+                "passed": true,
+                "difference": 0.001528806984424591,
+                "sigma": 0.002429938534416494,
+                "ratio": 0.6291545908554047,
+                "nearest": 4,
+                "reference_value": 0.04108338803052902,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-19",
+                "calibrated_limit": 27.332803472359476,
+                "absolute_limit": 0.06641703241111925
+              },
+              {
+                "channel": "ViewLayer.Denoising Normal.Z",
+                "passed": true,
+                "difference": 0.0012584328651428223,
+                "sigma": 0.0038149664771413953,
+                "ratio": 0.32986734554107605,
+                "nearest": 2,
+                "reference_value": -0.8812472820281982,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-6",
+                "calibrated_limit": 18.78286878821263,
+                "absolute_limit": 0.07165601477157661
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.R",
+                "passed": true,
+                "difference": 0.00021599605679512024,
+                "sigma": 0.002933358554830011,
+                "ratio": 0.07363438623603151,
+                "nearest": 4,
+                "reference_value": 0.05860753729939461,
+                "four_ulp": 1.4901161193847656e-08,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-19",
+                "calibrated_limit": 15.549130866985054,
+                "absolute_limit": 0.045611176048841996
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.G",
+                "passed": true,
+                "difference": 8.601322770118713e-05,
+                "sigma": 0.0011297737746118607,
+                "ratio": 0.07613314243441117,
+                "nearest": 4,
+                "reference_value": 0.05097385495901108,
+                "four_ulp": 1.4901161193847656e-08,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-19",
+                "calibrated_limit": 24.549670734281086,
+                "absolute_limit": 0.02773557417094707
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.B",
+                "passed": true,
+                "difference": -8.27983021736145e-05,
+                "sigma": 0.0006280084219987021,
+                "ratio": 0.13184266209376666,
+                "nearest": 4,
+                "reference_value": 0.054766859859228134,
+                "four_ulp": 1.4901161193847656e-08,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-19",
+                "calibrated_limit": 30.173574762316406,
+                "absolute_limit": 0.01894925907254219
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.A",
+                "passed": true,
+                "difference": 0.0,
+                "sigma": 0.0,
+                "ratio": 0.0,
+                "nearest": 0,
+                "reference_value": 1.0,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+                "calibrated_limit": 0.0,
+                "absolute_limit": 4.76837158203125e-07
+              }
+            ]
+          }
+        ],
+        "report": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\run1-beauty-20.json",
+        "original_report_preserved": true,
+        "accepted": true
+      },
+      "phase5_estimate": {
+        "scope": "CUDA IDs-off z0, startup-scaled upper-bound timing; not a controlled speedup",
+        "render_capture_minutes": 190.98,
+        "export_minutes": 187.43,
+        "spill_gb": 181.316,
+        "exr_gb": 4.392,
+        "host_gib": 13.93,
+        "device_gpu_mib": 5925
+      },
+      "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\deep-all"
+    },
+    "run2": {
+      "metrics": {
+        "name": "deep-64",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\deep-64",
+        "render_call_seconds": 1418.7958715000423,
+        "peak_host_bytes": 6104449024,
+        "peak_gpu_device_mib": 6217,
+        "peak_gpu_process_bytes": 4013391872,
+        "gates": "PASS",
+        "export_seconds": 372.38,
+        "spill_file_bytes": 20101054836,
+        "spill_read_bytes": 47054663352,
+        "spill_write_bytes": 24790150260,
+        "companion_export_seconds": 191.8091454,
+        "production_export_seconds": 180.5708546,
+        "render_capture_seconds": 1046.4158715000422,
+        "exr_bytes": 705176082,
+        "z0_companion_bytes": 920277638,
+        "deep_sample_count": 86125949,
+        "max_exterior_error": 2.682607158632777e-08,
+        "max_flatten_error": 0.0,
+        "oracle_max_error": 8.229895820188737e-05,
+        "finished_utc": "2026-10-10T08:45:29Z",
+        "lane_written_bytes": 18384917748,
+        "readback_bytes": 38721100532,
+        "peak_host_gib": 5.685211181640625,
+        "peak_process_gpu_gib": 3.737762451171875
+      },
+      "oracle": {
+        "passed": true,
+        "deep_error": 0.0010000000474974513,
+        "max_accepted_camera_error": 8.229895820188737e-05,
+        "accepted_camera_probes": 18277714,
+        "accepted_camera_pixels": 81,
+        "accepted_populations": [
+          64,
+          48,
+          64,
+          64,
+          64,
+          48,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          32,
+          64,
+          64,
+          48,
+          64,
+          64,
+          64,
+          64,
+          48,
+          64,
+          16,
+          16,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          16,
+          64,
+          16,
+          64,
+          64,
+          64,
+          64,
+          64,
+          48,
+          16,
+          64,
+          32,
+          64,
+          64,
+          64,
+          64,
+          64,
+          32,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          48,
+          64,
+          32,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          32,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          16
+        ],
+        "camera_populations": [
+          {
+            "x": 0,
+            "y": 0,
+            "count": 64
+          },
+          {
+            "x": 146,
+            "y": 0,
+            "count": 48
+          },
+          {
+            "x": 293,
+            "y": 0,
+            "count": 64
+          },
+          {
+            "x": 440,
+            "y": 0,
+            "count": 64
+          },
+          {
+            "x": 587,
+            "y": 0,
+            "count": 64
+          },
+          {
+            "x": 733,
+            "y": 0,
+            "count": 48
+          },
+          {
+            "x": 880,
+            "y": 0,
+            "count": 64
+          },
+          {
+            "x": 1027,
+            "y": 0,
+            "count": 64
+          },
+          {
+            "x": 1174,
+            "y": 0,
+            "count": 64
+          },
+          {
+            "x": 0,
+            "y": 62,
+            "count": 64
+          },
+          {
+            "x": 146,
+            "y": 62,
+            "count": 64
+          },
+          {
+            "x": 293,
+            "y": 62,
+            "count": 64
+          },
+          {
+            "x": 440,
+            "y": 62,
+            "count": 32
+          },
+          {
+            "x": 587,
+            "y": 62,
+            "count": 64
+          },
+          {
+            "x": 733,
+            "y": 62,
+            "count": 64
+          },
+          {
+            "x": 880,
+            "y": 62,
+            "count": 48
+          },
+          {
+            "x": 1027,
+            "y": 62,
+            "count": 64
+          },
+          {
+            "x": 1174,
+            "y": 62,
+            "count": 64
+          },
+          {
+            "x": 0,
+            "y": 124,
+            "count": 64
+          },
+          {
+            "x": 146,
+            "y": 124,
+            "count": 64
+          },
+          {
+            "x": 293,
+            "y": 124,
+            "count": 48
+          },
+          {
+            "x": 440,
+            "y": 124,
+            "count": 64
+          },
+          {
+            "x": 587,
+            "y": 124,
+            "count": 16
+          },
+          {
+            "x": 733,
+            "y": 124,
+            "count": 16
+          },
+          {
+            "x": 880,
+            "y": 124,
+            "count": 64
+          },
+          {
+            "x": 1027,
+            "y": 124,
+            "count": 64
+          },
+          {
+            "x": 1174,
+            "y": 124,
+            "count": 64
+          },
+          {
+            "x": 0,
+            "y": 187,
+            "count": 64
+          },
+          {
+            "x": 146,
+            "y": 187,
+            "count": 64
+          },
+          {
+            "x": 293,
+            "y": 187,
+            "count": 64
+          },
+          {
+            "x": 440,
+            "y": 187,
+            "count": 64
+          },
+          {
+            "x": 587,
+            "y": 187,
+            "count": 64
+          },
+          {
+            "x": 733,
+            "y": 187,
+            "count": 64
+          },
+          {
+            "x": 880,
+            "y": 187,
+            "count": 64
+          },
+          {
+            "x": 1027,
+            "y": 187,
+            "count": 64
+          },
+          {
+            "x": 1174,
+            "y": 187,
+            "count": 64
+          },
+          {
+            "x": 0,
+            "y": 249,
+            "count": 64
+          },
+          {
+            "x": 146,
+            "y": 249,
+            "count": 64
+          },
+          {
+            "x": 293,
+            "y": 249,
+            "count": 64
+          },
+          {
+            "x": 440,
+            "y": 249,
+            "count": 16
+          },
+          {
+            "x": 587,
+            "y": 249,
+            "count": 64
+          },
+          {
+            "x": 733,
+            "y": 249,
+            "count": 16
+          },
+          {
+            "x": 880,
+            "y": 249,
+            "count": 64
+          },
+          {
+            "x": 1027,
+            "y": 249,
+            "count": 64
+          },
+          {
+            "x": 1174,
+            "y": 249,
+            "count": 64
+          },
+          {
+            "x": 0,
+            "y": 311,
+            "count": 64
+          },
+          {
+            "x": 146,
+            "y": 311,
+            "count": 64
+          },
+          {
+            "x": 293,
+            "y": 311,
+            "count": 48
+          },
+          {
+            "x": 440,
+            "y": 311,
+            "count": 16
+          },
+          {
+            "x": 587,
+            "y": 311,
+            "count": 64
+          },
+          {
+            "x": 733,
+            "y": 311,
+            "count": 32
+          },
+          {
+            "x": 880,
+            "y": 311,
+            "count": 64
+          },
+          {
+            "x": 1027,
+            "y": 311,
+            "count": 64
+          },
+          {
+            "x": 1174,
+            "y": 311,
+            "count": 64
+          },
+          {
+            "x": 0,
+            "y": 374,
+            "count": 64
+          },
+          {
+            "x": 146,
+            "y": 374,
+            "count": 64
+          },
+          {
+            "x": 293,
+            "y": 374,
+            "count": 32
+          },
+          {
+            "x": 440,
+            "y": 374,
+            "count": 64
+          },
+          {
+            "x": 587,
+            "y": 374,
+            "count": 64
+          },
+          {
+            "x": 733,
+            "y": 374,
+            "count": 64
+          },
+          {
+            "x": 880,
+            "y": 374,
+            "count": 64
+          },
+          {
+            "x": 1027,
+            "y": 374,
+            "count": 64
+          },
+          {
+            "x": 1174,
+            "y": 374,
+            "count": 64
+          },
+          {
+            "x": 0,
+            "y": 436,
+            "count": 48
+          },
+          {
+            "x": 146,
+            "y": 436,
+            "count": 64
+          },
+          {
+            "x": 293,
+            "y": 436,
+            "count": 32
+          },
+          {
+            "x": 440,
+            "y": 436,
+            "count": 64
+          },
+          {
+            "x": 587,
+            "y": 436,
+            "count": 64
+          },
+          {
+            "x": 733,
+            "y": 436,
+            "count": 64
+          },
+          {
+            "x": 880,
+            "y": 436,
+            "count": 64
+          },
+          {
+            "x": 1027,
+            "y": 436,
+            "count": 64
+          },
+          {
+            "x": 1174,
+            "y": 436,
+            "count": 64
+          },
+          {
+            "x": 0,
+            "y": 499,
+            "count": 32
+          },
+          {
+            "x": 146,
+            "y": 499,
+            "count": 64
+          },
+          {
+            "x": 293,
+            "y": 499,
+            "count": 64
+          },
+          {
+            "x": 440,
+            "y": 499,
+            "count": 64
+          },
+          {
+            "x": 587,
+            "y": 499,
+            "count": 64
+          },
+          {
+            "x": 733,
+            "y": 499,
+            "count": 64
+          },
+          {
+            "x": 880,
+            "y": 499,
+            "count": 64
+          },
+          {
+            "x": 1027,
+            "y": 499,
+            "count": 64
+          },
+          {
+            "x": 1174,
+            "y": 499,
+            "count": 16
+          }
+        ],
+        "oracle": "Independent NumPy extinction sweep; one pixel at a time"
+      },
+      "cuts": {
+        "passed": true,
+        "max_slice_error": 2.8407978713840265e-07,
+        "header_bound": 0.0010000000474974513,
+        "diagnostic_pixels": 81,
+        "cuts": [
+          490.4764099121094,
+          624.84130859375,
+          759.2061767578125,
+          893.5711059570312,
+          1027.9359130859375
+        ],
+        "scope": "Gaffer DeepSlice vs independent stored-curve evaluation; no review scene"
+      },
+      "raw_inputs": {
+        "passed": true,
+        "accepted_samples": {
+          "min": 16,
+          "median": 288.0,
+          "max": 1024
+        },
+        "channels": 26,
+        "dimensions": [
+          1175,
+          500
+        ]
+      },
+      "beauty": {
+        "passed": true,
+        "raw_passed": true,
+        "bias_passed": true,
+        "denoised_outlier_pixels": 0,
+        "fallback_pixels": 1824,
+        "calibration": {
+          "renders": [
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+              "fallback_pixels": 1849,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 18.48913111198074,
+                "ViewLayer.Denoising Albedo.G": 18.487035787999552,
+                "ViewLayer.Denoising Albedo.B": 18.509358380599547,
+                "ViewLayer.Denoising Depth.Z": 3.965367512443502,
+                "ViewLayer.Denoising Normal.X": 532995.9905010487,
+                "ViewLayer.Denoising Normal.Y": 27.332803472359476,
+                "ViewLayer.Denoising Normal.Z": 7.043756346517258,
+                "ViewLayer.Noisy Image.R": 15.549130866985054,
+                "ViewLayer.Noisy Image.G": 12.400412423378766,
+                "ViewLayer.Noisy Image.B": 21.472202228367106,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 120,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+              "fallback_pixels": 1822,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 8.246389935464801,
+                "ViewLayer.Denoising Albedo.G": 8.227592837577056,
+                "ViewLayer.Denoising Albedo.B": 8.230721379496496,
+                "ViewLayer.Denoising Depth.Z": 4.135757836809195,
+                "ViewLayer.Denoising Normal.X": 272461.05366870825,
+                "ViewLayer.Denoising Normal.Y": 27.332803472359476,
+                "ViewLayer.Denoising Normal.Z": 5.556738788770476,
+                "ViewLayer.Noisy Image.R": 15.002376832433335,
+                "ViewLayer.Noisy Image.G": 14.10447822283115,
+                "ViewLayer.Noisy Image.B": 13.513196811611177,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 117,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-3",
+              "fallback_pixels": 1852,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 7.624223571792551,
+                "ViewLayer.Denoising Albedo.G": 7.76031461406359,
+                "ViewLayer.Denoising Albedo.B": 7.765405769514888,
+                "ViewLayer.Denoising Depth.Z": 10.868099162778321,
+                "ViewLayer.Denoising Normal.X": 112023.30878485453,
+                "ViewLayer.Denoising Normal.Y": 5.754892676561108,
+                "ViewLayer.Denoising Normal.Z": 5.975213514058982,
+                "ViewLayer.Noisy Image.R": 12.032709085832137,
+                "ViewLayer.Noisy Image.G": 24.549670734281086,
+                "ViewLayer.Noisy Image.B": 30.173574762316406,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 106,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-4",
+              "fallback_pixels": 1818,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 5.055051617514405,
+                "ViewLayer.Denoising Albedo.G": 5.068067935004904,
+                "ViewLayer.Denoising Albedo.B": 5.0669123306109425,
+                "ViewLayer.Denoising Depth.Z": 7.6102011059503285,
+                "ViewLayer.Denoising Normal.X": 66544.89959098112,
+                "ViewLayer.Denoising Normal.Y": 11.874291439166647,
+                "ViewLayer.Denoising Normal.Z": 4.50041662790268,
+                "ViewLayer.Noisy Image.R": 5.537481029879795,
+                "ViewLayer.Noisy Image.G": 7.031808452836941,
+                "ViewLayer.Noisy Image.B": 19.9731608188545,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 67,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-5",
+              "fallback_pixels": 1921,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 10.715635277902466,
+                "ViewLayer.Denoising Albedo.G": 11.06187341120668,
+                "ViewLayer.Denoising Albedo.B": 11.146888614844084,
+                "ViewLayer.Denoising Depth.Z": 5.655282657727259,
+                "ViewLayer.Denoising Normal.X": 112.53595210791921,
+                "ViewLayer.Denoising Normal.Y": 8.900866077353681,
+                "ViewLayer.Denoising Normal.Z": 18.78286878821263,
+                "ViewLayer.Noisy Image.R": 8.412108562461171,
+                "ViewLayer.Noisy Image.G": 16.053102895415105,
+                "ViewLayer.Noisy Image.B": 21.380305101560957,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 114,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-6",
+              "fallback_pixels": 1840,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 11.470988747299442,
+                "ViewLayer.Denoising Albedo.G": 11.446500837782528,
+                "ViewLayer.Denoising Albedo.B": 11.443146305390211,
+                "ViewLayer.Denoising Depth.Z": 6.303497514411427,
+                "ViewLayer.Denoising Normal.X": 825807.8688476377,
+                "ViewLayer.Denoising Normal.Y": 10.802432857182788,
+                "ViewLayer.Denoising Normal.Z": 6.034134012905147,
+                "ViewLayer.Noisy Image.R": 7.384031521276092,
+                "ViewLayer.Noisy Image.G": 6.08020738878106,
+                "ViewLayer.Noisy Image.B": 5.1429968167284335,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 118,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-7",
+              "fallback_pixels": 1860,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 13.817330244176578,
+                "ViewLayer.Denoising Albedo.G": 13.24975504963746,
+                "ViewLayer.Denoising Albedo.B": 13.108987089817498,
+                "ViewLayer.Denoising Depth.Z": 9.37162455625441,
+                "ViewLayer.Denoising Normal.X": 25415.090036905633,
+                "ViewLayer.Denoising Normal.Y": 10.524849554982694,
+                "ViewLayer.Denoising Normal.Z": 6.917638375475355,
+                "ViewLayer.Noisy Image.R": 8.222185840708349,
+                "ViewLayer.Noisy Image.G": 8.31219892639122,
+                "ViewLayer.Noisy Image.B": 8.380120821097522,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 72,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-8",
+              "fallback_pixels": 1874,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 10.112090447836492,
+                "ViewLayer.Denoising Albedo.G": 10.10855870852478,
+                "ViewLayer.Denoising Albedo.B": 10.092411994486481,
+                "ViewLayer.Denoising Depth.Z": 22.94285695440647,
+                "ViewLayer.Denoising Normal.X": 248836.5857814611,
+                "ViewLayer.Denoising Normal.Y": 13.693622068856328,
+                "ViewLayer.Denoising Normal.Z": 4.01309523717033,
+                "ViewLayer.Noisy Image.R": 8.412108562461171,
+                "ViewLayer.Noisy Image.G": 16.053102895415105,
+                "ViewLayer.Noisy Image.B": 21.380305101560957,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 108,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-9",
+              "fallback_pixels": 1896,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 10.112090447836492,
+                "ViewLayer.Denoising Albedo.G": 10.10855870852478,
+                "ViewLayer.Denoising Albedo.B": 10.092411994486481,
+                "ViewLayer.Denoising Depth.Z": 3.718622993623618,
+                "ViewLayer.Denoising Normal.X": 238883.0095768686,
+                "ViewLayer.Denoising Normal.Y": 13.693622068856328,
+                "ViewLayer.Denoising Normal.Z": 2.2421038739403123,
+                "ViewLayer.Noisy Image.R": 6.4308373715515055,
+                "ViewLayer.Noisy Image.G": 10.331855589747645,
+                "ViewLayer.Noisy Image.B": 9.588975359734933,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 97,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-10",
+              "fallback_pixels": 1882,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 13.817330244176578,
+                "ViewLayer.Denoising Albedo.G": 13.24975504963746,
+                "ViewLayer.Denoising Albedo.B": 13.108987089817498,
+                "ViewLayer.Denoising Depth.Z": 3.3983868883445103,
+                "ViewLayer.Denoising Normal.X": 58721.51514564824,
+                "ViewLayer.Denoising Normal.Y": 10.524849554982694,
+                "ViewLayer.Denoising Normal.Z": 5.959646331604395,
+                "ViewLayer.Noisy Image.R": 8.47341796150587,
+                "ViewLayer.Noisy Image.G": 9.003584020684428,
+                "ViewLayer.Noisy Image.B": 21.582016875290698,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 129,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-11",
+              "fallback_pixels": 1867,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 11.35629177952007,
+                "ViewLayer.Denoising Albedo.G": 11.39392650449217,
+                "ViewLayer.Denoising Albedo.B": 11.389730902099732,
+                "ViewLayer.Denoising Depth.Z": 9.37162455625441,
+                "ViewLayer.Denoising Normal.X": 238883.0095768686,
+                "ViewLayer.Denoising Normal.Y": 11.874291439166647,
+                "ViewLayer.Denoising Normal.Z": 9.75305212896897,
+                "ViewLayer.Noisy Image.R": 11.776972057944189,
+                "ViewLayer.Noisy Image.G": 17.50515376084577,
+                "ViewLayer.Noisy Image.B": 17.072507026562818,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 107,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-12",
+              "fallback_pixels": 1859,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 19.846694391162465,
+                "ViewLayer.Denoising Albedo.G": 19.844996789763712,
+                "ViewLayer.Denoising Albedo.B": 19.86883788626938,
+                "ViewLayer.Denoising Depth.Z": 6.303497514411427,
+                "ViewLayer.Denoising Normal.X": 558900.4967908907,
+                "ViewLayer.Denoising Normal.Y": 9.780342984990424,
+                "ViewLayer.Denoising Normal.Z": 6.656328401578297,
+                "ViewLayer.Noisy Image.R": 7.01013555280918,
+                "ViewLayer.Noisy Image.G": 14.421656275145017,
+                "ViewLayer.Noisy Image.B": 13.74600042031401,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 89,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-13",
+              "fallback_pixels": 1826,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 5.143220256416522,
+                "ViewLayer.Denoising Albedo.G": 6.051626950940657,
+                "ViewLayer.Denoising Albedo.B": 6.851930694272202,
+                "ViewLayer.Denoising Depth.Z": 5.627614375336051,
+                "ViewLayer.Denoising Normal.X": 333008.74186648306,
+                "ViewLayer.Denoising Normal.Y": 8.544992523210725,
+                "ViewLayer.Denoising Normal.Z": 6.973791511801948,
+                "ViewLayer.Noisy Image.R": 8.815489536355791,
+                "ViewLayer.Noisy Image.G": 9.526552179979491,
+                "ViewLayer.Noisy Image.B": 19.9731608188545,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 111,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-14",
+              "fallback_pixels": 1807,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 9.961182701509031,
+                "ViewLayer.Denoising Albedo.G": 5.772854260780872,
+                "ViewLayer.Denoising Albedo.B": 5.21446174217427,
+                "ViewLayer.Denoising Depth.Z": 6.057874232255853,
+                "ViewLayer.Denoising Normal.X": 196073.08623018765,
+                "ViewLayer.Denoising Normal.Y": 10.157210523041043,
+                "ViewLayer.Denoising Normal.Z": 6.034134012905147,
+                "ViewLayer.Noisy Image.R": 7.384031521276092,
+                "ViewLayer.Noisy Image.G": 8.13976240492157,
+                "ViewLayer.Noisy Image.B": 3.807680269753093,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 107,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-15",
+              "fallback_pixels": 1763,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 19.846694391162465,
+                "ViewLayer.Denoising Albedo.G": 19.844996789763712,
+                "ViewLayer.Denoising Albedo.B": 19.86883788626938,
+                "ViewLayer.Denoising Depth.Z": 5.655282657727259,
+                "ViewLayer.Denoising Normal.X": 6.995905275299831,
+                "ViewLayer.Denoising Normal.Y": 6.438887691530212,
+                "ViewLayer.Denoising Normal.Z": 6.777083331200814,
+                "ViewLayer.Noisy Image.R": 12.032709085832137,
+                "ViewLayer.Noisy Image.G": 24.549670734281086,
+                "ViewLayer.Noisy Image.B": 30.173574762316406,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 116,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-16",
+              "fallback_pixels": 1925,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 10.108788770903816,
+                "ViewLayer.Denoising Albedo.G": 10.027038838336802,
+                "ViewLayer.Denoising Albedo.B": 9.961368468136996,
+                "ViewLayer.Denoising Depth.Z": 5.204803003067829,
+                "ViewLayer.Denoising Normal.X": 885047.7881954636,
+                "ViewLayer.Denoising Normal.Y": 10.802432857182788,
+                "ViewLayer.Denoising Normal.Z": 3.4521612015570984,
+                "ViewLayer.Noisy Image.R": 15.002376832433335,
+                "ViewLayer.Noisy Image.G": 14.10447822283115,
+                "ViewLayer.Noisy Image.B": 21.582016875290698,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 109,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-17",
+              "fallback_pixels": 1879,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 9.961182701509031,
+                "ViewLayer.Denoising Albedo.G": 10.497116955793127,
+                "ViewLayer.Denoising Albedo.B": 10.956654932113194,
+                "ViewLayer.Denoising Depth.Z": 17.80570532007065,
+                "ViewLayer.Denoising Normal.X": 38.58547835485807,
+                "ViewLayer.Denoising Normal.Y": 8.544992523210725,
+                "ViewLayer.Denoising Normal.Z": 12.553589199637292,
+                "ViewLayer.Noisy Image.R": 8.893401998725222,
+                "ViewLayer.Noisy Image.G": 9.173266017769029,
+                "ViewLayer.Noisy Image.B": 9.285833545449192,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 103,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-18",
+              "fallback_pixels": 1829,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 8.246389935464801,
+                "ViewLayer.Denoising Albedo.G": 8.227592837577056,
+                "ViewLayer.Denoising Albedo.B": 8.230721379496496,
+                "ViewLayer.Denoising Depth.Z": 2.678210288292659,
+                "ViewLayer.Denoising Normal.X": 23145.479111612305,
+                "ViewLayer.Denoising Normal.Y": 6.515423906592649,
+                "ViewLayer.Denoising Normal.Z": 3.8402567127550955,
+                "ViewLayer.Noisy Image.R": 3.6545162096661366,
+                "ViewLayer.Noisy Image.G": 3.705269882227773,
+                "ViewLayer.Noisy Image.B": 3.070917783085974,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 132,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-19",
+              "fallback_pixels": 1860,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 10.110095007101801,
+                "ViewLayer.Denoising Albedo.G": 10.497116955793127,
+                "ViewLayer.Denoising Albedo.B": 10.956654932113194,
+                "ViewLayer.Denoising Depth.Z": 10.868099162778321,
+                "ViewLayer.Denoising Normal.X": 885047.7881954636,
+                "ViewLayer.Denoising Normal.Y": 8.08018337410617,
+                "ViewLayer.Denoising Normal.Z": 12.553589199637292,
+                "ViewLayer.Noisy Image.R": 6.7517198392715,
+                "ViewLayer.Noisy Image.G": 6.947947869987984,
+                "ViewLayer.Noisy Image.B": 15.991289470303835,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 91,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-20",
+              "fallback_pixels": 1865,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Denoising Albedo.R": 18.48913111198074,
+                "ViewLayer.Denoising Albedo.G": 18.487035787999552,
+                "ViewLayer.Denoising Albedo.B": 18.509358380599547,
+                "ViewLayer.Denoising Depth.Z": 17.80570532007065,
+                "ViewLayer.Denoising Normal.X": 276860.4965050722,
+                "ViewLayer.Denoising Normal.Y": 6.102156328681836,
+                "ViewLayer.Denoising Normal.Z": 5.959646331604395,
+                "ViewLayer.Noisy Image.R": 7.77366756816315,
+                "ViewLayer.Noisy Image.G": 12.400412423378766,
+                "ViewLayer.Noisy Image.B": 21.472202228367106,
+                "ViewLayer.Noisy Image.A": 0.0
+              },
+              "unmatched_population_pixels": 82,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Denoising Albedo.R": 0,
+                "ViewLayer.Denoising Albedo.G": 0,
+                "ViewLayer.Denoising Albedo.B": 0,
+                "ViewLayer.Denoising Depth.Z": 0,
+                "ViewLayer.Denoising Normal.X": 0,
+                "ViewLayer.Denoising Normal.Y": 0,
+                "ViewLayer.Denoising Normal.Z": 0,
+                "ViewLayer.Noisy Image.R": 0,
+                "ViewLayer.Noisy Image.G": 0,
+                "ViewLayer.Noisy Image.B": 0,
+                "ViewLayer.Noisy Image.A": 0
+              }
+            }
+          ],
+          "fallback_pixels": {
+            "min": 1763,
+            "median": 1859.5,
+            "max": 1925
+          },
+          "max_ratio": {
+            "ViewLayer.Debug Sample Count.X": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Denoising Albedo.R": {
+              "min": 5.055051617514405,
+              "median": 10.112090447836492,
+              "max": 19.846694391162465
+            },
+            "ViewLayer.Denoising Albedo.G": {
+              "min": 5.068067935004904,
+              "median": 10.497116955793127,
+              "max": 19.844996789763712
+            },
+            "ViewLayer.Denoising Albedo.B": {
+              "min": 5.0669123306109425,
+              "median": 10.956654932113194,
+              "max": 19.86883788626938
+            },
+            "ViewLayer.Denoising Depth.Z": {
+              "min": 2.678210288292659,
+              "median": 6.1806858733336405,
+              "max": 22.94285695440647
+            },
+            "ViewLayer.Denoising Normal.X": {
+              "min": 6.995905275299831,
+              "median": 238883.0095768686,
+              "max": 885047.7881954636
+            },
+            "ViewLayer.Denoising Normal.Y": {
+              "min": 5.754892676561108,
+              "median": 10.34103003901187,
+              "max": 27.332803472359476
+            },
+            "ViewLayer.Denoising Normal.Z": {
+              "min": 2.2421038739403123,
+              "median": 6.034134012905147,
+              "max": 18.78286878821263
+            },
+            "ViewLayer.Noisy Image.R": {
+              "min": 3.6545162096661366,
+              "median": 8.412108562461171,
+              "max": 15.549130866985054
+            },
+            "ViewLayer.Noisy Image.G": {
+              "min": 3.705269882227773,
+              "median": 11.366134006563206,
+              "max": 24.549670734281086
+            },
+            "ViewLayer.Noisy Image.B": {
+              "min": 3.070917783085974,
+              "median": 18.522833922708656,
+              "max": 30.173574762316406
+            },
+            "ViewLayer.Noisy Image.A": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "requires_seed_controls": true,
+          "ordinary_controls": 20,
+          "minimum_controls": 20,
+          "informational_only": false,
+          "complete": true
+        },
+        "count_mismatch": {
+          "passed": true,
+          "category": "count-mismatch",
+          "ordinary_leave_one_out": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 279,
+              "mismatch_rate": 0.00047489361702127657,
+              "fewer": 79,
+              "more": 90,
+              "modal_tie_pixels": 110,
+              "fewer_fraction": 0.46745562130177515,
+              "binomial_p": 0.44185016848815495,
+              "sample_count_differences": {
+                "-272": 2,
+                "-256": 1,
+                "-224": 2,
+                "-192": 1,
+                "-160": 1,
+                "-144": 1,
+                "-128": 3,
+                "-112": 2,
+                "-96": 4,
+                "-80": 7,
+                "-64": 5,
+                "-48": 6,
+                "-32": 14,
+                "-16": 30,
+                "16": 23,
+                "32": 17,
+                "48": 3,
+                "64": 9,
+                "96": 4,
+                "112": 12,
+                "128": 2,
+                "144": 3,
+                "160": 2,
+                "176": 2,
+                "208": 1,
+                "224": 1,
+                "240": 2,
+                "272": 3,
+                "288": 1,
+                "368": 3,
+                "464": 1,
+                "480": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 326,
+              "mismatch_rate": 0.0005548936170212766,
+              "fewer": 83,
+              "more": 124,
+              "modal_tie_pixels": 119,
+              "fewer_fraction": 0.40096618357487923,
+              "binomial_p": 0.005306333695933721,
+              "sample_count_differences": {
+                "-304": 1,
+                "-272": 1,
+                "-208": 2,
+                "-176": 1,
+                "-160": 1,
+                "-128": 2,
+                "-112": 2,
+                "-96": 6,
+                "-80": 8,
+                "-64": 9,
+                "-48": 4,
+                "-32": 27,
+                "-16": 19,
+                "16": 26,
+                "32": 20,
+                "48": 6,
+                "64": 14,
+                "80": 7,
+                "96": 7,
+                "112": 6,
+                "128": 1,
+                "144": 5,
+                "160": 6,
+                "176": 1,
+                "192": 1,
+                "208": 7,
+                "224": 1,
+                "256": 4,
+                "304": 3,
+                "336": 8,
+                "512": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 304,
+              "mismatch_rate": 0.0005174468085106383,
+              "fewer": 80,
+              "more": 127,
+              "modal_tie_pixels": 97,
+              "fewer_fraction": 0.3864734299516908,
+              "binomial_p": 0.001330560053406875,
+              "sample_count_differences": {
+                "-352": 1,
+                "-192": 1,
+                "-176": 1,
+                "-112": 3,
+                "-80": 4,
+                "-64": 13,
+                "-48": 9,
+                "-32": 12,
+                "-16": 36,
+                "16": 45,
+                "32": 14,
+                "48": 20,
+                "64": 7,
+                "80": 4,
+                "96": 2,
+                "112": 3,
+                "128": 2,
+                "160": 4,
+                "176": 6,
+                "208": 1,
+                "240": 3,
+                "256": 1,
+                "272": 4,
+                "304": 1,
+                "320": 2,
+                "336": 1,
+                "368": 1,
+                "400": 2,
+                "416": 1,
+                "432": 1,
+                "448": 2
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 262,
+              "mismatch_rate": 0.0004459574468085106,
+              "fewer": 45,
+              "more": 109,
+              "modal_tie_pixels": 108,
+              "fewer_fraction": 0.2922077922077922,
+              "binomial_p": 2.615376985326203e-07,
+              "sample_count_differences": {
+                "-416": 1,
+                "-224": 2,
+                "-160": 4,
+                "-128": 1,
+                "-112": 1,
+                "-80": 2,
+                "-64": 6,
+                "-48": 6,
+                "-32": 6,
+                "-16": 16,
+                "16": 35,
+                "32": 8,
+                "48": 6,
+                "64": 3,
+                "80": 9,
+                "96": 1,
+                "112": 6,
+                "128": 2,
+                "144": 2,
+                "160": 3,
+                "176": 2,
+                "192": 4,
+                "208": 1,
+                "224": 4,
+                "240": 1,
+                "272": 2,
+                "304": 3,
+                "320": 1,
+                "336": 5,
+                "352": 2,
+                "368": 5,
+                "416": 1,
+                "432": 2,
+                "576": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 278,
+              "mismatch_rate": 0.0004731914893617021,
+              "fewer": 81,
+              "more": 101,
+              "modal_tie_pixels": 96,
+              "fewer_fraction": 0.44505494505494503,
+              "binomial_p": 0.15883333227243546,
+              "sample_count_differences": {
+                "-336": 1,
+                "-256": 1,
+                "-240": 1,
+                "-224": 2,
+                "-192": 2,
+                "-176": 3,
+                "-144": 1,
+                "-128": 1,
+                "-96": 2,
+                "-80": 4,
+                "-64": 13,
+                "-48": 8,
+                "-32": 10,
+                "-16": 32,
+                "16": 29,
+                "32": 18,
+                "48": 7,
+                "64": 8,
+                "80": 4,
+                "96": 5,
+                "112": 1,
+                "144": 2,
+                "160": 6,
+                "176": 1,
+                "192": 2,
+                "224": 8,
+                "288": 3,
+                "320": 1,
+                "336": 3,
+                "352": 2,
+                "512": 1
+              }
+            }
+          ],
+          "deep_four_control_subsets": [
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 250,
+              "mismatch_rate": 0.000425531914893617,
+              "fewer": 58,
+              "more": 109,
+              "modal_tie_pixels": 83,
+              "fewer_fraction": 0.3473053892215569,
+              "binomial_p": 9.739104814301284e-05,
+              "sample_count_differences": {
+                "-496": 1,
+                "-240": 1,
+                "-192": 1,
+                "-112": 1,
+                "-80": 3,
+                "-64": 2,
+                "-48": 4,
+                "-32": 17,
+                "-16": 28,
+                "16": 16,
+                "32": 20,
+                "48": 2,
+                "64": 10,
+                "80": 3,
+                "96": 2,
+                "112": 6,
+                "128": 3,
+                "144": 7,
+                "160": 1,
+                "176": 3,
+                "208": 3,
+                "240": 1,
+                "256": 1,
+                "288": 8,
+                "304": 2,
+                "320": 1,
+                "336": 1,
+                "352": 2,
+                "368": 5,
+                "400": 2,
+                "416": 2,
+                "432": 8
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 275,
+              "mismatch_rate": 0.00046808510638297874,
+              "fewer": 64,
+              "more": 133,
+              "modal_tie_pixels": 78,
+              "fewer_fraction": 0.3248730964467005,
+              "binomial_p": 9.932750712206059e-07,
+              "sample_count_differences": {
+                "-288": 1,
+                "-240": 1,
+                "-192": 2,
+                "-160": 1,
+                "-112": 1,
+                "-96": 4,
+                "-80": 2,
+                "-64": 8,
+                "-48": 4,
+                "-32": 19,
+                "-16": 21,
+                "16": 31,
+                "32": 21,
+                "48": 3,
+                "64": 9,
+                "80": 3,
+                "96": 5,
+                "112": 5,
+                "128": 1,
+                "144": 10,
+                "160": 2,
+                "176": 2,
+                "208": 3,
+                "240": 1,
+                "256": 2,
+                "288": 8,
+                "304": 4,
+                "320": 2,
+                "336": 2,
+                "352": 1,
+                "368": 4,
+                "400": 2,
+                "416": 3,
+                "432": 8,
+                "448": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 259,
+              "mismatch_rate": 0.00044085106382978724,
+              "fewer": 68,
+              "more": 119,
+              "modal_tie_pixels": 72,
+              "fewer_fraction": 0.36363636363636365,
+              "binomial_p": 0.0002359430936566365,
+              "sample_count_differences": {
+                "-496": 1,
+                "-288": 1,
+                "-240": 1,
+                "-192": 1,
+                "-160": 1,
+                "-96": 4,
+                "-80": 4,
+                "-64": 5,
+                "-48": 5,
+                "-32": 18,
+                "-16": 27,
+                "16": 27,
+                "32": 22,
+                "48": 5,
+                "64": 7,
+                "80": 3,
+                "96": 3,
+                "112": 3,
+                "128": 1,
+                "144": 6,
+                "160": 1,
+                "176": 3,
+                "192": 2,
+                "208": 3,
+                "240": 1,
+                "288": 8,
+                "304": 2,
+                "320": 1,
+                "336": 1,
+                "352": 1,
+                "368": 4,
+                "384": 1,
+                "400": 2,
+                "416": 2,
+                "432": 9,
+                "560": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 273,
+              "mismatch_rate": 0.0004646808510638298,
+              "fewer": 56,
+              "more": 112,
+              "modal_tie_pixels": 105,
+              "fewer_fraction": 0.3333333333333333,
+              "binomial_p": 1.8638787920584236e-05,
+              "sample_count_differences": {
+                "-496": 1,
+                "-192": 1,
+                "-160": 1,
+                "-96": 3,
+                "-80": 3,
+                "-64": 3,
+                "-48": 6,
+                "-32": 15,
+                "-16": 23,
+                "16": 23,
+                "32": 11,
+                "48": 6,
+                "64": 6,
+                "80": 3,
+                "96": 3,
+                "112": 6,
+                "128": 4,
+                "144": 5,
+                "176": 2,
+                "208": 4,
+                "240": 2,
+                "256": 1,
+                "288": 8,
+                "304": 2,
+                "320": 2,
+                "336": 1,
+                "352": 3,
+                "368": 5,
+                "400": 2,
+                "416": 3,
+                "432": 8,
+                "448": 1,
+                "560": 1
+              }
+            },
+            {
+              "pixels": 587500,
+              "mismatch_pixels": 265,
+              "mismatch_rate": 0.000451063829787234,
+              "fewer": 63,
+              "more": 124,
+              "modal_tie_pixels": 78,
+              "fewer_fraction": 0.33689839572192515,
+              "binomial_p": 9.65665990674805e-06,
+              "sample_count_differences": {
+                "-496": 2,
+                "-288": 1,
+                "-192": 2,
+                "-112": 1,
+                "-80": 1,
+                "-64": 6,
+                "-48": 6,
+                "-32": 17,
+                "-16": 27,
+                "16": 22,
+                "32": 24,
+                "48": 5,
+                "64": 11,
+                "80": 6,
+                "96": 3,
+                "112": 3,
+                "128": 1,
+                "144": 8,
+                "176": 3,
+                "192": 2,
+                "208": 3,
+                "240": 1,
+                "288": 8,
+                "304": 2,
+                "320": 1,
+                "336": 1,
+                "352": 1,
+                "368": 4,
+                "384": 1,
+                "400": 2,
+                "416": 2,
+                "432": 9,
+                "560": 1
+              }
+            }
+          ],
+          "deep_five_control": {
+            "pixels": 587500,
+            "mismatch_pixels": 231,
+            "mismatch_rate": 0.00039319148936170213,
+            "fewer": 59,
+            "more": 112,
+            "modal_tie_pixels": 60,
+            "fewer_fraction": 0.34502923976608185,
+            "binomial_p": 6.169035751717305e-05,
+            "sample_count_differences": {
+              "-496": 2,
+              "-288": 1,
+              "-240": 1,
+              "-192": 2,
+              "-160": 1,
+              "-112": 1,
+              "-96": 3,
+              "-80": 1,
+              "-64": 3,
+              "-48": 5,
+              "-32": 19,
+              "-16": 20,
+              "16": 22,
+              "32": 19,
+              "48": 3,
+              "64": 10,
+              "80": 3,
+              "96": 3,
+              "112": 5,
+              "128": 1,
+              "144": 8,
+              "160": 1,
+              "176": 3,
+              "208": 3,
+              "240": 1,
+              "288": 8,
+              "304": 2,
+              "320": 1,
+              "336": 1,
+              "352": 1,
+              "368": 4,
+              "400": 2,
+              "416": 2,
+              "432": 8,
+              "560": 1
+            }
+          },
+          "ordinary_count_distribution": {
+            "min": 262,
+            "median": 279,
+            "max": 326
+          },
+          "deep_mean_mismatch_pixels": 264.4,
+          "rate_passed": true,
+          "ordinary_direction_range": [
+            0.2922077922077922,
+            0.46745562130177515
+          ],
+          "direction_outside_range": false,
+          "direction_passed": true,
+          "direction_rule": "One observation per full-pool mismatch pixel; unique modal reference count; modal ties reported separately"
+        },
+        "flagged_pixels": [],
+        "previous_pixel_978_81": [
+          {
+            "file_pixel": [
+              978,
+              81
+            ],
+            "sample_count": 1024,
+            "passed": true,
+            "failed_passes": [],
+            "channels": [
+              {
+                "channel": "ViewLayer.Debug Sample Count.X",
+                "passed": true,
+                "difference": 0.0,
+                "sigma": 0.07557693677568464,
+                "ratio": 0.0,
+                "nearest": 0,
+                "reference_value": 1.0,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+                "calibrated_limit": 0.0,
+                "absolute_limit": 4.76837158203125e-07
+              },
+              {
+                "channel": "ViewLayer.Denoising Albedo.R",
+                "passed": true,
+                "difference": 7.852911949157715e-05,
+                "sigma": 0.003340962855222345,
+                "ratio": 0.023504936419399654,
+                "nearest": 0,
+                "reference_value": 0.3124818205833435,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+                "calibrated_limit": 19.846694391162465,
+                "absolute_limit": 0.06630706875982345
+              },
+              {
+                "channel": "ViewLayer.Denoising Albedo.G",
+                "passed": true,
+                "difference": -0.004987537860870361,
+                "sigma": 0.007432521465814187,
+                "ratio": 0.6710425101105318,
+                "nearest": 3,
+                "reference_value": 0.4831116497516632,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-13",
+                "calibrated_limit": 19.844996789763712,
+                "absolute_limit": 0.14749836462893243
+              },
+              {
+                "channel": "ViewLayer.Denoising Albedo.B",
+                "passed": true,
+                "difference": -0.0068547725677490234,
+                "sigma": 0.009074978072330283,
+                "ratio": 0.7553486645493179,
+                "nearest": 3,
+                "reference_value": 0.5462771654129028,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-13",
+                "calibrated_limit": 19.86883788626938,
+                "absolute_limit": 0.1803092681405798
+              },
+              {
+                "channel": "ViewLayer.Denoising Depth.Z",
+                "passed": true,
+                "difference": 0.14288330078125,
+                "sigma": 1.5051158295132965,
+                "ratio": 0.09493176404068092,
+                "nearest": 4,
+                "reference_value": 932.0520629882812,
+                "four_ulp": 0.000244140625,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-19",
+                "calibrated_limit": 22.94285695440647,
+                "absolute_limit": 34.531657176336395
+              },
+              {
+                "channel": "ViewLayer.Denoising Normal.X",
+                "passed": true,
+                "difference": 1.545855775475502e-05,
+                "sigma": 0.0001512618162705046,
+                "ratio": 0.10219735645055435,
+                "nearest": 2,
+                "reference_value": -0.0051453993655741215,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-6",
+                "calibrated_limit": 885047.7881954636,
+                "absolute_limit": 133.8739359286387
+              },
+              {
+                "channel": "ViewLayer.Denoising Normal.Y",
+                "passed": true,
+                "difference": -0.00027986615896224976,
+                "sigma": 0.002429938534416494,
+                "ratio": 0.11517417210285714,
+                "nearest": 2,
+                "reference_value": 0.041081760078668594,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-6",
+                "calibrated_limit": 27.332803472359476,
+                "absolute_limit": 0.06641703241111925
+              },
+              {
+                "channel": "ViewLayer.Denoising Normal.Z",
+                "passed": true,
+                "difference": -0.00022870302200317383,
+                "sigma": 0.0038149664771413953,
+                "ratio": 0.05994889427561734,
+                "nearest": 4,
+                "reference_value": -0.881247341632843,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-19",
+                "calibrated_limit": 18.78286878821263,
+                "absolute_limit": 0.07165601477157661
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.R",
+                "passed": true,
+                "difference": -0.00016687065362930298,
+                "sigma": 0.002933358554830011,
+                "ratio": 0.0568872336982252,
+                "nearest": 2,
+                "reference_value": 0.06586837768554688,
+                "four_ulp": 2.9802322387695312e-08,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-6",
+                "calibrated_limit": 15.549130866985054,
+                "absolute_limit": 0.045611176048841996
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.G",
+                "passed": true,
+                "difference": 0.00030057504773139954,
+                "sigma": 0.0011297737746118607,
+                "ratio": 0.26604888030319485,
+                "nearest": 2,
+                "reference_value": 0.055361922830343246,
+                "four_ulp": 1.4901161193847656e-08,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-6",
+                "calibrated_limit": 24.549670734281086,
+                "absolute_limit": 0.02773557417094707
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.B",
+                "passed": true,
+                "difference": -0.00010204315185546875,
+                "sigma": 0.0006280084219987021,
+                "ratio": 0.16248691622750186,
+                "nearest": 2,
+                "reference_value": 0.057996705174446106,
+                "four_ulp": 1.4901161193847656e-08,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\control-6",
+                "calibrated_limit": 30.173574762316406,
+                "absolute_limit": 0.01894925907254219
+              },
+              {
+                "channel": "ViewLayer.Noisy Image.A",
+                "passed": true,
+                "difference": 0.0,
+                "sigma": 0.0,
+                "ratio": 0.0,
+                "nearest": 0,
+                "reference_value": 1.0,
+                "four_ulp": 4.76837158203125e-07,
+                "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+                "calibrated_limit": 0.0,
+                "absolute_limit": 4.76837158203125e-07
+              }
+            ]
+          }
+        ],
+        "report": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\run2-beauty-20.json",
+        "original_report_preserved": true,
+        "accepted": true
+      },
+      "phase5_estimate": {
+        "scope": "CUDA IDs-off z0, startup-scaled upper-bound timing; not a controlled speedup",
+        "render_capture_minutes": 68.55,
+        "export_minutes": 24.8,
+        "spill_gb": 20.37,
+        "exr_gb": 0.734,
+        "host_gib": 13.93,
+        "device_gpu_mib": 5910
+      },
+      "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\deep-64"
+    }
+  },
+  "queue": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\queue-state.json",
+  "toolchain": {
+    "clang_cl": "20.1.8",
+    "nvcc": "12.8.61",
+    "cuda_toolkit": "12.8.0",
+    "optix": "8.0.0",
+    "osl": "1.15.3.0",
+    "nvcc_host_msvc": "19.44 / 14.44.35207",
+    "ninja": "1.13.2",
+    "cmake": "3.31.2"
+  },
+  "executable_sha256": "68e972491e66834ccdb0e61a183924e5fbee80d249eb4ef93fd7258fce844a64",
+  "regression_report": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\deep-regression\\20261010T063350Z-f9316a27\\results.json",
+  "prior_harness_repairs": [
+    "7ef6fde96 retained rejection analysis without repeat renders",
+    "Shared TEMP/TMP startup directory fix with guarded preflight resume"
+  ],
+  "root_cause_resolution": {
+    "passed": true,
+    "original_report": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\twenty-controls-and-all\\run1-beauty-20.json",
+    "diagnostic_report": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\run1-root-cause-pair\\pair-results.json",
+    "original_flag": {
+      "file_pixel": [
+        992,
+        78
+      ],
+      "sample_count": 368,
+      "passed": false,
+      "failed_passes": [
+        "ViewLayer.Denoising Normal"
+      ],
+      "channels": [
+        {
+          "channel": "ViewLayer.Debug Sample Count.X",
+          "passed": true,
+          "difference": 0.0,
+          "sigma": 0.10106045787464717,
+          "ratio": 0.0,
+          "nearest": 0,
+          "reference_value": 0.359375,
+          "four_ulp": 1.1920928955078125e-07,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 0.0,
+          "absolute_limit": 1.1920928955078125e-07
+        },
+        {
+          "channel": "ViewLayer.Denoising Albedo.R",
+          "passed": true,
+          "difference": -0.0017185211181640625,
+          "sigma": 0.002568778457327256,
+          "ratio": 0.6690032428690394,
+          "nearest": 0,
+          "reference_value": 0.21085967123508453,
+          "four_ulp": 4.76837158203125e-07,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 19.846694391162465,
+          "absolute_limit": 0.05098176100117582
+        },
+        {
+          "channel": "ViewLayer.Denoising Albedo.G",
+          "passed": true,
+          "difference": -0.001158401370048523,
+          "sigma": 0.002440832518192145,
+          "ratio": 0.474592730723908,
+          "nearest": 0,
+          "reference_value": 0.2010194957256317,
+          "four_ulp": 4.76837158203125e-07,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 19.844996789763712,
+          "absolute_limit": 0.048438313487873995
+        },
+        {
+          "channel": "ViewLayer.Denoising Albedo.B",
+          "passed": true,
+          "difference": -0.0009860247373580933,
+          "sigma": 0.002510697194149426,
+          "ratio": 0.3927294536576478,
+          "nearest": 0,
+          "reference_value": 0.2108815759420395,
+          "four_ulp": 4.76837158203125e-07,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 19.86883788626938,
+          "absolute_limit": 0.04988463553206634
+        },
+        {
+          "channel": "ViewLayer.Denoising Depth.Z",
+          "passed": true,
+          "difference": -2.24017333984375,
+          "sigma": 2.3465473531561285,
+          "ratio": 0.9546678599222366,
+          "nearest": 0,
+          "reference_value": 966.2247924804688,
+          "four_ulp": 0.000244140625,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 22.94285695440647,
+          "absolute_limit": 53.83650026020218
+        },
+        {
+          "channel": "ViewLayer.Denoising Normal.X",
+          "passed": true,
+          "difference": 0.01145625114440918,
+          "sigma": 0.0031819753287891683,
+          "ratio": 3.600358255690376,
+          "nearest": 0,
+          "reference_value": -0.35937538743019104,
+          "four_ulp": 4.76837158203125e-07,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 885047.7881954636,
+          "absolute_limit": 2816.2002268373863
+        },
+        {
+          "channel": "ViewLayer.Denoising Normal.Y",
+          "passed": true,
+          "difference": 0.005602136254310608,
+          "sigma": 0.0011299344694925006,
+          "ratio": 4.957930221233763,
+          "nearest": 0,
+          "reference_value": -0.17354008555412292,
+          "four_ulp": 4.76837158203125e-07,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 27.332803472359476,
+          "absolute_limit": 0.030884276791283284
+        },
+        {
+          "channel": "ViewLayer.Denoising Normal.Z",
+          "passed": false,
+          "difference": -0.00950998067855835,
+          "sigma": 0.0004761334699392947,
+          "ratio": 19.973350497226836,
+          "nearest": 0,
+          "reference_value": -0.6161149144172668,
+          "four_ulp": 4.76837158203125e-07,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 18.78286878821263,
+          "absolute_limit": 0.008943152491546156
+        },
+        {
+          "channel": "ViewLayer.Noisy Image.R",
+          "passed": true,
+          "difference": -0.0013025524094700813,
+          "sigma": 0.005324140927089913,
+          "ratio": 0.24465025011688313,
+          "nearest": 0,
+          "reference_value": 0.01645001210272312,
+          "four_ulp": 7.450580596923828e-09,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 15.549130866985054,
+          "absolute_limit": 0.08278576402959219
+        },
+        {
+          "channel": "ViewLayer.Noisy Image.G",
+          "passed": true,
+          "difference": -0.001056099310517311,
+          "sigma": 0.003935813508273462,
+          "ratio": 0.26833062803846974,
+          "nearest": 0,
+          "reference_value": 0.017201362177729607,
+          "four_ulp": 7.450580596923828e-09,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 24.549670734281086,
+          "absolute_limit": 0.09662292569964918
+        },
+        {
+          "channel": "ViewLayer.Noisy Image.B",
+          "passed": true,
+          "difference": -0.001087833195924759,
+          "sigma": 0.0030950325442862126,
+          "ratio": 0.35147714292472454,
+          "nearest": 0,
+          "reference_value": 0.02908162586390972,
+          "four_ulp": 7.450580596923828e-09,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 30.173574762316406,
+          "absolute_limit": 0.0933881958668224
+        },
+        {
+          "channel": "ViewLayer.Noisy Image.A",
+          "passed": true,
+          "difference": 0.0,
+          "sigma": 0.0,
+          "ratio": 0.0,
+          "nearest": 0,
+          "reference_value": 1.0,
+          "four_ulp": 4.76837158203125e-07,
+          "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+          "calibrated_limit": 0.0,
+          "absolute_limit": 4.76837158203125e-07
+        }
+      ]
+    },
+    "target": {
+      "file_pixel": [
+        992,
+        78
+      ],
+      "off_samples": 352,
+      "on_samples": 352,
+      "raw": {
+        "ViewLayer.Debug Sample Count.X": {
+          "off": 0.34375,
+          "on": 0.34375,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 1.1920928955078125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "off": 0.20758332312107086,
+          "on": 0.20758332312107086,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "off": 0.19763000309467316,
+          "on": 0.19763000309467316,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "off": 0.20745456218719482,
+          "on": 0.20745456218719482,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "off": 964.9638061523438,
+          "on": 964.9637451171875,
+          "difference": -6.103515625e-05,
+          "absolute_difference": 6.103515625e-05,
+          "recorded_floor": 0.000244140625,
+          "passed": true,
+          "bit_identical": false
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "off": -0.348583847284317,
+          "on": -0.348583847284317,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "off": -0.1683930903673172,
+          "on": -0.1683930903673172,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "off": -0.624632716178894,
+          "on": -0.6246326565742493,
+          "difference": 5.960464477539063e-08,
+          "absolute_difference": 5.960464477539063e-08,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": false
+        },
+        "ViewLayer.Noisy Image.A": {
+          "off": 1.0,
+          "on": 1.0,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 4.76837158203125e-07,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Noisy Image.B": {
+          "off": 0.028433751314878464,
+          "on": 0.028433751314878464,
+          "difference": 0.0,
+          "absolute_difference": 0.0,
+          "recorded_floor": 7.450580596923828e-09,
+          "passed": true,
+          "bit_identical": true
+        },
+        "ViewLayer.Noisy Image.G": {
+          "off": 0.016107140108942986,
+          "on": 0.016107141971588135,
+          "difference": 1.862645149230957e-09,
+          "absolute_difference": 1.862645149230957e-09,
+          "recorded_floor": 7.450580596923828e-09,
+          "passed": true,
+          "bit_identical": false
+        },
+        "ViewLayer.Noisy Image.R": {
+          "off": 0.01543409377336502,
+          "on": 0.015434096567332745,
+          "difference": 2.7939677238464355e-09,
+          "absolute_difference": 2.7939677238464355e-09,
+          "recorded_floor": 3.725290298461914e-09,
+          "passed": true,
+          "bit_identical": false
+        }
+      },
+      "passed": true,
+      "bit_identical": false,
+      "reference_4ulp_reproduced_state": {
+        "passed": true,
+        "matched": [
+          0
+        ],
+        "passing": [
+          0
+        ],
+        "envelope": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "limits": [
+          1.1920928955078125e-07,
+          5.960464477539063e-08,
+          5.960464477539063e-08,
+          5.960464477539063e-08,
+          0.000244140625,
+          1.1920928955078125e-07,
+          5.960464477539063e-08,
+          2.384185791015625e-07,
+          4.76837158203125e-07,
+          7.450580596923828e-09,
+          7.450580596923828e-09,
+          3.725290298461914e-09
+        ]
+      }
+    },
+    "image_wide": {
+      "checked_raw_channels": {
+        "ViewLayer.Debug Sample Count.X": {
+          "max_abs": 0.0,
+          "max_reference_ulp": 0.0,
+          "max_ulp_pixel": [
+            0,
+            0
+          ],
+          "reference_at_max_ulp": 0.109375,
+          "on_at_max_ulp": 0.109375,
+          "pixels_above_4_ulp": 0,
+          "differing_pixels": 0,
+          "max_unit_scale_ulp": 0.0,
+          "pixels_outside_recorded_floor": 0,
+          "max_difference_over_floor": 0.0
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "max_abs": 4.172325134277344e-07,
+          "max_reference_ulp": 7.0,
+          "max_ulp_pixel": [
+            1165,
+            148
+          ],
+          "reference_at_max_ulp": 0.8419255614280701,
+          "on_at_max_ulp": 0.8419251441955566,
+          "pixels_above_4_ulp": 294,
+          "differing_pixels": 232059,
+          "max_unit_scale_ulp": 3.5,
+          "pixels_outside_recorded_floor": 0,
+          "max_difference_over_floor": 0.875
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "max_abs": 4.76837158203125e-07,
+          "max_reference_ulp": 7.0,
+          "max_ulp_pixel": [
+            831,
+            31
+          ],
+          "reference_at_max_ulp": 0.8128268122673035,
+          "on_at_max_ulp": 0.8128272294998169,
+          "pixels_above_4_ulp": 369,
+          "differing_pixels": 241709,
+          "max_unit_scale_ulp": 4.0,
+          "pixels_outside_recorded_floor": 0,
+          "max_difference_over_floor": 1.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "max_abs": 4.76837158203125e-07,
+          "max_reference_ulp": 8.0,
+          "max_ulp_pixel": [
+            279,
+            123
+          ],
+          "reference_at_max_ulp": 0.4289614260196686,
+          "on_at_max_ulp": 0.4289611876010895,
+          "pixels_above_4_ulp": 441,
+          "differing_pixels": 249063,
+          "max_unit_scale_ulp": 4.0,
+          "pixels_outside_recorded_floor": 0,
+          "max_difference_over_floor": 1.0
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "max_abs": 0.0006103515625,
+          "max_reference_ulp": 9.0,
+          "max_ulp_pixel": [
+            1009,
+            75
+          ],
+          "reference_at_max_ulp": 1016.5967407226562,
+          "on_at_max_ulp": 1016.5972900390625,
+          "pixels_above_4_ulp": 1309,
+          "differing_pixels": 314488,
+          "max_unit_scale_ulp": 5120.0,
+          "pixels_outside_recorded_floor": 1309,
+          "max_difference_over_floor": 2.25
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "max_abs": 4.172325134277344e-07,
+          "max_reference_ulp": 105660.0,
+          "max_ulp_pixel": [
+            385,
+            394
+          ],
+          "reference_at_max_ulp": -2.8242000738032402e-08,
+          "on_at_max_ulp": -2.8429690601683433e-08,
+          "pixels_above_4_ulp": 9005,
+          "differing_pixels": 245815,
+          "max_unit_scale_ulp": 3.5,
+          "pixels_outside_recorded_floor": 0,
+          "max_difference_over_floor": 0.875
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "max_abs": 5.364418029785156e-07,
+          "max_reference_ulp": 10767.0,
+          "max_ulp_pixel": [
+            933,
+            405
+          ],
+          "reference_at_max_ulp": 6.405796284525422e-06,
+          "on_at_max_ulp": 6.410692549252417e-06,
+          "pixels_above_4_ulp": 6090,
+          "differing_pixels": 244981,
+          "max_unit_scale_ulp": 4.5,
+          "pixels_outside_recorded_floor": 1,
+          "max_difference_over_floor": 1.125
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "max_abs": 5.960464477539062e-07,
+          "max_reference_ulp": 224.0,
+          "max_ulp_pixel": [
+            1055,
+            197
+          ],
+          "reference_at_max_ulp": -8.138979319483042e-05,
+          "on_at_max_ulp": -8.1391423009336e-05,
+          "pixels_above_4_ulp": 166,
+          "differing_pixels": 130675,
+          "max_unit_scale_ulp": 5.0,
+          "pixels_outside_recorded_floor": 5,
+          "max_difference_over_floor": 1.25
+        },
+        "ViewLayer.Noisy Image.A": {
+          "max_abs": 0.0,
+          "max_reference_ulp": 0.0,
+          "max_ulp_pixel": [
+            0,
+            0
+          ],
+          "reference_at_max_ulp": 1.0,
+          "on_at_max_ulp": 1.0,
+          "pixels_above_4_ulp": 0,
+          "differing_pixels": 0,
+          "max_unit_scale_ulp": 0.0,
+          "pixels_outside_recorded_floor": 0,
+          "max_difference_over_floor": 0.0
+        },
+        "ViewLayer.Noisy Image.B": {
+          "max_abs": 2.288818359375e-05,
+          "max_reference_ulp": 7.0,
+          "max_ulp_pixel": [
+            754,
+            344
+          ],
+          "reference_at_max_ulp": 0.11350752413272858,
+          "on_at_max_ulp": 0.1135074719786644,
+          "pixels_above_4_ulp": 110,
+          "differing_pixels": 219585,
+          "max_unit_scale_ulp": 192.0,
+          "pixels_outside_recorded_floor": 110,
+          "max_difference_over_floor": 1.75
+        },
+        "ViewLayer.Noisy Image.G": {
+          "max_abs": 1.52587890625e-05,
+          "max_reference_ulp": 7.0,
+          "max_ulp_pixel": [
+            722,
+            122
+          ],
+          "reference_at_max_ulp": 0.06128619983792305,
+          "on_at_max_ulp": 0.06128617376089096,
+          "pixels_above_4_ulp": 69,
+          "differing_pixels": 199471,
+          "max_unit_scale_ulp": 128.0,
+          "pixels_outside_recorded_floor": 69,
+          "max_difference_over_floor": 1.75
+        },
+        "ViewLayer.Noisy Image.R": {
+          "max_abs": 4.57763671875e-05,
+          "max_reference_ulp": 14.0,
+          "max_ulp_pixel": [
+            516,
+            183
+          ],
+          "reference_at_max_ulp": -0.0009490987868048251,
+          "on_at_max_ulp": -0.0009490979718975723,
+          "pixels_above_4_ulp": 56,
+          "differing_pixels": 180685,
+          "max_unit_scale_ulp": 384.0,
+          "pixels_outside_recorded_floor": 56,
+          "max_difference_over_floor": 3.5
+        }
+      },
+      "count_mismatches": 0,
+      "counts_identical": true,
+      "all_checked_raw_within_recorded_floors": false,
+      "other_saved_passes": {
+        "ViewLayer.Combined.A": {
+          "max_abs": 0.0,
+          "max_reference_ulp": 0.0,
+          "max_ulp_pixel": [
+            0,
+            0
+          ],
+          "reference_at_max_ulp": 1.0,
+          "on_at_max_ulp": 1.0,
+          "pixels_above_4_ulp": 0,
+          "differing_pixels": 0,
+          "max_unit_scale_ulp": 0.0
+        },
+        "ViewLayer.Combined.B": {
+          "max_abs": 0.4959259033203125,
+          "max_reference_ulp": 130480.0,
+          "max_ulp_pixel": [
+            1014,
+            155
+          ],
+          "reference_at_max_ulp": 15.595284461975098,
+          "on_at_max_ulp": 15.719719886779785,
+          "pixels_above_4_ulp": 113455,
+          "differing_pixels": 113455,
+          "max_unit_scale_ulp": 4160128.0
+        },
+        "ViewLayer.Combined.G": {
+          "max_abs": 1.37139892578125,
+          "max_reference_ulp": 134051.0,
+          "max_ulp_pixel": [
+            1059,
+            185
+          ],
+          "reference_at_max_ulp": 0.24904534220695496,
+          "on_at_max_ulp": 0.24704782664775848,
+          "pixels_above_4_ulp": 77586,
+          "differing_pixels": 77586,
+          "max_unit_scale_ulp": 11504128.0
+        },
+        "ViewLayer.Combined.R": {
+          "max_abs": 1.5572052001953125,
+          "max_reference_ulp": 133627.0,
+          "max_ulp_pixel": [
+            983,
+            181
+          ],
+          "reference_at_max_ulp": 15.971587181091309,
+          "on_at_max_ulp": 16.099023818969727,
+          "pixels_above_4_ulp": 120516,
+          "differing_pixels": 120516,
+          "max_unit_scale_ulp": 13062784.0
+        },
+        "ViewLayer.Denoising Backward Motion.X": {
+          "max_abs": 0.0,
+          "max_reference_ulp": 0.0,
+          "max_ulp_pixel": [
+            0,
+            0
+          ],
+          "reference_at_max_ulp": 0.0,
+          "on_at_max_ulp": 0.0,
+          "pixels_above_4_ulp": 0,
+          "differing_pixels": 0,
+          "max_unit_scale_ulp": 0.0
+        },
+        "ViewLayer.Denoising Backward Motion.Y": {
+          "max_abs": 0.0,
+          "max_reference_ulp": 0.0,
+          "max_ulp_pixel": [
+            0,
+            0
+          ],
+          "reference_at_max_ulp": 0.0,
+          "on_at_max_ulp": 0.0,
+          "pixels_above_4_ulp": 0,
+          "differing_pixels": 0,
+          "max_unit_scale_ulp": 0.0
+        },
+        "ViewLayer.Denoising Backward Motion.Z": {
+          "max_abs": 0.0,
+          "max_reference_ulp": 0.0,
+          "max_ulp_pixel": [
+            0,
+            0
+          ],
+          "reference_at_max_ulp": 0.0,
+          "on_at_max_ulp": 0.0,
+          "pixels_above_4_ulp": 0,
+          "differing_pixels": 0,
+          "max_unit_scale_ulp": 0.0
+        },
+        "ViewLayer.Denoising Roughness.X": {
+          "max_abs": 7.152557373046875e-07,
+          "max_reference_ulp": 6.0,
+          "max_ulp_pixel": [
+            688,
+            127
+          ],
+          "reference_at_max_ulp": 1.6687284708023071,
+          "on_at_max_ulp": 1.6687291860580444,
+          "pixels_above_4_ulp": 16,
+          "differing_pixels": 9946,
+          "max_unit_scale_ulp": 6.0
+        },
+        "ViewLayer.Denoising Specular Albedo.B": {
+          "max_abs": 4.76837158203125e-07,
+          "max_reference_ulp": 8.0,
+          "max_ulp_pixel": [
+            198,
+            99
+          ],
+          "reference_at_max_ulp": 0.853361964225769,
+          "on_at_max_ulp": 0.8533624410629272,
+          "pixels_above_4_ulp": 824,
+          "differing_pixels": 163633,
+          "max_unit_scale_ulp": 4.0
+        },
+        "ViewLayer.Denoising Specular Albedo.G": {
+          "max_abs": 4.172325134277344e-07,
+          "max_reference_ulp": 7.0,
+          "max_ulp_pixel": [
+            254,
+            44
+          ],
+          "reference_at_max_ulp": 0.8653411269187927,
+          "on_at_max_ulp": 0.8653415441513062,
+          "pixels_above_4_ulp": 431,
+          "differing_pixels": 151859,
+          "max_unit_scale_ulp": 3.5
+        },
+        "ViewLayer.Denoising Specular Albedo.R": {
+          "max_abs": 4.172325134277344e-07,
+          "max_reference_ulp": 7.0,
+          "max_ulp_pixel": [
+            79,
+            171
+          ],
+          "reference_at_max_ulp": 0.7084996104240417,
+          "on_at_max_ulp": 0.7085000276565552,
+          "pixels_above_4_ulp": 171,
+          "differing_pixels": 159962,
+          "max_unit_scale_ulp": 3.5
+        },
+        "ViewLayer.Denoising Specular Motion.X": {
+          "max_abs": 0.0,
+          "max_reference_ulp": 0.0,
+          "max_ulp_pixel": [
+            0,
+            0
+          ],
+          "reference_at_max_ulp": 0.0,
+          "on_at_max_ulp": 0.0,
+          "pixels_above_4_ulp": 0,
+          "differing_pixels": 0,
+          "max_unit_scale_ulp": 0.0
+        },
+        "ViewLayer.Denoising Specular Motion.Y": {
+          "max_abs": 0.0,
+          "max_reference_ulp": 0.0,
+          "max_ulp_pixel": [
+            0,
+            0
+          ],
+          "reference_at_max_ulp": 0.0,
+          "on_at_max_ulp": 0.0,
+          "pixels_above_4_ulp": 0,
+          "differing_pixels": 0,
+          "max_unit_scale_ulp": 0.0
+        },
+        "ViewLayer.Denoising Specular Motion.Z": {
+          "max_abs": 0.0,
+          "max_reference_ulp": 0.0,
+          "max_ulp_pixel": [
+            0,
+            0
+          ],
+          "reference_at_max_ulp": 0.0,
+          "on_at_max_ulp": 0.0,
+          "pixels_above_4_ulp": 0,
+          "differing_pixels": 0,
+          "max_unit_scale_ulp": 0.0
+        }
+      }
+    },
+    "rule": "User-approved single existing snapshot+timing-fix pair; all checked target passes within recorded ULP floors, exact counts. Also passes reference-value reproduced-state rule. Image-wide comparison informational.",
+    "snapshot_diagnostic_only": true,
+    "new_build": false
+  },
+  "production_reports_unchanged": true,
+  "gaffer_review": {
+    "passed": true,
+    "path": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\phase9-production-review.gfr",
+    "checks": [
+      {
+        "run": "run1",
+        "points": 52261,
+        "deep_path": "D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-production-20261010/twenty-controls-and-all/deep-all/scene.deep.exr",
+        "camera_transform_checked": true,
+        "connected": true
+      },
+      {
+        "run": "run2",
+        "points": 36989,
+        "deep_path": "D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-production-20261010/replacement-run2/deep-64/scene.deep.exr",
+        "camera_transform_checked": true,
+        "connected": true
+      }
+    ],
+    "point_stride": 32,
+    "max_points": 100000,
+    "initial_focus": "ProductionBeauty",
+    "initial_run": "run2",
+    "qualification": "C:/Users/jun/Documents/ChatGPT/cycles_deep/builds/validation/landscape-cloud/optimization-phase9/phase9-acceptance.json",
+    "script_sha256": "ca295edffa0875af73210f2737bb5ba558021b75e73aa6b6b530845fe0f3b00b"
+  },
+  "gaffer_open": {
+    "launcher_pid": 54280,
+    "command": "C:/Users/jun/Documents/ChatGPT/cycles_deep/builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd",
+    "opened_utc": "2026-10-10T22:51:54.4909633Z",
+    "file": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\phase9-production-review.gfr"
+  },
+  "monitor_stopped": true
+}

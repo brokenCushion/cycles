@@ -1,0 +1,779 @@
+{
+  "passed": true,
+  "flag_resolved": true,
+  "scope": "User-approved single snapshot+timing-fix off/on pair; resolution at (992,78); image-wide results informational",
+  "new_build": false,
+  "diagnostic_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+  "production_sha256": "68e972491e66834ccdb0e61a183924e5fbee80d249eb4ef93fd7258fce844a64",
+  "settings": [
+    {
+      "renderer_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": false,
+      "device": "OPTIX",
+      "deep_volume": false,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": null,
+      "deep_z_tolerance": 0,
+      "deep_samples": null,
+      "deep_ids": false,
+      "deep_max_events": null,
+      "deep_memory_mb": null,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 357.1543489000178,
+      "beauty_exists": true
+    },
+    {
+      "renderer_sha256": "9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752",
+      "blender": "5.3.0 Alpha",
+      "build_hash": "749518deb2f0",
+      "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\scene-paths-fixed.blend",
+      "camera": "Camera",
+      "camera_type": "PERSP",
+      "ortho_scale": 7.314285755157471,
+      "frame": 0,
+      "samples": 1024,
+      "threads": 24,
+      "resolution": [
+        2350,
+        1000
+      ],
+      "percentage": 50,
+      "dof": false,
+      "adaptive": true,
+      "adaptive_threshold": 0.029999999329447746,
+      "adaptive_min_samples": 8,
+      "seed": 0,
+      "use_animated_seed": true,
+      "denoising": true,
+      "denoiser": "OPENIMAGEDENOISE",
+      "denoising_use_gpu": true,
+      "save_render_passes": true,
+      "capture_only": false,
+      "diagnostic_sample_count_pass": true,
+      "kernel_source_override": null,
+      "materials": 110,
+      "objects": 376,
+      "compositing": false,
+      "deep": true,
+      "device": "OPTIX",
+      "deep_volume": true,
+      "deep_volume_shader_eval": false,
+      "deep_volume_step": 0,
+      "deep_volume_fixed_step": false,
+      "deep_error": 0.001,
+      "deep_z_tolerance": 0.0001,
+      "deep_samples": 0,
+      "deep_ids": true,
+      "deep_max_events": 8192,
+      "deep_memory_mb": 8192,
+      "view_layers": [
+        "ViewLayer"
+      ],
+      "pixel_filter": "BLACKMAN_HARRIS",
+      "source_sha256": "4f40bd62911d8d6c81e373126bb7ea81f4264c476f0d5b44caef2faa9e63c902",
+      "camera_world_matrix": [
+        [
+          3.319657325744629,
+          -0.6532265543937683,
+          0.7761955857276917,
+          563.4478149414062
+        ],
+        [
+          1.0144872665405273,
+          2.137481212615967,
+          -2.53994083404541,
+          -556.8704223632812
+        ],
+        [
+          1.539787626825273e-05,
+          2.655895233154297,
+          2.2350683212280273,
+          697.09521484375
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "camera_frame": [
+        [
+          0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          -0.21276596188545227,
+          -1.6666666269302368
+        ],
+        [
+          -0.5,
+          0.21276596188545227,
+          -1.6666666269302368
+        ]
+      ],
+      "camera_translation": [
+        563.4478149414062,
+        -556.8704223632812,
+        697.09521484375
+      ],
+      "camera_rotation_degrees": [
+        49.91771354898617,
+        -0.0002541571951613384,
+        16.993152070060297
+      ],
+      "camera_scale": [
+        3.4712114334106445,
+        3.4712116718292236,
+        3.4712116718292236
+      ],
+      "pixel_aspect": [
+        1.0,
+        1.0
+      ],
+      "seconds": 6380.107272499998,
+      "beauty_exists": true,
+      "deep_bytes": 1994214414
+    }
+  ],
+  "target": {
+    "file_pixel": [
+      992,
+      78
+    ],
+    "off_samples": 352,
+    "on_samples": 352,
+    "raw": {
+      "ViewLayer.Debug Sample Count.X": {
+        "off": 0.34375,
+        "on": 0.34375,
+        "difference": 0.0,
+        "absolute_difference": 0.0,
+        "recorded_floor": 1.1920928955078125e-07,
+        "passed": true,
+        "bit_identical": true
+      },
+      "ViewLayer.Denoising Albedo.B": {
+        "off": 0.20758332312107086,
+        "on": 0.20758332312107086,
+        "difference": 0.0,
+        "absolute_difference": 0.0,
+        "recorded_floor": 4.76837158203125e-07,
+        "passed": true,
+        "bit_identical": true
+      },
+      "ViewLayer.Denoising Albedo.G": {
+        "off": 0.19763000309467316,
+        "on": 0.19763000309467316,
+        "difference": 0.0,
+        "absolute_difference": 0.0,
+        "recorded_floor": 4.76837158203125e-07,
+        "passed": true,
+        "bit_identical": true
+      },
+      "ViewLayer.Denoising Albedo.R": {
+        "off": 0.20745456218719482,
+        "on": 0.20745456218719482,
+        "difference": 0.0,
+        "absolute_difference": 0.0,
+        "recorded_floor": 4.76837158203125e-07,
+        "passed": true,
+        "bit_identical": true
+      },
+      "ViewLayer.Denoising Depth.Z": {
+        "off": 964.9638061523438,
+        "on": 964.9637451171875,
+        "difference": -6.103515625e-05,
+        "absolute_difference": 6.103515625e-05,
+        "recorded_floor": 0.000244140625,
+        "passed": true,
+        "bit_identical": false
+      },
+      "ViewLayer.Denoising Normal.X": {
+        "off": -0.348583847284317,
+        "on": -0.348583847284317,
+        "difference": 0.0,
+        "absolute_difference": 0.0,
+        "recorded_floor": 4.76837158203125e-07,
+        "passed": true,
+        "bit_identical": true
+      },
+      "ViewLayer.Denoising Normal.Y": {
+        "off": -0.1683930903673172,
+        "on": -0.1683930903673172,
+        "difference": 0.0,
+        "absolute_difference": 0.0,
+        "recorded_floor": 4.76837158203125e-07,
+        "passed": true,
+        "bit_identical": true
+      },
+      "ViewLayer.Denoising Normal.Z": {
+        "off": -0.624632716178894,
+        "on": -0.6246326565742493,
+        "difference": 5.960464477539063e-08,
+        "absolute_difference": 5.960464477539063e-08,
+        "recorded_floor": 4.76837158203125e-07,
+        "passed": true,
+        "bit_identical": false
+      },
+      "ViewLayer.Noisy Image.A": {
+        "off": 1.0,
+        "on": 1.0,
+        "difference": 0.0,
+        "absolute_difference": 0.0,
+        "recorded_floor": 4.76837158203125e-07,
+        "passed": true,
+        "bit_identical": true
+      },
+      "ViewLayer.Noisy Image.B": {
+        "off": 0.028433751314878464,
+        "on": 0.028433751314878464,
+        "difference": 0.0,
+        "absolute_difference": 0.0,
+        "recorded_floor": 7.450580596923828e-09,
+        "passed": true,
+        "bit_identical": true
+      },
+      "ViewLayer.Noisy Image.G": {
+        "off": 0.016107140108942986,
+        "on": 0.016107141971588135,
+        "difference": 1.862645149230957e-09,
+        "absolute_difference": 1.862645149230957e-09,
+        "recorded_floor": 7.450580596923828e-09,
+        "passed": true,
+        "bit_identical": false
+      },
+      "ViewLayer.Noisy Image.R": {
+        "off": 0.01543409377336502,
+        "on": 0.015434096567332745,
+        "difference": 2.7939677238464355e-09,
+        "absolute_difference": 2.7939677238464355e-09,
+        "recorded_floor": 3.725290298461914e-09,
+        "passed": true,
+        "bit_identical": false
+      }
+    },
+    "passed": true,
+    "bit_identical": false,
+    "reference_4ulp_reproduced_state": {
+      "passed": true,
+      "matched": [
+        0
+      ],
+      "passing": [
+        0
+      ],
+      "envelope": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "limits": [
+        1.1920928955078125e-07,
+        5.960464477539063e-08,
+        5.960464477539063e-08,
+        5.960464477539063e-08,
+        0.000244140625,
+        1.1920928955078125e-07,
+        5.960464477539063e-08,
+        2.384185791015625e-07,
+        4.76837158203125e-07,
+        7.450580596923828e-09,
+        7.450580596923828e-09,
+        3.725290298461914e-09
+      ]
+    }
+  },
+  "image_wide": {
+    "checked_raw_channels": {
+      "ViewLayer.Debug Sample Count.X": {
+        "max_abs": 0.0,
+        "max_reference_ulp": 0.0,
+        "max_ulp_pixel": [
+          0,
+          0
+        ],
+        "reference_at_max_ulp": 0.109375,
+        "on_at_max_ulp": 0.109375,
+        "pixels_above_4_ulp": 0,
+        "differing_pixels": 0,
+        "max_unit_scale_ulp": 0.0,
+        "pixels_outside_recorded_floor": 0,
+        "max_difference_over_floor": 0.0
+      },
+      "ViewLayer.Denoising Albedo.B": {
+        "max_abs": 4.172325134277344e-07,
+        "max_reference_ulp": 7.0,
+        "max_ulp_pixel": [
+          1165,
+          148
+        ],
+        "reference_at_max_ulp": 0.8419255614280701,
+        "on_at_max_ulp": 0.8419251441955566,
+        "pixels_above_4_ulp": 294,
+        "differing_pixels": 232059,
+        "max_unit_scale_ulp": 3.5,
+        "pixels_outside_recorded_floor": 0,
+        "max_difference_over_floor": 0.875
+      },
+      "ViewLayer.Denoising Albedo.G": {
+        "max_abs": 4.76837158203125e-07,
+        "max_reference_ulp": 7.0,
+        "max_ulp_pixel": [
+          831,
+          31
+        ],
+        "reference_at_max_ulp": 0.8128268122673035,
+        "on_at_max_ulp": 0.8128272294998169,
+        "pixels_above_4_ulp": 369,
+        "differing_pixels": 241709,
+        "max_unit_scale_ulp": 4.0,
+        "pixels_outside_recorded_floor": 0,
+        "max_difference_over_floor": 1.0
+      },
+      "ViewLayer.Denoising Albedo.R": {
+        "max_abs": 4.76837158203125e-07,
+        "max_reference_ulp": 8.0,
+        "max_ulp_pixel": [
+          279,
+          123
+        ],
+        "reference_at_max_ulp": 0.4289614260196686,
+        "on_at_max_ulp": 0.4289611876010895,
+        "pixels_above_4_ulp": 441,
+        "differing_pixels": 249063,
+        "max_unit_scale_ulp": 4.0,
+        "pixels_outside_recorded_floor": 0,
+        "max_difference_over_floor": 1.0
+      },
+      "ViewLayer.Denoising Depth.Z": {
+        "max_abs": 0.0006103515625,
+        "max_reference_ulp": 9.0,
+        "max_ulp_pixel": [
+          1009,
+          75
+        ],
+        "reference_at_max_ulp": 1016.5967407226562,
+        "on_at_max_ulp": 1016.5972900390625,
+        "pixels_above_4_ulp": 1309,
+        "differing_pixels": 314488,
+        "max_unit_scale_ulp": 5120.0,
+        "pixels_outside_recorded_floor": 1309,
+        "max_difference_over_floor": 2.25
+      },
+      "ViewLayer.Denoising Normal.X": {
+        "max_abs": 4.172325134277344e-07,
+        "max_reference_ulp": 105660.0,
+        "max_ulp_pixel": [
+          385,
+          394
+        ],
+        "reference_at_max_ulp": -2.8242000738032402e-08,
+        "on_at_max_ulp": -2.8429690601683433e-08,
+        "pixels_above_4_ulp": 9005,
+        "differing_pixels": 245815,
+        "max_unit_scale_ulp": 3.5,
+        "pixels_outside_recorded_floor": 0,
+        "max_difference_over_floor": 0.875
+      },
+      "ViewLayer.Denoising Normal.Y": {
+        "max_abs": 5.364418029785156e-07,
+        "max_reference_ulp": 10767.0,
+        "max_ulp_pixel": [
+          933,
+          405
+        ],
+        "reference_at_max_ulp": 6.405796284525422e-06,
+        "on_at_max_ulp": 6.410692549252417e-06,
+        "pixels_above_4_ulp": 6090,
+        "differing_pixels": 244981,
+        "max_unit_scale_ulp": 4.5,
+        "pixels_outside_recorded_floor": 1,
+        "max_difference_over_floor": 1.125
+      },
+      "ViewLayer.Denoising Normal.Z": {
+        "max_abs": 5.960464477539062e-07,
+        "max_reference_ulp": 224.0,
+        "max_ulp_pixel": [
+          1055,
+          197
+        ],
+        "reference_at_max_ulp": -8.138979319483042e-05,
+        "on_at_max_ulp": -8.1391423009336e-05,
+        "pixels_above_4_ulp": 166,
+        "differing_pixels": 130675,
+        "max_unit_scale_ulp": 5.0,
+        "pixels_outside_recorded_floor": 5,
+        "max_difference_over_floor": 1.25
+      },
+      "ViewLayer.Noisy Image.A": {
+        "max_abs": 0.0,
+        "max_reference_ulp": 0.0,
+        "max_ulp_pixel": [
+          0,
+          0
+        ],
+        "reference_at_max_ulp": 1.0,
+        "on_at_max_ulp": 1.0,
+        "pixels_above_4_ulp": 0,
+        "differing_pixels": 0,
+        "max_unit_scale_ulp": 0.0,
+        "pixels_outside_recorded_floor": 0,
+        "max_difference_over_floor": 0.0
+      },
+      "ViewLayer.Noisy Image.B": {
+        "max_abs": 2.288818359375e-05,
+        "max_reference_ulp": 7.0,
+        "max_ulp_pixel": [
+          754,
+          344
+        ],
+        "reference_at_max_ulp": 0.11350752413272858,
+        "on_at_max_ulp": 0.1135074719786644,
+        "pixels_above_4_ulp": 110,
+        "differing_pixels": 219585,
+        "max_unit_scale_ulp": 192.0,
+        "pixels_outside_recorded_floor": 110,
+        "max_difference_over_floor": 1.75
+      },
+      "ViewLayer.Noisy Image.G": {
+        "max_abs": 1.52587890625e-05,
+        "max_reference_ulp": 7.0,
+        "max_ulp_pixel": [
+          722,
+          122
+        ],
+        "reference_at_max_ulp": 0.06128619983792305,
+        "on_at_max_ulp": 0.06128617376089096,
+        "pixels_above_4_ulp": 69,
+        "differing_pixels": 199471,
+        "max_unit_scale_ulp": 128.0,
+        "pixels_outside_recorded_floor": 69,
+        "max_difference_over_floor": 1.75
+      },
+      "ViewLayer.Noisy Image.R": {
+        "max_abs": 4.57763671875e-05,
+        "max_reference_ulp": 14.0,
+        "max_ulp_pixel": [
+          516,
+          183
+        ],
+        "reference_at_max_ulp": -0.0009490987868048251,
+        "on_at_max_ulp": -0.0009490979718975723,
+        "pixels_above_4_ulp": 56,
+        "differing_pixels": 180685,
+        "max_unit_scale_ulp": 384.0,
+        "pixels_outside_recorded_floor": 56,
+        "max_difference_over_floor": 3.5
+      }
+    },
+    "count_mismatches": 0,
+    "counts_identical": true,
+    "all_checked_raw_within_recorded_floors": false,
+    "other_saved_passes": {
+      "ViewLayer.Combined.A": {
+        "max_abs": 0.0,
+        "max_reference_ulp": 0.0,
+        "max_ulp_pixel": [
+          0,
+          0
+        ],
+        "reference_at_max_ulp": 1.0,
+        "on_at_max_ulp": 1.0,
+        "pixels_above_4_ulp": 0,
+        "differing_pixels": 0,
+        "max_unit_scale_ulp": 0.0
+      },
+      "ViewLayer.Combined.B": {
+        "max_abs": 0.4959259033203125,
+        "max_reference_ulp": 130480.0,
+        "max_ulp_pixel": [
+          1014,
+          155
+        ],
+        "reference_at_max_ulp": 15.595284461975098,
+        "on_at_max_ulp": 15.719719886779785,
+        "pixels_above_4_ulp": 113455,
+        "differing_pixels": 113455,
+        "max_unit_scale_ulp": 4160128.0
+      },
+      "ViewLayer.Combined.G": {
+        "max_abs": 1.37139892578125,
+        "max_reference_ulp": 134051.0,
+        "max_ulp_pixel": [
+          1059,
+          185
+        ],
+        "reference_at_max_ulp": 0.24904534220695496,
+        "on_at_max_ulp": 0.24704782664775848,
+        "pixels_above_4_ulp": 77586,
+        "differing_pixels": 77586,
+        "max_unit_scale_ulp": 11504128.0
+      },
+      "ViewLayer.Combined.R": {
+        "max_abs": 1.5572052001953125,
+        "max_reference_ulp": 133627.0,
+        "max_ulp_pixel": [
+          983,
+          181
+        ],
+        "reference_at_max_ulp": 15.971587181091309,
+        "on_at_max_ulp": 16.099023818969727,
+        "pixels_above_4_ulp": 120516,
+        "differing_pixels": 120516,
+        "max_unit_scale_ulp": 13062784.0
+      },
+      "ViewLayer.Denoising Backward Motion.X": {
+        "max_abs": 0.0,
+        "max_reference_ulp": 0.0,
+        "max_ulp_pixel": [
+          0,
+          0
+        ],
+        "reference_at_max_ulp": 0.0,
+        "on_at_max_ulp": 0.0,
+        "pixels_above_4_ulp": 0,
+        "differing_pixels": 0,
+        "max_unit_scale_ulp": 0.0
+      },
+      "ViewLayer.Denoising Backward Motion.Y": {
+        "max_abs": 0.0,
+        "max_reference_ulp": 0.0,
+        "max_ulp_pixel": [
+          0,
+          0
+        ],
+        "reference_at_max_ulp": 0.0,
+        "on_at_max_ulp": 0.0,
+        "pixels_above_4_ulp": 0,
+        "differing_pixels": 0,
+        "max_unit_scale_ulp": 0.0
+      },
+      "ViewLayer.Denoising Backward Motion.Z": {
+        "max_abs": 0.0,
+        "max_reference_ulp": 0.0,
+        "max_ulp_pixel": [
+          0,
+          0
+        ],
+        "reference_at_max_ulp": 0.0,
+        "on_at_max_ulp": 0.0,
+        "pixels_above_4_ulp": 0,
+        "differing_pixels": 0,
+        "max_unit_scale_ulp": 0.0
+      },
+      "ViewLayer.Denoising Roughness.X": {
+        "max_abs": 7.152557373046875e-07,
+        "max_reference_ulp": 6.0,
+        "max_ulp_pixel": [
+          688,
+          127
+        ],
+        "reference_at_max_ulp": 1.6687284708023071,
+        "on_at_max_ulp": 1.6687291860580444,
+        "pixels_above_4_ulp": 16,
+        "differing_pixels": 9946,
+        "max_unit_scale_ulp": 6.0
+      },
+      "ViewLayer.Denoising Specular Albedo.B": {
+        "max_abs": 4.76837158203125e-07,
+        "max_reference_ulp": 8.0,
+        "max_ulp_pixel": [
+          198,
+          99
+        ],
+        "reference_at_max_ulp": 0.853361964225769,
+        "on_at_max_ulp": 0.8533624410629272,
+        "pixels_above_4_ulp": 824,
+        "differing_pixels": 163633,
+        "max_unit_scale_ulp": 4.0
+      },
+      "ViewLayer.Denoising Specular Albedo.G": {
+        "max_abs": 4.172325134277344e-07,
+        "max_reference_ulp": 7.0,
+        "max_ulp_pixel": [
+          254,
+          44
+        ],
+        "reference_at_max_ulp": 0.8653411269187927,
+        "on_at_max_ulp": 0.8653415441513062,
+        "pixels_above_4_ulp": 431,
+        "differing_pixels": 151859,
+        "max_unit_scale_ulp": 3.5
+      },
+      "ViewLayer.Denoising Specular Albedo.R": {
+        "max_abs": 4.172325134277344e-07,
+        "max_reference_ulp": 7.0,
+        "max_ulp_pixel": [
+          79,
+          171
+        ],
+        "reference_at_max_ulp": 0.7084996104240417,
+        "on_at_max_ulp": 0.7085000276565552,
+        "pixels_above_4_ulp": 171,
+        "differing_pixels": 159962,
+        "max_unit_scale_ulp": 3.5
+      },
+      "ViewLayer.Denoising Specular Motion.X": {
+        "max_abs": 0.0,
+        "max_reference_ulp": 0.0,
+        "max_ulp_pixel": [
+          0,
+          0
+        ],
+        "reference_at_max_ulp": 0.0,
+        "on_at_max_ulp": 0.0,
+        "pixels_above_4_ulp": 0,
+        "differing_pixels": 0,
+        "max_unit_scale_ulp": 0.0
+      },
+      "ViewLayer.Denoising Specular Motion.Y": {
+        "max_abs": 0.0,
+        "max_reference_ulp": 0.0,
+        "max_ulp_pixel": [
+          0,
+          0
+        ],
+        "reference_at_max_ulp": 0.0,
+        "on_at_max_ulp": 0.0,
+        "pixels_above_4_ulp": 0,
+        "differing_pixels": 0,
+        "max_unit_scale_ulp": 0.0
+      },
+      "ViewLayer.Denoising Specular Motion.Z": {
+        "max_abs": 0.0,
+        "max_reference_ulp": 0.0,
+        "max_ulp_pixel": [
+          0,
+          0
+        ],
+        "reference_at_max_ulp": 0.0,
+        "on_at_max_ulp": 0.0,
+        "pixels_above_4_ulp": 0,
+        "differing_pixels": 0,
+        "max_unit_scale_ulp": 0.0
+      }
+    }
+  },
+  "rule": "Exact accepted counts; 4 FLOAT ULP of 1.0 for bounded normal/albedo, 4 FLOAT ULP of deep-off reference otherwise; reference-value reproduced-state result additionally reported",
+  "all_count_mismatch_pixels_path": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\run1-root-cause-pair\\pair-results.json"
+}

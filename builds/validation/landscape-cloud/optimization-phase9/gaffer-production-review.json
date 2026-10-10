@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "path": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\phase9-production-review.gfr",
+  "checks": [
+    {
+      "run": "run1",
+      "points": 52261,
+      "deep_path": "D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-production-20261010/twenty-controls-and-all/deep-all/scene.deep.exr",
+      "camera_transform_checked": true,
+      "connected": true
+    },
+    {
+      "run": "run2",
+      "points": 36989,
+      "deep_path": "D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-production-20261010/replacement-run2/deep-64/scene.deep.exr",
+      "camera_transform_checked": true,
+      "connected": true
+    }
+  ],
+  "point_stride": 32,
+  "max_points": 100000,
+  "initial_focus": "ProductionBeauty",
+  "initial_run": "run2",
+  "qualification": "C:/Users/jun/Documents/ChatGPT/cycles_deep/builds/validation/landscape-cloud/optimization-phase9/phase9-acceptance.json"
+}

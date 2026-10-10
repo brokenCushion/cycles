@@ -2689,5 +2689,10 @@ controls, retries, investigation or production renders; stopped for user decisio
 [install destinations](builds/validation/landscape-cloud/optimization-phase9/production-timing-install-destinations.json),
 [new hashes/toolchain](builds/validation/landscape-cloud/optimization-phase9/production-timing-build.json).
 Large artifacts remain under the production D: root and regression root recorded
-in the reports. Fresh additional CUDA controls require authorization before
-continuing the retained regression; replacement production and Gaffer remain pending.
+in the reports. The user subsequently approved 15 additional small CUDA controls
+and pre-authorized small-fixture controls/seeds required by the existing policy.
+Retained regression resumes after calibration; replacement production and Gaffer
+remain pending. Harness-only resume repair `7ef6fde96` rechecks completed rejection
+sentinel/log/no-partial evidence without repeating their render commands. The shared
+helper covers native, boundary and bevel cases; the corruption/partial-output
+regression check passes. Renderer code, gates and golden references are unchanged.

@@ -50,6 +50,18 @@ Root causes, in code:
 
 ## 2. Rules for this work
 
+- User approval (2026-10-11): resolve run1's `(992,78)` flag with ONE full-frame
+  OptiX deep-off/deep-on pair using the existing snapshot+timing-fix diagnostic
+  executable, without rebuilding. Match run1 settings: all samples, IDs,
+  error1e-3, default z1e-4 and unchanged memory8192MiB. Require equal accepted
+  counts and agreement on all checked raw passes within the recorded ULP floors
+  (normal/albedo: 4 ULP of1; other channels: 4 ULP of the reference). Report
+  reference-value reproduced-state agreement separately, plus image-wide results.
+  This specific pair replaces the six-render diagnostic requirement for this
+  flag only. If resolved, record both production runs accepted, create their
+  connected Gaffer review and stop for final review. Otherwise stop without
+  further investigation. Preserve the original calibrated flag and results.
+
 - User approval (2026-10-10): add exactly 15 full-resolution OptiX deep-off
   controls with the current production executable and existing settings, making
   a 20-control pool. Complete replacement run2's calibrated beauty policy,

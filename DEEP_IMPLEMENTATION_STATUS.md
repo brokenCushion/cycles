@@ -4,37 +4,24 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–8 accepted.
 
-**Phase 9: fresh standalone installation repair authorized; regression pending.**
-Fix `47a8dffb0` excludes deep GPU capture from beauty scheduler timing.
-Snapshot+fix OptiX off/on/on have identical schedules, zero count mismatches,
-and resolve the original eight pixels. CUDA ordinary controls reproduce the
-five-pixel cluster: new-three leave-one-out counts 5/0/0; both deep-on runs
-have zero unmatched pixels. This is ordinary CUDA nondeterminism.
+**Phase 9 stopped: CUDA raw fallback calibration has 5 controls; policy requires 20.**
+Fresh standalone install destinations, manifest and hashes pass; all 1,059
+protected files remain unchanged. Old standalone binaries are superseded as
+directed; reference outputs remain preserved. Production has the timing fix,
+no snapshot/debug patch, and the accepted [toolchain](BUILDING.md).
 
-[CUDA count evidence](builds/validation/landscape-cloud/optimization-phase9/cuda-repeatability.json).
-[Timing diagnostic](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-fix.json).
-[PTX register rename audit](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-module-check.json).
+Regression: strict81/81, numeric30/30, OptiX65/65, nine CTests, CPU beauty
+exactness, native beauty-source proof and 75 kernel resource records pass.
+Elapsed 26.66 minutes. Small CUDA case has zero count mismatches, passing
+bias and identical denoised beauty. Three raw normal fallback pixels fit the
+existing unit-scale ULP floor, but qualification needs 20 ordinary controls.
+Only five were authorized; no further renders or analysis launched.
+OptiX beauty stage and replacement production run2 have not started.
 
-Both builds succeeded. Standalone installation wrote executables into the old
-Phase8c location despite the new prefix; the expected new executable was absent
-and preservation checks failed. The old standalone cycles/test executable hashes
-changed. Generated sources and GPU caches were restored; recorded Blender and
-diagnostic hashes remain preserved. No regression or replacement render started.
-[Failure evidence](builds/validation/landscape-cloud/optimization-phase9/production-timing-build-failure.json).
-The user designated those two old binaries superseded, not recoverable, rebuildable
-from `0c6821277` with a different hash; preserved reference outputs remain the gates.
-Fresh standalone configure uses the new install prefix and checks every generated
-install destination before installing. Then the authorized regression, replacement
-OptiX run2 and fresh five ordinary/four seed controls continue. Stop on any failure.
-Both preserved production deep outputs pass deep gates; beauty remains pending.
-No retries or Gaffer review before all production gates pass.
+[Stop evidence](builds/validation/landscape-cloud/optimization-phase9/production-timing-regression-stop.json),
+[beauty report](builds/validation/landscape-cloud/optimization-phase9/production-timing-cuda-beauty.json),
+[install/hash proof](builds/validation/landscape-cloud/optimization-phase9/production-timing-build.json).
+Large artifacts remain on D:. Stop for user decision; no Gaffer before gates pass.
 
-Build/regression: `D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-production-20261010/`.
-Large artifacts/TEMP stay on D:. Existing production and diagnostic installs
-remain preserved. Snapshot patch is diagnostic only.
-
-[Toolchain](BUILDING.md): clang-cl 20.1.8 / NVCC 12.8.61, CUDA 12.8.0,
-OptiX 8.0.0, OSL 1.15.3.0.
-[Support matrix](src/deep/RELEASE_MATRIX.md),
-[M8 release](src/deep/M8_RELEASE_VALIDATION.md),
+[Support matrix](src/deep/RELEASE_MATRIX.md), [M8 release](src/deep/M8_RELEASE_VALIDATION.md),
 [archived reports](src/deep/ARCHIVED_REPORTS.md), [regression](src/deep/README.md).

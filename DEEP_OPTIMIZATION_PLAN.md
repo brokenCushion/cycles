@@ -2644,3 +2644,41 @@ Then run the unchanged 81/81 strict, 30/30 numeric, 65/65 OptiX regression, nine
 CTests, CPU beauty exactness and beauty source/resource proofs; replace only OptiX
 run2, followed by five fresh ordinary and four seed-varied references, full beauty
 policy and count-mismatch calibration. Stop on failure; report at the end.
+
+
+#### Phase 9 - fresh install passed; regression stopped on calibration (2026-10-10)
+
+Fresh `standalone-build-fresh` configures the production prefix at configure time.
+All generated install destinations were listed and verified before installing;
+actual installed manifest/hashes pass. All 1,059 protected files are unchanged
+after regression; no superseded binaries were recovered. Toolchain unchanged;
+production contains timing fix only, with no snapshot/debug patch.
+
+| Check | Measured result |
+| --- | --- |
+| Strict identity | 81/81 PASS |
+| Numeric identity | 30/30 PASS |
+| OptiX identity | 65/65 PASS |
+| Nine CTests | PASS, 12.39 s |
+| CPU same-build beauty, native source proof, 75 resources | PASS |
+| Regression wall time | 1,599.391 s (26.66 min), stopped at CUDA beauty |
+| CUDA47x20 count mismatch/direction | PASS, zero unmatched counts |
+| CUDA bias / denoised difference | PASS / exactly zero |
+| CUDA raw fallback | 3 pixels; calibration requires 20 ordinary controls, only 5 authorized |
+| OptiX beauty and replacement full-frame run2 | Not started |
+
+Fallback pixels (top origin): `(39,13)` Normal.Y difference 3.72529e-9 and
+Normal.Z -5.96046e-8; `(0,11)` Normal.X -8.73115e-11; `(26,10)` Normal.X
+-1.11759e-8. Every reported step-2 channel fits the existing 4-ULP-of-1 floor
+(4.76837e-7), but with fewer than 20 controls the calibration is informational
+and cannot qualify the case. Ordinary leave-one-out fallback counts min/median/max
+are 2/4/7; deep-on has 3. No gate, threshold or reference changed. No extra
+controls, retries, investigation or production renders; stopped for user decision.
+
+[Regression stop](builds/validation/landscape-cloud/optimization-phase9/production-timing-regression-stop.json),
+[raw beauty report](builds/validation/landscape-cloud/optimization-phase9/production-timing-cuda-beauty.json),
+[install destinations](builds/validation/landscape-cloud/optimization-phase9/production-timing-install-destinations.json),
+[new hashes/toolchain](builds/validation/landscape-cloud/optimization-phase9/production-timing-build.json).
+Large artifacts remain under the production D: root and regression root recorded
+in the reports. Fresh additional CUDA controls require authorization before
+continuing the retained regression; replacement production and Gaffer remain pending.

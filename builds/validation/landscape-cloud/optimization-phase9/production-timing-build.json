@@ -1,0 +1,90 @@
+{
+  "diagnostic_only": false,
+  "snapshot_commit": null,
+  "timing_fix_commit": "47a8dffb0",
+  "base_compiled_cycles_commit": "8137045eb3f8e62e012a251ea93c548970c48716",
+  "toolchain": {
+    "clang_cl": "20.1.8",
+    "nvcc": "12.8.61",
+    "cuda_toolkit": "12.8.0",
+    "optix": "8.0.0",
+    "osl": "1.15.3.0",
+    "nvcc_host_msvc": "19.44 / 14.44.35207",
+    "ninja": "1.13.2",
+    "cmake": "3.31.2"
+  },
+  "build_passed": true,
+  "executable": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\blender\\blender.exe",
+  "executable_sha256": "68e972491e66834ccdb0e61a183924e5fbee80d249eb4ef93fd7258fce844a64",
+  "standalone": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\standalone\\cycles.exe",
+  "standalone_sha256": "018ef87b7662fe8621d91c042b451cb202badb79dabc8db4b921b14bd25ca5a6",
+  "ctest_build": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\standalone-build-fresh",
+  "qualified_files_preserved": true,
+  "managed_originals_restored": true,
+  "superseded": [
+    {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\standalone\\cycles.exe",
+      "before": "a909c81b985b0b9a2e66b45634f2c42e01ff60554045d07d0690296977405945",
+      "after": "23e6de36adc278e7731fbbc5644a69dff9eabb8845f26797f670b9b3eea4bc31"
+    },
+    {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\standalone\\cycles_deep_output_driver_test.exe",
+      "before": "c729134028ffb0f84600592257959090e8a28fc34dc628105e050986aaec9911",
+      "after": "fa65bb635751504f3590f1bef3d54513b6479360229e92e57a4a370fbfb913d0"
+    }
+  ],
+  "gpu_module_comparison": {
+    "kernel_optix.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_deep.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_deep_osl.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_deep_osl_services.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_mnee.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_osl.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_osl_camera.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_osl_mnee.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_osl_services.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_osl_shader_raytrace.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_osl_volume.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_optix_shader_raytrace.ptx.zst": {
+      "passed": true,
+      "bytes_identical": true
+    },
+    "kernel_sm_86.cubin.zst": {
+      "passed": true,
+      "bytes_identical": true
+    }
+  }
+}

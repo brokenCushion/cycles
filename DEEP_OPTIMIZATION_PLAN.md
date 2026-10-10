@@ -62,6 +62,18 @@ Root causes, in code:
   off/on at full run-2 settings. Require equal batches and zero count mismatches;
   report raw differences. Stop after these diagnostics before rebuilding production.
 
+- User decision (2026-10-10): OptiX timing-fix diagnostics are accepted (identical
+  schedules, zero mismatches, original eight pixels resolved). For CUDA, render
+  three additional ordinary deep-off controls and one additional deep-on using
+  the same full-frame snapshot+fix executable and run-2 settings. Compare both
+  deep-on renders with the accumulated compatible deep-off pool using matched-size
+  leave-one-out count calibration and the existing direction statistic; report
+  the three new controls separately too. Direction alone is not evidence for a
+  correlated dilated cluster. If CUDA controls show ordinary variation and deep-on
+  passes the calibrated rule, proceed to step 4: production build without snapshot,
+  regression, then OptiX run-2 replacement and full beauty/count qualification
+  against fresh controls from the new executable. Otherwise stop and report.
+
 - Do not change beauty kernels or beauty sampling. Deep must remain a
   side-channel. (See Phase 0 for the existing violation.)
 Phase 8c user decisions: initialize all deep shader inputs on every device.
@@ -2564,4 +2576,22 @@ kernel/readback/spill and capture overhead after beauty drain. Wall includes loa
 export and saving. Native path-time statistics exclude capture. Small off/on wall
 is 151.047/54.438 s, affected by first-run startup; not a speed comparison.
 [All measured results and preservation proof](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-fix.json).
-Stopped after step 3 for user review; monitor removed. Production remains unchanged.
+Step 3 stopped for review; the user accepted OptiX and authorized the CUDA control
+experiment below. Production remains unchanged pending its result.
+
+#### Phase 9 - CUDA repeatability calibration: running
+
+Reuse snapshot+fix SHA `9754e361416cd8520ed84e0dda61a2d88a1ceeb70a5ce746dc2b0fd21d687752`;
+no rebuild. Exactly three new CUDA deep-off renders and one new CUDA deep-on,
+full1175x500 original1024 adaptive/GPUOIDN, deep1e-3/prefix64/IDs/z1e-4,
+memory8192MiB. The previous CUDA off/on outputs stay preserved. The accumulated
+pool has four ordinary controls; report its leave-one-out counts against three
+references and each deep-on's mean across four three-reference subsets. Also
+report the three new controls alone with two-reference comparisons. Reuse
+`count_mismatch_summary`; do not change the production five-control validator.
+The analysis self-check covers rate boundaries, ties and the binomial statistic.
+An incorrect synthetic rejection example was repaired before rendering; no
+renderer, policy or reference changed.
+
+Large outputs/TEMP: `D:/CyclesDeepScratch/optimization-phase9/cuda-repeatability-20261010/`.
+Results pending. Conditional step-4 authorization applies only after measured pass.

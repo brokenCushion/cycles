@@ -2,7 +2,7 @@
 
 [Optimization plan](DEEP_OPTIMIZATION_PLAN.md) is the plan of record;
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
-Branch: `codex/landscape-cloud-compatibility`. **Phases 0–9 accepted.**
+Branch: `deep`. **Phases 0–9 accepted.**
 
 Both production landscape outputs qualify: OptiX 1175x500, original1024 adaptive,
 GPU OIDN, IDs, error1e-3, default z1e-4; all samples and prefix64. Run1's sole

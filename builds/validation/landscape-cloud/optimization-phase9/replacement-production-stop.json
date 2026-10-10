@@ -1,0 +1,1472 @@
+{
+  "passed": false,
+  "status": "stopped-insufficient-full-resolution-calibration",
+  "qualified_files_preserved": true,
+  "metrics": {
+    "name": "deep-64",
+    "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\deep-64",
+    "render_call_seconds": 1418.7958715000423,
+    "peak_host_bytes": 6104449024,
+    "peak_gpu_device_mib": 6217,
+    "peak_gpu_process_bytes": 4013391872,
+    "gates": "pending; no Gaffer review",
+    "export_seconds": 372.38,
+    "spill_file_bytes": 20101054836,
+    "spill_read_bytes": 47054663352,
+    "spill_write_bytes": 24790150260,
+    "companion_export_seconds": 191.8091454,
+    "production_export_seconds": 180.5708546,
+    "render_capture_seconds": 1046.4158715000422,
+    "exr_bytes": 705176082,
+    "z0_companion_bytes": 920277638,
+    "deep_sample_count": 86125949,
+    "max_exterior_error": 2.682607158632777e-08,
+    "max_flatten_error": 0.0,
+    "oracle_max_error": 8.229895820188737e-05,
+    "finished_utc": "2026-10-10T08:45:29Z",
+    "gpu_lane_written_bytes": 18384917748,
+    "gpu_copied_bytes": 38721100532,
+    "capture_readback_seconds": 512.409815,
+    "peak_host_gib": 5.685211181640625,
+    "beauty_only_median_seconds": 356.2757003000006
+  },
+  "oracle": {
+    "passed": true,
+    "deep_error": 0.0010000000474974513,
+    "max_accepted_camera_error": 8.229895820188737e-05,
+    "accepted_camera_probes": 18277714,
+    "accepted_camera_pixels": 81,
+    "accepted_populations": [
+      64,
+      48,
+      64,
+      64,
+      64,
+      48,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      32,
+      64,
+      64,
+      48,
+      64,
+      64,
+      64,
+      64,
+      48,
+      64,
+      16,
+      16,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      16,
+      64,
+      16,
+      64,
+      64,
+      64,
+      64,
+      64,
+      48,
+      16,
+      64,
+      32,
+      64,
+      64,
+      64,
+      64,
+      64,
+      32,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      48,
+      64,
+      32,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      32,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      64,
+      16
+    ],
+    "camera_populations": [
+      {
+        "x": 0,
+        "y": 0,
+        "count": 64
+      },
+      {
+        "x": 146,
+        "y": 0,
+        "count": 48
+      },
+      {
+        "x": 293,
+        "y": 0,
+        "count": 64
+      },
+      {
+        "x": 440,
+        "y": 0,
+        "count": 64
+      },
+      {
+        "x": 587,
+        "y": 0,
+        "count": 64
+      },
+      {
+        "x": 733,
+        "y": 0,
+        "count": 48
+      },
+      {
+        "x": 880,
+        "y": 0,
+        "count": 64
+      },
+      {
+        "x": 1027,
+        "y": 0,
+        "count": 64
+      },
+      {
+        "x": 1174,
+        "y": 0,
+        "count": 64
+      },
+      {
+        "x": 0,
+        "y": 62,
+        "count": 64
+      },
+      {
+        "x": 146,
+        "y": 62,
+        "count": 64
+      },
+      {
+        "x": 293,
+        "y": 62,
+        "count": 64
+      },
+      {
+        "x": 440,
+        "y": 62,
+        "count": 32
+      },
+      {
+        "x": 587,
+        "y": 62,
+        "count": 64
+      },
+      {
+        "x": 733,
+        "y": 62,
+        "count": 64
+      },
+      {
+        "x": 880,
+        "y": 62,
+        "count": 48
+      },
+      {
+        "x": 1027,
+        "y": 62,
+        "count": 64
+      },
+      {
+        "x": 1174,
+        "y": 62,
+        "count": 64
+      },
+      {
+        "x": 0,
+        "y": 124,
+        "count": 64
+      },
+      {
+        "x": 146,
+        "y": 124,
+        "count": 64
+      },
+      {
+        "x": 293,
+        "y": 124,
+        "count": 48
+      },
+      {
+        "x": 440,
+        "y": 124,
+        "count": 64
+      },
+      {
+        "x": 587,
+        "y": 124,
+        "count": 16
+      },
+      {
+        "x": 733,
+        "y": 124,
+        "count": 16
+      },
+      {
+        "x": 880,
+        "y": 124,
+        "count": 64
+      },
+      {
+        "x": 1027,
+        "y": 124,
+        "count": 64
+      },
+      {
+        "x": 1174,
+        "y": 124,
+        "count": 64
+      },
+      {
+        "x": 0,
+        "y": 187,
+        "count": 64
+      },
+      {
+        "x": 146,
+        "y": 187,
+        "count": 64
+      },
+      {
+        "x": 293,
+        "y": 187,
+        "count": 64
+      },
+      {
+        "x": 440,
+        "y": 187,
+        "count": 64
+      },
+      {
+        "x": 587,
+        "y": 187,
+        "count": 64
+      },
+      {
+        "x": 733,
+        "y": 187,
+        "count": 64
+      },
+      {
+        "x": 880,
+        "y": 187,
+        "count": 64
+      },
+      {
+        "x": 1027,
+        "y": 187,
+        "count": 64
+      },
+      {
+        "x": 1174,
+        "y": 187,
+        "count": 64
+      },
+      {
+        "x": 0,
+        "y": 249,
+        "count": 64
+      },
+      {
+        "x": 146,
+        "y": 249,
+        "count": 64
+      },
+      {
+        "x": 293,
+        "y": 249,
+        "count": 64
+      },
+      {
+        "x": 440,
+        "y": 249,
+        "count": 16
+      },
+      {
+        "x": 587,
+        "y": 249,
+        "count": 64
+      },
+      {
+        "x": 733,
+        "y": 249,
+        "count": 16
+      },
+      {
+        "x": 880,
+        "y": 249,
+        "count": 64
+      },
+      {
+        "x": 1027,
+        "y": 249,
+        "count": 64
+      },
+      {
+        "x": 1174,
+        "y": 249,
+        "count": 64
+      },
+      {
+        "x": 0,
+        "y": 311,
+        "count": 64
+      },
+      {
+        "x": 146,
+        "y": 311,
+        "count": 64
+      },
+      {
+        "x": 293,
+        "y": 311,
+        "count": 48
+      },
+      {
+        "x": 440,
+        "y": 311,
+        "count": 16
+      },
+      {
+        "x": 587,
+        "y": 311,
+        "count": 64
+      },
+      {
+        "x": 733,
+        "y": 311,
+        "count": 32
+      },
+      {
+        "x": 880,
+        "y": 311,
+        "count": 64
+      },
+      {
+        "x": 1027,
+        "y": 311,
+        "count": 64
+      },
+      {
+        "x": 1174,
+        "y": 311,
+        "count": 64
+      },
+      {
+        "x": 0,
+        "y": 374,
+        "count": 64
+      },
+      {
+        "x": 146,
+        "y": 374,
+        "count": 64
+      },
+      {
+        "x": 293,
+        "y": 374,
+        "count": 32
+      },
+      {
+        "x": 440,
+        "y": 374,
+        "count": 64
+      },
+      {
+        "x": 587,
+        "y": 374,
+        "count": 64
+      },
+      {
+        "x": 733,
+        "y": 374,
+        "count": 64
+      },
+      {
+        "x": 880,
+        "y": 374,
+        "count": 64
+      },
+      {
+        "x": 1027,
+        "y": 374,
+        "count": 64
+      },
+      {
+        "x": 1174,
+        "y": 374,
+        "count": 64
+      },
+      {
+        "x": 0,
+        "y": 436,
+        "count": 48
+      },
+      {
+        "x": 146,
+        "y": 436,
+        "count": 64
+      },
+      {
+        "x": 293,
+        "y": 436,
+        "count": 32
+      },
+      {
+        "x": 440,
+        "y": 436,
+        "count": 64
+      },
+      {
+        "x": 587,
+        "y": 436,
+        "count": 64
+      },
+      {
+        "x": 733,
+        "y": 436,
+        "count": 64
+      },
+      {
+        "x": 880,
+        "y": 436,
+        "count": 64
+      },
+      {
+        "x": 1027,
+        "y": 436,
+        "count": 64
+      },
+      {
+        "x": 1174,
+        "y": 436,
+        "count": 64
+      },
+      {
+        "x": 0,
+        "y": 499,
+        "count": 32
+      },
+      {
+        "x": 146,
+        "y": 499,
+        "count": 64
+      },
+      {
+        "x": 293,
+        "y": 499,
+        "count": 64
+      },
+      {
+        "x": 440,
+        "y": 499,
+        "count": 64
+      },
+      {
+        "x": 587,
+        "y": 499,
+        "count": 64
+      },
+      {
+        "x": 733,
+        "y": 499,
+        "count": 64
+      },
+      {
+        "x": 880,
+        "y": 499,
+        "count": 64
+      },
+      {
+        "x": 1027,
+        "y": 499,
+        "count": 64
+      },
+      {
+        "x": 1174,
+        "y": 499,
+        "count": 16
+      }
+    ],
+    "oracle": "Independent NumPy extinction sweep; one pixel at a time"
+  },
+  "depth_cuts": {
+    "passed": true,
+    "max_slice_error": 2.8407978713840265e-07,
+    "header_bound": 0.0010000000474974513,
+    "diagnostic_pixels": 81,
+    "cuts": [
+      490.4764099121094,
+      624.84130859375,
+      759.2061767578125,
+      893.5711059570312,
+      1027.9359130859375
+    ],
+    "scope": "Gaffer DeepSlice vs independent stored-curve evaluation; no review scene"
+  },
+  "raw_inputs": {
+    "passed": true,
+    "accepted_samples": {
+      "min": 16,
+      "median": 288.0,
+      "max": 1024
+    },
+    "channels": 26,
+    "dimensions": [
+      1175,
+      500
+    ]
+  },
+  "beauty": {
+    "passed": false,
+    "raw_passed": false,
+    "bias_passed": true,
+    "denoised_outlier_pixels": 0,
+    "fallback_pixels": 4411,
+    "calibration": {
+      "fallback_pixels": {
+        "min": 5137,
+        "median": 5201,
+        "max": 5312
+      },
+      "max_ratio": {
+        "ViewLayer.Debug Sample Count.X": {
+          "min": 0.0,
+          "median": 0.0,
+          "max": 0.0
+        },
+        "ViewLayer.Denoising Albedo.R": {
+          "min": 7.231377570677128,
+          "median": 12.867766940720038,
+          "max": 14.727430075666208
+        },
+        "ViewLayer.Denoising Albedo.G": {
+          "min": 7.223027707561019,
+          "median": 12.123055742789775,
+          "max": 14.698819638524697
+        },
+        "ViewLayer.Denoising Albedo.B": {
+          "min": 7.21306587033467,
+          "median": 11.909843701153465,
+          "max": 14.714581770294105
+        },
+        "ViewLayer.Denoising Depth.Z": {
+          "min": 3.9767815430083404,
+          "median": 5.677393551019786,
+          "max": 7.118650631379622
+        },
+        "ViewLayer.Denoising Normal.X": {
+          "min": 112023.30878485453,
+          "median": 272461.05366870825,
+          "max": 532995.9905010487
+        },
+        "ViewLayer.Denoising Normal.Y": {
+          "min": 6.947532402685065,
+          "median": 8.9012290425507,
+          "max": 27.332803472359476
+        },
+        "ViewLayer.Denoising Normal.Z": {
+          "min": 5.556738788770476,
+          "median": 5.975213514058982,
+          "max": 18.78286878821263
+        },
+        "ViewLayer.Noisy Image.R": {
+          "min": 4.708162745951373,
+          "median": 9.467869059422485,
+          "max": 15.549130866985054
+        },
+        "ViewLayer.Noisy Image.G": {
+          "min": 3.569803623478132,
+          "median": 4.970883829449145,
+          "max": 11.353920267720603
+        },
+        "ViewLayer.Noisy Image.B": {
+          "min": 4.923801445709849,
+          "median": 8.696446490916594,
+          "max": 11.850142097195157
+        },
+        "ViewLayer.Noisy Image.A": {
+          "min": 0.0,
+          "median": 0.0,
+          "max": 0.0
+        }
+      },
+      "requires_seed_controls": true,
+      "ordinary_controls": 5,
+      "minimum_controls": 20,
+      "informational_only": true,
+      "complete": false
+    },
+    "provisional_flagged_pixels": [
+      {
+        "file_pixel": [
+          978,
+          81
+        ],
+        "sample_count": 1024,
+        "passed": false,
+        "failed_passes": [
+          "ViewLayer.Noisy Image"
+        ],
+        "channels": [
+          {
+            "channel": "ViewLayer.Debug Sample Count.X",
+            "passed": true,
+            "difference": 0.0,
+            "sigma": 0.07557693677568464,
+            "ratio": 0.0,
+            "nearest": 0,
+            "reference_value": 1.0,
+            "four_ulp": 4.76837158203125e-07,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+            "calibrated_limit": 0.0,
+            "absolute_limit": 4.76837158203125e-07
+          },
+          {
+            "channel": "ViewLayer.Denoising Albedo.R",
+            "passed": true,
+            "difference": 7.852911949157715e-05,
+            "sigma": 0.003340962855222345,
+            "ratio": 0.023504936419399654,
+            "nearest": 0,
+            "reference_value": 0.3124818205833435,
+            "four_ulp": 4.76837158203125e-07,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+            "calibrated_limit": 14.727430075666208,
+            "absolute_limit": 0.04920379683568521
+          },
+          {
+            "channel": "ViewLayer.Denoising Albedo.G",
+            "passed": true,
+            "difference": -0.00695115327835083,
+            "sigma": 0.007432521465814187,
+            "ratio": 0.9352348742378471,
+            "nearest": 0,
+            "reference_value": 0.4850752651691437,
+            "four_ulp": 4.76837158203125e-07,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+            "calibrated_limit": 14.698819638524697,
+            "absolute_limit": 0.10924929248546593
+          },
+          {
+            "channel": "ViewLayer.Denoising Albedo.B",
+            "passed": true,
+            "difference": -0.008887767791748047,
+            "sigma": 0.009074978072330283,
+            "ratio": 0.9793707181339597,
+            "nearest": 0,
+            "reference_value": 0.5483101606369019,
+            "four_ulp": 4.76837158203125e-07,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+            "calibrated_limit": 14.714581770294105,
+            "absolute_limit": 0.13353450690892993
+          },
+          {
+            "channel": "ViewLayer.Denoising Depth.Z",
+            "passed": true,
+            "difference": 1.97430419921875,
+            "sigma": 1.5051158295132965,
+            "ratio": 1.3117290779256325,
+            "nearest": 1,
+            "reference_value": 930.2206420898438,
+            "four_ulp": 0.000244140625,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-4",
+            "calibrated_limit": 7.118650631379622,
+            "absolute_limit": 10.714393750064291
+          },
+          {
+            "channel": "ViewLayer.Denoising Normal.X",
+            "passed": true,
+            "difference": -0.00018264027312397957,
+            "sigma": 0.0001512618162705046,
+            "ratio": 1.2074446653302127,
+            "nearest": 1,
+            "reference_value": -0.004947300534695387,
+            "four_ulp": 4.76837158203125e-07,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-4",
+            "calibrated_limit": 532995.9905010487,
+            "absolute_limit": 80.62194158808526
+          },
+          {
+            "channel": "ViewLayer.Denoising Normal.Y",
+            "passed": true,
+            "difference": 0.0018608830869197845,
+            "sigma": 0.002429938534416494,
+            "ratio": 0.765814879908739,
+            "nearest": 0,
+            "reference_value": 0.03894101083278656,
+            "four_ulp": 4.76837158203125e-07,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+            "calibrated_limit": 27.332803472359476,
+            "absolute_limit": 0.06641703241111925
+          },
+          {
+            "channel": "ViewLayer.Denoising Normal.Z",
+            "passed": true,
+            "difference": 0.004269540309906006,
+            "sigma": 0.0038149664771413953,
+            "ratio": 1.1191553937599024,
+            "nearest": 0,
+            "reference_value": -0.8857455849647522,
+            "four_ulp": 4.76837158203125e-07,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+            "calibrated_limit": 18.78286878821263,
+            "absolute_limit": 0.07165601477157661
+          },
+          {
+            "channel": "ViewLayer.Noisy Image.R",
+            "passed": true,
+            "difference": 0.01666255295276642,
+            "sigma": 0.002933358554830011,
+            "ratio": 5.680366938208145,
+            "nearest": 0,
+            "reference_value": 0.049038954079151154,
+            "four_ulp": 1.4901161193847656e-08,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+            "calibrated_limit": 15.549130866985054,
+            "absolute_limit": 0.045611176048841996
+          },
+          {
+            "channel": "ViewLayer.Noisy Image.G",
+            "passed": false,
+            "difference": 0.013718098402023315,
+            "sigma": 0.0011297737746118607,
+            "ratio": 12.142340980375682,
+            "nearest": 0,
+            "reference_value": 0.04194439947605133,
+            "four_ulp": 1.4901161193847656e-08,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+            "calibrated_limit": 11.353920267720603,
+            "absolute_limit": 0.012827361357504815
+          },
+          {
+            "channel": "ViewLayer.Noisy Image.B",
+            "passed": false,
+            "difference": 0.010421119630336761,
+            "sigma": 0.0006280084219987021,
+            "ratio": 16.593917000619935,
+            "nearest": 0,
+            "reference_value": 0.047473542392253876,
+            "four_ulp": 1.4901161193847656e-08,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+            "calibrated_limit": 11.850142097195157,
+            "absolute_limit": 0.0074419890389199215
+          },
+          {
+            "channel": "ViewLayer.Noisy Image.A",
+            "passed": true,
+            "difference": 0.0,
+            "sigma": 0.0,
+            "ratio": 0.0,
+            "nearest": 0,
+            "reference_value": 1.0,
+            "four_ulp": 4.76837158203125e-07,
+            "nearest_reference": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+            "calibrated_limit": 0.0,
+            "absolute_limit": 4.76837158203125e-07
+          }
+        ]
+      }
+    ],
+    "count_mismatch": {
+      "passed": true,
+      "category": "count-mismatch",
+      "ordinary_leave_one_out": [
+        {
+          "pixels": 587500,
+          "mismatch_pixels": 279,
+          "mismatch_rate": 0.00047489361702127657,
+          "fewer": 79,
+          "more": 90,
+          "modal_tie_pixels": 110,
+          "fewer_fraction": 0.46745562130177515,
+          "binomial_p": 0.44185016848815495,
+          "sample_count_differences": {
+            "-272": 2,
+            "-256": 1,
+            "-224": 2,
+            "-192": 1,
+            "-160": 1,
+            "-144": 1,
+            "-128": 3,
+            "-112": 2,
+            "-96": 4,
+            "-80": 7,
+            "-64": 5,
+            "-48": 6,
+            "-32": 14,
+            "-16": 30,
+            "16": 23,
+            "32": 17,
+            "48": 3,
+            "64": 9,
+            "96": 4,
+            "112": 12,
+            "128": 2,
+            "144": 3,
+            "160": 2,
+            "176": 2,
+            "208": 1,
+            "224": 1,
+            "240": 2,
+            "272": 3,
+            "288": 1,
+            "368": 3,
+            "464": 1,
+            "480": 1
+          }
+        },
+        {
+          "pixels": 587500,
+          "mismatch_pixels": 326,
+          "mismatch_rate": 0.0005548936170212766,
+          "fewer": 83,
+          "more": 124,
+          "modal_tie_pixels": 119,
+          "fewer_fraction": 0.40096618357487923,
+          "binomial_p": 0.005306333695933721,
+          "sample_count_differences": {
+            "-304": 1,
+            "-272": 1,
+            "-208": 2,
+            "-176": 1,
+            "-160": 1,
+            "-128": 2,
+            "-112": 2,
+            "-96": 6,
+            "-80": 8,
+            "-64": 9,
+            "-48": 4,
+            "-32": 27,
+            "-16": 19,
+            "16": 26,
+            "32": 20,
+            "48": 6,
+            "64": 14,
+            "80": 7,
+            "96": 7,
+            "112": 6,
+            "128": 1,
+            "144": 5,
+            "160": 6,
+            "176": 1,
+            "192": 1,
+            "208": 7,
+            "224": 1,
+            "256": 4,
+            "304": 3,
+            "336": 8,
+            "512": 1
+          }
+        },
+        {
+          "pixels": 587500,
+          "mismatch_pixels": 304,
+          "mismatch_rate": 0.0005174468085106383,
+          "fewer": 80,
+          "more": 127,
+          "modal_tie_pixels": 97,
+          "fewer_fraction": 0.3864734299516908,
+          "binomial_p": 0.001330560053406875,
+          "sample_count_differences": {
+            "-352": 1,
+            "-192": 1,
+            "-176": 1,
+            "-112": 3,
+            "-80": 4,
+            "-64": 13,
+            "-48": 9,
+            "-32": 12,
+            "-16": 36,
+            "16": 45,
+            "32": 14,
+            "48": 20,
+            "64": 7,
+            "80": 4,
+            "96": 2,
+            "112": 3,
+            "128": 2,
+            "160": 4,
+            "176": 6,
+            "208": 1,
+            "240": 3,
+            "256": 1,
+            "272": 4,
+            "304": 1,
+            "320": 2,
+            "336": 1,
+            "368": 1,
+            "400": 2,
+            "416": 1,
+            "432": 1,
+            "448": 2
+          }
+        },
+        {
+          "pixels": 587500,
+          "mismatch_pixels": 262,
+          "mismatch_rate": 0.0004459574468085106,
+          "fewer": 45,
+          "more": 109,
+          "modal_tie_pixels": 108,
+          "fewer_fraction": 0.2922077922077922,
+          "binomial_p": 2.615376985326203e-07,
+          "sample_count_differences": {
+            "-416": 1,
+            "-224": 2,
+            "-160": 4,
+            "-128": 1,
+            "-112": 1,
+            "-80": 2,
+            "-64": 6,
+            "-48": 6,
+            "-32": 6,
+            "-16": 16,
+            "16": 35,
+            "32": 8,
+            "48": 6,
+            "64": 3,
+            "80": 9,
+            "96": 1,
+            "112": 6,
+            "128": 2,
+            "144": 2,
+            "160": 3,
+            "176": 2,
+            "192": 4,
+            "208": 1,
+            "224": 4,
+            "240": 1,
+            "272": 2,
+            "304": 3,
+            "320": 1,
+            "336": 5,
+            "352": 2,
+            "368": 5,
+            "416": 1,
+            "432": 2,
+            "576": 1
+          }
+        },
+        {
+          "pixels": 587500,
+          "mismatch_pixels": 278,
+          "mismatch_rate": 0.0004731914893617021,
+          "fewer": 81,
+          "more": 101,
+          "modal_tie_pixels": 96,
+          "fewer_fraction": 0.44505494505494503,
+          "binomial_p": 0.15883333227243546,
+          "sample_count_differences": {
+            "-336": 1,
+            "-256": 1,
+            "-240": 1,
+            "-224": 2,
+            "-192": 2,
+            "-176": 3,
+            "-144": 1,
+            "-128": 1,
+            "-96": 2,
+            "-80": 4,
+            "-64": 13,
+            "-48": 8,
+            "-32": 10,
+            "-16": 32,
+            "16": 29,
+            "32": 18,
+            "48": 7,
+            "64": 8,
+            "80": 4,
+            "96": 5,
+            "112": 1,
+            "144": 2,
+            "160": 6,
+            "176": 1,
+            "192": 2,
+            "224": 8,
+            "288": 3,
+            "320": 1,
+            "336": 3,
+            "352": 2,
+            "512": 1
+          }
+        }
+      ],
+      "deep_four_control_subsets": [
+        {
+          "pixels": 587500,
+          "mismatch_pixels": 250,
+          "mismatch_rate": 0.000425531914893617,
+          "fewer": 58,
+          "more": 109,
+          "modal_tie_pixels": 83,
+          "fewer_fraction": 0.3473053892215569,
+          "binomial_p": 9.739104814301284e-05,
+          "sample_count_differences": {
+            "-496": 1,
+            "-240": 1,
+            "-192": 1,
+            "-112": 1,
+            "-80": 3,
+            "-64": 2,
+            "-48": 4,
+            "-32": 17,
+            "-16": 28,
+            "16": 16,
+            "32": 20,
+            "48": 2,
+            "64": 10,
+            "80": 3,
+            "96": 2,
+            "112": 6,
+            "128": 3,
+            "144": 7,
+            "160": 1,
+            "176": 3,
+            "208": 3,
+            "240": 1,
+            "256": 1,
+            "288": 8,
+            "304": 2,
+            "320": 1,
+            "336": 1,
+            "352": 2,
+            "368": 5,
+            "400": 2,
+            "416": 2,
+            "432": 8
+          }
+        },
+        {
+          "pixels": 587500,
+          "mismatch_pixels": 275,
+          "mismatch_rate": 0.00046808510638297874,
+          "fewer": 64,
+          "more": 133,
+          "modal_tie_pixels": 78,
+          "fewer_fraction": 0.3248730964467005,
+          "binomial_p": 9.932750712206059e-07,
+          "sample_count_differences": {
+            "-288": 1,
+            "-240": 1,
+            "-192": 2,
+            "-160": 1,
+            "-112": 1,
+            "-96": 4,
+            "-80": 2,
+            "-64": 8,
+            "-48": 4,
+            "-32": 19,
+            "-16": 21,
+            "16": 31,
+            "32": 21,
+            "48": 3,
+            "64": 9,
+            "80": 3,
+            "96": 5,
+            "112": 5,
+            "128": 1,
+            "144": 10,
+            "160": 2,
+            "176": 2,
+            "208": 3,
+            "240": 1,
+            "256": 2,
+            "288": 8,
+            "304": 4,
+            "320": 2,
+            "336": 2,
+            "352": 1,
+            "368": 4,
+            "400": 2,
+            "416": 3,
+            "432": 8,
+            "448": 1
+          }
+        },
+        {
+          "pixels": 587500,
+          "mismatch_pixels": 259,
+          "mismatch_rate": 0.00044085106382978724,
+          "fewer": 68,
+          "more": 119,
+          "modal_tie_pixels": 72,
+          "fewer_fraction": 0.36363636363636365,
+          "binomial_p": 0.0002359430936566365,
+          "sample_count_differences": {
+            "-496": 1,
+            "-288": 1,
+            "-240": 1,
+            "-192": 1,
+            "-160": 1,
+            "-96": 4,
+            "-80": 4,
+            "-64": 5,
+            "-48": 5,
+            "-32": 18,
+            "-16": 27,
+            "16": 27,
+            "32": 22,
+            "48": 5,
+            "64": 7,
+            "80": 3,
+            "96": 3,
+            "112": 3,
+            "128": 1,
+            "144": 6,
+            "160": 1,
+            "176": 3,
+            "192": 2,
+            "208": 3,
+            "240": 1,
+            "288": 8,
+            "304": 2,
+            "320": 1,
+            "336": 1,
+            "352": 1,
+            "368": 4,
+            "384": 1,
+            "400": 2,
+            "416": 2,
+            "432": 9,
+            "560": 1
+          }
+        },
+        {
+          "pixels": 587500,
+          "mismatch_pixels": 273,
+          "mismatch_rate": 0.0004646808510638298,
+          "fewer": 56,
+          "more": 112,
+          "modal_tie_pixels": 105,
+          "fewer_fraction": 0.3333333333333333,
+          "binomial_p": 1.8638787920584236e-05,
+          "sample_count_differences": {
+            "-496": 1,
+            "-192": 1,
+            "-160": 1,
+            "-96": 3,
+            "-80": 3,
+            "-64": 3,
+            "-48": 6,
+            "-32": 15,
+            "-16": 23,
+            "16": 23,
+            "32": 11,
+            "48": 6,
+            "64": 6,
+            "80": 3,
+            "96": 3,
+            "112": 6,
+            "128": 4,
+            "144": 5,
+            "176": 2,
+            "208": 4,
+            "240": 2,
+            "256": 1,
+            "288": 8,
+            "304": 2,
+            "320": 2,
+            "336": 1,
+            "352": 3,
+            "368": 5,
+            "400": 2,
+            "416": 3,
+            "432": 8,
+            "448": 1,
+            "560": 1
+          }
+        },
+        {
+          "pixels": 587500,
+          "mismatch_pixels": 265,
+          "mismatch_rate": 0.000451063829787234,
+          "fewer": 63,
+          "more": 124,
+          "modal_tie_pixels": 78,
+          "fewer_fraction": 0.33689839572192515,
+          "binomial_p": 9.65665990674805e-06,
+          "sample_count_differences": {
+            "-496": 2,
+            "-288": 1,
+            "-192": 2,
+            "-112": 1,
+            "-80": 1,
+            "-64": 6,
+            "-48": 6,
+            "-32": 17,
+            "-16": 27,
+            "16": 22,
+            "32": 24,
+            "48": 5,
+            "64": 11,
+            "80": 6,
+            "96": 3,
+            "112": 3,
+            "128": 1,
+            "144": 8,
+            "176": 3,
+            "192": 2,
+            "208": 3,
+            "240": 1,
+            "288": 8,
+            "304": 2,
+            "320": 1,
+            "336": 1,
+            "352": 1,
+            "368": 4,
+            "384": 1,
+            "400": 2,
+            "416": 2,
+            "432": 9,
+            "560": 1
+          }
+        }
+      ],
+      "deep_five_control": {
+        "pixels": 587500,
+        "mismatch_pixels": 231,
+        "mismatch_rate": 0.00039319148936170213,
+        "fewer": 59,
+        "more": 112,
+        "modal_tie_pixels": 60,
+        "fewer_fraction": 0.34502923976608185,
+        "binomial_p": 6.169035751717305e-05,
+        "sample_count_differences": {
+          "-496": 2,
+          "-288": 1,
+          "-240": 1,
+          "-192": 2,
+          "-160": 1,
+          "-112": 1,
+          "-96": 3,
+          "-80": 1,
+          "-64": 3,
+          "-48": 5,
+          "-32": 19,
+          "-16": 20,
+          "16": 22,
+          "32": 19,
+          "48": 3,
+          "64": 10,
+          "80": 3,
+          "96": 3,
+          "112": 5,
+          "128": 1,
+          "144": 8,
+          "160": 1,
+          "176": 3,
+          "208": 3,
+          "240": 1,
+          "288": 8,
+          "304": 2,
+          "320": 1,
+          "336": 1,
+          "352": 1,
+          "368": 4,
+          "400": 2,
+          "416": 2,
+          "432": 8,
+          "560": 1
+        }
+      },
+      "ordinary_count_distribution": {
+        "min": 262,
+        "median": 279,
+        "max": 326
+      },
+      "deep_mean_mismatch_pixels": 264.4,
+      "rate_passed": true,
+      "ordinary_direction_range": [
+        0.2922077922077922,
+        0.46745562130177515
+      ],
+      "direction_outside_range": false,
+      "direction_passed": true,
+      "direction_rule": "One observation per full-pool mismatch pixel; unique modal reference count; modal ties reported separately"
+    },
+    "report_path": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\deep-64\\cuda_beauty_validation.json"
+  },
+  "queue_state": {
+    "queue_pid": 8584,
+    "status": "failed",
+    "completed": [
+      {
+        "name": "deep-64",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\deep-64",
+        "render_call_seconds": 1418.7958715000423,
+        "peak_host_bytes": 6104449024,
+        "peak_gpu_device_mib": 6217,
+        "peak_gpu_process_bytes": 4013391872,
+        "gates": "pending; no Gaffer review",
+        "export_seconds": 372.38,
+        "spill_file_bytes": 20101054836,
+        "spill_read_bytes": 47054663352,
+        "spill_write_bytes": 24790150260,
+        "companion_export_seconds": 191.8091454,
+        "production_export_seconds": 180.5708546,
+        "render_capture_seconds": 1046.4158715000422,
+        "exr_bytes": 705176082,
+        "z0_companion_bytes": 920277638,
+        "deep_sample_count": 86125949,
+        "max_exterior_error": 2.682607158632777e-08,
+        "max_flatten_error": 0.0,
+        "oracle_max_error": 8.229895820188737e-05,
+        "finished_utc": "2026-10-10T08:45:29Z"
+      },
+      {
+        "name": "control-1",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-1",
+        "render_call_seconds": 353.5757140000351,
+        "peak_host_bytes": 5081890816,
+        "peak_gpu_device_mib": 6158,
+        "peak_gpu_process_bytes": 3753299968,
+        "gates": "pending; no Gaffer review",
+        "finished_utc": "2026-10-10T08:51:29Z"
+      },
+      {
+        "name": "control-2",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-2",
+        "render_call_seconds": 346.84824400005164,
+        "peak_host_bytes": 5152681984,
+        "peak_gpu_device_mib": 5994,
+        "peak_gpu_process_bytes": 3753299968,
+        "gates": "pending; no Gaffer review",
+        "finished_utc": "2026-10-10T08:57:22Z"
+      },
+      {
+        "name": "control-3",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-3",
+        "render_call_seconds": 356.2757003000006,
+        "peak_host_bytes": 5121302528,
+        "peak_gpu_device_mib": 6468,
+        "peak_gpu_process_bytes": 3751202816,
+        "gates": "pending; no Gaffer review",
+        "finished_utc": "2026-10-10T09:03:25Z"
+      },
+      {
+        "name": "control-4",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-4",
+        "render_call_seconds": 372.2688663000008,
+        "peak_host_bytes": 5069127680,
+        "peak_gpu_device_mib": 7198,
+        "peak_gpu_process_bytes": 3753299968,
+        "gates": "pending; no Gaffer review",
+        "finished_utc": "2026-10-10T09:09:44Z"
+      },
+      {
+        "name": "control-5",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\control-5",
+        "render_call_seconds": 379.802471300005,
+        "peak_host_bytes": 5218222080,
+        "peak_gpu_device_mib": 6828,
+        "peak_gpu_process_bytes": 3973500928,
+        "gates": "pending; no Gaffer review",
+        "finished_utc": "2026-10-10T09:16:11Z"
+      },
+      {
+        "name": "seed-1",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\seed-1",
+        "render_call_seconds": 404.85837849997915,
+        "peak_host_bytes": 5160165376,
+        "peak_gpu_device_mib": 6768,
+        "peak_gpu_process_bytes": 3992379392,
+        "gates": "pending; no Gaffer review",
+        "finished_utc": "2026-10-10T09:23:05Z"
+      },
+      {
+        "name": "seed-2",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\seed-2",
+        "render_call_seconds": 380.471555600001,
+        "peak_host_bytes": 5086253056,
+        "peak_gpu_device_mib": 6981,
+        "peak_gpu_process_bytes": 3753299968,
+        "gates": "pending; no Gaffer review",
+        "finished_utc": "2026-10-10T09:29:32Z"
+      },
+      {
+        "name": "seed-3",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\seed-3",
+        "render_call_seconds": 369.99854040000355,
+        "peak_host_bytes": 5123063808,
+        "peak_gpu_device_mib": 9643,
+        "peak_gpu_process_bytes": 3753299968,
+        "gates": "pending; no Gaffer review",
+        "finished_utc": "2026-10-10T09:35:49Z"
+      },
+      {
+        "name": "seed-4",
+        "directory": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\seed-4",
+        "render_call_seconds": 351.8087235999992,
+        "peak_host_bytes": 5196197888,
+        "peak_gpu_device_mib": 6587,
+        "peak_gpu_process_bytes": 3753299968,
+        "gates": "pending; no Gaffer review",
+        "finished_utc": "2026-10-10T09:41:47Z"
+      }
+    ],
+    "root": "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2",
+    "started_utc": "2026-10-10T08:18:06Z",
+    "command": [
+      "D:\\CyclesDeepScratch\\regression-tools\\Scripts\\python.exe",
+      "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\check_beauty.py",
+      "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\replacement-run2\\beauty-config.json"
+    ],
+    "validation_pid": 50680,
+    "current": "seed-4",
+    "started_current_utc": "2026-10-10T09:35:49Z",
+    "measurement_pid": 49016,
+    "error": "beauty-validation failed; no retry",
+    "traceback": "Traceback (most recent call last):\n  File \"D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\run_replacement_production.py\", line 128, in <module>\n    check('beauty-validation',[old.PYTHON,ROOT/'check_beauty.py',ROOT/'beauty-config.json'])\n  File \"D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\run_replacement_production.py\", line 62, in check\n    if code:raise RuntimeError(label+' failed; no retry')\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: beauty-validation failed; no retry\n"
+  },
+  "no_new_renders": true,
+  "no_retry": true,
+  "gaffer_review_created": false,
+  "projection": {
+    "scope": "Phase5 CUDA IDs-off z0 estimate; current OptiX IDs-on default z; not controlled speedup",
+    "render_capture_minutes": 68.55,
+    "export_minutes": 24.8,
+    "spill_gb": 20.37,
+    "exr_gb": 0.734,
+    "host_gib": 13.93,
+    "device_gpu_mib": 5910
+  }
+}

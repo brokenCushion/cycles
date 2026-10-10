@@ -2722,3 +2722,48 @@ queue resumes with unchanged executable, settings and gates. Gaffer remains
 pending all production gates.
 
 [Measured calibration, regression and harness repair](builds/validation/landscape-cloud/optimization-phase9/production-timing-calibration-pass.json).
+
+#### Phase 9 - replacement run2 complete; stopped on full-frame calibration
+
+All ten authorized renders finished. New production executable SHA
+`68e972491e66834ccdb0e61a183924e5fbee80d249eb4ef93fd7258fce844a64`, unchanged
+clang-cl20.1.8/NVCC12.8.61 pairing; timing fix only, no diagnostic snapshot.
+Installed/qualified preservation hashes still pass. TEMP/TMP/caches/large outputs
+stay on D:, automatic AC/DC sleep/hibernate disabled as recorded in preflight.
+
+| Metric | Phase5 prefix64 estimate | Replacement OptiX prefix64 IDs |
+| --- | ---: | ---: |
+| Render + capture | 68.55 min | 17.44 min |
+| Production export | 24.80 min | 3.01 min |
+| Same-capture z0 companion export | Not projected | 3.20 min |
+| Beauty-only (five-control median) | Startup-scaled upper bound | 5.94 min |
+| Peak host working set | 13.93 GiB envelope | 5.69 GiB |
+| Peak total / process GPU | 5910 MiB / not projected | 6217 MiB / 3.74 GiB |
+| Spill disk / EXR | 20.370 / 0.734 GB | 20.101 / 0.705 GB |
+| GPU lane bytes / copied bytes | Not projected | 18.385 / 38.721 GB |
+| Deep records | Not projected | 86,125,949 |
+| Oracle + surface exterior error | <=1e-3 gate | 8.22990e-5 + 2.68261e-8, PASS |
+| Gaffer depth cuts / flattened difference to z0 | <=header bound | 2.84080e-7 / 0, PASS |
+| Accepted samples min / median / max | Adaptive convergence assumed | 16 / 288 / 1024 |
+
+Estimate was CUDA, IDs off, z0; current run is OptiX, IDs on, default z1e-4.
+These are informational comparisons, not controlled speedups. Render+capture
+subtracts both export stages from the render call; diagnostic companion overhead
+is separate. Sampled memory excludes other host processes. Preserved run1 and
+prior run2 were not rendered again.
+
+Beauty count-rate passes: deep mean over four-control subsets 264.4 versus control
+leave-one-out min/median/max 262/279/326. Full-pool unmatched count is 231;
+59 fewer, 112 more, 60 modal ties excluded. Fewer fraction 0.34503 is within
+control range [0.29221,0.46746], so direction passes (binomial p=6.16904e-5).
+Bias passes; denoised outlier count is zero.
+
+Raw fallback is **not qualified**: 4,411 pixels versus control fallback
+min/median/max 5,137/5,201/5,312, but only five ordinary full-frame controls exist;
+the unchanged rule requires 20. Pixel `(978,81)` provisionally exceeds the
+five-control noisy G/B range (differences 0.0137181 / 0.0104211; provisional
+allowances 0.0128274 / 0.00744199). This calibration is informational, not proof
+of a deep defect. No further investigation, renders, gate changes or Gaffer
+presentation. Stop for user decision; full-frame extra controls are not authorized.
+
+[Actual metrics, complete count histograms, provisional pixel and preserved report paths](builds/validation/landscape-cloud/optimization-phase9/replacement-production-stop.json).

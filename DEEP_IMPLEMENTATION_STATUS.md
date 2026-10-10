@@ -4,7 +4,7 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–8 accepted.
 
-**Phase 9: production installation stopped; regression not started.**
+**Phase 9: fresh standalone installation repair authorized; regression pending.**
 Fix `47a8dffb0` excludes deep GPU capture from beauty scheduler timing.
 Snapshot+fix OptiX off/on/on have identical schedules, zero count mismatches,
 and resolve the original eight pixels. CUDA ordinary controls reproduce the
@@ -21,7 +21,11 @@ and preservation checks failed. The old standalone cycles/test executable hashes
 changed. Generated sources and GPU caches were restored; recorded Blender and
 diagnostic hashes remain preserved. No regression or replacement render started.
 [Failure evidence](builds/validation/landscape-cloud/optimization-phase9/production-timing-build-failure.json).
-Stopped for user decision before installation repair/recovery; no retry.
+The user designated those two old binaries superseded, not recoverable, rebuildable
+from `0c6821277` with a different hash; preserved reference outputs remain the gates.
+Fresh standalone configure uses the new install prefix and checks every generated
+install destination before installing. Then the authorized regression, replacement
+OptiX run2 and fresh five ordinary/four seed controls continue. Stop on any failure.
 Both preserved production deep outputs pass deep gates; beauty remains pending.
 No retries or Gaffer review before all production gates pass.
 

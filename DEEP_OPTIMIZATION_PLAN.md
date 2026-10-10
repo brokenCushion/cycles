@@ -2630,4 +2630,17 @@ controls and replacement run2 never started. No retry or recovery performed.
 
 [Failure and hashes](builds/validation/landscape-cloud/optimization-phase9/production-timing-build-failure.json).
 Artifacts/install logs: `D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-production-20261010/`.
-Stop for user decision before installation repair and recovery.
+User decision (2026-10-10): the two overwritten Phase8c standalone binaries are
+**superseded by an install mistake, not recoverable, rebuildable from 0c6821277
+with a different hash**. Their former SHA-256 values remain in the failure report;
+do not recover them. Qualification uses the preserved reference outputs.
+
+Continue with a fresh production standalone build directory, configuring
+`CMAKE_INSTALL_PREFIX` to the new production install at configure time. List and
+validate every generated install destination before installation, rejecting any
+write outside the fresh install/build and any unresolved destination. Verify the
+actual installed manifest/hashes and all other qualified files after installation.
+Then run the unchanged 81/81 strict, 30/30 numeric, 65/65 OptiX regression, nine
+CTests, CPU beauty exactness and beauty source/resource proofs; replace only OptiX
+run2, followed by five fresh ordinary and four seed-varied references, full beauty
+policy and count-mismatch calibration. Stop on failure; report at the end.

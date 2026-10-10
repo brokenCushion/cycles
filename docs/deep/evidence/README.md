@@ -4,6 +4,18 @@ Both Phase 9 production runs were accepted on 10 October 2026. These previews
 come from the actual saved production files; no scene was re-rendered to make them.
 [Results and SHA-256 checksums](results.json) identify the source outputs and each PNG.
 
+## Gaffer review screenshot
+
+![Gaffer showing the beauty image, deep point-cloud preview and connected review graph](gaffer-review.png)
+
+User-supplied screenshot, preserved without editing: beauty image on the left,
+deep-to-point-cloud preview on the right, and the connected deep slicing, camera
+and point-cloud graph below. Cyan is the point cloud's display color; the deep
+file carries alpha, depth intervals and object IDs. Viewer color settings and
+point-cloud sampling are interactive and can differ from the exported previews
+below. This is visual review evidence; the numerical qualification is reported
+separately.
+
 ## Beauty images
 
 The scene's Filmic view transform was applied to each saved beauty EXR. Both runs

@@ -381,5 +381,17 @@
         ]
       }
     }
+  },
+  "user_supplied_screenshots": {
+    "gaffer-review.png": {
+      "bytes": 2171761,
+      "sha256": "95bfd09855b7a1a1fb477eb74209f855a6717e05fe8538d22d02e4ff55ad13b8",
+      "dimensions": [
+        3831,
+        2066
+      ],
+      "edited": false,
+      "description": "Gaffer beauty viewer, deep point-cloud preview and connected review graph; visual evidence only"
+    }
   }
 }

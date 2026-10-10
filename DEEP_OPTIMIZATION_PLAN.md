@@ -2611,6 +2611,23 @@ builds with timing fix `47a8dffb0`, without snapshot/debug patches, followed by
 the unchanged 81/30/65 regression and fresh CUDA/OptiX small-fixture beauty
 controls. Build/regression workspace:
 `D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-production-20261010/`.
-Only after regression passes: replacement OptiX run2 and five fresh ordinary
+Build/install stopped before regression: see the failure record below. Only after regression passes: replacement OptiX run2 and five fresh ordinary
 plus four seed-varied controls. Preserve run1 and previous run2. Stop on failure;
 no Gaffer review until the production gates pass.
+
+#### Phase 9 - production install failure; stopped (2026-10-10)
+
+Blender and standalone compilation/install commands completed successfully.
+Standalone installation wrote `cycles.exe`, the output-driver test executable
+and Hydra DLL to the old configured Phase8c standalone location despite the
+new `--prefix`. The expected new standalone executable was absent; the
+preservation assertion also failed. My build orchestration did not protect
+against those absolute install destinations. The recorded old standalone
+`cycles.exe` and test executable hashes changed. All backed-up generated
+sources and GPU cache files were restored; recorded production Blender and
+diagnostic executable/module hashes remain unchanged. Regression, fresh
+controls and replacement run2 never started. No retry or recovery performed.
+
+[Failure and hashes](builds/validation/landscape-cloud/optimization-phase9/production-timing-build-failure.json).
+Artifacts/install logs: `D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-production-20261010/`.
+Stop for user decision before installation repair and recovery.

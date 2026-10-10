@@ -4,7 +4,7 @@
 [peer requirements](PEER_DEEP_OUTPUT_REQUIREMENTS.md) still apply.
 Branch: `codex/landscape-cloud-compatibility`. Phases 0–8 accepted.
 
-**Phase 9: scheduler fix accepted on OptiX; CUDA calibration passed.**
+**Phase 9: production installation stopped; regression not started.**
 Fix `47a8dffb0` excludes deep GPU capture from beauty scheduler timing.
 Snapshot+fix OptiX off/on/on have identical schedules, zero count mismatches,
 and resolve the original eight pixels. CUDA ordinary controls reproduce the
@@ -15,10 +15,13 @@ have zero unmatched pixels. This is ordinary CUDA nondeterminism.
 [Timing diagnostic](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-fix.json).
 [PTX register rename audit](builds/validation/landscape-cloud/optimization-phase9/scheduler-timing-module-check.json).
 
-Authorized next work: separate production Blender/standalone installs with the
-timing fix and no snapshot/debug patch; 81/81 strict, 30/30 numeric, 65/65
-OptiX regression, nine CTests, CPU beauty exactness and source/resource proofs.
-Then replacement OptiX run2 plus fresh five ordinary/four seed references.
+Both builds succeeded. Standalone installation wrote executables into the old
+Phase8c location despite the new prefix; the expected new executable was absent
+and preservation checks failed. The old standalone cycles/test executable hashes
+changed. Generated sources and GPU caches were restored; recorded Blender and
+diagnostic hashes remain preserved. No regression or replacement render started.
+[Failure evidence](builds/validation/landscape-cloud/optimization-phase9/production-timing-build-failure.json).
+Stopped for user decision before installation repair/recovery; no retry.
 Both preserved production deep outputs pass deep gates; beauty remains pending.
 No retries or Gaffer review before all production gates pass.
 

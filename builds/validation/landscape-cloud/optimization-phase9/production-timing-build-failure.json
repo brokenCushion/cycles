@@ -1,0 +1,25 @@
+{
+  "passed": false,
+  "stage": "post-install identity",
+  "queue_stopped": true,
+  "renderer_builds_completed": true,
+  "regression_started": false,
+  "replacement_render_started": false,
+  "failure": "Standalone install wrote executables to the old configured install location despite --prefix; expected new cycles.exe absent. Preservation check correctly failed.",
+  "changed_qualified_files": [
+    {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\standalone\\cycles.exe",
+      "before": "a909c81b985b0b9a2e66b45634f2c42e01ff60554045d07d0690296977405945",
+      "after": "23e6de36adc278e7731fbbc5644a69dff9eabb8845f26797f670b9b3eea4bc31"
+    },
+    {
+      "path": "D:\\CyclesDeepScratch\\optimization-phase8c\\mip\\standalone\\cycles_deep_output_driver_test.exe",
+      "before": "c729134028ffb0f84600592257959090e8a28fc34dc628105e050986aaec9911",
+      "after": "fa65bb635751504f3590f1bef3d54513b6479360229e92e57a4a370fbfb913d0"
+    }
+  ],
+  "managed_originals_restored": true,
+  "new_blender_sha256": "68e972491e66834ccdb0e61a183924e5fbee80d249eb4ef93fd7258fce844a64",
+  "artifacts": "D:/CyclesDeepScratch/optimization-phase9/scheduler-timing-production-20261010",
+  "next": "Stopped for user decision; no retries or renderer/reference/gate edits"
+}

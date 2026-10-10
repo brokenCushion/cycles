@@ -1,10 +1,11 @@
 # Deep alpha qualification matrix
 
 Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
-and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-7 are accepted.
-Phases 8a, 8b and 8c are accepted; Phase 9 production validation is authorized.
-Qualification covers the named fixtures; arbitrary feature combinations and the
-full-resolution landscape are not implied. Phase 9 remains unlaunched.
+and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-9 are accepted,
+including the full-resolution OptiX landscape with IDs and all-samples/64-sample
+deep capture. See the [production evidence](../../docs/deep/evidence/README.md).
+Qualification covers the named fixtures and production settings; arbitrary
+feature combinations are not implied.
 
 | Feature | Qualified scope |
 | --- | --- |

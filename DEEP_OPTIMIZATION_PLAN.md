@@ -50,6 +50,15 @@ Root causes, in code:
 
 ## 2. Rules for this work
 
+- User standing permission (2026-10-10): ordinary deep-off controls and seed-varied
+  references required by the recorded beauty policy are pre-authorized for small
+  fixtures (47x20, 117x50, 587x250 and similar, each under about five minutes).
+  Record how many were added and continue. Full-resolution renders, renderer code,
+  gates, thresholds and reference changes still need specific approval. Fifteen
+  additional CUDA47x20 controls (20 total) are approved now; then resume retained
+  regression and the already approved OptiX replacement run2 plus fresh full-frame
+  five ordinary/four seed controls. Stop on failure; report at the end.
+
 - User standing permission (2026-10-10): repair parser/import/report-only
   validation or measurement failures, add a regression check, rerun only affected
   analysis on preserved outputs and continue, reporting the repair. Renderer code,

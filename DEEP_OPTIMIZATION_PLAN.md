@@ -50,6 +50,15 @@ Root causes, in code:
 
 ## 2. Rules for this work
 
+- User approval (2026-10-10): add exactly 15 full-resolution OptiX deep-off
+  controls with the current production executable and existing settings, making
+  a 20-control pool. Complete replacement run2's calibrated beauty policy,
+  including `(978,81)`. Keep the recorded five-control count test unchanged.
+  Only if every run2 gate passes, re-render all-samples run1 with IDs using this
+  executable and qualify it against the same pool/four seed references. If both
+  pass, create the connected Gaffer review, record Phase9 acceptance and stop.
+  Any failure stops without retry; no additional renderer/gate/reference changes.
+
 - User standing permission (2026-10-10): ordinary deep-off controls and seed-varied
   references required by the recorded beauty policy are pre-authorized for small
   fixtures (47x20, 117x50, 587x250 and similar, each under about five minutes).

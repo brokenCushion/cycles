@@ -67,7 +67,9 @@
       "deep_exr": {
         "bytes": 1994272718,
         "sha256": "1bec674a385af2c8fcc133afdf97f1936c59a0c19d4bb9be12fba386c76561c9",
-        "published": false
+        "published": true,
+        "asset_name": "landscape-deep-all.exr",
+        "download_url": "https://github.com/brokenCushion/cycles/releases/download/deep-output-evidence-2026-10-10/landscape-deep-all.exr"
       },
       "beauty_exr": {
         "bytes": 6598981,
@@ -146,7 +148,9 @@
       "deep_exr": {
         "bytes": 705176082,
         "sha256": "4bf6ed92b5bbd4bd0a8940b7af17cb1abc8a1bcda6e5206ea9e1dc79dc3dd44c",
-        "published": false
+        "published": true,
+        "asset_name": "landscape-deep-64.exr",
+        "download_url": "https://github.com/brokenCushion/cycles/releases/download/deep-output-evidence-2026-10-10/landscape-deep-64.exr"
       },
       "beauty_exr": {
         "bytes": 6595675,
@@ -393,5 +397,6 @@
       "edited": false,
       "description": "Gaffer beauty viewer, deep point-cloud preview and connected review graph; visual evidence only"
     }
-  }
+  },
+  "deep_exr_release_url": "https://github.com/brokenCushion/cycles/releases/tag/deep-output-evidence-2026-10-10"
 }

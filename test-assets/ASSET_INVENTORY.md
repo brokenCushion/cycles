@@ -1,6 +1,16 @@
 # Real-asset test inventory
 
 Inspected 2026-09-19 with Blender 5.2.1.
+The bakery/VDB observations below record the original inputs. Current qualified
+features are listed in the [support matrix](../docs/deep/SUPPORT.md).
+
+## Production landscape
+
+The final landscape is **Scanlands by Piotr Krynski**, the Blender 3.3 LTS demo
+scene listed under CC-BY-SA on [Blender's demo-files page](https://www.blender.org/download/demo-files/).
+Its path-repaired copy and original texture/VDB inputs are local assets, not
+included in Git. Both accepted OptiX production outputs and their source-scene
+checksum are recorded in the [evidence](../docs/deep/evidence/README.md).
 
 ## Blender scene
 
@@ -30,11 +40,11 @@ The scene now renders through the custom native Blender/Cycles integration at
 it in 247.633 seconds with byte-identical deep output and unchanged beauty.
 Standalone Cycles still does not open `.blend` files directly.
 
-The supplied VDB remains a separate input. Homogeneous volume capture is qualified
-on CPU/CUDA; native heterogeneous VDB capture is not yet implemented. The helper
+The supplied VDB remains a separate input. Native heterogeneous VDB capture was
+subsequently implemented and qualified; see the current support matrix. The helper
 `tools/create_vdb_deep_scene.py` successfully creates a native VDB test scene at
 `builds/validation/native-vdb/scene.blend`, with grid transforms, bounds and source
-hash recorded in `scene.json`. This is preparation, not a completed deep render.
+hash recorded in `scene.json`. That initial preparation record is historical.
 It leaves the original VDB unchanged.
 
 An exact 664 x 625, 100% reference render is saved at

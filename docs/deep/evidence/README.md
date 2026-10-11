@@ -4,6 +4,18 @@ Both Phase 9 production runs were accepted on 10 October 2026. These previews
 come from the actual saved production files; no scene was re-rendered to make them.
 [Results and SHA-256 checksums](results.json) identify the source outputs and each PNG.
 
+## Download the deep EXRs
+
+| Production file | Download size |
+| --- | ---: |
+| [All camera samples, with deepID](https://github.com/brokenCushion/cycles/releases/download/deep-output-evidence-2026-10-10/landscape-deep-all.exr) | 1.99 GB |
+| [First 64 camera samples per pixel, with deepID](https://github.com/brokenCushion/cycles/releases/download/deep-output-evidence-2026-10-10/landscape-deep-64.exr) | 705 MB |
+
+Verify downloads with [SHA256SUMS.txt](https://github.com/brokenCushion/cycles/releases/download/deep-output-evidence-2026-10-10/SHA256SUMS.txt).
+The [release](https://github.com/brokenCushion/cycles/releases/tag/deep-output-evidence-2026-10-10)
+also includes results and scene attribution. These are the accepted production
+files, uploaded unchanged; both server-side SHA-256 digests match the recorded outputs.
+
 ## Gaffer review screenshot
 
 ![Gaffer showing the beauty image, deep point-cloud preview and connected review graph](gaffer-review.png)
@@ -98,9 +110,9 @@ plus scheduler timing fix `47a8dffb0`. Acceptance evidence is recorded at
 commit `1fe60fe2f`. See the [support matrix](../SUPPORT.md)
 and [validation policy](../VALIDATION.md) for scope.
 
-The full deep EXRs and linear beauty EXRs are preserved outside Git. Their exact
-sizes and checksums are listed in `results.json`; this page publishes compact
-visual evidence rather than multi-gigabyte files.
+The full deep EXRs are published as release downloads, keeping multi-gigabyte
+files out of Git history. Linear beauty EXRs remain local; their previews are
+included here. Exact sizes and checksums are listed in `results.json`.
 
 ## Scene attribution and image license
 

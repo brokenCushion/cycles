@@ -52,12 +52,18 @@ setting.
 | --- | --- |
 | ![All-samples production beauty](docs/deep/evidence/beauty-all.png) | ![64-sample production beauty](docs/deep/evidence/beauty-64.png) |
 
+`Deep Samples` in Blender's **Render Properties → Film → Deep Output** controls
+how many accepted camera rays per pixel contribute to deep capture: `0` uses all,
+and `64` uses the first 64 (or fewer if adaptive sampling stops earlier).
+The command-line equivalent is `--deep-samples N`. This does not cap depth layers.
+
 The deep sample cap does **not** lower beauty sampling. It trades deep sampling
 quality for capture and export cost. The error tolerance controls curve
 approximation; it does not bound the sampling difference between these two runs.
 
 See the [render evidence](docs/deep/evidence/README.md) for depth-cut images,
 memory measurements, validation results, checksums and scene attribution.
+Both [production deep EXRs are available as release downloads](https://github.com/brokenCushion/cycles/releases/tag/deep-output-evidence-2026-10-10).
 The scene is **Scanlands by Piotr Krynski**, distributed under CC-BY-SA;
 scene-derived images retain those terms.
 

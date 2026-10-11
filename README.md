@@ -12,6 +12,25 @@ select objects by ID in a compositing workflow.
 *Beauty on the left, a deep point-cloud preview on the right, and the connected
 Gaffer review graph below. User-supplied screenshot, preserved unchanged.*
 
+## Why deep?
+
+A flat image loses the layers behind each pixel. In full deep compositing, a
+character can sit inside separately rendered smoke, with smoke both in front of
+and behind it. Keeping depth and opacity lets compositors combine those elements
+and revise their overlap with fewer holdout re-renders.
+[Nuke's deep compositing guide](https://learn.foundry.com/nuke/16.0/content/comp_environment/deep/deep_compositing.html)
+explains this workflow.
+
+Studios use it for complex shots: Wētā managed overlapping characters in
+*Rise of the Planet of the Apes*, while Atomic Fiction layered city atmospheres
+in *Blade Runner 2049*. See [Foundry's studio examples](https://www.foundry.com/insights/film-tv/freedom-with-deep-compositing).
+
+Cycles Deep currently supplies the **visibility side** of that workflow:
+opacity through clouds and surfaces, depth cuts, and object selection with deepID.
+**Full deep colour compositing needs deep RGB, which is future work.** Deep data
+also costs storage and processing; the sample cap and error controls make those
+costs adjustable.
+
 ## What it can do
 
 - **Surfaces and volumes:** opaque and transparent surfaces, homogeneous volumes,

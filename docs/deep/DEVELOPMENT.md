@@ -101,6 +101,15 @@ The [asset inventory](../../test-assets/ASSET_INVENTORY.md) records the supplied
 scenes; [build provenance](BUILD_BASELINE.md) records source pins. The accepted
 production executable/toolchain and output checksums are in the evidence page.
 
+The landscape source assets are available separately:
+
+- [Original Blender 3.3 splash scene (.blend)](https://www.blender.org/download/demo/splash/blender-3.3-splash.blend)
+- [Cloud Pack VDB (.zip)](https://www.mediafire.com/file/879onggscuon7ew/CloudPackVDB.zip/file)
+
+Restore the scene's external asset paths before rendering. The accepted scene is
+a path-repaired copy; downloading these sources alone does not reproduce its
+recorded checksum or supply the golden references required for full qualification.
+
 Use the [final validation policy](VALIDATION.md) unchanged: independent oracles,
 same-build/backend identity, exact CPU beauty, calibrated GPU beauty and
 source/resource proofs. Cross-backend curve identity is not promised.

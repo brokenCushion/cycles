@@ -118,6 +118,12 @@ included here. Exact sizes and checksums are listed in `results.json`.
 
 **Scanlands**, by **Piotr Krynski**, is the Blender 3.3 LTS demo scene, listed as
 **CC-BY-SA** on [Blender's official demo-files page](https://www.blender.org/download/demo-files/).
+
+Source assets:
+
+- [Original Blender 3.3 splash scene (.blend)](https://www.blender.org/download/demo/splash/blender-3.3-splash.blend)
+- [Cloud Pack VDB (.zip)](https://www.mediafire.com/file/879onggscuon7ew/CloudPackVDB.zip/file), identified by the user as the clouds used in the test scene
+
 The scene-derived PNGs in this folder retain those CC-BY-SA terms, separately
 from the renderer's software license. Adaptations shown here are renders made
 with this Cycles deep-output fork and grayscale depth-cut previews of its alpha.

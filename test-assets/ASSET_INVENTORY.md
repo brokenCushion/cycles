@@ -8,6 +8,10 @@ features are listed in the [support matrix](../docs/deep/SUPPORT.md).
 
 The final landscape is **Scanlands by Piotr Krynski**, the Blender 3.3 LTS demo
 scene listed under CC-BY-SA on [Blender's demo-files page](https://www.blender.org/download/demo-files/).
+
+- [Original Blender 3.3 splash scene (.blend)](https://www.blender.org/download/demo/splash/blender-3.3-splash.blend)
+- [Cloud Pack VDB (.zip)](https://www.mediafire.com/file/879onggscuon7ew/CloudPackVDB.zip/file), supplied by the user as the cloud source used in the test scene
+
 Its path-repaired copy and original texture/VDB inputs are local assets, not
 included in Git. Both accepted OptiX production outputs and their source-scene
 checksum are recorded in the [evidence](../docs/deep/evidence/README.md).

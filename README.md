@@ -21,6 +21,13 @@ and revise their overlap with fewer holdout re-renders.
 [Nuke's deep compositing guide](https://learn.foundry.com/nuke/16.0/content/comp_environment/deep/deep_compositing.html)
 explains this workflow.
 
+Separate character, environment and FX renders can each use sampling and ray
+settings tuned to that element. With traditional holdouts, an animation or asset
+update can force unchanged elements to be rendered again just to update their
+mattes. A full deep pipeline can resolve those overlaps in compositing and reuse
+unaffected renders. Changes to lighting, shadows or reflections may still require
+re-rendering; deep does not remove those dependencies.
+
 Studios use it for complex shots: Wētā managed overlapping characters in
 *Rise of the Planet of the Apes*, while Atomic Fiction layered city atmospheres
 in *Blade Runner 2049*. See [Foundry's studio examples](https://www.foundry.com/insights/film-tv/freedom-with-deep-compositing).

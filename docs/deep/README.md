@@ -13,6 +13,7 @@ Both full-resolution landscape production settings are accepted; see
 | [Supported features](SUPPORT.md) | Qualified backends, shaders, cameras and limitations. |
 | [Validation policy](VALIDATION.md) | Final numerical, beauty, identity and cross-backend gates. |
 | [Architecture](ARCHITECTURE.md) | Core ownership and implementation invariants. |
+| [Developer verification](DEVELOPMENT.md) | Inspect published files, run core tests, and prepare full qualification. |
 | [Production evidence](evidence/README.md) | Accepted all-samples/64-sample results and checksums. |
 
 ## Provenance and future work

@@ -61,6 +61,7 @@ scene-derived images retain those terms.
 
 This feature requires a build of this fork; it is not part of stock Blender.
 The [documentation index](docs/deep/README.md) brings the guides together.
+For code review or independent checks, see [developer verification](docs/deep/DEVELOPMENT.md).
 
 1. [Build Cycles](BUILDING.md), or follow the
    [Blender integration instructions](docs/deep/BLENDER.md).

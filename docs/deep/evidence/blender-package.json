@@ -46,6 +46,6 @@
     }
   },
   "release_url": "https://github.com/brokenCushion/cycles/releases/tag/cycles-deep-blender-2026-10-11",
-  "published": false,
-  "qualification": "Windows x64 / NVIDIA RTX 3080; CUDA sm_86"
+  "qualification": "Windows x64 / NVIDIA RTX 3080; CUDA sm_86",
+  "release_asset_digests_verified": true
 }

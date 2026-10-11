@@ -73,6 +73,8 @@ Beauty sampling is unchanged. Positive N publishes its effective maximum in
 `cycles:deepSamples`; 0 omits the attribute for legacy identity. Curve error
 bounds apply to the retained prefix; differences from all samples are sampling variation.
 
+### deepID and holdouts
+
 `DeepSettings::ids`, `--deep-ids` and Blender `use_deep_ids` enable the optional
 UINT `id` channel. `cycles:deepIDManifest` maps raw MurmurHash3 seed-0 hashes to
 object names. Reconstruction preserves object tags through camera averaging;

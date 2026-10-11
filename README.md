@@ -16,8 +16,8 @@ Gaffer review graph below. User-supplied screenshot, preserved unchanged.*
 
 - **Surfaces and volumes:** opaque and transparent surfaces, homogeneous volumes,
   and native VDB density grids.
-- **Object selection and holdouts:** optional per-object IDs, with an object-name
-  manifest stored in the file; holdouts retain their camera opacity.
+- **deepID and holdouts:** select individual objects through a per-object UINT
+  `id` channel and an object-name manifest in the EXR. Holdouts retain their camera opacity.
 - **CPU, CUDA and OptiX:** SVM shaders on all three; OSL surface and volume shaders
   on CPU and OptiX.
 - **Control size and cost:** choose a curve error tolerance, cap the number of deep
@@ -28,6 +28,10 @@ Gaffer review graph below. User-supplied screenshot, preserved unchanged.*
 The deep channels are **Z, ZBack and A**, plus an optional UINT object `id`.
 Depth is positive axial camera distance in scene units. **Deep RGB is not included**;
 the normal beauty image is saved separately.
+
+Enable deepID with `--deep-ids` and a numeric error setting, such as
+`--deep-error 1e-3`. See [deepID usage](src/deep/README.md#deepid-and-holdouts)
+for the ID mapping and exact selection rules.
 
 ## Tested on a full landscape
 

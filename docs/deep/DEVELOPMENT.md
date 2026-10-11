@@ -24,6 +24,7 @@ header without loading millions of samples into memory:
 
 ```python
 import OpenEXR
+import json
 
 image = OpenEXR.File("landscape-deep-64.exr", header_only=True)
 header = image.header()
@@ -31,6 +32,8 @@ assert header["type"] == OpenEXR.deepscanline
 assert {channel.name for channel in header["channels"]} == {"A", "Z", "ZBack", "id"}
 assert header["cycles:depthConvention"] == "positive_axial_camera_z"
 assert header["cycles:deepSamples"] == 64
+assert header["cycles:deepIDHash"] == "MurmurHash3_32_seed0"
+assert json.loads(header["cycles:deepIDManifest"])
 print(header["dataWindow"])
 print(header["cycles:maxTransmittanceError"])
 print(header["cycles:deepIDManifest"])
@@ -41,6 +44,14 @@ Use a deep-capable viewer for samples, flattened alpha and depth cuts.
 install its Python package and startup registration in your own Gaffer setup.
 Keep the original EXRs intact. Gaffer FLOAT conversion can lose UINT ID precision;
 select IDs as UINT before conversion, as described in the deep output guide.
+
+**deepID** records an object's name hash per deep sample in the UINT `id`
+channel; `cycles:deepIDManifest` maps hashes back to names. Enable it with
+`--deep-ids` and numeric deep error; strict + IDs is rejected. Both published
+production EXRs include deepID. The
+[usage guide](../../src/deep/README.md#deepid-and-holdouts) describes overlap and
+holdout handling; `tools/compare_deep_ids.py` compares or isolates IDs natively
+before a reader converts them to FLOAT.
 
 These checks establish file identity and readable structure. Reproducing the
 independent physical oracle also requires the matching scene, grids and captured

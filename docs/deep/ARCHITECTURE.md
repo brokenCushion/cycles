@@ -35,6 +35,12 @@ define the accepted behavior.
 The [validation policy](VALIDATION.md) defines what these choices guarantee;
 the [production evidence](evidence/README.md) records measured cost and accuracy.
 
+For industry context, Mike Seymour's
+[The art of deep compositing](https://www.fxguide.com/fxfeatured/the-art-of-deep-compositing/)
+(fxguide, 2014) describes the development of deep opacity and later deep colour
+workflows through interviews with their developers. It is background reading,
+not a claim that Cycles Deep implements those studios' complete pipelines.
+
 ## Code map
 
 | Layer | Ownership |

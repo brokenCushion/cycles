@@ -38,6 +38,10 @@ opacity through clouds and surfaces, depth cuts, and object selection with deepI
 also costs storage and processing; the sample cap and error controls make those
 costs adjustable.
 
+For the history and studio workflows, read Mike Seymour's
+[The art of deep compositing](https://www.fxguide.com/fxfeatured/the-art-of-deep-compositing/)
+(fxguide, 2014), including the distinction between deep opacity and deep colour.
+
 ## What it can do
 
 - **Surfaces and volumes:** opaque and transparent surfaces, homogeneous volumes,

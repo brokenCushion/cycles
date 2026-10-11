@@ -61,8 +61,7 @@ results, build identity and original scene attribution are in the
 
 ## 2. Run core tests from a clone
 
-The completed feature lives on `deep-output`; GitHub's default branch is still
-`main`. Clone the feature explicitly:
+The completed feature lives on the default branch, `deep-output`. Clone it with:
 
 ```text
 git clone --branch deep-output https://github.com/brokenCushion/cycles.git cycles-deep

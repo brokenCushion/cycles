@@ -102,10 +102,11 @@ scene-derived images retain those terms.
 This feature requires a build of this fork; it is not part of stock Blender.
 The custom build exposes deep settings in the UI; deep EXR export currently
 requires a background render.
+Start with the [Windows Blender download and short walkthrough](docs/deep/QUICKSTART.md).
 The [documentation index](docs/deep/README.md) brings the guides together.
 For code review or independent checks, see [developer verification](docs/deep/DEVELOPMENT.md).
 
-1. [Build Cycles](BUILDING.md), or follow the
+1. [Download custom Blender](https://github.com/brokenCushion/cycles/releases/tag/cycles-deep-blender-2026-10-11), [build Cycles](BUILDING.md), or follow the
    [Blender integration instructions](docs/deep/BLENDER.md).
 2. Read the [deep output guide](src/deep/README.md) for settings, file semantics
    and the regression command.

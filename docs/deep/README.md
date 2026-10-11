@@ -6,6 +6,7 @@ Both full-resolution landscape production settings are accepted; see
 
 | Guide | What it covers |
 | --- | --- |
+| [Quick start](QUICKSTART.md) | Download custom Blender, configure deep output, render and inspect a small example. |
 | [Build Cycles](../../BUILDING.md) | Standalone/Hydra builds and the qualified toolchain. |
 | [Blender integration](BLENDER.md) | Custom Blender build, scene settings and rendering. |
 | [Deep output guide](../../src/deep/README.md) | Channels, error/sample controls, native VDB, OSL and regression. |

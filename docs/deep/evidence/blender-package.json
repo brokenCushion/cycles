@@ -1,0 +1,51 @@
+{
+  "executable_sha256": "68e972491e66834ccdb0e61a183924e5fbee80d249eb4ef93fd7258fce844a64",
+  "blender_revision": "749518deb2f0735a22361a07488b35f7ea5c2fdf",
+  "compiled_cycles_base": "8137045eb3f8e62e012a251ea93c548970c48716",
+  "timing_fix": "47a8dffb0",
+  "snapshot_in_production": false,
+  "toolchain": {
+    "clang_cl": "20.1.8",
+    "nvcc": "12.8.61",
+    "cuda_toolkit": "12.8.0",
+    "optix": "8.0.0",
+    "osl": "1.15.3.0",
+    "nvcc_host_msvc": "19.44 / 14.44.35207",
+    "ninja": "1.13.2",
+    "cmake": "3.31.2"
+  },
+  "runtime_file_count": 6487,
+  "source_file_count": 20424,
+  "omitted_source_submodules": [
+    "lib/linux_x64",
+    "lib/macos_arm64",
+    "lib/windows_arm64",
+    "lib/windows_x64"
+  ],
+  "qualified_install_unchanged": true,
+  "archive_crc_passed": true,
+  "archives": {
+    "cycles-deep-blender-5.3-alpha-windows-x64.zip": {
+      "bytes": 307255388,
+      "sha256": "32d5d22d58a5ee7fedacaab01c803586e31a232a59b07a87afc67db908c45e7a"
+    },
+    "cycles-deep-blender-5.3-alpha-source.zip": {
+      "bytes": 664850510,
+      "sha256": "e66fa18b574d78fb1f25d45a8f41643ac899e2194879fb14324e5a311a7629e6"
+    }
+  },
+  "startup_smoke": {
+    "extracted_files_verified": 6487,
+    "background_startup_passed": true,
+    "renderer_invoked": false,
+    "registered_settings": {
+      "version": "5.3.0 Alpha",
+      "deep_panel": "Deep Visibility",
+      "deep_samples": 0,
+      "deep_ids": false
+    }
+  },
+  "release_url": "https://github.com/brokenCushion/cycles/releases/tag/cycles-deep-blender-2026-10-11",
+  "published": false,
+  "qualification": "Windows x64 / NVIDIA RTX 3080; CUDA sm_86"
+}

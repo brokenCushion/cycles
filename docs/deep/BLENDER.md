@@ -63,8 +63,9 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
 
 - Settings: `use_deep_output`, `use_deep_volume`, `deep_output_path`,
   `deep_max_events`, `deep_memory_mb`, `deep_error`, `deep_samples`,
-  `use_deep_ids`. Film > Deep Output exposes these controls. Deep and IDs are off
-  by default.
+  `use_deep_ids`. Render Properties > Film > Deep Visibility exposes these
+  controls. Deep and IDs are off by default. The panel configures scene settings;
+  deep capture and EXR publication currently require background rendering.
 - Optional `--deep-ids` / `use_deep_ids` writes per-sample UINT `id` and
   `cycles:deepIDManifest` (hex ID to object name), using Cycles Cryptomatte
   MurmurHash3 seed 0. Different objects retain overlapping samples. Select IDs

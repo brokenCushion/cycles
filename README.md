@@ -52,7 +52,7 @@ setting.
 | --- | --- |
 | ![All-samples production beauty](docs/deep/evidence/beauty-all.png) | ![64-sample production beauty](docs/deep/evidence/beauty-64.png) |
 
-`Deep Samples` in Blender's **Render Properties → Film → Deep Output** controls
+`Deep Samples` in Blender's **Render Properties → Film → Deep Visibility** controls
 how many accepted camera rays per pixel contribute to deep capture: `0` uses all,
 and `64` uses the first 64 (or fewer if adaptive sampling stops earlier).
 The command-line equivalent is `--deep-samples N`. This does not cap depth layers.
@@ -70,6 +70,8 @@ scene-derived images retain those terms.
 ## Getting started
 
 This feature requires a build of this fork; it is not part of stock Blender.
+The custom build exposes deep settings in the UI; deep EXR export currently
+requires a background render.
 The [documentation index](docs/deep/README.md) brings the guides together.
 For code review or independent checks, see [developer verification](docs/deep/DEVELOPMENT.md).
 

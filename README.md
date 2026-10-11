@@ -96,7 +96,7 @@ resource checks. GPU beauty is checked using the recorded calibrated policy;
 bit-identical GPU renders are not promised.
 
 For implementation details and the final qualification rules, see the
-[architecture](docs/deep/ARCHITECTURE.md) and
+[architecture and design rationale](docs/deep/ARCHITECTURE.md#why-this-design) and
 [validation policy](docs/deep/VALIDATION.md).
 
 ## Future development

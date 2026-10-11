@@ -5,6 +5,36 @@ visibility records; the host reconstructs and publishes deep EXRs. Native beauty
 stays separate. The [support matrix](SUPPORT.md) and [validation policy](VALIDATION.md)
 define the accepted behavior.
 
+## Why this design
+
+- **Keep beauty independent.** Deep captures visibility separately using the
+  accepted beauty camera samples, without advancing beauty RNG state. This keeps
+  beauty's sampling settings intact and allows a deep-only sample cap. GPU deep
+  capture time is excluded from scheduler timing inputs so capture overhead does
+  not change beauty batch decisions. Beauty isolation still requires validation.
+- **Capture on the device, reconstruct on the host.** GPU kernels write bounded
+  records into preallocated buffers. The host can spill large captures to disk,
+  fit curves, check errors and write OpenEXR without putting growing containers
+  or file operations in GPU threads. Readback and export remain real costs.
+- **Average visibility, not local alpha.** Opacity accumulates along a ray before
+  camera samples are averaged. Reconstruction averages transmittance curves, then
+  derives the EXR interval alpha. Averaging each hit's alpha directly would lose
+  the relationship between front and back layers.
+- **Use analytic grids where possible.** Trilinear native VDB density integrates
+  exactly within each cell before bounded reconstruction. General OSL volumes
+  need shader evaluation and adaptive stepping; narrow features can be missed,
+  so that stepping allowance is stated rather than proven.
+- **Keep the first output scalar.** Z/ZBack/A and optional IDs support visibility,
+  depth cuts and object selection with a clear numerical contract. They do not
+  reconstruct deep RGB or preserve arbitrary subpixel correlations; those need
+  additional representation and qualification.
+- **Keep hosts optional.** Blender supplies scene/UI integration and Gaffer
+  supplies review. The Cycles core and output-driver interface remain usable
+  without either, including through the standalone renderer.
+
+The [validation policy](VALIDATION.md) defines what these choices guarantee;
+the [production evidence](evidence/README.md) records measured cost and accuracy.
+
 ## Code map
 
 | Layer | Ownership |

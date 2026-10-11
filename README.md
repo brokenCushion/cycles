@@ -99,6 +99,17 @@ For implementation details and the final qualification rules, see the
 [architecture](docs/deep/ARCHITECTURE.md) and
 [validation policy](docs/deep/VALIDATION.md).
 
+## Future development
+
+- **Deep RGB:** store colour alongside opacity and depth for deep compositing.
+  Current deep files contain alpha, depth and optional object IDs; beauty is separate.
+- **OSL shader AOVs on CPU and OptiX:** support custom colour/value render passes
+  from OSL materials. This is a [planned side project](docs/plans/OSL_AOV.md),
+  separate from deep output. OSL surface and volume deep capture already works
+  on these backends within the support matrix.
+
+These are future directions, with no committed implementation schedule.
+
 ## Upstream and license
 
 Built on [Cycles](https://www.cycles-renderer.org), Blender's path tracing renderer.

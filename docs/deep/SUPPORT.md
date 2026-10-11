@@ -1,9 +1,9 @@
 # Deep alpha qualification matrix
 
-Current scope follows the [optimization plan](../../DEEP_OPTIMIZATION_PLAN.md)
-and [status](../../DEEP_IMPLEMENTATION_STATUS.md). Phases 0-9 are accepted,
+Current scope follows the [validation policy](VALIDATION.md)
+and [production evidence](evidence/README.md). Phases 0-9 are accepted,
 including the full-resolution OptiX landscape with IDs and all-samples/64-sample
-deep capture. See the [production evidence](../../docs/deep/evidence/README.md).
+deep capture. See the [production evidence](evidence/README.md).
 Qualification covers the named fixtures and production settings; arbitrary
 feature combinations are not implied.
 
@@ -22,8 +22,8 @@ feature combinations are not implied.
 
 ## Numerical and storage contract
 
-Strict reproduces legacy payload and deterministic headers under Section 2 of
-the plan. Numeric error splits the user setting across device/host/publication
+Strict reproduces legacy payload and deterministic headers under the
+[validation policy](VALIDATION.md). Numeric error splits the user setting across device/host/publication
 allowances; their sum bounds absolute transmittance error. Validators read the
 effective error and sample setting from EXR headers. ID publication sums measured
 per-object errors; independent exact-cubic/camera/depth-cut checks remain mandatory.
@@ -45,8 +45,9 @@ capacity and I/O failures preserve the previous EXR through atomic local publica
 network/power-loss/frame-transaction durability is not qualified. Scalar alpha
 does not encode arbitrary subpixel correlations or recover colour from beauty.
 
-CPU beauty remains exact. CUDA beauty policy and its GPU-only phase scope are in
-Section 2; source hashes and 75 kernel resource records provide the host-only proof.
+CPU beauty remains exact. CUDA/OptiX beauty policy and its GPU-only change scope
+are in [VALIDATION.md](VALIDATION.md); source hashes and 75 kernel resource records
+provide the host-only proof.
 Strict backend equality is not promised: OptiX hardware intersections compute
 surface t differently from CUDA BVH2. Across builds/toolchains/backends, both
 sides qualify independently and flattened alpha differs by at most 1e-4.
@@ -57,11 +58,11 @@ Report both differences. Known native difference: **OSL texture-driven opacity
 can differ between CPU and OptiX by up to ~1e-3, as in native Blender** (CPU
 OpenImageIO textures versus OptiX Cycles images). All other cases retain 1e-4;
 curves, depth shifts and counts are informational. Byte/curve identity applies
-only within the same build and backend. See Section 2 of the plan.
+only within the same build and backend.
 
 ## Reproduction
 
-Use [the single regression command](README.md#regression-command): nine CTests,
+Use [the single regression command](../../src/deep/README.md#regression-command): nine CTests,
 CPU/CUDA matrices, boundaries, oracles, CPU beauty, resource/source proof and
 81/81 strict + 30/30 numeric identity. OptiX SVM identity is 65/65 with `--optix`; the separate OSL suite checks 30
 mode/backend cases, 26 atomic rejections and calibrated OptiX beauty. Gaffer is
@@ -70,4 +71,4 @@ Large validation output/TEMP lives on D:, with only small reports under `builds/
 Verified historical sample ZIPs stream without disk expansion. The approved
 [M8 release record](M8_RELEASE_VALIDATION.md) is retained; other historical
 reports have an [archive index](ARCHIVED_REPORTS.md). Current results are in
-Section 6 of the plan.
+the [production evidence](evidence/README.md).

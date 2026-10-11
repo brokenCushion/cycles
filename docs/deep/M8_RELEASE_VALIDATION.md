@@ -1,15 +1,14 @@
 # Historical M8 deep-alpha qualification
 
 This records the 2026-09-29 release and its executable, not qualification of the
-current landscape development build. The expanded original-settings landscape
-production test remains open; see [current release status](../../DEEP_IMPLEMENTATION_STATUS.md)
-and [landscape evidence](LANDSCAPE_COMPATIBILITY.md).
+current production build. The expanded landscape qualification subsequently
+passed; see the [accepted production evidence](evidence/README.md).
 
 All technical release gates pass, including production-scale repeats, the full
 Blender asset regression and the default-colour native matrix. The user approved
 the final Gaffer scene on 2026-09-29: "the gaffer scene for m8 looks good."
 **M8 is complete within the qualified CPU/CUDA support matrix.**
-The [support matrix](RELEASE_MATRIX.md) defines the scope; deep RGB and
+The [support matrix](SUPPORT.md) defines the scope; deep RGB and
 additional device backends belong to M9.
 
 ## Final native VDB matrix
@@ -172,6 +171,6 @@ Gaffer session was opened for user review. The automated reload check verifies
 graph evaluation; final visual approval was supplied separately by the user on
 2026-09-29. Implementation and qualification were committed in `8e03847da`.
 
-[Release status](../../DEEP_IMPLEMENTATION_STATUS.md) |
-[Measurements](../../DEEP_PERFORMANCE_AND_VDB.md) |
-[Milestones](../../DEEP_MILESTONES.md)
+[Release status](evidence/README.md) |
+[Measurements](evidence/README.md) |
+[Milestones](ARCHIVED_REPORTS.md)

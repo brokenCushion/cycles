@@ -113,12 +113,12 @@ group `ShadingSystem::getattribute` queries and cached loaded OSO metadata
 provide preflight. Phase 8c qualifies adaptive OSL volume evaluation on CPU/OptiX;
 CUDA OSL remains unsupported. Native analytic VDB capture stays the default.
 
-See [Blender deep build commands](BLENDER_DEEP_INTEGRATION.md) and the
-[qualification plan](DEEP_OPTIMIZATION_PLAN.md). A recorded compiler change
-uses its own CPU/CUDA references after the one-time qualification in Section 2;
+See [Blender deep build commands](docs/deep/BLENDER.md) and the
+[validation policy](docs/deep/VALIDATION.md). A recorded compiler change
+uses its own CPU/CUDA references after independent qualification;
 retain the cl.exe/NVCC references for history. Within the same build and backend,
 payload and deterministic-header byte identity remains mandatory. Across builds,
-toolchains or backends, use the unified cross-comparison rule in Section 2.
+toolchains or backends, use the policy's unified cross-comparison rule.
 
 Cycles uses the CMake build system. As an alternative to the `make` wrapper, CMake can be manually configured.
 

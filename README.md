@@ -60,9 +60,10 @@ scene-derived images retain those terms.
 ## Getting started
 
 This feature requires a build of this fork; it is not part of stock Blender.
+The [documentation index](docs/deep/README.md) brings the guides together.
 
 1. [Build Cycles](BUILDING.md), or follow the
-   [Blender integration instructions](BLENDER_DEEP_INTEGRATION.md).
+   [Blender integration instructions](docs/deep/BLENDER.md).
 2. Read the [deep output guide](src/deep/README.md) for settings, file semantics
    and the regression command.
 3. Use the [Gaffer node guide](src/deep/gaffer/README.md) for an interactive
@@ -70,7 +71,7 @@ This feature requires a build of this fork; it is not part of stock Blender.
 
 ## Scope and validation
 
-The [support matrix](src/deep/RELEASE_MATRIX.md) lists qualified features and
+The [support matrix](docs/deep/SUPPORT.md) lists qualified features and
 restrictions. Volumes currently require a static, mono perspective camera without
 depth of field or motion blur. CUDA does not support OSL. Shader-evaluated volumes
 use adaptive integration with a stated error estimate; features narrower than the
@@ -81,9 +82,9 @@ identity cases, nine CTests, exact CPU beauty checks, and beauty-source/kernel
 resource checks. GPU beauty is checked using the recorded calibrated policy;
 bit-identical GPU renders are not promised.
 
-For the accepted scope and implementation details, see the
-[current status](DEEP_IMPLEMENTATION_STATUS.md) and
-[qualification plan](DEEP_OPTIMIZATION_PLAN.md).
+For implementation details and the final qualification rules, see the
+[architecture](docs/deep/ARCHITECTURE.md) and
+[validation policy](docs/deep/VALIDATION.md).
 
 ## Upstream and license
 

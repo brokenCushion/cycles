@@ -1,7 +1,7 @@
 # Side project: AOV Output support in OSL mode
 
-Status: parked (2026-10-07). Start only after the deep optimization plan
-(`DEEP_OPTIMIZATION_PLAN.md`) has completed Phase 9 and the user confirms.
+Status: parked. Deep production qualification is complete; this separate project
+still requires the user's confirmation before starting.
 This project is independent of deep output and must not touch deep code.
 
 ## 1. Problem

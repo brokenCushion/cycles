@@ -95,8 +95,8 @@ Production executable SHA-256:
 Toolchain: clang-cl 20.1.8, NVCC 12.8.61 / CUDA 12.8.0, OptiX 8.0.0,
 OSL 1.15.3.0. Compiled Cycles base: `8137045eb3f8e62e012a251ea93c548970c48716`,
 plus scheduler timing fix `47a8dffb0`. Acceptance evidence is recorded at
-commit `1fe60fe2f`. See the [support matrix](../../../src/deep/RELEASE_MATRIX.md)
-and [qualification plan](../../../DEEP_OPTIMIZATION_PLAN.md) for scope.
+commit `1fe60fe2f`. See the [support matrix](../SUPPORT.md)
+and [validation policy](../VALIDATION.md) for scope.
 
 The full deep EXRs and linear beauty EXRs are preserved outside Git. Their exact
 sizes and checksums are listed in `results.json`; this page publishes compact

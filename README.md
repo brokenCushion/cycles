@@ -25,6 +25,13 @@ Studios use it for complex shots: Wētā managed overlapping characters in
 *Rise of the Planet of the Apes*, while Atomic Fiction layered city atmospheres
 in *Blade Runner 2049*. See [Foundry's studio examples](https://www.foundry.com/insights/film-tv/freedom-with-deep-compositing).
 
+[![Blade Runner 2049 production image from Foundry's deep compositing article, courtesy of Atomic Fiction](https://www.foundry.com/sites/default/files/inline-images/Blade_Runner-In-page-image-block1_1440x810.jpg)](https://www.foundry.com/insights/film-tv/blade-runner-2049-compositing)
+
+*Industry example only: this is **not our work and was not rendered with Cycles Deep**.
+Blade Runner 2049 © 2017 Alcon Entertainment, LLC / Warner Bros. Entertainment Inc.
+All rights reserved. Image courtesy of Atomic Fiction, hosted by Foundry.
+[Watch the deep-compositing making-of](https://www.foundry.com/insights/film-tv/blade-runner-2049-compositing).*
+
 Cycles Deep currently supplies the **visibility side** of that workflow:
 opacity through clouds and surfaces, depth cuts, and object selection with deepID.
 **Full deep colour compositing needs deep RGB, which is future work.** Deep data

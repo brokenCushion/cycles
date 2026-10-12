@@ -17,6 +17,8 @@ template<typename F> ccl_status geometry_access(ccl_node *n, F fn)
       return st;
     if (!valid(n))
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid geometry handle");
+    if (auto st = scene_access(n->scene, true))
+      return st;
     if (!n->native->is_a(ccl::Geometry::get_node_base_type()))
       return wrong_type();
     auto &g = *static_cast<ccl::Geometry *>(n->native);

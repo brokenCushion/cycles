@@ -84,3 +84,12 @@ _ccl_hair_resize
 _ccl_pointcloud_resize
 _ccl_geometry_set_attribute
 _ccl_volume_set_grid
+_ccl_session_reset
+_ccl_session_start
+_ccl_session_pause
+_ccl_session_wait
+_ccl_session_cancel
+_ccl_session_set_samples
+_ccl_session_progress
+_ccl_session_set_progress_callback
+_ccl_session_set_output_callback

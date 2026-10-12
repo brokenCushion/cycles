@@ -24,14 +24,14 @@ function(cycles_c_keep_registrations target)
   endforeach()
 endfunction()
 
-add_library(cycles_c SHARED cycles_c.cpp cycles_c.h scene_api.inc shader_api.inc geometry_api.inc)
+add_library(cycles_c SHARED cycles_c.cpp cycles_c.h scene_api.inc shader_api.inc geometry_api.inc session_api.inc)
 target_include_directories(cycles_c PRIVATE ..)
 target_compile_definitions(cycles_c PRIVATE CCL_C_API_BUILD)
 target_link_libraries(cycles_c PRIVATE ${LIB})
 cycles_c_keep_registrations(cycles_c)
 set_target_properties(cycles_c PROPERTIES
   CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES
-  WINDOWS_EXPORT_ALL_SYMBOLS OFF VERSION 1.4.0 SOVERSION 1)
+  WINDOWS_EXPORT_ALL_SYMBOLS OFF VERSION 1.5.0 SOVERSION 1)
 # Localize linked static-library symbols as well as the wrapper's own symbols.
 if(APPLE)
   set_target_properties(cycles_c PROPERTIES INSTALL_RPATH "@loader_path")
@@ -92,6 +92,24 @@ if(BUILD_TESTING)
   add_test(NAME cycles_c_geometry COMMAND cycles_c_geometry ${CMAKE_INSTALL_PREFIX}
     ${CMAKE_CURRENT_BINARY_DIR}/geometry-tests)
   set_tests_properties(cycles_c_geometry PROPERTIES TIMEOUT 120)
+
+  if(WITH_CYCLES_OSL AND WITH_CYCLES_PUGIXML)
+    add_executable(cycles_c_rendering test/rendering.cpp)
+    target_include_directories(cycles_c_rendering PRIVATE ..)
+    target_link_libraries(cycles_c_rendering PRIVATE cycles_c ${LIB})
+    cycles_c_keep_registrations(cycles_c_rendering)
+    add_test(NAME cycles_c_rendering COMMAND cycles_c_rendering ${CMAKE_INSTALL_PREFIX}
+      ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/rendering-tests CPU)
+    set_tests_properties(cycles_c_rendering PROPERTIES TIMEOUT 300)
+  endif()
+
+  add_executable(cycles_c_controls test/controls.cpp)
+  target_include_directories(cycles_c_controls PRIVATE ..)
+  target_link_libraries(cycles_c_controls PRIVATE ${LIB})
+  cycles_c_keep_registrations(cycles_c_controls)
+  add_test(NAME cycles_c_controls COMMAND cycles_c_controls ${CMAKE_INSTALL_PREFIX}
+    ${CMAKE_CURRENT_BINARY_DIR}/control-tests)
+  set_tests_properties(cycles_c_controls PROPERTIES TIMEOUT 120)
 
   add_executable(cycles_c_benchmark test/benchmark.cpp)
   target_include_directories(cycles_c_benchmark PRIVATE ..)

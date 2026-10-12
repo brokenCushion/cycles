@@ -4,6 +4,16 @@ import subprocess
 import sys
 
 EXPECTED = {
+    'ccl_session_reset',
+    'ccl_session_start',
+    'ccl_session_pause',
+    'ccl_session_wait',
+    'ccl_session_cancel',
+    'ccl_session_set_samples',
+    'ccl_session_progress',
+    'ccl_session_set_progress_callback',
+    'ccl_session_set_output_callback',
+
     'ccl_mesh_resize',
     'ccl_mesh_resize_subdivision',
     'ccl_hair_resize',

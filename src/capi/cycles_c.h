@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-/** API version 1.3.0 (experimental until the Phase 7 swap test).
+/** API version 1.5.0 (experimental until the Phase 7 swap test).
  * Use default platform struct alignment. Initialize every struct to zero and
  * set size to sizeof(struct). A larger size is accepted; unknown tail bytes
  * are ignored/preserved. A smaller size returns CCL_ERROR_INVALID_ARGUMENT.
@@ -265,7 +265,8 @@ CCL_API ccl_status CCL_CALL ccl_socket_enum_value(const char *node_name,
                                                   ccl_enum_value *out);
 
 /** Scene editing added in API 1.2. All functions below require init and run
- * serialized on any thread except a callback. Rendering is deferred to Phase 6.
+ * serialized on any thread except a callback. Scene reads require an idle job;
+ * edits while paused synchronously cancel/wait and require reset (see render controls).
  * Inputs are borrowed for the call; setters copy values, arrays and strings.
  * Handles are library-owned: never dereference/free them or use after deletion
  * or Session destruction. A Session owns its scene and all nodes. Destroying it invalidates
@@ -295,7 +296,7 @@ typedef struct ccl_transform {
 /** Creation-only session settings. Call ccl_session_params_default before editing.
  * device_index is an index from ccl_device_info; UINT32_MAX selects CPU.
  * Strings are copied at creation. All booleans must be 0 or 1.
- * Scene settings correspond to native SceneParams; render controls are deferred.
+ * Scene settings correspond to native SceneParams; buffer settings use session_reset.
  */
 typedef struct ccl_session_params {
   uint32_t size;
@@ -325,7 +326,8 @@ CCL_API ccl_status CCL_CALL ccl_session_params_default(ccl_session_params *param
 CCL_API ccl_status CCL_CALL ccl_session_create(const ccl_session_params *params,
                                                ccl_session **out);
 /** Destroy session and all borrowed scene/node handles, joining native waiting
- * thread and releasing devices. Common editing contract/errors; no render starts.
+ * thread and releasing devices. Blocks until workers/callbacks finish; IN_USE
+ * while another host thread waits. Common editing contract/errors; no render starts.
  * References between scene nodes need not be cleared first. */
 CCL_API ccl_status CCL_CALL ccl_session_destroy(ccl_session *session);
 /** Borrow the session-owned scene; repeated calls return the same handle.
@@ -715,6 +717,100 @@ CCL_API ccl_status CCL_CALL ccl_geometry_set_attribute(ccl_node *geometry,
  * attribute remains on validation/read failure. Common geometry contract applies. */
 CCL_API ccl_status CCL_CALL ccl_volume_set_grid(ccl_node *volume,
     const ccl_attribute_desc *desc, const char *filename, const char *grid, float clipping);
+
+
+/** Rendering control: all calls are serialized; wait releases the API lock so
+ * another host thread may query progress, resume or cancel. Destroy/reset/start
+ * and edits return IN_USE while a wait call holds the session. No callback may
+ * reenter the API except ccl_last_error, throw, or wait for another API call.
+ * Invalid/uninitialized handles use the common editing errors; native failures
+ * return INTERNAL and allocation failures OUT_OF_MEMORY.
+ * Progress and output callbacks may overlap; synchronize shared host data.
+ * Callbacks are synchronous on native worker threads; their arguments are borrowed
+ * only during the call. User data remains host-owned until callback replacement
+ * or session destruction returns. Callback exceptions/errors cancel the job.
+ * All functions require init and a live session (NOT_INITIALIZED/INVALID_ARGUMENT).
+ * Other common errors: CALLBACK_REENTRY, OUT_OF_MEMORY, INTERNAL (native failure).
+ * Scene reads return IN_USE during a job, including paused jobs. Editing a paused
+ * job synchronously cancels/waits before touching native scene data. This can block
+ * for in-flight work and serializes other API calls. The first attempted edit may
+ * quiesce even if subsequent argument validation fails. Edits require reset before
+ * resume. Editing unpaused jobs returns IN_USE. Ordinary pause/resume without edits
+ * does not reset samples. Destroy also blocks until worker/callback completion. */
+typedef struct ccl_buffer_params {
+  uint32_t size;
+  int32_t width, height;
+  int32_t full_x, full_y, full_width, full_height;
+  int32_t samples;
+  double time_limit;
+  /** Native automatic tiling; 0 disables it, otherwise positive tile width. */
+  int32_t tile_size;
+  /** 0/1 native progressive resolution control, typically 0 for offline parity. */
+  int32_t use_resolution_divider;
+  /** Absolute writable temp directory, copied; NULL uses init's user directory. */
+  const char *temp_directory;
+} ccl_buffer_params;
+/** Copied progress snapshot. Messages are UTF-8 truncated to fit, NUL terminated.
+ * sample is the last tile's sample, not necessarily full-frame progress. */
+typedef struct ccl_progress {
+  uint32_t size;
+  double fraction, total_seconds, render_seconds;
+  int32_t sample, error, cancelled, pause_requested, reset_required;
+  char status[256], substatus[256], error_message[1024];
+} ccl_progress;
+typedef void(CCL_CALL *ccl_progress_fn)(const ccl_progress *progress, void *user);
+/** Pass request: name copied, channels must match a named scene pass at reset. */
+typedef struct ccl_output_pass { uint32_t size; const char *name; int32_t channels; } ccl_output_pass;
+/** One tightly packed float pass for a native tile, lower-left origin; unassociated
+ * native pass semantics, no color transform. final=0 update, final=1 finished tile.
+ * Pixel count = width*height*channels. Copy before returning to retain the pixels. */
+typedef struct ccl_render_tile {
+  uint32_t size;
+  int32_t x, y, width, height, full_width, full_height, channels, final;
+  const char *pass_name;
+  const float *pixels;
+  uint64_t float_count;
+} ccl_render_tile;
+/** Return 0 for success, nonzero to report output failure and cancel rendering. */
+typedef int32_t(CCL_CALL *ccl_output_fn)(const ccl_render_tile *tile, void *user);
+/** Queue fresh buffer/sample settings; copies params/strings. Positive dimensions
+ * and samples, bounded crop inside full dimensions, finite nonnegative time limit,
+ * tile_size>=0 and a 0/1 divider required (INVALID_ARGUMENT). Named output passes
+ * must exist with exact channels (NOT_FOUND/TYPE_MISMATCH). Running job must be
+ * paused (IN_USE otherwise); reset then blocks to quiesce it. Does not start a job.
+ * Restores native progress after cancellation and clears the reset-required flag. */
+CCL_API ccl_status CCL_CALL ccl_session_reset(ccl_session *session, const ccl_buffer_params *params);
+/** Start a reset, idle session; IN_USE if already active or reset is required.
+ * Asynchronous: failures during rendering are read via progress or wait. */
+CCL_API ccl_status CCL_CALL ccl_session_start(ccl_session *session);
+/** Request pause/resume (0/1). Background/offline jobs do not support pause
+ * (UNSUPPORTED). Pause is asynchronous and preserves samples; first subsequent
+ * edit blocks as described above. Resume after an edit requires reset (IN_USE);
+ * after that reset, resume starts the replacement job. */
+CCL_API ccl_status CCL_CALL ccl_session_pause(ccl_session *session, int32_t pause);
+/** Block until job ends. A paused/idle interactive job still waits until resumed
+ * or cancelled by another thread. Native error returns INTERNAL; cancellation
+ * without an error succeeds. Session remains valid; concurrent destruction IN_USE. */
+CCL_API ccl_status CCL_CALL ccl_session_wait(ccl_session *session);
+/** Synchronously cancel/wait; session stays valid but requires reset before start.
+ * May run while another thread waits. Callback contract above prevents deadlocks. */
+CCL_API ccl_status CCL_CALL ccl_session_cancel(ccl_session *session);
+/** Set native sample limit, positive and <= native MAX_SAMPLES; INVALID_ARGUMENT
+ * otherwise. Does not reset accumulated samples. Also updates queued reset limits. */
+CCL_API ccl_status CCL_CALL ccl_session_set_samples(ccl_session *session, int32_t samples);
+/** Copy progress on any host thread, including during rendering/wait. out is
+ * caller-owned, size required; INVALID_ARGUMENT for NULL/undersized output. */
+CCL_API ccl_status CCL_CALL ccl_session_progress(ccl_session *session, ccl_progress *out);
+/** Replace callback while idle (IN_USE during a job/wait); NULL disables it.
+ * Pointer/user are retained, never freed. Common callback/control contract above. */
+CCL_API ccl_status CCL_CALL ccl_session_set_progress_callback(ccl_session *session, ccl_progress_fn fn, void *user);
+/** Configure copied pass requests and callback while idle (IN_USE otherwise).
+ * count>0 requires passes and fn; count=0 disables output. Duplicate/empty names,
+ * channels outside 1..4 or bad struct sizes return INVALID_ARGUMENT. Pass existence
+ * is checked at reset. Unavailable in-progress pixels are skipped; missing final
+ * pixels report INTERNAL. Callback/user lifetime and error rules above apply. */
+CCL_API ccl_status CCL_CALL ccl_session_set_output_callback(ccl_session *session,
+    const ccl_output_pass *passes, uint32_t count, ccl_output_fn fn, void *user);
 
 #ifdef __cplusplus
 }

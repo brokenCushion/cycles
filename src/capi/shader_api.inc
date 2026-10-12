@@ -35,7 +35,7 @@ ccl_node *graph_node(ccl_shader_graph *g, ccl::ShaderNode *n)
   h->graph = g;
   return h;
 }
-template<typename F> ccl_status graph_access(ccl_shader_graph *g, F fn)
+template<bool Write = true, typename F> ccl_status graph_access(ccl_shader_graph *g, F fn)
 {
   return boundary([&] {
     std::lock_guard<std::mutex> lock(api_mutex);
@@ -43,6 +43,8 @@ template<typename F> ccl_status graph_access(ccl_shader_graph *g, F fn)
       return st;
     if (!valid(g))
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid shader graph");
+    if (auto st = scene_access(g->scene, Write))
+      return st;
     return fn();
   });
 }
@@ -91,6 +93,8 @@ ccl_status CCL_CALL ccl_shader_graph_create(ccl_scene *s, ccl_shader_graph **out
       return st;
     if (!valid(s) || !out)
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid scene/graph output");
+    if (auto st = scene_access(s, true))
+      return st;
     auto g = std::make_unique<ccl_shader_graph>();
     g->scene = s;
     g->native = ccl::make_unique<ccl::ShaderGraph>();
@@ -128,7 +132,7 @@ ccl_status CCL_CALL ccl_shader_graph_add(ccl_shader_graph *g,
 }
 ccl_status CCL_CALL ccl_shader_graph_output(ccl_shader_graph *g, ccl_node **out)
 {
-  return graph_access(g, [&] {
+  return graph_access<false>(g, [&] {
     if (!out)
       return fail(CCL_ERROR_INVALID_ARGUMENT, "NULL output");
     *out = graph_node(g, g->native->output());
@@ -229,6 +233,8 @@ ccl_status CCL_CALL ccl_node_socket_count(ccl_node *n, ccl_socket_direction d, u
       return st;
     if (!valid(n) || !out || (d != CCL_SOCKET_INPUT && d != CCL_SOCKET_OUTPUT))
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid node/socket direction/output");
+    if (auto st = scene_access(n->scene, false))
+      return st;
     *out = uint32_t(d == CCL_SOCKET_INPUT ? n->native->type->inputs.size() :
                                             n->native->type->outputs.size());
     return CCL_SUCCESS;
@@ -246,6 +252,8 @@ ccl_status CCL_CALL ccl_node_socket_info(ccl_node *n,
     if (!valid(n) || !out || out->size < sizeof(*out) ||
         (d != CCL_SOCKET_INPUT && d != CCL_SOCKET_OUTPUT))
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid node/socket description");
+    if (auto st = scene_access(n->scene, false))
+      return st;
     const auto &v = d == CCL_SOCKET_INPUT ? n->native->type->inputs : n->native->type->outputs;
     if (index >= v.size())
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Socket index out of range");
@@ -261,6 +269,8 @@ ccl_status CCL_CALL ccl_node_socket_find(ccl_node *n, const char *name, ccl_sock
       return st;
     if (!valid(n) || !name || !out)
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid node/socket lookup");
+    if (auto st = scene_access(n->scene, false))
+      return st;
     const auto *s = resolve(n, name);
     if (!s)
       return CCL_ERROR_NOT_FOUND;

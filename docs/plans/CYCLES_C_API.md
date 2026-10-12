@@ -1,7 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
 Status: Phases 1–4 accepted; Phase 5 passed after authorized wrapper fixes
-(2026-10-13). Phase 6 stopped for the pause/edit contract decision below. Experimental until Phase 7.
+(2026-10-13). Phase 6 passed; Phase 7 is next. Experimental until Phase 7.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -559,3 +559,46 @@ Options requiring a user choice before implementing the public contract:
 Stopped under the user's uncovered-design-tradeoff condition. Phase 5 remains
 passed; Phase 6 has no acceptance failure. Phases 7–10 have not started. No action
 leaving this machine, renderer modification or new render occurred.
+
+### Phase 6 pause/edit decision approved (2026-10-13)
+
+Ordinary pause/resume preserves samples. The first editing call on a paused
+session cancels and waits for the in-flight job; edits require reset before
+resuming. Document blocking in the public header. A possible future minor-version
+addition is a non-blocking edit path (scene mutex, edit, reset while rendering
+continues), following Blender viewport sync; no work on that path now. Continue
+Phases 6–10 under the refined stop rules.
+
+
+### Phase 6 results (2026-10-13) — PASSED
+
+- API **1.5**, **95 exact C exports**. Nine session functions implement reset,
+  start/pause/wait/cancel, sample limits, copied progress and borrowed named-pass
+  output. The approved edit barrier blocks in native cancel/wait, requires reset,
+  and leaves ordinary pause/resume accumulation intact. A concurrent wait pins
+  session lifetime while allowing another thread to query, resume or cancel.
+- Baseline **11/11**, final **13/13 CTests**, retained native tests **9/9**.
+  Installed DLL source inventory **184 types**, reflection, old C hosts, CPU/CUDA/
+  OptiX scene/geometry tests and CPU/OptiX OSL graph tests pass. Callback reentry,
+  host output error/exception containment and wait/cancel/destruction checks pass.
+- Four existing XML fixtures (surface, transparency, volume, OSL) are loaded by
+  native Cycles and independently cloned via the DLL's public header. At 47x20,
+  fixed 16 samples, CPU is exact on all nine saved channels. OptiX passes the
+  unchanged beauty policy with **five native controls and four seed references
+  per fixture**, zero count failures, zero statistical fallback pixels and passing
+  bias/envelope checks. Denoising is disabled; normal/depth differences are also
+  retained as measurements, not mislabeled as denoising feature passes.
+- The policy adapter preserves every FLOAT and explicitly labels its JSON as an
+  adapter: the old validator's `deep` subject flag means API-versus-native here;
+  **actual_deep=false throughout**. No renderer setting or policy was changed.
+- Harness corrections: preserve native relative XML includes in the temporary
+  fixture tree, bind the XML loader's implicit world shader explicitly through
+  the public background socket, and copy OpenEXR's mutable channel dictionary
+  before writing. Acceptance criteria stayed unchanged. No wrapper test failure
+  required a renderer/internal change.
+- **158** native compile commands match API-on/off; **558** install paths audited.
+  Native sources, Phase 1–5 DLLs and qualified production hashes unchanged. All
+  large artifacts are under `D:/CyclesDeepScratch/c-api/phase6-20261013`; D: remains
+  above 1.3 TB free. Windows only; no sanitizer/cross-platform qualification or
+  full production regression is claimed. ABI remains experimental until Phase 7.
+- Evidence: [Phase 6](../../builds/validation/c-api/phase6.json).

@@ -1,13 +1,14 @@
-# Cycles C API — Phases 1–5
+# Cycles C API — Phases 1–6
 
 Experimental shared-library boundary for host applications such as Gaffer.
 **Experimental until Phase 7**; the stable ABI promise has not begun.
 The contract is [cycles_c.h](cycles_c.h): it contains no Cycles C++ headers or
 deep types. It initializes resource paths, enumerates native devices, reports
 compiled capabilities, routes logs and introspects built-in node types, sockets,
-defaults, flags and enums. API 1.4 creates device-selected native Sessions and
+defaults, flags and enums. API 1.5 creates device-selected native Sessions and
 borrows their scenes, edits sockets by name or cached ID, and builds shader graphs
-including OSL scripts. It does **not** start renders yet.
+including OSL scripts. It renders through native Sessions, with progress and named
+float-pass callbacks, and supports the documented blocking pause/edit/reset flow.
 
 ## Build and test
 
@@ -367,3 +368,57 @@ quiesce with cancel/wait before edits and require reset (recommended), relax the
 promise to native scene-mutex synchronization, or seek a native acknowledged-pause
 hook. These differ in accumulation, latency and integration scope, so work stopped
 under the user's design-decision rule. No Cycles internal change was made.
+
+
+## Phase 6 approved contract and draft (2026-10-13)
+
+The user approved the synchronous edit barrier. API 1.5 adds reset/start/pause/
+wait/cancel/sample limits, copied progress and named float-pass output callbacks.
+Pause/resume without edits retains samples. The first attempted edit of a paused
+job cancels and joins native work before touching its scene; reset is then required
+before resume. That edit can block. An unpaused job rejects edits, and scene reads
+require idle work. A host wait releases the API lock but pins session lifetime;
+destroy/reset/edit/start return IN_USE until it returns. Another thread may still
+query progress, resume or cancel. Callbacks borrow data and may not reenter the API
+(except last_error), throw, or wait on another API call.
+
+A nonblocking Blender viewport-style scene-mutex/edit/reset path is recorded as a
+possible future minor-version addition only; it is not implemented. No native
+Cycles or kernel change is needed for the approved blocking contract.
+
+Phase 6 is not qualified yet. The retained baseline passed 11/11 tests; final
+render/device/export checks and results will be recorded below.
+
+
+## Phase 6 results (2026-10-13) — PASSED
+
+- API **1.5**, **95 exact C exports**. Nine session functions implement reset,
+  start/pause/wait/cancel, sample limits, copied progress and borrowed named-pass
+  output. The approved edit barrier blocks in native cancel/wait, requires reset,
+  and leaves ordinary pause/resume accumulation intact. A concurrent wait pins
+  session lifetime while allowing another thread to query, resume or cancel.
+- Baseline **11/11**, final **13/13 CTests**, retained native tests **9/9**.
+  Installed DLL source inventory **184 types**, reflection, old C hosts, CPU/CUDA/
+  OptiX scene/geometry tests and CPU/OptiX OSL graph tests pass. Callback reentry,
+  host output error/exception containment and wait/cancel/destruction checks pass.
+- Four existing XML fixtures (surface, transparency, volume, OSL) are loaded by
+  native Cycles and independently cloned via the DLL's public header. At 47x20,
+  fixed 16 samples, CPU is exact on all nine saved channels. OptiX passes the
+  unchanged beauty policy with **five native controls and four seed references
+  per fixture**, zero count failures, zero statistical fallback pixels and passing
+  bias/envelope checks. Denoising is disabled; normal/depth differences are also
+  retained as measurements, not mislabeled as denoising feature passes.
+- The policy adapter preserves every FLOAT and explicitly labels its JSON as an
+  adapter: the old validator's `deep` subject flag means API-versus-native here;
+  **actual_deep=false throughout**. No renderer setting or policy was changed.
+- Harness corrections: preserve native relative XML includes in the temporary
+  fixture tree, bind the XML loader's implicit world shader explicitly through
+  the public background socket, and copy OpenEXR's mutable channel dictionary
+  before writing. Acceptance criteria stayed unchanged. No wrapper test failure
+  required a renderer/internal change.
+- **158** native compile commands match API-on/off; **558** install paths audited.
+  Native sources, Phase 1–5 DLLs and qualified production hashes unchanged. All
+  large artifacts are under `D:/CyclesDeepScratch/c-api/phase6-20261013`; D: remains
+  above 1.3 TB free. Windows only; no sanitizer/cross-platform qualification or
+  full production regression is claimed. ABI remains experimental until Phase 7.
+- Evidence: [Phase 6](../../builds/validation/c-api/phase6.json).

@@ -18,6 +18,7 @@
 #include "util/profiling.h"
 #include "util/stats.h"
 #include <cmath>
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <unordered_map>
@@ -31,12 +32,24 @@ struct ccl_node {
 };
 struct ccl_scene {
   ccl::Scene *native;
+  ccl_session *owner = nullptr;
   std::vector<std::unique_ptr<ccl_node>> handles;
   std::unordered_map<ccl::Node *, ccl_node *> handles_by_node;
 };
 struct ccl_session {
   ccl::unique_ptr<ccl::Session> native;
   ccl_scene scene;
+  ccl::SessionParams params;
+  ccl::BufferParams buffers;
+  bool configured = false, active = false;
+  unsigned waiters = 0;
+  std::atomic<bool> paused{false}, needs_reset{true};
+  ccl_progress_fn progress_fn = nullptr;
+  void *progress_user = nullptr;
+  struct OutputPass { std::string name; int channels; };
+  std::vector<OutputPass> output_passes;
+  ccl_output_fn output_fn = nullptr;
+  void *output_user = nullptr;
 };
 struct ccl_shader_graph {
   ccl_scene *scene;
@@ -53,6 +66,9 @@ struct SocketBinding {
   const ccl::SocketType *socket;
 };
 std::vector<SocketBinding> socket_ids;
+
+void install_session_bridges(ccl_session &s);
+ccl_status scene_access(ccl_scene *s, bool write);
 
 ccl_status editing()
 {
@@ -107,7 +123,7 @@ const ccl::SocketType *resolve(ccl_node *n, ccl_socket_id id)
   }
   return socket_ids[id - 1].socket;
 }
-template<typename Key, typename F> ccl_status access(ccl_node *n, Key key, F fn)
+template<bool Write = false, typename Key, typename F> ccl_status access(ccl_node *n, Key key, F fn)
 {
   return boundary([&] {
     std::lock_guard<std::mutex> lock(api_mutex);
@@ -115,6 +131,8 @@ template<typename Key, typename F> ccl_status access(ccl_node *n, Key key, F fn)
       return st;
     if (!valid(n))
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid node handle");
+    if (auto st = scene_access(n->scene, Write))
+      return st;
     const auto *s = resolve(n, key);
     if (!s)
       return std::is_same_v<Key, ccl_socket_id> || !key ? CCL_ERROR_INVALID_ARGUMENT :
@@ -308,7 +326,10 @@ ccl_status CCL_CALL ccl_session_create(const ccl_session_params *p, ccl_session 
     session->native = ccl::make_unique<ccl::Session>(params, sp);
     if (session->native->progress.get_error())
       return fail(CCL_ERROR_INTERNAL, session->native->progress.get_error_message().c_str());
+    session->params = params;
     session->scene.native = session->native->scene.get();
+    session->scene.owner = session.get();
+    install_session_bridges(*session);
     auto *h = session.get();
     sessions.emplace(h, std::move(session));
     try {
@@ -330,6 +351,9 @@ ccl_status CCL_CALL ccl_session_destroy(ccl_session *h)
       return st;
     if (!sessions.count(h))
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid session handle");
+    if (h->waiters)
+      return fail(CCL_ERROR_IN_USE, "A host thread is waiting on this session");
+    h->native->cancel();
     for (auto it = graphs.begin(); it != graphs.end();) {
       auto *g = it->first;
       ++it;
@@ -363,6 +387,8 @@ ccl_status CCL_CALL ccl_scene_singleton(ccl_scene *s, const char *name, ccl_node
       return st;
     if (!valid(s) || !name || !out)
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid singleton arguments");
+    if (auto st = scene_access(s, false))
+      return st;
     ccl::Node *n = nullptr;
     if (!strcmp(name, "camera"))
       n = s->native->camera;
@@ -393,6 +419,8 @@ ccl_status CCL_CALL ccl_node_create(ccl_scene *s,
       return st;
     if (!valid(s) || !type || !out)
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid node creation arguments");
+    if (auto st = scene_access(s, true))
+      return st;
     for (const auto &f : factories)
       if (!strcmp(type, f.name)) {
         ccl::ustring node_name(name ? name : type);
@@ -414,6 +442,8 @@ ccl_status CCL_CALL ccl_node_delete(ccl_scene *s, ccl_node *n)
       return st;
     if (!valid(s) || !valid(n) || n->scene != s)
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid node/scene ownership");
+    if (auto st = scene_access(s, true))
+      return st;
     if (!n->remove)
       return fail(CCL_ERROR_UNSUPPORTED, "Borrowed singleton/default node cannot be deleted");
     if (n->native->reference_count())
@@ -433,6 +463,8 @@ ccl_status CCL_CALL ccl_node_tag_update(ccl_node *n)
       return st;
     if (!valid(n))
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid node handle");
+    if (auto st = scene_access(n->scene, true))
+      return st;
     auto *s = n->scene->native;
     auto *p = n->native;
     if (p->is_a(ccl::Light::get_node_base_type()))
@@ -673,7 +705,7 @@ ccl_status get_node(ccl_node &n, const ccl::SocketType &s, ccl_node **out)
 }  // namespace
 ccl_status CCL_CALL ccl_node_set_bool(ccl_node *n, const char *key, int32_t value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_bool(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_bool(ccl_node *n, const char *key, int32_t *out)
@@ -683,7 +715,7 @@ ccl_status CCL_CALL ccl_node_get_bool(ccl_node *n, const char *key, int32_t *out
 }
 ccl_status CCL_CALL ccl_node_set_bool_id(ccl_node *n, ccl_socket_id key, int32_t value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_bool(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_bool_id(ccl_node *n, ccl_socket_id key, int32_t *out)
@@ -693,7 +725,7 @@ ccl_status CCL_CALL ccl_node_get_bool_id(ccl_node *n, ccl_socket_id key, int32_t
 }
 ccl_status CCL_CALL ccl_node_set_float(ccl_node *n, const char *key, float value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_float(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_float(ccl_node *n, const char *key, float *out)
@@ -703,7 +735,7 @@ ccl_status CCL_CALL ccl_node_get_float(ccl_node *n, const char *key, float *out)
 }
 ccl_status CCL_CALL ccl_node_set_float_id(ccl_node *n, ccl_socket_id key, float value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_float(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_float_id(ccl_node *n, ccl_socket_id key, float *out)
@@ -713,7 +745,7 @@ ccl_status CCL_CALL ccl_node_get_float_id(ccl_node *n, ccl_socket_id key, float 
 }
 ccl_status CCL_CALL ccl_node_set_int(ccl_node *n, const char *key, int32_t value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_int(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_int(ccl_node *n, const char *key, int32_t *out)
@@ -722,7 +754,7 @@ ccl_status CCL_CALL ccl_node_get_int(ccl_node *n, const char *key, int32_t *out)
 }
 ccl_status CCL_CALL ccl_node_set_int_id(ccl_node *n, ccl_socket_id key, int32_t value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_int(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_int_id(ccl_node *n, ccl_socket_id key, int32_t *out)
@@ -731,7 +763,7 @@ ccl_status CCL_CALL ccl_node_get_int_id(ccl_node *n, ccl_socket_id key, int32_t 
 }
 ccl_status CCL_CALL ccl_node_set_uint(ccl_node *n, const char *key, uint32_t value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_uint(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_uint(ccl_node *n, const char *key, uint32_t *out)
@@ -741,7 +773,7 @@ ccl_status CCL_CALL ccl_node_get_uint(ccl_node *n, const char *key, uint32_t *ou
 }
 ccl_status CCL_CALL ccl_node_set_uint_id(ccl_node *n, ccl_socket_id key, uint32_t value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_uint(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_uint_id(ccl_node *n, ccl_socket_id key, uint32_t *out)
@@ -751,7 +783,7 @@ ccl_status CCL_CALL ccl_node_get_uint_id(ccl_node *n, ccl_socket_id key, uint32_
 }
 ccl_status CCL_CALL ccl_node_set_uint64(ccl_node *n, const char *key, uint64_t value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_uint64(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_uint64(ccl_node *n, const char *key, uint64_t *out)
@@ -761,7 +793,7 @@ ccl_status CCL_CALL ccl_node_get_uint64(ccl_node *n, const char *key, uint64_t *
 }
 ccl_status CCL_CALL ccl_node_set_uint64_id(ccl_node *n, ccl_socket_id key, uint64_t value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_uint64(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_uint64_id(ccl_node *n, ccl_socket_id key, uint64_t *out)
@@ -771,7 +803,7 @@ ccl_status CCL_CALL ccl_node_get_uint64_id(ccl_node *n, ccl_socket_id key, uint6
 }
 ccl_status CCL_CALL ccl_node_set_float2(ccl_node *n, const char *key, ccl_float2 value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_float2(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_float2(ccl_node *n, const char *key, ccl_float2 *out)
@@ -781,7 +813,7 @@ ccl_status CCL_CALL ccl_node_get_float2(ccl_node *n, const char *key, ccl_float2
 }
 ccl_status CCL_CALL ccl_node_set_float2_id(ccl_node *n, ccl_socket_id key, ccl_float2 value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_float2(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_float2_id(ccl_node *n, ccl_socket_id key, ccl_float2 *out)
@@ -791,7 +823,7 @@ ccl_status CCL_CALL ccl_node_get_float2_id(ccl_node *n, ccl_socket_id key, ccl_f
 }
 ccl_status CCL_CALL ccl_node_set_float3(ccl_node *n, const char *key, ccl_float3 value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_float3(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_float3(ccl_node *n, const char *key, ccl_float3 *out)
@@ -801,7 +833,7 @@ ccl_status CCL_CALL ccl_node_get_float3(ccl_node *n, const char *key, ccl_float3
 }
 ccl_status CCL_CALL ccl_node_set_float3_id(ccl_node *n, ccl_socket_id key, ccl_float3 value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_float3(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_float3_id(ccl_node *n, ccl_socket_id key, ccl_float3 *out)
@@ -811,7 +843,7 @@ ccl_status CCL_CALL ccl_node_get_float3_id(ccl_node *n, ccl_socket_id key, ccl_f
 }
 ccl_status CCL_CALL ccl_node_set_string(ccl_node *n, const char *key, const char *value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_string(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_string(ccl_node *n, const char *key, const char **out)
@@ -821,7 +853,7 @@ ccl_status CCL_CALL ccl_node_get_string(ccl_node *n, const char *key, const char
 }
 ccl_status CCL_CALL ccl_node_set_string_id(ccl_node *n, ccl_socket_id key, const char *value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_string(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_string_id(ccl_node *n, ccl_socket_id key, const char **out)
@@ -831,7 +863,7 @@ ccl_status CCL_CALL ccl_node_get_string_id(ccl_node *n, ccl_socket_id key, const
 }
 ccl_status CCL_CALL ccl_node_set_enum(ccl_node *n, const char *key, int32_t value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_enum(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_enum(ccl_node *n, const char *key, int32_t *out)
@@ -841,7 +873,7 @@ ccl_status CCL_CALL ccl_node_get_enum(ccl_node *n, const char *key, int32_t *out
 }
 ccl_status CCL_CALL ccl_node_set_enum_id(ccl_node *n, ccl_socket_id key, int32_t value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_enum(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_enum_id(ccl_node *n, ccl_socket_id key, int32_t *out)
@@ -851,7 +883,7 @@ ccl_status CCL_CALL ccl_node_get_enum_id(ccl_node *n, ccl_socket_id key, int32_t
 }
 ccl_status CCL_CALL ccl_node_set_transform(ccl_node *n, const char *key, ccl_transform value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_transform(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_transform(ccl_node *n, const char *key, ccl_transform *out)
@@ -861,7 +893,7 @@ ccl_status CCL_CALL ccl_node_get_transform(ccl_node *n, const char *key, ccl_tra
 }
 ccl_status CCL_CALL ccl_node_set_transform_id(ccl_node *n, ccl_socket_id key, ccl_transform value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_transform(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_transform_id(ccl_node *n, ccl_socket_id key, ccl_transform *out)
@@ -871,7 +903,7 @@ ccl_status CCL_CALL ccl_node_get_transform_id(ccl_node *n, ccl_socket_id key, cc
 }
 ccl_status CCL_CALL ccl_node_set_node(ccl_node *n, const char *key, ccl_node *value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_node(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_node(ccl_node *n, const char *key, ccl_node **out)
@@ -881,7 +913,7 @@ ccl_status CCL_CALL ccl_node_get_node(ccl_node *n, const char *key, ccl_node **o
 }
 ccl_status CCL_CALL ccl_node_set_node_id(ccl_node *n, ccl_socket_id key, ccl_node *value)
 {
-  return access(
+  return access<true>(
       n, key, [&](ccl_node &h, const ccl::SocketType &s) { return set_node(h, s, value); });
 }
 ccl_status CCL_CALL ccl_node_get_node_id(ccl_node *n, ccl_socket_id key, ccl_node **out)
@@ -1054,14 +1086,14 @@ ccl_status get_array(ccl_node &n,
 ccl_status CCL_CALL ccl_node_set_array(
     ccl_node *n, const char *key, ccl_socket_type type, const void *data, uint64_t count)
 {
-  return access(n, key, [&](ccl_node &h, const ccl::SocketType &s) {
+  return access<true>(n, key, [&](ccl_node &h, const ccl::SocketType &s) {
     return set_array(h, s, type, data, count);
   });
 }
 ccl_status CCL_CALL ccl_node_set_array_id(
     ccl_node *n, ccl_socket_id key, ccl_socket_type type, const void *data, uint64_t count)
 {
-  return access(n, key, [&](ccl_node &h, const ccl::SocketType &s) {
+  return access<true>(n, key, [&](ccl_node &h, const ccl::SocketType &s) {
     return set_array(h, s, type, data, count);
   });
 }

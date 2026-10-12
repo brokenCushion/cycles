@@ -114,7 +114,7 @@ ccl_status CCL_CALL ccl_api_version(ccl_version *out)
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid version output size");
     }
     out->major = 1;
-    out->minor = 2;
+    out->minor = 3;
     out->patch = 0;
     return CCL_SUCCESS;
   });
@@ -534,6 +534,24 @@ ccl_default_value default_value(const ccl::SocketType &s, uint64_t element)
   }
   return value;
 }
+ccl_socket_desc describe_socket(const ccl::SocketType *s, uint32_t size)
+{
+  uint32_t enums = 0;
+  if (s->enum_values)
+    for (const auto &entry : *s->enum_values) {
+      (void)entry;
+      ++enums;
+    }
+  return {size,
+          text(s->name),
+          text(s->ui_name),
+          socket_type(s->type),
+          socket_flags(s->flags),
+          s->node_type ? text(s->node_type->name) : "",
+          s->default_value && s->type != ccl::SocketType::CLOSURE,
+          default_count(*s),
+          enums};
+}
 }  // namespace
 
 ccl_status CCL_CALL ccl_node_type_count(uint32_t *count)
@@ -583,21 +601,7 @@ ccl_status CCL_CALL ccl_socket_info(const char *name,
     const auto status = socket(name, direction, index, s);
     if (status != CCL_SUCCESS)
       return status;
-    uint32_t enums = 0;
-    if (s->enum_values)
-      for (const auto &entry : *s->enum_values) {
-        (void)entry;
-        ++enums;
-      }
-    *out = {out->size,
-            text(s->name),
-            text(s->ui_name),
-            socket_type(s->type),
-            socket_flags(s->flags),
-            s->node_type ? text(s->node_type->name) : "",
-            s->default_value && s->type != ccl::SocketType::CLOSURE,
-            default_count(*s),
-            enums};
+    *out = describe_socket(s, out->size);
     return CCL_SUCCESS;
   });
 }
@@ -656,3 +660,5 @@ ccl_status CCL_CALL ccl_socket_enum_value(const char *name,
 }
 
 #include "scene_api.inc"
+
+#include "shader_api.inc"

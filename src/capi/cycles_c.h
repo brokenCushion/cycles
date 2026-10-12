@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-/** Phase 2 ABI, version 1.1.0 (experimental until the Phase 7 swap test).
+/** API version 1.3.0 (experimental until the Phase 7 swap test).
  * Use default platform struct alignment. Initialize every struct to zero and
  * set size to sizeof(struct). A larger size is accepted; unknown tail bytes
  * are ignored/preserved. A smaller size returns CCL_ERROR_INVALID_ARGUMENT.
@@ -139,7 +139,7 @@ CCL_API ccl_status CCL_CALL ccl_device_info(uint32_t index, ccl_device_desc *out
  * On failure output is unchanged. Common errors: NOT_INITIALIZED,
  * CALLBACK_REENTRY, OUT_OF_MEMORY, INTERNAL; NULL/undersized output or invalid
  * direction/index: INVALID_ARGUMENT; unknown node name: NOT_FOUND.
- * Built-in registry only: instance-specific OSL sockets belong to Phase 4.
+ * Built-in registry only: instance-specific OSL sockets use ccl_node_socket_* below.
  */
 #define CCL_ERROR_NOT_FOUND INT32_C(7)
 #define CCL_ERROR_NO_DEFAULT INT32_C(8)
@@ -265,14 +265,16 @@ CCL_API ccl_status CCL_CALL ccl_socket_enum_value(const char *node_name,
                                                   ccl_enum_value *out);
 
 /** Scene editing added in API 1.2. All functions below require init and run
- * serialized on any thread except a callback. No rendering occurs in Phase 3.
+ * serialized on any thread except a callback. Rendering is deferred to Phase 6.
  * Inputs are borrowed for the call; setters copy values, arrays and strings.
  * Handles are library-owned: never dereference/free them or use after deletion
- * or scene destruction. A scene owns all its nodes. Destroying it invalidates
+ * or Session destruction. A Session owns its scene and all nodes. Destroying it invalidates
  * every node handle. NULL is not a valid scene/node (except a null reference).
  * Common errors: NOT_INITIALIZED, INVALID_ARGUMENT (invalid handle/NULL output),
  * CALLBACK_REENTRY, OUT_OF_MEMORY, INTERNAL. Output values remain unchanged on
  * failure except get_array's documented required-capacity result. */
+typedef struct ccl_shader_graph ccl_shader_graph;
+typedef struct ccl_session ccl_session;
 typedef struct ccl_scene ccl_scene;
 typedef struct ccl_node ccl_node;
 typedef uint64_t ccl_socket_id;
@@ -290,15 +292,119 @@ typedef struct ccl_transform {
   float m[12];
 } ccl_transform;
 
-/** Create an editable scene using native default SceneParams and a CPU device.
- * No kernels are loaded and no GPU is allocated. Caller owns the handle until
- * scene_destroy; common editing errors above, UNSUPPORTED without a CPU device.
- * Session adoption/render-device selection belongs to the later session API. */
-CCL_API ccl_status CCL_CALL ccl_scene_create(ccl_scene **out);
-/** Destroy scene and all its nodes, releasing native resources. Common editing
- * ownership/threading/errors above. References within the scene need not be
- * cleared first; native destruction order handles them. */
-CCL_API ccl_status CCL_CALL ccl_scene_destroy(ccl_scene *scene);
+/** Creation-only session settings. Call ccl_session_params_default before editing.
+ * device_index is an index from ccl_device_info; UINT32_MAX selects CPU.
+ * Strings are copied at creation. All booleans must be 0 or 1.
+ * Scene settings correspond to native SceneParams; render controls are deferred.
+ */
+typedef struct ccl_session_params {
+  uint32_t size;
+  uint32_t device_index;
+  int32_t threads; /**< 0 = native automatic; otherwise positive. */
+  int32_t headless, background;
+  int32_t use_osl;        /**< Rejects devices without OSL; never falls back. */
+  const char *bvh_layout; /**< AUTO, BVH2, EMBREE, OPTIX, METAL, HIPRT, EMBREEGPU. */
+  int32_t bvh_static;
+  int32_t bvh_spatial_split, bvh_compact_structure, bvh_unaligned_nodes;
+  int32_t bvh_time_steps;
+  int32_t hair_subdivisions; /**< Exponent 0..4, native clamped tessellation range. */
+  int32_t hair_shape;        /**< 0 ribbon, 1 thick, 2 thick linear. */
+  float texture_resolution;  /**< Finite positive native resolution scale. */
+  int32_t texture_limit;     /**< 0 unlimited; otherwise nonnegative pixels. */
+  int32_t use_texture_cache, auto_texture_cache;
+  const char *texture_cache_path; /**< NULL/empty = native default; copied. */
+} ccl_session_params;
+/** Fill defaults without requiring init. Caller owns params, initializes size.
+ * Thread-safe; INVALID_ARGUMENT for NULL/short struct, CALLBACK_REENTRY in callback.
+ * Default strings are immutable library-owned; unknown tail bytes are preserved. */
+CCL_API ccl_status CCL_CALL ccl_session_params_default(ccl_session_params *params);
+/** Create native Session and its device-owned Scene; does not start rendering.
+ * Caller owns session until session_destroy. Common editing errors; UNSUPPORTED
+ * for unavailable CPU/OSL, INVALID_ARGUMENT for settings/device index, INTERNAL
+ * for native device failure. No automatic device fallback. */
+CCL_API ccl_status CCL_CALL ccl_session_create(const ccl_session_params *params,
+                                               ccl_session **out);
+/** Destroy session and all borrowed scene/node handles, joining native waiting
+ * thread and releasing devices. Common editing contract/errors; no render starts.
+ * References between scene nodes need not be cleared first. */
+CCL_API ccl_status CCL_CALL ccl_session_destroy(ccl_session *session);
+/** Borrow the session-owned scene; repeated calls return the same handle.
+ * Never destroy/free it separately. Valid until session_destroy. Common editing
+ * threading/errors apply; no ownership transfer and no rendering. */
+CCL_API ccl_status CCL_CALL ccl_session_scene(ccl_session *session, ccl_scene **out);
+/** Shader graph editing (API 1.3). All calls use the common editing contract:
+ * init required, serialized on any non-callback thread; borrowed call inputs,
+ * copied names/values; NOT_INITIALIZED, CALLBACK_REENTRY, OUT_OF_MEMORY, INTERNAL
+ * and INVALID_ARGUMENT for invalid handles, wrong ownership or NULL outputs.
+ * A scene owns unattached graphs. shader_set_graph consumes a graph and ALL its
+ * node handles/instance socket IDs, because native attachment may remove proxy
+ * nodes. To change an attached graph, build and attach a replacement. No render,
+ * shader execution or GPU kernel compilation is performed by this interface.
+ */
+/** Create a graph with its native output node. Scene owns it until destroy,
+ * successful attachment, or session destruction. Common graph contract. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_create(ccl_scene *scene, ccl_shader_graph **out);
+/** Discard an unattached graph and invalidate all its nodes/OSL IDs.
+ * Common graph contract; attached/consumed handles are invalid. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_destroy(ccl_shader_graph *graph);
+/** Add a reflected built-in shader node; optional name is copied (NULL = type).
+ * Graph owns returned node. NOT_FOUND for unknown type; UNSUPPORTED for abstract,
+ * non-shader or output types (use graph_output). Common graph contract. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_add(ccl_shader_graph *graph,
+                                                 const char *type,
+                                                 const char *name,
+                                                 ccl_node **out);
+/** Borrow the graph's sole output node; repeated calls give same handle.
+ * Common graph contract; use existing typed setters for its settings. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_output(ccl_shader_graph *graph, ccl_node **out);
+/** Connect canonical case-sensitive reflected socket names in this graph.
+ * Native numeric/color conversions are preserved. NOT_FOUND for missing sockets,
+ * IN_USE for an already connected input (disconnect first), TYPE_MISMATCH for
+ * unsupported conversion, INVALID_ARGUMENT for cycles/cross-graph endpoints.
+ * Common graph contract. Does not replace an existing connection on failure. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_connect(
+    ccl_shader_graph *graph, ccl_node *from, const char *output, ccl_node *to, const char *input);
+/** Disconnect one input; an already disconnected input succeeds. NOT_FOUND for
+ * missing socket. Common graph contract/ownership checks. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_disconnect(ccl_shader_graph *graph,
+                                                        ccl_node *node,
+                                                        const char *input);
+/** Transfer graph to a scene shader and tag its native update. Both must belong
+ * to the same scene; TYPE_MISMATCH for a non-shader scene item. Replaces previous
+ * graph. Consumes graph and its node handles/OSL IDs. Common graph contract. */
+CCL_API ccl_status CCL_CALL ccl_shader_set_graph(ccl_node *shader, ccl_shader_graph *graph);
+/** Load an OSL script using native Cycles OSL loading, in an OSL-enabled session.
+ * path must be absolute .osl or .oso. Native .osl loading writes/reuses a sibling
+ * .oso by modification time: use a host-owned writable cache for source files.
+ * Graph owns node; optional name copied. UNSUPPORTED without OSL session/build;
+ * NOT_FOUND for missing file, INVALID_ARGUMENT for path/extension, INTERNAL for
+ * compile/query failure. Native unsupported parameter shapes are omitted, as in
+ * the XML loader. No inline-source or custom AOV support is promised here.
+ * Common graph contract. Discover instance sockets with functions below. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_add_osl(ccl_shader_graph *graph,
+                                                     const char *path,
+                                                     const char *name,
+                                                     ccl_node **out);
+/** Count sockets on an actual node, including OSL's instance-defined type.
+ * Common editing contract; direction must be INPUT or OUTPUT. */
+CCL_API ccl_status CCL_CALL ccl_node_socket_count(ccl_node *node,
+                                                  ccl_socket_direction direction,
+                                                  uint32_t *out);
+/** Describe an instance socket. Strings borrowed until node invalidation (OSL),
+ * otherwise library lifetime. Unknown future socket types must be skipped.
+ * Common editing contract; INVALID_ARGUMENT for short struct/index/direction. */
+CCL_API ccl_status CCL_CALL ccl_node_socket_info(ccl_node *node,
+                                                 ccl_socket_direction direction,
+                                                 uint32_t index,
+                                                 ccl_socket_desc *out);
+/** Find a canonical input name on this node, including OSL. Use returned ID with
+ * all existing typed _id accessors. Built-in IDs remain library-instance stable;
+ * OSL IDs are valid only for this instance until graph attachment/destruction.
+ * NOT_FOUND for unknown name; common editing contract. */
+CCL_API ccl_status CCL_CALL ccl_node_socket_find(ccl_node *node,
+                                                 const char *name,
+                                                 ccl_socket_id *out);
+
 /** Borrow camera, dicing_camera, film, integrator, background or scene_attribute.
  * Cannot delete these nodes. Common editing contract; unknown name: NOT_FOUND.
  * Repeated queries return the same handle while the scene lives. */

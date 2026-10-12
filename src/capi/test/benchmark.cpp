@@ -36,8 +36,10 @@ int main(int argc, char **argv)
     TEST_CHECK(n)
 #endif
   LOAD(ccl_init);
-  LOAD(ccl_scene_create);
-  LOAD(ccl_scene_destroy);
+  LOAD(ccl_session_create);
+  LOAD(ccl_session_params_default);
+  LOAD(ccl_session_scene);
+  LOAD(ccl_session_destroy);
   LOAD(ccl_scene_singleton);
   LOAD(ccl_socket_find);
   LOAD(ccl_node_set_float);
@@ -48,7 +50,12 @@ int main(int argc, char **argv)
   ccl_scene *scene;
   ccl_node *camera;
   ccl_socket_id id;
-  TEST_CHECK(ccl_scene_create(&scene) == CCL_SUCCESS);
+  ccl_session *session;
+  ccl_session_params params{};
+  params.size = sizeof(params);
+  TEST_CHECK(ccl_session_params_default(&params) == CCL_SUCCESS);
+  TEST_CHECK(ccl_session_create(&params, &session) == CCL_SUCCESS);
+  TEST_CHECK(ccl_session_scene(session, &scene) == CCL_SUCCESS);
   TEST_CHECK(ccl_scene_singleton(scene, "camera", &camera) == CCL_SUCCESS);
   TEST_CHECK(ccl_socket_find("camera", "fov", &id) == CCL_SUCCESS);
   ccl::Camera native;
@@ -110,6 +117,6 @@ int main(int argc, char **argv)
   }
   std::fprintf(out, "}}\n");
   std::fclose(out);
-  TEST_CHECK(ccl_scene_destroy(scene) == CCL_SUCCESS);
+  TEST_CHECK(ccl_session_destroy(session) == CCL_SUCCESS);
   // Retain DLL until process exit, as the API lifetime contract requires.
 }

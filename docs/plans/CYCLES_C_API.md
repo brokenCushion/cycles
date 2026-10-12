@@ -1,6 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
-Status: Phases 1–2 accepted; Phase 3 implemented and tested, awaiting review (2026-10-12).
+Status: Phases 1–3 accepted; required session-ownership correction and Phase 4
+implemented and tested, awaiting review (2026-10-12). Experimental until Phase 7.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -118,13 +119,16 @@ ambiguity. Node descriptors give both socket counts; socket descriptors give
 default and enum counts. Defaults are one typed C scalar/vector/transform/string
 per element. No raw Cycles default-value storage escapes.
 
-Phase 3 (API 1.2) adds editing scenes, scene-owned nodes, six borrowed singletons,
+Phase 3 introduced scene-owned nodes and six borrowed singletons; API 1.3 now
+uses Session-owned scenes. The unchanged editing surface includes
 all scalar and array socket accessors, and group-update tagging. Every typed
 setter/getter has both name and cached-ID forms. Representative signatures:
 
 ```c
-ccl_status ccl_scene_create(ccl_scene **out);
-ccl_status ccl_scene_destroy(ccl_scene *scene);
+ccl_status ccl_session_params_default(ccl_session_params *params);
+ccl_status ccl_session_create(const ccl_session_params *params, ccl_session **out);
+ccl_status ccl_session_scene(ccl_session *session, ccl_scene **out);
+ccl_status ccl_session_destroy(ccl_session *session);
 ccl_status ccl_scene_singleton(ccl_scene *scene, const char *type, ccl_node **out);
 ccl_status ccl_node_create(ccl_scene *scene, const char *type, const char *name, ccl_node **out);
 ccl_status ccl_node_delete(ccl_scene *scene, ccl_node *node);
@@ -135,15 +139,16 @@ ccl_status ccl_node_get_float_id(ccl_node *node, ccl_socket_id socket, float *ou
 ccl_status ccl_node_tag_update(ccl_node *node);
 ```
 
-Phase 3 refinements: standalone editing scenes use a native CPU device until the
-session lifecycle is implemented; session adoption/device selection remains to be
-designed in Phase 6. Destruction and singleton lookup return status. IDs are
+Ownership refinement: native Session creation/device selection replaces the
+Phase 3 standalone CPU editing scene. There is no scene adoption step. Destruction
+and singleton lookup return status. IDs are
 stable only for this loaded library and exact node type; they are not serialized
 identifiers. Arrays, including node arrays, use one typed/capacity-checked API
 instead of separate node-array functions. Fixed-layout math values are plain C;
 metadata retains its size-prefix convention. Hosts must skip unknown future
 `ccl_socket_type` values. These decisions are documented in the header and are
-subject to this phase's review before adding shader graphs.
+accepted in Phase 3. The ownership correction below supersedes standalone scene
+creation without changing the node/socket functions.
 
 Refinements from the initial outline:
 
@@ -161,13 +166,15 @@ Refinements from the initial outline:
 
 Before later phases, retain the status/out convention for fallible queries; define node/graph deletion invalidation, session edit
 synchronization (pause alone may not suffice), and callback/buffer lifetimes.
-No later-phase function below is implemented or part of the exported ABI yet.
+Session creation/scene borrowing and shader graph functions below are now
+implemented in API 1.3; rendering, output and geometry-attribute functions remain
+provisional. The fully documented header is authoritative.
 
 ```c
 /* Session and scene */
 ccl_status  ccl_session_create(const ccl_session_params *params, ccl_session **out);
-void        ccl_session_destroy(ccl_session *s);
-ccl_scene  *ccl_session_scene(ccl_session *s);
+ccl_status  ccl_session_destroy(ccl_session *s);
+ccl_status  ccl_session_scene(ccl_session *s, ccl_scene **out);
 ccl_status  ccl_session_start(ccl_session *s);
 ccl_status  ccl_session_pause(ccl_session *s, int pause);
 ccl_status  ccl_session_reset(ccl_session *s, const ccl_buffer_params *buffer);
@@ -183,12 +190,12 @@ ccl_status  ccl_geometry_add_attribute(ccl_node *geom, const char *name, int sta
 
 /* Shader graphs */
 ccl_status  ccl_shader_graph_create(ccl_scene *scene, ccl_shader_graph **out);
-ccl_status  ccl_shader_graph_add(ccl_shader_graph *g, const char *node_type, ccl_node **out);
+ccl_status  ccl_shader_graph_add(ccl_shader_graph *g, const char *node_type, const char *name, ccl_node **out);
 ccl_status  ccl_shader_graph_connect(ccl_shader_graph *g, ccl_node *from, const char *out_socket,
                                      ccl_node *to, const char *in_socket);
 ccl_status  ccl_shader_graph_output(ccl_shader_graph *g, ccl_node **out);
 ccl_status  ccl_shader_set_graph(ccl_node *shader, ccl_shader_graph *g);   /* takes ownership */
-ccl_status  ccl_shader_graph_add_osl(ccl_shader_graph *g, const char *path_or_source, ccl_node **out);
+ccl_status  ccl_shader_graph_add_osl(ccl_shader_graph *g, const char *absolute_osl_or_oso_path, const char *name, ccl_node **out);
 
 /* Outputs */
 ccl_status  ccl_session_set_output(ccl_session *s, const ccl_output_callbacks *cb, void *user);
@@ -308,10 +315,63 @@ Small evidence: [Phase 3 results](../../builds/validation/c-api/phase3.json).
 Full build/install, benchmark trials and logs:
 `D:/CyclesDeepScratch/c-api/phase3-20261012`.
 
+### Required ownership correction before Phase 4 (user-approved)
+
+API **1.3.0** removes standalone scene creation/destruction. A native Session
+creates its own device-owned Scene, returned as a borrowed handle. Public settings
+cover explicit device selection and SceneParams-equivalent scene options; native
+Session construction waits without starting a render. Session destruction
+invalidates its scenes/nodes/graphs. No native scene adoption or copying is added.
+All Phase 3 node/socket signatures remain unchanged. Start/pause/reset/wait and
+outputs remain Phase 6. The ABI is **experimental until Phase 7**.
+
+Baseline and ownership-only CTests both passed **9/9**. All scene factories,
+singletons, value/array/reference and concurrency tests passed through CPU and
+CUDA Session-owned scenes before graph work; final verification repeats CUDA and
+OptiX and checks native scene/device identity and nondefault parameter mapping.
+
 ### Phase 4: Shader graphs, including OSL
 - Generic shader nodes by type name, connections, output node, OSL script
   nodes.
 - Acceptance: graphs equivalent to existing XML test scenes.
+
+Phase 4 results (2026-10-12):
+- Final CTests **10/10**; preserved native regression **9/9**. Installed plain-C
+  graph/OSL tests on CPU and OptiX pass; Phase 3 scene/editing suite also passes
+  through CUDA and OptiX Sessions. No render starts.
+- **16 shader graphs from six existing XML examples** match native loader types,
+  values and connections on CPU and OptiX, including OSL stripes, volume and
+  displacement. Legacy comma-separated color values are converted to equivalent
+  spaces in the test DOM because the current native volume parser rejects commas;
+  fixture files/values remain unchanged. Unknown legacy attributes follow the
+  native XML reader's ignore behavior. This is graph parity, not image parity.
+- Graph connections preserve native conversion behavior, with explicit cycle,
+  ownership, type, occupied-input and missing-socket errors; disconnection and
+  graph replacement are tested. All handles from a graph are consumed on shader
+  attachment because native Cycles may remove proxy nodes there.
+- OSL takes an absolute `.osl`/`.oso` path (not ambiguous inline text). Native
+  compilation/cache behavior is retained. Instance socket reflection/IDs expose
+  OSL parameters without changing existing typed setters; OSL IDs die with the
+  instance or graph attachment. Unsupported native OSL parameter shapes are not
+  expanded. Custom AOVs remain outside this phase.
+- Exact **80 `ccl_*` exports**, complete **184** built-in types, full reflection
+  parity, **158** identical API-on/off native compile commands, audited **548**
+  installed paths. Phase 1/2/3 DLLs and qualified production binaries unchanged.
+  No internal renderer, scene, scheduler, shader or kernel source change.
+- Setter benchmark rerun (median ns): direct **1.49**, name **31.21**, ID **13.26**;
+  microbenchmark only. No render controls, full 81/30/65 rerender, Linux/macOS,
+  sanitizers, mixed-dependency test or stable-ABI promise in this phase.
+
+Outline refinements for review: status/out Session creation/scene borrowing;
+explicit graph destruction/disconnection; optional copied node names; graph and
+node-handle consumption on attachment; explicit OSL file loading plus per-instance
+socket count/info/find. This supports replacement networks without dangling native
+proxy/OSL pointers. Pause/edit/render lifetime work remains Phase 6.
+
+Evidence: [Phase 4 results](../../builds/validation/c-api/phase4.json).
+Full build/install/logs: `D:/CyclesDeepScratch/c-api/phase4-20261012`.
+**Stop for Phase 4 review; Phase 5 has not started.**
+
 
 ### Phase 5: Geometry and attributes
 - Mesh (triangles, polygons, subdivision), hair/curves, point clouds, volumes

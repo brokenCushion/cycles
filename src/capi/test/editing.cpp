@@ -112,13 +112,80 @@ void array_test(ccl_scene *scene,
   TEST_CHECK(ccl_node_get_array(s.handle, "value", api_type, nullptr, 0, &count) == CCL_SUCCESS &&
              count == 0);
 }
+#include "session_helpers.h"
 int main(int argc, char **argv)
 {
-  TEST_CHECK(argc == 2);
+  TEST_CHECK(argc == 2 || argc == 3);
   ccl_init_params p{sizeof(p), argv[1], argv[1]};
   TEST_CHECK(ccl_init(&p) == CCL_SUCCESS);
   ccl_scene *scene;
-  TEST_CHECK(ccl_scene_create(&scene) == CCL_SUCCESS);
+  ccl_session_params params{};
+  params.size = sizeof(params);
+  TEST_CHECK(ccl_session_params_default(&params) == CCL_SUCCESS);
+  params.device_index = test_device(argc == 3 ? argv[2] : "CPU");
+  ccl_session *session;
+  TEST_CHECK(ccl_session_create(&params, &session) == CCL_SUCCESS);
+  TEST_CHECK(ccl_session_scene(session, &scene) == CCL_SUCCESS);
+  TEST_CHECK(scene->native == session->native->scene.get());
+  TEST_CHECK(scene->native->device == session->native->device.get());
+  TEST_CHECK(session->native->params.device.id == devices[params.device_index].id);
+  ccl::SceneParams defaults;
+  TEST_CHECK(!scene->native->params.modified(defaults));
+  ccl_scene *again = nullptr;
+  TEST_CHECK(ccl_session_scene(session, &again) == CCL_SUCCESS && again == scene);
+  ccl_session *untouched = session;
+  auto bad = params;
+  bad.size = 0;
+  TEST_CHECK(ccl_session_create(&bad, &untouched) == CCL_ERROR_INVALID_ARGUMENT &&
+             untouched == session);
+  bad = params;
+  bad.headless = 2;
+  TEST_CHECK(ccl_session_create(&bad, &untouched) == CCL_ERROR_INVALID_ARGUMENT);
+  bad = params;
+  bad.device_index = UINT32_MAX - 1;
+  TEST_CHECK(ccl_session_create(&bad, &untouched) == CCL_ERROR_INVALID_ARGUMENT);
+  bad = params;
+  bad.bvh_layout = "not-a-layout";
+  TEST_CHECK(ccl_session_create(&bad, &untouched) == CCL_ERROR_INVALID_ARGUMENT);
+  bad = params;
+  bad.texture_resolution = NAN;
+  TEST_CHECK(ccl_session_create(&bad, &untouched) == CCL_ERROR_INVALID_ARGUMENT);
+  TEST_CHECK(ccl_session_scene(nullptr, &again) == CCL_ERROR_INVALID_ARGUMENT);
+  TEST_CHECK(ccl_session_destroy(nullptr) == CCL_ERROR_INVALID_ARGUMENT);
+  if (!devices[params.device_index].has_osl) {
+    bad = params;
+    bad.use_osl = 1;
+    TEST_CHECK(ccl_session_create(&bad, &untouched) == CCL_ERROR_UNSUPPORTED);
+  }
+  auto options = params;
+  options.threads = 2;
+  options.background = 0;
+  options.bvh_static = 1;
+  options.bvh_spatial_split = 1;
+  options.bvh_compact_structure = 0;
+  options.bvh_unaligned_nodes = 0;
+  options.bvh_time_steps = 2;
+  options.hair_subdivisions = 4;
+  options.hair_shape = 1;
+  options.texture_resolution = 0.5f;
+  options.texture_limit = 1024;
+  options.use_texture_cache = 0;
+  options.auto_texture_cache = 1;
+  std::string cache = std::string(argv[1]) + "/test-cache";
+  options.texture_cache_path = cache.c_str();
+  ccl_session *configured;
+  TEST_CHECK(ccl_session_create(&options, &configured) == CCL_SUCCESS);
+  cache.clear();
+  auto &actual = configured->native->scene->params;
+  TEST_CHECK(configured->native->params.threads == 2 && !actual.background);
+  TEST_CHECK(actual.bvh_type == ccl::BVH_TYPE_STATIC && actual.use_bvh_spatial_split &&
+             !actual.use_bvh_compact_structure && !actual.use_bvh_unaligned_nodes &&
+             actual.num_bvh_time_steps == 2 && actual.hair_subdivisions == 4 &&
+             actual.hair_shape == ccl::CURVE_THICK && actual.texture_resolution == 0.5f &&
+             actual.texture_limit == 1024 && !actual.use_texture_cache &&
+             actual.auto_texture_cache &&
+             actual.texture_cache_path == std::string(argv[1]) + "/test-cache");
+  TEST_CHECK(ccl_session_destroy(configured) == CCL_SUCCESS);
   auto eq = [](auto a, auto b) { return a == b; };
   auto v2 = [](ccl::float2 a, ccl_float2 b) { return a.x == b.x && a.y == b.y; };
   auto v3 = [](auto a, ccl_float3 b) { return a.x == b.x && a.y == b.y && a.z == b.z; };
@@ -248,7 +315,7 @@ int main(int argc, char **argv)
     });
   for (auto &t : threads)
     t.join();
-  TEST_CHECK(ccl_scene_destroy(scene) == CCL_SUCCESS);
+  TEST_CHECK(ccl_session_destroy(session) == CCL_SUCCESS);
   puts(
       "PASS all 25 value types, 2 non-value types, copied arrays, references, invalid values and "
       "concurrent edits");

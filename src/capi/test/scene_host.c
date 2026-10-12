@@ -10,15 +10,24 @@
       exit(1); \
     } \
   } while (0)
+#include "session_helpers.h"
 int main(int argc, char **argv)
 {
-  CHECK(argc == 2);
+  CHECK(argc >= 2 && argc <= 4);
+  ccl_session *session = NULL, *other_session = NULL;
+  ccl_session_params params = {0};
+  params.size = sizeof(params);
+  CHECK(ccl_session_params_default(&params) == CCL_SUCCESS);
   ccl_scene *s = NULL, *other = NULL;
-  CHECK(ccl_scene_create(&s) == CCL_ERROR_NOT_INITIALIZED);
+  CHECK(ccl_session_create(&params, &session) == CCL_ERROR_NOT_INITIALIZED);
   ccl_init_params init = {sizeof(init), argv[1], argv[1]};
   CHECK(ccl_init(&init) == CCL_SUCCESS);
-  CHECK(ccl_scene_create(&s) == CCL_SUCCESS);
-  CHECK(ccl_scene_create(&other) == CCL_SUCCESS);
+  params.device_index = test_device(argc >= 3 ? argv[2] : "CPU");
+  params.use_osl = argc == 4;
+  CHECK(ccl_session_create(&params, &session) == CCL_SUCCESS);
+  CHECK(ccl_session_scene(session, &s) == CCL_SUCCESS);
+  CHECK(ccl_session_create(&params, &other_session) == CCL_SUCCESS);
+  CHECK(ccl_session_scene(other_session, &other) == CCL_SUCCESS);
   const char *types[] = {"object",
                          "mesh",
                          "hair",
@@ -109,8 +118,66 @@ int main(int argc, char **argv)
         CCL_ERROR_INVALID_ARGUMENT);
   CHECK(ccl_node_set_array(mesh, "used_shaders", CCL_SOCKET_NODE_ARRAY, &camera, 1) ==
         CCL_ERROR_TYPE_MISMATCH);
-  CHECK(ccl_scene_destroy(s) == CCL_SUCCESS);
-  CHECK(ccl_scene_destroy(other) == CCL_SUCCESS);
+  {
+    ccl_shader_graph *g = NULL, *g2 = NULL;
+    ccl_node *a = NULL, *b = NULL, *output = NULL, *foreign = NULL, *shader = NULL;
+    CHECK(ccl_shader_graph_create(s, &g) == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_create(other, &g2) == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_add(g, "math", "a", &a) == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_add(g, "math", "b", &b) == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_output(g, &output) == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_output(g2, &foreign) == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_add(g, "missing", NULL, &b) == CCL_ERROR_NOT_FOUND);
+    CHECK(ccl_shader_graph_add(g, "object", NULL, &b) == CCL_ERROR_UNSUPPORTED);
+    CHECK(ccl_shader_graph_add(g, "output", NULL, &b) == CCL_ERROR_UNSUPPORTED);
+    CHECK(ccl_shader_graph_connect(g, a, "value", b, "value1") == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_connect(g, a, "value", b, "value1") == CCL_ERROR_IN_USE);
+    CHECK(ccl_shader_graph_connect(g, b, "value", a, "value1") == CCL_ERROR_INVALID_ARGUMENT);
+    CHECK(ccl_shader_graph_connect(g, a, "value", foreign, "surface") ==
+          CCL_ERROR_INVALID_ARGUMENT);
+    CHECK(ccl_shader_graph_connect(g, a, "absent", output, "surface") == CCL_ERROR_NOT_FOUND);
+    CHECK(ccl_shader_graph_disconnect(g, b, "value1") == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_disconnect(g, b, "value1") == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_connect(g, b, "value", a, "value1") == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_connect(g, a, "value", output, "surface") == CCL_SUCCESS);
+    ccl_node *diffuse = NULL;
+    CHECK(ccl_shader_graph_add(g, "diffuse_bsdf", "diffuse", &diffuse) == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_connect(g, diffuse, "bsdf", b, "value1") == CCL_ERROR_NOT_FOUND);
+    CHECK(ccl_shader_graph_connect(g, diffuse, "BSDF", b, "value1") == CCL_ERROR_TYPE_MISMATCH);
+    ccl_socket_id graph_id = 0;
+    CHECK(ccl_node_socket_find(a, "value2", &graph_id) == CCL_SUCCESS);
+    CHECK(ccl_node_set_float_id(a, graph_id, 0.25f) == CCL_SUCCESS);
+    CHECK(ccl_node_delete(s, a) == CCL_ERROR_UNSUPPORTED);
+    CHECK(ccl_node_create(s, "shader", "graph_shader", &shader) == CCL_SUCCESS);
+    CHECK(ccl_shader_set_graph(shader, g2) == CCL_ERROR_INVALID_ARGUMENT);
+    CHECK(ccl_shader_set_graph(shader, g) == CCL_SUCCESS);
+    CHECK(ccl_node_set_float_id(a, graph_id, 1.0f) == CCL_ERROR_INVALID_ARGUMENT);
+    CHECK(ccl_shader_graph_destroy(g) == CCL_ERROR_INVALID_ARGUMENT);
+    CHECK(ccl_shader_graph_create(s, &g) == CCL_SUCCESS);
+    CHECK(ccl_shader_graph_add(g, "math", "replacement", &a) == CCL_SUCCESS);
+    CHECK(ccl_node_set_float_id(a, graph_id, 2.0f) == CCL_SUCCESS);
+    CHECK(ccl_shader_set_graph(shader, g) == CCL_SUCCESS);
+    if (argc == 4) {
+      ccl_node *osl = NULL;
+      ccl_socket_id osl_id = 0;
+      float scale = 0;
+      CHECK(ccl_shader_graph_create(s, &g) == CCL_SUCCESS);
+      CHECK(ccl_shader_graph_add_osl(g, argv[3], "osl", &osl) == CCL_SUCCESS);
+      CHECK(ccl_node_socket_find(osl, "Scale", &osl_id) == CCL_SUCCESS);
+      CHECK(ccl_node_get_float_id(osl, osl_id, &scale) == CCL_SUCCESS && scale == 0.5f);
+      CHECK(ccl_node_set_float_id(osl, osl_id, 2.0f) == CCL_SUCCESS);
+      CHECK(ccl_node_get_float(osl, "Scale", &scale) == CCL_SUCCESS && scale == 2.0f);
+      CHECK(ccl_shader_graph_output(g, &output) == CCL_SUCCESS);
+      CHECK(ccl_shader_graph_connect(g, osl, "BSDF", output, "surface") == CCL_SUCCESS);
+      CHECK(ccl_shader_set_graph(shader, g) == CCL_SUCCESS);
+      CHECK(ccl_node_get_float_id(osl, osl_id, &scale) == CCL_ERROR_INVALID_ARGUMENT);
+      puts("PASS installed C interface OSL load, instance sockets, connection and attachment");
+    }
+    CHECK(ccl_shader_graph_destroy(g2) == CCL_SUCCESS);
+    CHECK(ccl_node_delete(s, shader) == CCL_SUCCESS);
+  }
+  CHECK(ccl_session_destroy(session) == CCL_SUCCESS);
+  CHECK(ccl_session_destroy(other_session) == CCL_SUCCESS);
   puts("PASS plain-C scene ownership, factories, references and name/ID access");
   return 0;
 }

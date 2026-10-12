@@ -14,8 +14,10 @@
 #include "scene/scene.h"
 #include "scene/shader_graph.h"
 #include "scene/volume.h"
+#include "session/session.h"
 #include "util/profiling.h"
 #include "util/stats.h"
+#include <cmath>
 #include <memory>
 #include <type_traits>
 #include <unordered_map>
@@ -25,17 +27,26 @@ struct ccl_node {
   ccl_scene *scene;
   ccl::Node *native;
   void (*remove)(ccl::Scene *, ccl::Node *);
+  ccl_shader_graph *graph = nullptr;
 };
 struct ccl_scene {
-  ccl::Stats stats;
-  ccl::Profiler profiler;
-  ccl::unique_ptr<ccl::Device> device;
-  ccl::unique_ptr<ccl::Scene> native;
+  ccl::Scene *native;
   std::vector<std::unique_ptr<ccl_node>> handles;
   std::unordered_map<ccl::Node *, ccl_node *> handles_by_node;
 };
+struct ccl_session {
+  ccl::unique_ptr<ccl::Session> native;
+  ccl_scene scene;
+};
+struct ccl_shader_graph {
+  ccl_scene *scene;
+  ccl::unique_ptr<ccl::ShaderGraph> native;
+};
 namespace {
-std::unordered_map<ccl_scene *, std::unique_ptr<ccl_scene>> scenes;
+std::unordered_map<ccl_shader_graph *, std::unique_ptr<ccl_shader_graph>> graphs;
+void forget_graph(ccl_shader_graph *g);
+std::unordered_set<ccl_scene *> scenes;
+std::unordered_map<ccl_session *, std::unique_ptr<ccl_session>> sessions;
 std::unordered_set<ccl_node *> live_nodes;
 struct SocketBinding {
   const ccl::NodeType *type;
@@ -148,6 +159,7 @@ struct Factory {
   const char *name;
   ccl::Node *(*create)(ccl::Scene *);
   void (*remove)(ccl::Scene *, ccl::Node *);
+  ccl_shader_graph *graph = nullptr;
 };
 template<typename T> ccl::Node *create_node(ccl::Scene *s)
 {
@@ -194,39 +206,152 @@ ccl_transform public_transform(const ccl::Transform &t)
 }
 }  // namespace
 
-ccl_status CCL_CALL ccl_scene_create(ccl_scene **out)
+ccl_status CCL_CALL ccl_session_params_default(ccl_session_params *p)
 {
   return boundary([&] {
-    std::lock_guard<std::mutex> lock(api_mutex);
-    if (auto st = editing())
-      return st;
-    if (!out)
-      return fail(CCL_ERROR_INVALID_ARGUMENT, "NULL scene output");
-    auto cpus = ccl::Device::available_devices(ccl::DEVICE_MASK_CPU);
-    if (cpus.empty())
-      return fail(CCL_ERROR_UNSUPPORTED, "CPU device unavailable");
-    auto s = std::make_unique<ccl_scene>();
-    s->device = ccl::Device::create(cpus.front(), s->stats, s->profiler, true);
-    if (!s->device || s->device->have_error())
-      return fail(CCL_ERROR_INTERNAL, "CPU editing device creation failed");
-    s->native = ccl::make_unique<ccl::Scene>(ccl::SceneParams(), s->device.get());
-    auto *p = s.get();
-    scenes.emplace(p, std::move(s));
-    *out = p;
+    if (!p || p->size < sizeof(*p))
+      return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid session params size");
+    auto size = p->size;
+    *p = {};
+    p->size = size;
+    p->device_index = UINT32_MAX;
+    p->headless = p->background = 1;
+    p->bvh_layout = "AUTO";
+    p->bvh_compact_structure = p->bvh_unaligned_nodes = 1;
+    p->hair_subdivisions = 3;
+    p->texture_resolution = 1.0f;
+    p->use_texture_cache = 1;
     return CCL_SUCCESS;
   });
 }
-ccl_status CCL_CALL ccl_scene_destroy(ccl_scene *s)
+ccl_status CCL_CALL ccl_session_create(const ccl_session_params *p, ccl_session **out)
 {
   return boundary([&] {
     std::lock_guard<std::mutex> lock(api_mutex);
     if (auto st = editing())
       return st;
-    if (!valid(s))
-      return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid scene handle");
-    for (auto &h : s->handles)
-      live_nodes.erase(h.get());
-    scenes.erase(s);
+    if (!p || p->size < sizeof(*p) || !out || !p->bvh_layout || p->threads < 0 ||
+        p->bvh_time_steps < 0 || p->hair_subdivisions < 0 || p->hair_subdivisions > 4 ||
+        p->hair_shape < 0 || p->hair_shape > 2 || p->texture_limit < 0 ||
+        !std::isfinite(p->texture_resolution) || p->texture_resolution <= 0)
+      return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid session settings");
+    for (auto v : {p->headless,
+                   p->background,
+                   p->use_osl,
+                   p->bvh_static,
+                   p->bvh_spatial_split,
+                   p->bvh_compact_structure,
+                   p->bvh_unaligned_nodes,
+                   p->use_texture_cache,
+                   p->auto_texture_cache})
+      if (v != 0 && v != 1)
+        return fail(CCL_ERROR_INVALID_ARGUMENT, "Bool must be 0 or 1");
+    ccl::SceneParams sp;
+    const struct {
+      const char *name;
+      ccl::BVHLayout layout;
+    } layouts[] = {{"AUTO", ccl::BVH_LAYOUT_AUTO},
+                   {"BVH2", ccl::BVH_LAYOUT_BVH2},
+                   {"EMBREE", ccl::BVH_LAYOUT_EMBREE},
+                   {"OPTIX", ccl::BVH_LAYOUT_OPTIX},
+                   {"METAL", ccl::BVH_LAYOUT_METAL},
+                   {"HIPRT", ccl::BVH_LAYOUT_HIPRT},
+                   {"EMBREEGPU", ccl::BVH_LAYOUT_EMBREEGPU}};
+    bool found = false;
+    for (auto &l : layouts)
+      if (!strcmp(p->bvh_layout, l.name)) {
+        sp.bvh_layout = l.layout;
+        found = true;
+      }
+    if (!found)
+      return fail(CCL_ERROR_INVALID_ARGUMENT, "Unknown BVH layout");
+    if (auto st = discover())
+      return st;
+    uint32_t index = p->device_index;
+    if (index == UINT32_MAX) {
+      for (uint32_t i = 0; i < devices.size(); ++i)
+        if (devices[i].type == ccl::DEVICE_CPU) {
+          index = i;
+          break;
+        }
+      if (index == UINT32_MAX)
+        return fail(CCL_ERROR_UNSUPPORTED, "CPU unavailable");
+    }
+    if (index >= devices.size())
+      return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid device index");
+#ifndef WITH_OSL
+    if (p->use_osl)
+      return fail(CCL_ERROR_UNSUPPORTED, "OSL not compiled in");
+#endif
+    if (p->use_osl && !devices[index].has_osl)
+      return fail(CCL_ERROR_UNSUPPORTED, "Selected device does not support OSL");
+    ccl::SessionParams params;
+    params.device = params.denoise_device = devices[index];
+    params.threads = p->threads;
+    params.headless = bool(p->headless);
+    params.background = sp.background = bool(p->background);
+    params.shadingsystem = sp.shadingsystem = p->use_osl ? ccl::SHADINGSYSTEM_OSL :
+                                                           ccl::SHADINGSYSTEM_SVM;
+    sp.bvh_type = p->bvh_static ? ccl::BVH_TYPE_STATIC : ccl::BVH_TYPE_DYNAMIC;
+    sp.use_bvh_spatial_split = bool(p->bvh_spatial_split);
+    sp.use_bvh_compact_structure = bool(p->bvh_compact_structure);
+    sp.use_bvh_unaligned_nodes = bool(p->bvh_unaligned_nodes);
+    sp.num_bvh_time_steps = p->bvh_time_steps;
+    sp.hair_subdivisions = p->hair_subdivisions;
+    sp.hair_shape = ccl::CurveShapeType(p->hair_shape);
+    sp.texture_resolution = p->texture_resolution;
+    sp.texture_limit = p->texture_limit;
+    sp.use_texture_cache = bool(p->use_texture_cache);
+    sp.auto_texture_cache = bool(p->auto_texture_cache);
+    sp.texture_cache_path = p->texture_cache_path ? p->texture_cache_path : "";
+    auto session = std::make_unique<ccl_session>();
+    session->native = ccl::make_unique<ccl::Session>(params, sp);
+    if (session->native->progress.get_error())
+      return fail(CCL_ERROR_INTERNAL, session->native->progress.get_error_message().c_str());
+    session->scene.native = session->native->scene.get();
+    auto *h = session.get();
+    sessions.emplace(h, std::move(session));
+    try {
+      scenes.insert(&h->scene);
+    }
+    catch (...) {
+      sessions.erase(h);
+      throw;
+    }
+    *out = h;
+    return CCL_SUCCESS;
+  });
+}
+ccl_status CCL_CALL ccl_session_destroy(ccl_session *h)
+{
+  return boundary([&] {
+    std::lock_guard<std::mutex> lock(api_mutex);
+    if (auto st = editing())
+      return st;
+    if (!sessions.count(h))
+      return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid session handle");
+    for (auto it = graphs.begin(); it != graphs.end();) {
+      auto *g = it->first;
+      ++it;
+      if (g->scene == &h->scene)
+        forget_graph(g);
+    }
+    for (auto &n : h->scene.handles)
+      live_nodes.erase(n.get());
+    scenes.erase(&h->scene);
+    sessions.erase(h);
+    return CCL_SUCCESS;
+  });
+}
+ccl_status CCL_CALL ccl_session_scene(ccl_session *h, ccl_scene **out)
+{
+  return boundary([&] {
+    std::lock_guard<std::mutex> lock(api_mutex);
+    if (auto st = editing())
+      return st;
+    if (!sessions.count(h) || !out)
+      return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid session/scene output");
+    *out = &h->scene;
     return CCL_SUCCESS;
   });
 }
@@ -271,7 +396,7 @@ ccl_status CCL_CALL ccl_node_create(ccl_scene *s,
     for (const auto &f : factories)
       if (!strcmp(type, f.name)) {
         ccl::ustring node_name(name ? name : type);
-        auto *n = f.create(s->native.get());
+        auto *n = f.create(s->native);
         n->name = node_name;
         *out = wrap_node(s, n, f.remove);
         return CCL_SUCCESS;
@@ -293,7 +418,7 @@ ccl_status CCL_CALL ccl_node_delete(ccl_scene *s, ccl_node *n)
       return fail(CCL_ERROR_UNSUPPORTED, "Borrowed singleton/default node cannot be deleted");
     if (n->native->reference_count())
       return fail(CCL_ERROR_IN_USE, "Node still has incoming references");
-    n->remove(s->native.get(), n->native);
+    n->remove(s->native, n->native);
     s->handles_by_node.erase(n->native);
     n->native = nullptr;
     live_nodes.erase(n);
@@ -308,7 +433,7 @@ ccl_status CCL_CALL ccl_node_tag_update(ccl_node *n)
       return st;
     if (!valid(n))
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid node handle");
-    auto *s = n->scene->native.get();
+    auto *s = n->scene->native;
     auto *p = n->native;
     if (p->is_a(ccl::Light::get_node_base_type()))
       static_cast<ccl::Light *>(p)->tag_update(s);

@@ -1,11 +1,13 @@
-# Cycles C API — Phases 1–3
+# Cycles C API — Phases 1–4
 
 Experimental shared-library boundary for host applications such as Gaffer.
+**Experimental until Phase 7**; the stable ABI promise has not begun.
 The contract is [cycles_c.h](cycles_c.h): it contains no Cycles C++ headers or
 deep types. It initializes resource paths, enumerates native devices, reports
 compiled capabilities, routes logs and introspects built-in node types, sockets,
-defaults, flags and enums. API 1.2 also creates editable scenes and sets/gets
-node sockets by name or cached ID. It does **not** render yet.
+defaults, flags and enums. API 1.3 creates device-selected native Sessions and
+borrows their scenes, edits sockets by name or cached ID, and builds shader graphs
+including OSL scripts. It does **not** start renders yet.
 
 ## Build and test
 
@@ -34,7 +36,7 @@ For a build without the unrelated USD/Hydra integration, set both
 is compiled as C11, uses LoadLibrary/GetProcAddress or dlopen/dlsym, and has no
 Cycles import-library dependency. `cycles_c_contract` additionally checks native
 enumeration, exception containment, struct sizes, thread-local errors and logging.
-`cycles_c_exports` requires the exact 67 public functions, rejecting extra
+`cycles_c_exports` requires the exact 80 public functions, rejecting extra
 symbols even if they start with `ccl_`. No tests depend on deep being enabled.
 
 ## Reflection and registration completeness
@@ -46,7 +48,7 @@ sockets retain declaration order. Defaults use C scalars, UTF-8 strings and
 explicit float components, never a native C++ memory layout. Empty array defaults
 are distinct from missing defaults; closures/outputs have no default. Native
 empty strings are represented by non-null empty C strings. Instance-specific
-OSL shader sockets remain part of Phase 4.
+OSL sockets are queried through `ccl_node_socket_count/info/find` in API 1.3.
 
 Two independent checks protect this boundary:
 
@@ -69,27 +71,42 @@ Measured inventory: 118 `NODE_DEFINE` types + 64 generated conversion types +
 for as a lazy abstract definition, not a missing `NODE_DEFINE` registration.
 The original pre-fix inventory is retained in the D: validation directory.
 
-## Scene editing and cached sockets (API 1.2)
+## Session-owned scenes and cached sockets (API 1.3)
 
-A scene owns its nodes and native resources. `ccl_scene_create` supplies native
-`SceneParams` defaults and a CPU device for editing; it starts no render and loads
-no kernels. Session ownership and render-device selection remain Phase 6 work.
-Create scene items with their reflected names; borrow the camera, dicing camera,
-film, integrator, background and scene-attribute singletons. Shader-graph nodes
-and connections remain Phase 4. Destroy every scene before finishing with the API.
+**Breaking experimental correction:** standalone `ccl_scene_create/destroy` are
+removed. Native Cycles constructs its Scene inside Session with that Session's
+device; an independent CPU scene cannot be adopted by a GPU session. The wrapper
+now follows this ownership directly, without native changes or copying scenes.
+
+Call `ccl_session_params_default`, then choose a device index from enumeration
+(`UINT32_MAX` selects CPU). Parameters expose native scene options: SVM/OSL, BVH,
+curves, texture resolution/cache, and background mode, plus thread/headless setup.
+Only single-device selection is exposed; internal multi-device BVH combinations
+are not a public option. Unsupported OSL/device combinations fail without fallback.
+Creation starts the native waiting thread, **not a render**. Start/pause/reset/wait,
+render output and progress remain Phase 6.
 
 ```c
+ccl_session_params params = {0};
+params.size = sizeof(params);
+ccl_session *session = NULL;
 ccl_scene *scene = NULL;
 ccl_node *camera = NULL;
 ccl_socket_id fov = 0;
 /* After ccl_init; check every status in real host code. */
-ccl_scene_create(&scene);
+ccl_session_params_default(&params);
+ccl_session_create(&params, &session);
+ccl_session_scene(session, &scene);
 ccl_scene_singleton(scene, "camera", &camera);
 ccl_socket_find("camera", "fov", &fov);
 ccl_node_set_float_id(camera, fov, 0.8f);
 ccl_node_tag_update(camera);
-ccl_scene_destroy(scene);
+ccl_session_destroy(session); /* Also invalidates scene, nodes and graphs. */
 ```
+
+All Phase 3 node/socket signatures remain unchanged. Scene items use reflected
+names; camera, dicing camera, film, integrator, background and scene attributes
+are borrowed singletons. Destroy every session before finishing with the API.
 
 Each typed accessor has name and `_id` variants. IDs are nonzero `uint64_t`
 values scoped to the **loaded library and exact node type**, reusable across
@@ -111,7 +128,7 @@ size-prefixed extensible metadata structs from earlier phases remain unchanged.
 Calls are serialized, including concurrent edits. Setters mark native socket
 changes; call `ccl_node_tag_update` after a group of edits to notify the native
 managers. No concurrent rendering exists yet; pause/reset/edit synchronization
-must be enforced when sessions arrive in Phase 6. The benchmark measures setters
+must be enforced when render controls arrive in Phase 6. The benchmark measures setters
 alone, without this once-per-edit-group update notification.
 
 References must belong to the same scene and satisfy native socket constraints.
@@ -139,6 +156,68 @@ include both plus the dynamic call. This is a hot, single-thread microbenchmark,
 not a Gaffer workload or an end-to-end performance promise. Results and limitations
 are recorded in [Phase 3 evidence](../../builds/validation/c-api/phase3.json).
 
+## Shader graphs and OSL (Phase 4)
+
+Create a scene-owned graph, add built-in nodes by reflected type name, set values
+with the existing node setters, then connect canonical reflected socket names.
+Names are case-sensitive (`BSDF`, for example); UI labels are not socket keys.
+The graph supplies its single output node. Native automatic conversions are kept;
+cycles, cross-graph endpoints, unsupported conversions and occupied inputs return
+errors. Disconnect an occupied input explicitly before reconnecting it.
+
+`ccl_shader_set_graph` transfers ownership to a scene shader, replaces its previous
+graph and tags the native shader update. **It consumes the graph handle and every
+node handle from that graph.** Native attachment may remove proxy nodes, so their
+addresses cannot safely stay exposed. To edit an attached network, construct and
+attach a replacement. Unattached graphs can be discarded explicitly or are cleaned
+up with the Session. Scene shader handles remain valid after attachment.
+
+OSL uses an OSL-enabled Session and an absolute `.osl` or `.oso` file. This refines
+the outline's ambiguous `path_or_source`: inline source is not implemented. Native
+source compilation writes/reuses a sibling `.oso` according to modification time;
+put source in a host-owned writable cache. API loading does not execute the shader
+or promise custom OSL AOV support. Native unsupported parameter shapes are omitted,
+just as in the XML loader. Query actual instance sockets rather than the built-in
+type registry. OSL socket IDs work with all existing typed `_id` calls but are
+instance-specific and invalidated by graph attachment/destruction. Built-in IDs
+remain valid for the loaded library's lifetime. Unknown future socket types must
+be skipped.
+
+Phase 4 verification:
+
+- Phase 3 baseline **9/9**, session-ownership correction **9/9**, final **10/10**
+  CTests. All Phase 3 scene/editing cases rerun on **CUDA and OptiX** Sessions;
+  white-box checks verify native Scene/device identity and parameter mapping.
+- **16 graphs from six existing XML examples** match native loading, including
+  surface, volume, displacement, automatic conversion and OSL stripes. Compared
+  node/socket types, stored input values and every input connection on CPU and
+  OptiX. Legacy comma-separated color values are normalized to equivalent spaces
+  in the test DOM for the current native volume parser; files remain unchanged.
+  Legacy unknown XML attributes are ignored by both paths, as the native loader
+  does. This tests graph construction, **not rendered-image parity** (Phase 6).
+- An external plain-C client exercises the installed DLL's graph operations and
+  OSL load/reflection/connection/attachment on CPU and OptiX. Negative checks cover
+  malformed/missing OSL, cycles, cross-owner links, conversions, occupied inputs,
+  invalid handles, and OSL ID invalidation. Native expected compiler errors are
+  part of the invalid-source test.
+- **80 C-only exports**, complete 184-type source inventory and unchanged full
+  reflection parity; **158** native compile commands identical API on/off.
+  **548** install paths audited inside the fresh D: prefix. Native regression
+  **9/9** passes; earlier Phase 1/2/3 DLLs and production executables unchanged.
+- Socket benchmark rerun: direct **1.49 ns**, name **31.21 ns**, ID **13.26 ns**
+  medians; the same Phase 3 microbenchmark caveats apply.
+
+Small evidence: [Phase 4 results](../../builds/validation/c-api/phase4.json).
+Full logs/build/install: `D:/CyclesDeepScratch/c-api/phase4-20261012`.
+GPU checks are explicit (fail if the requested device is absent), for example:
+
+```text
+cycles_c_scene_host <install> CUDA
+cycles_c_editing <install> OPTIX
+cycles_c_scene_host <install> OPTIX <absolute-cached-stripes.osl>
+cycles_c_shaders <install> <repo>/examples <writable-test-directory> OPTIX
+```
+
 ## Phase 1 outline decisions
 
 - Version, feature and device-count queries return `ccl_status` and write into
@@ -160,13 +239,13 @@ are recorded in [Phase 3 evidence](../../builds/validation/c-api/phase3.json).
   unload, multiple simultaneous versions, resource relocation and backend runtime
   compatibility need explicit lifecycle design before the Phase 7 swap promise.
 
-Phase 3 extends status/out returns to scene and node creation/deletion. Graph
-ownership, render synchronization, callback lifetime, cancellation and tile buffer
-stride rules still need their later-phase contracts.
+Phase 3 extended status/out returns to node creation/deletion; Phase 4 defines
+Session/graph ownership. Render synchronization, callback lifetime, cancellation
+and tile buffer stride rules still need their Phase 6 contracts.
 
 ## Runtime dependencies and host coexistence
 
-`dumpbin /dependents` on the Windows Phase 1, Phase 2 and Phase 3 DLLs reports the same
+`dumpbin /dependents` on the Windows Phase 1–4 DLLs reports the same
 direct runtime imports (2026-10-12):
 
 - `OpenImageIO.dll`, `OpenImageIO_Util.dll`
@@ -205,7 +284,9 @@ adds whole-archive retention for `cycles_scene` and `cycles_session` in the wrap
 and its independent reference test only. The
 wrapper calls existing `path_init`, `log_init` and `Device::available_devices`.
 Phase 3 uses native Scene factories, Node setters/getters and manager update calls.
-No unavoidable internal source changes were needed. Two wrapper setup details:
+Phase 4 adds native Session ownership, ShaderGraph editing and OSL loading; no
+scene-adoption hook, deep dependency or native shader/compiler patch was needed.
+No unavoidable internal source changes were needed. Two existing wrapper setup details:
 new shaders receive an empty native output graph (native updates require it), and
 unfinished objects with null geometry are erased from the native collection and
 tagged directly because native single-object deletion dereferences geometry.
@@ -215,5 +296,5 @@ exports on Windows, linker export lists on ELF/Mach-O. Dependencies may still
 be separate runtime libraries; a C ABI does not make them self-contained or
 guarantee compatibility between arbitrary dependency versions.
 
-The API and tests are intentionally limited to Phases 1–3. ABI evolution and render
+The API and tests are intentionally limited to Phases 1–4. ABI evolution and render
 parity remain acceptance gates in the [plan](../../docs/plans/CYCLES_C_API.md).

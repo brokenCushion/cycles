@@ -24,14 +24,14 @@ function(cycles_c_keep_registrations target)
   endforeach()
 endfunction()
 
-add_library(cycles_c SHARED cycles_c.cpp cycles_c.h scene_api.inc shader_api.inc)
+add_library(cycles_c SHARED cycles_c.cpp cycles_c.h scene_api.inc shader_api.inc geometry_api.inc)
 target_include_directories(cycles_c PRIVATE ..)
 target_compile_definitions(cycles_c PRIVATE CCL_C_API_BUILD)
 target_link_libraries(cycles_c PRIVATE ${LIB})
 cycles_c_keep_registrations(cycles_c)
 set_target_properties(cycles_c PROPERTIES
   CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES
-  WINDOWS_EXPORT_ALL_SYMBOLS OFF VERSION 1.3.0 SOVERSION 1)
+  WINDOWS_EXPORT_ALL_SYMBOLS OFF VERSION 1.4.0 SOVERSION 1)
 # Localize linked static-library symbols as well as the wrapper's own symbols.
 if(APPLE)
   set_target_properties(cycles_c PROPERTIES INSTALL_RPATH "@loader_path")
@@ -84,6 +84,14 @@ if(BUILD_TESTING)
       ${CMAKE_SOURCE_DIR}/examples ${CMAKE_CURRENT_BINARY_DIR}/shader-tests)
     set_tests_properties(cycles_c_shaders PROPERTIES TIMEOUT 120)
   endif()
+
+  add_executable(cycles_c_geometry test/geometry.cpp)
+  target_include_directories(cycles_c_geometry PRIVATE ..)
+  target_link_libraries(cycles_c_geometry PRIVATE ${LIB})
+  cycles_c_keep_registrations(cycles_c_geometry)
+  add_test(NAME cycles_c_geometry COMMAND cycles_c_geometry ${CMAKE_INSTALL_PREFIX}
+    ${CMAKE_CURRENT_BINARY_DIR}/geometry-tests)
+  set_tests_properties(cycles_c_geometry PROPERTIES TIMEOUT 120)
 
   add_executable(cycles_c_benchmark test/benchmark.cpp)
   target_include_directories(cycles_c_benchmark PRIVATE ..)

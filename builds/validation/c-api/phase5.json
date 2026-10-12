@@ -1,0 +1,105 @@
+{
+  "phase": 5,
+  "status": "acceptance-failed-stopped",
+  "time_utc": "2026-10-12T13:15:47.572154+00:00",
+  "branch": "c-api",
+  "baseline_commit": "91f3a42e7",
+  "api_version": "1.4.0 experimental, unqualified draft",
+  "build_root": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013",
+  "baseline": {
+    "passed": 10,
+    "total": 10,
+    "log": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013\\baseline.log"
+  },
+  "after": {
+    "passed": 10,
+    "total": 11,
+    "log": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013\\phase5-ctests.log",
+    "failed": "cycles_c_geometry"
+  },
+  "failure": {
+    "operation": "First center POSITION attribute write on freshly resized mesh",
+    "actual": "CCL_ERROR_INVALID_ARGUMENT: Invalid motion step/count",
+    "expected": "CCL_SUCCESS for native non-motion geometry",
+    "native_default": "src/scene/geometry.cpp:42 SOCKET_UINT(motion_steps, \"Motion Steps\", 0)",
+    "wrapper_issue": "geometry_set_attribute rejects steps < 1 even for center step 0",
+    "classification": "wrapper validation bug, not a harness-only issue",
+    "fix_applied": false,
+    "retry": false
+  },
+  "build": {
+    "success": true,
+    "install_manifest_files": 548,
+    "install_destinations_audited": true,
+    "native_compile_commands": {
+      "passed": true,
+      "compilation_units": 158,
+      "api_off_matches_on": true
+    }
+  },
+  "exports": {
+    "passed": true,
+    "exact_c_functions": 86
+  },
+  "reflection": {
+    "passed": true,
+    "records": {
+      "NODE": 184,
+      "SOCKET": 1277,
+      "DEFAULT": 963,
+      "ENUM": 816
+    }
+  },
+  "source_inventory": {
+    "node_types": 184,
+    "missing": [],
+    "unexpected": []
+  },
+  "native_source_changes": false,
+  "protected_files": {
+    "D:\\CyclesDeepScratch\\c-api\\phase1-20261012\\install\\cycles_c.dll": {
+      "sha256": "d7053828800cd58c2dd75c202ea87eaa009a3b501e46cca5f04d6c9ce17097df",
+      "unchanged": true
+    },
+    "D:\\CyclesDeepScratch\\c-api\\phase2-20261012\\install\\cycles_c.dll": {
+      "sha256": "54ba7c6a3295d42c874371bff1bf17727f9102c7049cc556d13d839456392289",
+      "unchanged": true
+    },
+    "D:\\CyclesDeepScratch\\c-api\\phase3-20261012\\install\\cycles_c.dll": {
+      "sha256": "d2a5ce0b4aeabdd0943f0b4fc84880f1f3826f6e0c2023fec7c1da64a65b4014",
+      "unchanged": true
+    },
+    "D:\\CyclesDeepScratch\\c-api\\phase4-20261012\\install\\cycles_c.dll": {
+      "sha256": "eefcbf57254f3126aed4cc60f616687390073ca16436c8f8d7046723a813c7cc",
+      "unchanged": true
+    },
+    "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\blender\\blender.exe": {
+      "sha256": "68e972491e66834ccdb0e61a183924e5fbee80d249eb4ef93fd7258fce844a64",
+      "unchanged": true
+    },
+    "D:\\CyclesDeepScratch\\optimization-phase9\\scheduler-timing-production-20261010\\standalone\\cycles.exe": {
+      "sha256": "018ef87b7662fe8621d91c042b451cb202badb79dabc8db4b921b14bd25ca5a6",
+      "unchanged": true
+    }
+  },
+  "d_free_bytes": 1396912332800,
+  "identities": {
+    "dll_sha256": "33b17f42a6add3a7009cb40b82c530aa3394fb0bd382a6a01f9db51691b681e5",
+    "header_sha256": "0e9d7c2eda3999c77a54666068f268d4235779a7c4b0cca3402a277b710f5327"
+  },
+  "not_run": [
+    "Remaining geometry assertions after first center attribute",
+    "CUDA/OptiX geometry suite",
+    "separate installed geometry smoke",
+    "post-phase legacy native suite",
+    "Phase6 rendering/parity",
+    "Phases7-10"
+  ],
+  "user_decisions_recorded": [
+    "continue phases locally with per-phase commits",
+    "shared version-matched dependencies with init checks",
+    "local Gaffer clone/build on D:",
+    "local-only upstream proposal"
+  ],
+  "external_actions": false
+}

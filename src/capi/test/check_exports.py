@@ -4,6 +4,13 @@ import subprocess
 import sys
 
 EXPECTED = {
+    'ccl_mesh_resize',
+    'ccl_mesh_resize_subdivision',
+    'ccl_hair_resize',
+    'ccl_pointcloud_resize',
+    'ccl_geometry_set_attribute',
+    'ccl_volume_set_grid',
+
     'ccl_api_version',
     'ccl_has_feature',
     'ccl_init',

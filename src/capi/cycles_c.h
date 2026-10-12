@@ -633,6 +633,89 @@ CCL_API ccl_status CCL_CALL ccl_node_get_array_id(ccl_node *node,
                                                   uint64_t capacity,
                                                   uint64_t *required);
 
+
+/** Geometry/attribute calls use the common editing contract: initialized library,
+ * live scene-owned node, serialized calls, no callback reentry and no concurrent
+ * rendering. Inputs are copied; no host allocation is retained. Invalid handles,
+ * sizes, counts or flags return INVALID_ARGUMENT; wrong node/type/element returns
+ * TYPE_MISMATCH; unavailable features return UNSUPPORTED; allocation/native errors
+ * return OUT_OF_MEMORY/INTERNAL. Tag updates after completing related edits.
+ * Resize first, then fill topology sockets and attributes before rendering. */
+/** Resize mesh vertices/triangles using native allocation. Existing data is retained
+ * where native resizing permits; newly allocated elements MUST be filled by caller.
+ * Counts must fit native signed int (triangles <= INT_MAX/3). Not for Volume nodes. */
+CCL_API ccl_status CCL_CALL ccl_mesh_resize(ccl_node *mesh, uint64_t vertices, uint64_t triangles);
+/** Resize subdivision faces/corners after mesh vertices. Fill subd_* sockets,
+ * including ptex offsets, and subd attributes; subdivision_type selects native
+ * linear/Catmull-Clark processing. Polygon tessellation belongs to the host, as
+ * with native Mesh. Counts fit signed int. Allocation/lifetime contract above. */
+CCL_API ccl_status CCL_CALL ccl_mesh_resize_subdivision(ccl_node *mesh, uint64_t faces, uint64_t corners);
+/** Resize curves/keys. Fill curve_first_key/curve_shader sockets and P/radius
+ * attributes. Counts fit signed int; allocation/lifetime contract above. */
+CCL_API ccl_status CCL_CALL ccl_hair_resize(ccl_node *hair, uint64_t curves, uint64_t keys);
+/** Resize point cloud. Fill shader socket and P/radius attributes. Counts fit
+ * signed int; allocation/lifetime contract above. */
+CCL_API ccl_status CCL_CALL ccl_pointcloud_resize(ccl_node *points, uint64_t count);
+
+typedef int32_t ccl_attribute_element;
+enum {
+  CCL_ATTRIBUTE_OBJECT = 1, CCL_ATTRIBUTE_MESH = 2,
+  CCL_ATTRIBUTE_FACE = 3, CCL_ATTRIBUTE_VERTEX = 4,
+  CCL_ATTRIBUTE_CORNER = 5, CCL_ATTRIBUTE_CURVE = 6,
+  CCL_ATTRIBUTE_CURVE_KEY = 7, CCL_ATTRIBUTE_VOXEL = 8,
+  CCL_ATTRIBUTE_VERTEX_NORMAL = 9, CCL_ATTRIBUTE_CORNER_BYTE = 10,
+  CCL_ATTRIBUTE_CORNER_NORMAL = 11, CCL_ATTRIBUTE_CURVE_KEY_NORMAL = 12
+};
+/** Attribute payload type; explicit values independent of native TypeDesc. */
+typedef int32_t ccl_attribute_type;
+enum {
+  CCL_ATTRIBUTE_FLOAT = 1, CCL_ATTRIBUTE_FLOAT2 = 2, CCL_ATTRIBUTE_FLOAT3 = 3,
+  CCL_ATTRIBUTE_COLOR = 4, CCL_ATTRIBUTE_POINT = 5, CCL_ATTRIBUTE_NORMAL = 6,
+  CCL_ATTRIBUTE_FLOAT4 = 7, CCL_ATTRIBUTE_MATRIX = 8, CCL_ATTRIBUTE_RGBA = 9
+};
+/** A tightly packed four-float payload (also used for linear RGBA). */
+typedef struct ccl_float4 { float x, y, z, w; } ccl_float4;
+/** CORNER_BYTE uses four bytes per element, preserving encoded vertex colors. */
+typedef struct ccl_uchar4 { uint8_t x, y, z, w; } ccl_uchar4;
+/** Copied attribute description. standard is NULL/empty for custom attributes,
+ * otherwise an uppercase native semantic token without ATTR_STD_ (e.g. POSITION,
+ * VERTEX_NORMAL, UV, VOLUME_DENSITY). Unknown semantics are UNSUPPORTED. name may
+ * be NULL for standards (uses native default name); custom names must be nonempty.
+ * type/element must match a standard's native layout. subdivision selects the
+ * mesh subd attribute set (0/1); smooth_fvar is native subdivision smoothing (0/1).
+ * Unknown enum values must be skipped by hosts, never assumed to be a known type. */
+typedef struct ccl_attribute_desc {
+  uint32_t size;
+  const char *name;
+  const char *standard;
+  ccl_attribute_type type;
+  ccl_attribute_element element;
+  int32_t subdivision;
+  int32_t smooth_fvar;
+} ccl_attribute_desc;
+/** Add/replace one attribute step. count must equal native element count. Payloads:
+ * FLOAT float, FLOAT2 ccl_float2, FLOAT3/COLOR/POINT/NORMAL ccl_float3,
+ * FLOAT4/RGBA ccl_float4, MATRIX ccl_transform; CORNER_BYTE instead uses ccl_uchar4.
+ * Encoded normal elements take ccl_float3 and use native normal packing. All floats
+ * must be finite. Step 0 is center; 1..motion_steps-1 follow native noncenter order.
+ * Set motion_steps first (odd 1..129). New motion buffers are initialized from the
+ * center, then this step is replaced. Noncenter writes require an existing matching
+ * center attribute. Other existing motion steps are preserved. Voxel data uses
+ * ccl_volume_set_grid instead. Reserved built-in P/radius cannot be retyped.
+ * Validation occurs before modification; native allocation failure may require
+ * discarding the scene. Common geometry ownership/threading/errors apply. */
+CCL_API ccl_status CCL_CALL ccl_geometry_set_attribute(ccl_node *geometry,
+    const ccl_attribute_desc *desc, uint32_t step, const void *data, uint64_t count);
+/** Load a named grid from an absolute VDB filename into a volume voxel attribute.
+ * desc must select VOXEL, no subdivision/smoothing; type is FLOAT/COLOR/FLOAT3
+ * matching scalar/vector grid channels. Optional standard follows rules above.
+ * File/grid is read synchronously, owned by the scene; no file handle is retained.
+ * clipping is finite and nonnegative. Missing file/grid: NOT_FOUND; unsupported
+ * build/grid: UNSUPPORTED; malformed file/native IO failure: INTERNAL. Existing
+ * attribute remains on validation/read failure. Common geometry contract applies. */
+CCL_API ccl_status CCL_CALL ccl_volume_set_grid(ccl_node *volume,
+    const ccl_attribute_desc *desc, const char *filename, const char *grid, float clipping);
+
 #ifdef __cplusplus
 }
 #endif

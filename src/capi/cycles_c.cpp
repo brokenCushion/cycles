@@ -114,7 +114,7 @@ ccl_status CCL_CALL ccl_api_version(ccl_version *out)
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid version output size");
     }
     out->major = 1;
-    out->minor = 3;
+    out->minor = 4;
     out->patch = 0;
     return CCL_SUCCESS;
   });
@@ -662,3 +662,5 @@ ccl_status CCL_CALL ccl_socket_enum_value(const char *name,
 #include "scene_api.inc"
 
 #include "shader_api.inc"
+
+#include "geometry_api.inc"

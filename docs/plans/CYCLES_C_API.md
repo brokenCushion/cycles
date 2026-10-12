@@ -1,7 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
-Status: Phases 1–3 accepted; required session-ownership correction and Phase 4
-implemented and tested, awaiting review (2026-10-12). Experimental until Phase 7.
+Status: Phases 1–4 accepted. Phase 5 acceptance failed; stopped under the
+2026-10-13 user rule. Phases 6–10 not started. Experimental until Phase 7.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -370,7 +370,8 @@ proxy/OSL pointers. Pause/edit/render lifetime work remains Phase 6.
 
 Evidence: [Phase 4 results](../../builds/validation/c-api/phase4.json).
 Full build/install/logs: `D:/CyclesDeepScratch/c-api/phase4-20261012`.
-**Stop for Phase 4 review; Phase 5 has not started.**
+Phase 4 accepted. Phase 5 baseline: retained C API CTests **10/10**, 2026-10-13;
+log `D:/CyclesDeepScratch/c-api/phase5-20261013/baseline.log`.
 
 
 ### Phase 5: Geometry and attributes
@@ -378,6 +379,26 @@ Full build/install/logs: `D:/CyclesDeepScratch/c-api/phase4-20261012`.
   (VDB file and grid), instancing through objects. Standard and custom
   attributes with all elements.
 - Acceptance: geometry tests and render parity (Phase 6).
+
+Phase 5 results (2026-10-13) — **FAILED; stopped, not accepted**:
+- Baseline **10/10**. Fresh API 1.4 draft builds and installs; after-test **10/11**.
+  The new `cycles_c_geometry` test stops at the first center POSITION write:
+  `INVALID_ARGUMENT: Invalid motion step/count`.
+- Native `Geometry` defaults `motion_steps` to **0** (no motion), but the new
+  wrapper rejects values below 1 even for center step 0. This is a wrapper
+  validation defect, not a harness defect. No workaround, retry, gate change or
+  fix was applied; permission is needed to fix it and resume qualification.
+- Draft adds native mesh/subdivision/hair/point allocation, copied attributes and
+  VDB loading. Geometry coverage is **not established**: later assertions did not
+  execute. Native topology sockets and object references are reused.
+- Exact **86** C exports; source inventory **184** types; reflection parity passes.
+  **158** native compile commands identical with API on/off; **548** audited
+  install paths. Native sources, Phase 1–4 DLLs and qualified production binaries
+  unchanged. D: has over 1.3 TB free; no external publication.
+- CUDA/OptiX geometry tests, remaining geometry acceptance, post-phase legacy
+  tests and Phases 6–10 were not run after the stop. Render parity remains Phase 6.
+- Evidence: [Phase 5 stopped results](../../builds/validation/c-api/phase5.json).
+  Full build/install/logs: `D:/CyclesDeepScratch/c-api/phase5-20261013`.
 
 ### Phase 6: Session, rendering and outputs
 - Session lifecycle mirroring GafferCycles' usage (start, pause, reset, wait,
@@ -402,10 +423,13 @@ Full build/install/logs: `D:/CyclesDeepScratch/c-api/phase4-20261012`.
   loading `cycles_c`, exercises both interfaces and checks actual loaded-module
   identities. Successful DLL loading alone is not sufficient. Document the
   supported version combinations and reject unsupported combinations clearly.
-- Decide with the GafferCycles author between static/hidden dependencies,
-  renamed private dependency DLLs (including transitive imports), or a shared
-  version-matched VFX Reference Platform dependency set. Phase 2 only documents
-  these options; it does not implement dependency isolation.
+- User decision (2026-10-13): use shared, version-matched dependencies from the
+  host/VFX Reference Platform stack, not private static copies. At `ccl_init`,
+  compare loaded OIIO/OSL/OpenVDB/OCIO/Embree versions with build versions and
+  return a clear error on mismatch. Test that a matched host works and a host
+  preloading mismatched OIIO gets that error without a crash. Check loader-time
+  initialization as well as calls after init; shared dependencies are not
+  arbitrary-version isolation.
 
 ### Phase 8: Deep extension
 - Expose the existing deep output (Z/ZBack/A/id) through
@@ -414,7 +438,8 @@ Full build/install/logs: `D:/CyclesDeepScratch/c-api/phase4-20261012`.
   standalone deep output for the same scene (strict mode byte-identical).
 
 ### Phase 9: Gaffer proof of concept (separate repository)
-- In a fork of GafferHQ/gaffer, add an alternative GafferCycles backend that
+- In a local clone of GafferHQ/gaffer on `D:`, building Gaffer and dependencies
+  locally, add an alternative GafferCycles backend that
   loads `cycles_c` dynamically and uses only `cycles_c.h`. Start with a subset:
   meshes, basic shaders, lights, camera, final and interactive renders.
 - Acceptance: the same Gaffer test scenes render identically through the old
@@ -425,7 +450,8 @@ Full build/install/logs: `D:/CyclesDeepScratch/c-api/phase4-20261012`.
 ### Phase 10: Upstream proposal
 - Short design write-up plus a link to the working prototype, for the Cycles
   module and Gaffer developers. Only after the GafferCycles author agrees the
-  shape is right.
+  shape is right. User authorizes a **local document under docs/plans only**;
+  no posting, fork, push, issue, PR or release publication is authorized.
 
 ## 6. Rules for this work
 
@@ -436,9 +462,15 @@ Full build/install/logs: `D:/CyclesDeepScratch/c-api/phase4-20261012`.
   ownership, threading, errors) in the header itself.
 - Keep the core API independent of deep. Deep is an optional extension, so the
   core can be offered upstream without it.
-- Measure and test before and after each phase, stop for review after each
-  phase, and don't loosen acceptance criteria to pass. Same discipline as
-  `DEEP_OPTIMIZATION_PLAN.md`.
+- Measure and test before and after each phase; do not loosen acceptance criteria.
+  User decision (2026-10-13) supersedes per-phase stops: after each Phase 5–10,
+  commit and append short results here and in `src/capi/README.md`, then continue.
+  Stop for an acceptance failure requiring more than a harness fix, an internal
+  Cycles change beyond the wrapper, an uncovered design tradeoff, any external
+  publishing action, or less than 200 GB free on `D:`. Full-resolution renders
+  required by a phase are authorized; harness repairs and required small-fixture
+  controls retain their standing authorization. Give one consolidated report at
+  completion or a stop condition.
 - Large build and test outputs go on `D:`. The repository keeps only code,
   docs and small results.
 
@@ -456,8 +488,8 @@ Full build/install/logs: `D:/CyclesDeepScratch/c-api/phase4-20261012`.
    is a direct C API preferred?
 6. Preferred naming and prefix (`ccl_`), and any ABI conventions Gaffer already
    uses for other renderers.
-7. How should Cycles coexist with Gaffer's already-loaded OIIO/OSL/OpenVDB/
-   Embree/OCIO/USD versions? Prefer static and hidden dependencies, renamed private
-   DLLs, or version matching to the VFX Reference Platform? Which versions must
-   the Phase 7 preload-and-use test support? Version matching constrains which
-   renderer builds can be swapped and is not arbitrary-version isolation.
+7. Resolved by user (2026-10-13): shared host/VFX Reference Platform dependency
+   versions, checked at `ccl_init`; reject OIIO/OSL/OpenVDB/OCIO/Embree mismatches.
+   Phase 7 requires matched-host success and mismatched-OIIO clear failure without
+   a crash. Which exact VFX Reference Platform stack should be supported remains
+   a deployment question; version matching constrains swappable renderer builds.

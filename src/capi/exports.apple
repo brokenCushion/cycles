@@ -78,3 +78,9 @@ _ccl_node_set_array
 _ccl_node_get_array
 _ccl_node_set_array_id
 _ccl_node_get_array_id
+_ccl_mesh_resize
+_ccl_mesh_resize_subdivision
+_ccl_hair_resize
+_ccl_pointcloud_resize
+_ccl_geometry_set_attribute
+_ccl_volume_set_grid

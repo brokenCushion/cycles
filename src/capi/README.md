@@ -595,3 +595,40 @@ remains running; D: free space was 1,390,720,962,560 bytes at the stop.
 Large artifacts: D:/CyclesDeepScratch/c-api/phase8-20261013 and
 D:/CyclesDeepScratch/c-api/phase8-core-20261013.
 Evidence: [Phase 8 stopped result](../../builds/validation/c-api/phase8.json).
+
+
+## Phase 8 continuation approved (2026-10-13)
+
+Phase 7 is accepted. Test strict mode without IDs and numeric error 1e-3 with
+IDs, requiring byte identity against standalone at identical settings in both
+opaque and transparent cases. Rebuild final test sources in a fresh disposable
+D:/temp/cycles_c_api directory. Continue Phases 8-10 locally.
+
+A configuration contradicting the documented native support matrix may now be
+corrected without stopping if criteria remain at least as strict and the
+correction is recorded. Real failures, native/internal changes, uncovered design
+trade-offs and external publication retain their stop rules. Phase 9 local Gaffer
+clone/build belongs under D:/temp/cycles_c_api; Phase 10 is a local document only.
+
+
+## Phase 8 continuation incident (2026-10-13) - STOPPED
+
+The strict/no-ID and numeric/ID test configuration was corrected as approved.
+A copied temporary build driver failed to replace its forward-slash old-root
+literal because the replacement key used Windows backslashes. It read the old
+configure command and ran configure/build/install in
+`D:/CyclesDeepScratch/c-api/phase8-20261013`, violating the explicit preservation
+instruction. The old toolchain also retained its old TEMP/TMP path.
+
+Known overwritten state includes CMake/generated build state, logs and audit
+reports, API build/test outputs, and installed `cycles_c.dll`,
+`cycles_c_backend_private.dll` and `lib/cycles_c.lib`. Previous bytes are not
+claimed preserved. No rollback was attempted. The faulty copied driver in the
+new temporary directory is disabled. No tests or renders were run in this
+continuation, and no native sources or the other session's folders were edited.
+
+Phase 8 remains unqualified; Phases 9-10 have not started. Await user direction
+on the preservation incident before continuing. Future drivers must validate
+their actual root, configure build/install paths and toolchain TEMP/TMP against
+D:/temp/cycles_c_api before any command, instead of relying on text replacement.
+Evidence: [path incident](../../builds/validation/c-api/phase8-path-incident.json).

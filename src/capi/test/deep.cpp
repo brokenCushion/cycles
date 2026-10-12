@@ -175,7 +175,8 @@ int main(int argc, char **argv)
       DeepResult result{root / (label + "-api.exr")};
       ccl_deep_params deep{sizeof(deep)};
       OK(ccl_deep_params_default(&deep));
-      deep.error = 0;
+      // Native strict output excludes IDs; IDs use the documented numeric mode.
+      deep.error = ids ? 1e-3f : 0.0f;
       deep.transparent = transparent;
       deep.ids = ids;
       auto bad = deep;

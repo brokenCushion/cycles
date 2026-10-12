@@ -1,10 +1,11 @@
-# Cycles C API — Phase 1
+# Cycles C API — Phases 1–3
 
 Experimental shared-library boundary for host applications such as Gaffer.
 The contract is [cycles_c.h](cycles_c.h): it contains no Cycles C++ headers or
 deep types. It initializes resource paths, enumerates native devices, reports
 compiled capabilities, routes logs and introspects built-in node types, sockets,
-defaults, flags and enums. It does **not** render yet.
+defaults, flags and enums. API 1.2 also creates editable scenes and sets/gets
+node sockets by name or cached ID. It does **not** render yet.
 
 ## Build and test
 
@@ -14,7 +15,7 @@ and set the install prefix at configure time:
 
 ```text
 cmake -S . -B <build> -DWITH_CYCLES_C_API=ON -DBUILD_TESTING=ON -DCMAKE_INSTALL_PREFIX=<new-install>
-cmake --build <build> --target cycles_c cycles_c_host cycles_c_contract cycles_c_native_dump
+cmake --build <build>
 ctest --test-dir <build> -R "^cycles_c_" --output-on-failure
 ```
 
@@ -33,7 +34,7 @@ For a build without the unrelated USD/Hydra integration, set both
 is compiled as C11, uses LoadLibrary/GetProcAddress or dlopen/dlsym, and has no
 Cycles import-library dependency. `cycles_c_contract` additionally checks native
 enumeration, exception containment, struct sizes, thread-local errors and logging.
-`cycles_c_exports` requires the exact twelve public functions, rejecting extra
+`cycles_c_exports` requires the exact 67 public functions, rejecting extra
 symbols even if they start with `ccl_`. No tests depend on deep being enabled.
 
 ## Reflection and registration completeness
@@ -68,6 +69,76 @@ Measured inventory: 118 `NODE_DEFINE` types + 64 generated conversion types +
 for as a lazy abstract definition, not a missing `NODE_DEFINE` registration.
 The original pre-fix inventory is retained in the D: validation directory.
 
+## Scene editing and cached sockets (API 1.2)
+
+A scene owns its nodes and native resources. `ccl_scene_create` supplies native
+`SceneParams` defaults and a CPU device for editing; it starts no render and loads
+no kernels. Session ownership and render-device selection remain Phase 6 work.
+Create scene items with their reflected names; borrow the camera, dicing camera,
+film, integrator, background and scene-attribute singletons. Shader-graph nodes
+and connections remain Phase 4. Destroy every scene before finishing with the API.
+
+```c
+ccl_scene *scene = NULL;
+ccl_node *camera = NULL;
+ccl_socket_id fov = 0;
+/* After ccl_init; check every status in real host code. */
+ccl_scene_create(&scene);
+ccl_scene_singleton(scene, "camera", &camera);
+ccl_socket_find("camera", "fov", &fov);
+ccl_node_set_float_id(camera, fov, 0.8f);
+ccl_node_tag_update(camera);
+ccl_scene_destroy(scene);
+```
+
+Each typed accessor has name and `_id` variants. IDs are nonzero `uint64_t`
+values scoped to the **loaded library and exact node type**, reusable across
+scenes and nodes of that type. They do not encode native addresses, and their
+validity is unaffected by growing the lookup cache. Do not save IDs in scene
+files or reuse them with another DLL/build. The ID path performs no string lookup.
+Hosts must **skip unknown socket-type values** from a newer library; they are
+not a reason to reject the library or the entire node.
+
+Scalar types use fixed-width C values, explicit float2/float3 and row-major 3x4
+transforms. Enums use the numeric values reported by reflection. Array calls use
+an explicit array type, copied host data, element counts and output capacities;
+a null output with zero capacity queries the required count. Node arrays use
+`ccl_node*` elements through the same array API. This replaces separate provisional
+node-array functions. Strings and node handles returned by getters are borrowed;
+the header specifies their lifetime. Math value structs have fixed layouts;
+size-prefixed extensible metadata structs from earlier phases remain unchanged.
+
+Calls are serialized, including concurrent edits. Setters mark native socket
+changes; call `ccl_node_tag_update` after a group of edits to notify the native
+managers. No concurrent rendering exists yet; pause/reset/edit synchronization
+must be enforced when sessions arrive in Phase 6. The benchmark measures setters
+alone, without this once-per-edit-group update notification.
+
+References must belong to the same scene and satisfy native socket constraints.
+Scalar node references can be null; native node arrays require non-null entries.
+Deleting a referenced node returns `IN_USE`; borrowed singleton/default nodes
+cannot be deleted. Native shaders are retained until scene destruction, but their
+deleted API handles are invalidated immediately. Small retired handle records
+remain until scene destruction to avoid address reuse within an editing scene.
+Never use a handle after node deletion or scene destruction.
+
+`cycles_c_scene_host` is a plain-C client of the actual DLL: it covers all 13
+creatable scene item types, six singletons, references, deletion and cached IDs,
+including reuse after resolving every built-in input socket. `cycles_c_editing`
+checks all 25 value-bearing socket types against native storage, all eleven array
+types, invalid enum/bool/reference values, output capacity, copied storage and
+concurrent edits. Two non-value types are explicitly rejected. Synthetic private
+nodes cover rare socket types without adding fake types to the exported registry.
+
+`cycles_c_benchmark` loads the actual DLL and compares name and ID setters with
+an independently linked direct `Node::set()` on a native camera. All three alternate
+values on the cached `fov` socket. It warms up once, rotates execution order over
+nine one-million-edit rounds and reports median/min/max nanoseconds per call.
+The direct baseline has neither ABI validation nor locking; API measurements
+include both plus the dynamic call. This is a hot, single-thread microbenchmark,
+not a Gaffer workload or an end-to-end performance promise. Results and limitations
+are recorded in [Phase 3 evidence](../../builds/validation/c-api/phase3.json).
+
 ## Phase 1 outline decisions
 
 - Version, feature and device-count queries return `ccl_status` and write into
@@ -89,15 +160,13 @@ The original pre-fix inventory is retained in the D: validation directory.
   unload, multiple simultaneous versions, resource relocation and backend runtime
   compatibility need explicit lifecycle design before the Phase 7 swap promise.
 
-Phase 2 applies the status/out convention to reflection. Before later phases,
-use it for handle creation too; specify scene/graph ownership and deletion
-invalidation; do not assume pausing rendering alone makes scene edits safe;
-define callback lifetime, cancellation and buffer stride/capacity rules before
-session/output functions. These are proposals, not implemented future phases.
+Phase 3 extends status/out returns to scene and node creation/deletion. Graph
+ownership, render synchronization, callback lifetime, cancellation and tile buffer
+stride rules still need their later-phase contracts.
 
 ## Runtime dependencies and host coexistence
 
-`dumpbin /dependents` on the Windows Phase 1 and Phase 2 DLLs reports the same
+`dumpbin /dependents` on the Windows Phase 1, Phase 2 and Phase 3 DLLs reports the same
 direct runtime imports (2026-10-12):
 
 - `OpenImageIO.dll`, `OpenImageIO_Util.dll`
@@ -135,10 +204,16 @@ and enables position-independent static objects when that option is on. Phase 2
 adds whole-archive retention for `cycles_scene` and `cycles_session` in the wrapper
 and its independent reference test only. The
 wrapper calls existing `path_init`, `log_init` and `Device::available_devices`.
+Phase 3 uses native Scene factories, Node setters/getters and manager update calls.
+No unavoidable internal source changes were needed. Two wrapper setup details:
+new shaders receive an empty native output graph (native updates require it), and
+unfinished objects with null geometry are erased from the native collection and
+tagged directly because native single-object deletion dereferences geometry.
+Tests cover both; rendering and kernel behavior are unchanged.
 Static implementation symbols are private to the shared library: explicit
 exports on Windows, linker export lists on ELF/Mach-O. Dependencies may still
 be separate runtime libraries; a C ABI does not make them self-contained or
 guarantee compatibility between arbitrary dependency versions.
 
-The API and tests are intentionally limited to Phases 1�2. ABI evolution and render
+The API and tests are intentionally limited to Phases 1–3. ABI evolution and render
 parity remain acceptance gates in the [plan](../../docs/plans/CYCLES_C_API.md).

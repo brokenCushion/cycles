@@ -24,14 +24,14 @@ function(cycles_c_keep_registrations target)
   endforeach()
 endfunction()
 
-add_library(cycles_c SHARED cycles_c.cpp cycles_c.h)
+add_library(cycles_c SHARED cycles_c.cpp cycles_c.h scene_api.inc)
 target_include_directories(cycles_c PRIVATE ..)
 target_compile_definitions(cycles_c PRIVATE CCL_C_API_BUILD)
 target_link_libraries(cycles_c PRIVATE ${LIB})
 cycles_c_keep_registrations(cycles_c)
 set_target_properties(cycles_c PROPERTIES
   CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES
-  WINDOWS_EXPORT_ALL_SYMBOLS OFF VERSION 1.1.0 SOVERSION 1)
+  WINDOWS_EXPORT_ALL_SYMBOLS OFF VERSION 1.2.0 SOVERSION 1)
 # Localize linked static-library symbols as well as the wrapper's own symbols.
 if(APPLE)
   set_target_properties(cycles_c PROPERTIES INSTALL_RPATH "@loader_path")
@@ -63,6 +63,24 @@ if(BUILD_TESTING)
   target_include_directories(cycles_c_native_dump PRIVATE ..)
   target_link_libraries(cycles_c_native_dump PRIVATE ${LIB})
   cycles_c_keep_registrations(cycles_c_native_dump)
+
+  add_executable(cycles_c_scene_host test/scene_host.c)
+  set_target_properties(cycles_c_scene_host PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
+  target_link_libraries(cycles_c_scene_host PRIVATE cycles_c)
+  add_test(NAME cycles_c_scene_host COMMAND cycles_c_scene_host ${CMAKE_INSTALL_PREFIX})
+
+  add_executable(cycles_c_editing test/editing.cpp)
+  target_include_directories(cycles_c_editing PRIVATE ..)
+  target_link_libraries(cycles_c_editing PRIVATE ${LIB})
+  cycles_c_keep_registrations(cycles_c_editing)
+  add_test(NAME cycles_c_editing COMMAND cycles_c_editing ${CMAKE_INSTALL_PREFIX})
+
+  add_executable(cycles_c_benchmark test/benchmark.cpp)
+  target_include_directories(cycles_c_benchmark PRIVATE ..)
+  target_link_libraries(cycles_c_benchmark PRIVATE ${LIB} ${CMAKE_DL_LIBS})
+  add_test(NAME cycles_c_benchmark COMMAND cycles_c_benchmark $<TARGET_FILE:cycles_c>
+    ${CMAKE_INSTALL_PREFIX} ${CMAKE_CURRENT_BINARY_DIR}/benchmark.json)
+  set_tests_properties(cycles_c_scene_host cycles_c_editing cycles_c_benchmark PROPERTIES TIMEOUT 120)
 
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   add_test(NAME cycles_c_source_inventory COMMAND ${Python3_EXECUTABLE}

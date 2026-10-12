@@ -1,6 +1,6 @@
 # Plan: stable C API and shared-library build for Cycles
 
-Status: Phase 1 accepted; Phase 2 implemented and tested, awaiting review (2026-10-12).
+Status: Phases 1–2 accepted; Phase 3 implemented and tested, awaiting review (2026-10-12).
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -118,6 +118,33 @@ ambiguity. Node descriptors give both socket counts; socket descriptors give
 default and enum counts. Defaults are one typed C scalar/vector/transform/string
 per element. No raw Cycles default-value storage escapes.
 
+Phase 3 (API 1.2) adds editing scenes, scene-owned nodes, six borrowed singletons,
+all scalar and array socket accessors, and group-update tagging. Every typed
+setter/getter has both name and cached-ID forms. Representative signatures:
+
+```c
+ccl_status ccl_scene_create(ccl_scene **out);
+ccl_status ccl_scene_destroy(ccl_scene *scene);
+ccl_status ccl_scene_singleton(ccl_scene *scene, const char *type, ccl_node **out);
+ccl_status ccl_node_create(ccl_scene *scene, const char *type, const char *name, ccl_node **out);
+ccl_status ccl_node_delete(ccl_scene *scene, ccl_node *node);
+ccl_status ccl_socket_find(const char *node_type, const char *name, ccl_socket_id *out);
+ccl_status ccl_node_set_float(ccl_node *node, const char *socket, float value);
+ccl_status ccl_node_set_float_id(ccl_node *node, ccl_socket_id socket, float value);
+ccl_status ccl_node_get_float_id(ccl_node *node, ccl_socket_id socket, float *out);
+ccl_status ccl_node_tag_update(ccl_node *node);
+```
+
+Phase 3 refinements: standalone editing scenes use a native CPU device until the
+session lifecycle is implemented; session adoption/device selection remains to be
+designed in Phase 6. Destruction and singleton lookup return status. IDs are
+stable only for this loaded library and exact node type; they are not serialized
+identifiers. Arrays, including node arrays, use one typed/capacity-checked API
+instead of separate node-array functions. Fixed-layout math values are plain C;
+metadata retains its size-prefix convention. Hosts must skip unknown future
+`ccl_socket_type` values. These decisions are documented in the header and are
+subject to this phase's review before adding shader graphs.
+
 Refinements from the initial outline:
 
 - Fallible queries and callback registration return status; errors do not look
@@ -149,19 +176,6 @@ ccl_status  ccl_session_cancel(ccl_session *s);
 ccl_status  ccl_session_set_samples(ccl_session *s, int samples);
 ccl_status  ccl_session_progress(ccl_session *s, ccl_progress *out);
 void        ccl_session_set_progress_callback(ccl_session *s, ccl_progress_fn fn, void *user);
-
-/* Nodes (scene-level: object, mesh, hair, pointcloud, volume, light, shader, pass;
- * singletons: camera, film, integrator, background) */
-ccl_status  ccl_node_create(ccl_scene *scene, const char *type, const char *name, ccl_node **out);
-ccl_status  ccl_node_delete(ccl_scene *scene, ccl_node *node);
-ccl_node   *ccl_scene_singleton(ccl_scene *scene, const char *type);   /* "camera", "film", ... */
-ccl_status  ccl_node_set_float(ccl_node *n, const char *socket, float v);
-ccl_status  ccl_node_set_int / _bool / _float3 / _string / _transform / _enum(...);
-ccl_status  ccl_node_set_array(ccl_node *n, const char *socket, ccl_type t, const void *data, size_t count);
-ccl_status  ccl_node_set_node(ccl_node *n, const char *socket, ccl_node *ref);   /* object->geometry */
-ccl_status  ccl_node_set_node_array(ccl_node *n, const char *socket, ccl_node *const *refs, size_t count);
-ccl_status  ccl_node_get_*(...);
-ccl_status  ccl_node_tag_update(ccl_node *n);
 
 /* Geometry attributes (beyond sockets) */
 ccl_status  ccl_geometry_add_attribute(ccl_node *geom, const char *name, int standard,
@@ -252,7 +266,7 @@ Phase 2 results (2026-10-12):
 - Direct runtime dependency list is recorded in `src/capi/README.md`; mixed
   dependency isolation is a Phase 7 decision/test, not a Phase 2 implementation.
 - Full 81/30/65 rendering, Linux/macOS builds and dependency coexistence were not
-  tested here. No Phase 3 work has started.
+  tested in Phase 2.
 
 Small evidence: [Phase 2 results](../../builds/validation/c-api/phase2.json).
 Full dumps, pre-fix inventory, build/install and logs:
@@ -262,7 +276,37 @@ Full dumps, pre-fix inventory, build/install and logs:
 - Create, delete and edit scene-level nodes by type name. Singletons. Typed and
   array setters/getters, node references. Precise errors for unknown types or
   sockets and type mismatches.
-- Acceptance: unit tests per socket type, including arrays and node references.
+- Provide cached socket IDs as well as name-based setters/getters. IDs are stable
+  for this library instance; typed `_id` access avoids per-call string lookup.
+- Document that hosts skip unknown future socket-type values rather than fail.
+- Acceptance: unit tests per socket type, including arrays and node references;
+  benchmark name versus ID setters against direct C++ `Node::set()`.
+- Stop for review before Phase 4.
+
+Phase 3 results (2026-10-12):
+- Baseline Phase 2 tests: 6/6. Final Phase 3 tests: 9/9. Preserved native CTests:
+  9/9. Installed plain-C scene host and unchanged Phase 1/2 dynamic hosts pass.
+- 13 scene item factories, six singletons, all 25 value socket types and eleven
+  array types tested, plus two non-value rejections, ownership/reference errors,
+  copied buffers, invalid values, cache growth and concurrent edits.
+- 67 C-only exports; source inventory remains complete (184 types), and full
+  native/C reflection parity still matches 1,277 sockets, 963 defaults, 816 enums.
+- API-on/off native compilation commands remain identical (158 units). All 548
+  installed paths stay inside the new D: prefix. Phase 1/2 DLLs and qualified
+  production executables retain their hashes; native rendering sources unchanged.
+- Setter benchmark, nine rounds of one million edits (median ns/call):
+  direct C++ **1.55**, name **32.53**, cached ID **13.93**.
+  ID is **2.33x** faster than name lookup in this hot single-thread
+  test. API paths include validation/serialization; direct C++ does not. No
+  end-to-end Gaffer or general rendering-speed claim follows from these numbers.
+- Native shader update's empty-graph prerequisite and unfinished-object deletion
+  are handled in wrapper setup, with tests; no internal source patch was needed.
+- No render/session work, Linux/macOS validation, sanitizer or dependency
+  coexistence test. Full 81/30/65 renders were not repeated. Stop for Phase 3 review.
+
+Small evidence: [Phase 3 results](../../builds/validation/c-api/phase3.json).
+Full build/install, benchmark trials and logs:
+`D:/CyclesDeepScratch/c-api/phase3-20261012`.
 
 ### Phase 4: Shader graphs, including OSL
 - Generic shader nodes by type name, connections, output node, OSL script
@@ -344,9 +388,8 @@ Full dumps, pre-fix inventory, build/install and logs:
    or is one per session enough?
 2. Which GafferCycles features are essential for a first proof of concept, and
    which can wait (for example instancing, VDB, cryptomatte, OSL)?
-3. Is reflection-based configuration (type and socket names as strings)
-   acceptable for performance in interactive editing, or are cached socket
-   handles needed (for example `ccl_socket_id ccl_socket_find(type, name)`)?
+3. Resolved by user for Phase 3: provide both named access and cached socket IDs;
+   measure their cost against native C++ access for the GafferCycles author.
 4. How should OSL shader paths and compiled shader caches be handled when the
    library is swapped?
 5. Would a Hydra-based route (hdCycles) be an alternative for any of this, or

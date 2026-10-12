@@ -1,0 +1,169 @@
+{
+  "phase": 3,
+  "status": "passed-review-pending",
+  "time_utc": "2026-10-12T12:22:40.415553+00:00",
+  "branch": "c-api",
+  "phase2_commit": "8c9f055ae",
+  "api_version": "1.2.0",
+  "toolchain": "clang-cl 20.1.8 / CMake 3.31.2 / Ninja / Windows x64 Release",
+  "build_root": "D:\\CyclesDeepScratch\\c-api\\phase3-20261012",
+  "baseline": {
+    "passed": 6,
+    "total": 6
+  },
+  "after": {
+    "passed": 9,
+    "total": 9
+  },
+  "preserved_native_ctests": {
+    "passed": 9,
+    "total": 9
+  },
+  "reflection": {
+    "passed": true,
+    "records": {
+      "NODE": 184,
+      "SOCKET": 1277,
+      "DEFAULT": 963,
+      "ENUM": 816
+    }
+  },
+  "exports": {
+    "count": 67,
+    "only_ccl_c_functions": true
+  },
+  "identities": {
+    "dll_sha256": "d2a5ce0b4aeabdd0943f0b4fc84880f1f3826f6e0c2023fec7c1da64a65b4014",
+    "header_sha256": "c76c168ecb850712b51dfd45cbb6d9fe6a6f320a091a63317d15cb81d7a6e2e9",
+    "phase1_phase2_and_production_preserved": true,
+    "direct_dependencies": [
+      "ADVAPI32.dll",
+      "CFGMGR32.dll",
+      "KERNEL32.dll",
+      "MSVCP140.dll",
+      "OpenColorIO_2_5.dll",
+      "OpenImageDenoise.dll",
+      "OpenImageIO.dll",
+      "OpenImageIO_Util.dll",
+      "VCRUNTIME140.dll",
+      "VCRUNTIME140_1.dll",
+      "VERSION.dll",
+      "api-ms-win-crt-convert-l1-1-0.dll",
+      "api-ms-win-crt-environment-l1-1-0.dll",
+      "api-ms-win-crt-filesystem-l1-1-0.dll",
+      "api-ms-win-crt-heap-l1-1-0.dll",
+      "api-ms-win-crt-locale-l1-1-0.dll",
+      "api-ms-win-crt-math-l1-1-0.dll",
+      "api-ms-win-crt-runtime-l1-1-0.dll",
+      "api-ms-win-crt-stdio-l1-1-0.dll",
+      "api-ms-win-crt-string-l1-1-0.dll",
+      "api-ms-win-crt-time-l1-1-0.dll",
+      "api-ms-win-crt-utility-l1-1-0.dll",
+      "embree4.dll",
+      "openvdb.dll",
+      "oslcomp.dll",
+      "oslexec.dll",
+      "oslquery.dll",
+      "sycl8.dll",
+      "tbb12.dll"
+    ]
+  },
+  "native_compile_parity": {
+    "passed": true,
+    "compilation_units": 158,
+    "api_off_matches_on": true
+  },
+  "installed_manifest_count": 548,
+  "unchanged_phase1_and_phase2_hosts_pass": true,
+  "installed_plain_c_scene_host_pass": true,
+  "benchmark": {
+    "iterations_per_round": 1000000,
+    "rounds": 9,
+    "unit": "ns_per_set",
+    "results": {
+      "direct_cpp": {
+        "median": 1.5491,
+        "min": 1.4967,
+        "max": 1.7088,
+        "samples": [
+          1.5124,
+          1.5491,
+          1.7088,
+          1.5915,
+          1.4967,
+          1.5201,
+          1.5436,
+          1.6145,
+          1.5575
+        ]
+      },
+      "name": {
+        "median": 32.5315,
+        "min": 31.9973,
+        "max": 33.2441,
+        "samples": [
+          32.5315,
+          32.2641,
+          32.6042,
+          32.6633,
+          32.373,
+          32.17,
+          31.9973,
+          33.2441,
+          33.0135
+        ]
+      },
+      "id": {
+        "median": 13.9338,
+        "min": 13.5988,
+        "max": 14.1373,
+        "samples": [
+          13.6154,
+          13.7719,
+          14.1373,
+          13.5988,
+          13.6486,
+          13.9338,
+          13.9618,
+          14.0315,
+          14.1261
+        ]
+      }
+    },
+    "method": "Windows x64 Release; actual DLL function pointers; native cached camera fov socket; alternating 0/1 floats; one warmup; nine rotated rounds; no per-edit tag_update; API includes validation and locking; direct C++ has neither.",
+    "name_over_id": 2.3347184544058335,
+    "name_over_direct": 21.0002582144471,
+    "id_over_direct": 8.994771157446259
+  },
+  "coverage": {
+    "creatable_scene_types": 13,
+    "singletons": 6,
+    "value_socket_types": 25,
+    "non_value_socket_types_rejected": 2,
+    "array_types": 11,
+    "concurrent_threads": 4,
+    "edit_pairs_per_thread": 1000
+  },
+  "limitations": [
+    "No rendering/session API yet; editing scenes use a native CPU device.",
+    "No Linux/macOS build or sanitizer run.",
+    "Full 81/30/65 renderer matrix not rerun; preserved nine CTests and native compile/source parity checked.",
+    "No dependency coexistence or safe DLL unload test; Phase 7 gates remain.",
+    "Benchmark is hot single-thread socket mutation, not end-to-end Gaffer performance."
+  ],
+  "source_inventory_summary": {
+    "source_definitions": 118,
+    "generated_types": 64,
+    "dll_types": 184,
+    "missing": [],
+    "unexpected": [],
+    "lazy_abstract_not_registered": [
+      "procedural_base"
+    ]
+  },
+  "source_inventory_report": "D:\\CyclesDeepScratch\\c-api\\phase3-20261012\\installed-source-inventory.json",
+  "wrapper_setup_validated": [
+    "Empty native output graph required before tagging a newly created shader; initialized by wrapper.",
+    "Use native collection removal plus manager tag for unfinished object with null geometry."
+  ]
+}

@@ -7,7 +7,7 @@ ccl_status CCL_CALL ccl_api_version(ccl_version *out)
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid version output size");
     }
     out->major = 1;
-    out->minor = 6;
+    out->minor = 7;
     out->patch = 0;
     return CCL_SUCCESS;
   });
@@ -42,6 +42,9 @@ ccl_status CCL_CALL ccl_has_feature(const char *name, int32_t *supported)
 #ifdef WITH_OSL
     available |= std::strcmp(name, "osl") == 0;
 #endif
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    available |= std::strcmp(name, "deep") == 0;
+#endif
     *supported = available ? 1 : 0;
     return CCL_SUCCESS;
   });
@@ -63,6 +66,23 @@ ccl_status CCL_CALL ccl_session_params_default(ccl_session_params *p)
     p->hair_subdivisions = 3;
     p->texture_resolution = 1.0f;
     p->use_texture_cache = 1;
+    return CCL_SUCCESS;
+  });
+}
+
+ccl_status CCL_CALL ccl_deep_params_default(ccl_deep_params *p)
+{
+  CCL_BOOTSTRAP_FORWARD(ccl_deep_params_default, (p));
+  return boundary([&] {
+    if (!p || p->size < sizeof(*p))
+      return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid deep params size");
+    auto size = p->size;
+    *p = {};
+    p->size = size;
+    p->max_events = 16;
+    p->memory_bytes = UINT64_C(64) * 1024 * 1024;
+    p->error = 1e-3f;
+    p->z_tolerance = 1e-4f;
     return CCL_SUCCESS;
   });
 }

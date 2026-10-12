@@ -2,6 +2,9 @@
 /* Native Session owns scheduling; this boundary owns host lifetimes only. */
 #include "session/output_driver.h"
 namespace {
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+void deliver_deep(ccl_session &s, const ccl::OutputDriver::DeepTile &tile);
+#endif
 ccl_status scene_access(ccl_scene *scene, bool write)
 {
   auto &s = *scene->owner;
@@ -18,13 +21,14 @@ ccl_status scene_access(ccl_scene *scene, bool write)
   return CCL_SUCCESS;
 }
 struct CallbackScope {
+  bool previous = in_callback;
   CallbackScope()
   {
     in_callback = true;
   }
   ~CallbackScope()
   {
-    in_callback = false;
+    in_callback = previous;
   }
 };
 template<size_t N> void message(char (&dst)[N], const std::string &src)
@@ -101,6 +105,10 @@ class HostOutput final : public ccl::OutputDriver {
 
  public:
   explicit HostOutput(ccl_session &owner) : s(owner) {}
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  bool supports_deep_output() const override { return s.deep_fn != nullptr; }
+  void write_deep_render_tile(const DeepTile &tile) override { deliver_deep(s, tile); }
+#endif
   void write_render_tile(const Tile &tile) override
   {
     deliver(tile, true);

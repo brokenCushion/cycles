@@ -114,11 +114,11 @@ ccl_status CCL_CALL ccl_init(const ccl_init_params *params)
     // cannot safely be assumed unloadable after static registration has run.
     auto getter = reinterpret_cast<ccl_table_getter>(
         GetProcAddress(backend, "cycles_c_private_get_table"));
-    const auto *api = getter ? getter(1, 6, sizeof(ccl_backend_table), CCL_TABLE_SIGNATURE) :
+    const auto *api = getter ? getter(1, 7, sizeof(ccl_backend_table), CCL_TABLE_SIGNATURE) :
                                nullptr;
     if (!api)
       return fail(CCL_ERROR_DEPENDENCY_MISMATCH,
-                  "Private backend API 1.6 table handshake mismatch");
+                  "Private backend API 1.7 table handshake mismatch");
     ccl_status status = api->ccl_set_log_callback(pending_log, pending_log_user);
     if (status == CCL_SUCCESS)
       status = api->ccl_init(params);

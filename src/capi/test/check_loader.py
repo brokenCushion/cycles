@@ -38,7 +38,7 @@ def main():
         raise AssertionError('Import checker accepted a renderer dependency')
     Path(output).write_text(json.dumps(dict(public_exports=len(front), private_exports=private,
                                           front_imports=sorted(dependencies), passed=True), indent=2)+'\n')
-    print('PASS front OS-only imports and 95 exports; backend one private export')
+    print('PASS front OS-only imports and 98 exports; backend one private export')
 
 
 if __name__ == '__main__':

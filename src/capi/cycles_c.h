@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-/** API version 1.6.0 (experimental until the Phase 7 swap test).
+/** API version 1.7.0 (Windows ABI swap-tested; other platforms unqualified).
  * Use default platform struct alignment. Initialize every struct to zero and
  * set size to sizeof(struct). A larger size is accepted; unknown tail bytes
  * are ignored/preserved. A smaller size returns CCL_ERROR_INVALID_ARGUMENT.
@@ -91,8 +91,8 @@ typedef void(CCL_CALL *ccl_log_fn)(ccl_log_level level, const char *message, voi
 CCL_API ccl_status CCL_CALL ccl_api_version(ccl_version *out);
 
 /** Query a compile-time capability: cpu, cuda, optix, hip, hiprt, metal,
- * oneapi, osl. Unknown names return success with 0, including deep until its
- * C API extension exists. A compiled backend may have no available hardware.
+ * oneapi, osl, deep. Unknown names return success with 0, including unknown future
+ * extensions. A compiled backend may have no available hardware.
  * name is borrowed for this call; supported is caller-owned (written on success).
  * Any thread, before/after init. NULL arguments: INVALID_ARGUMENT; callback:
  * CALLBACK_REENTRY. Does not probe drivers. */
@@ -820,6 +820,78 @@ CCL_API ccl_status CCL_CALL ccl_session_set_progress_callback(ccl_session *sessi
  * pixels report INTERNAL. Callback/user lifetime and error rules above apply. */
 CCL_API ccl_status CCL_CALL ccl_session_set_output_callback(ccl_session *session,
     const ccl_output_pass *passes, uint32_t count, ccl_output_fn fn, void *user);
+
+/** Optional deep visibility extension: no RGB radiance. Independent of flat passes. */
+typedef struct ccl_deep_tile ccl_deep_tile;
+typedef struct ccl_deep_params {
+  uint32_t size;
+  int32_t transparent, volume, volume_shader_eval, ids;
+  int32_t samples; /**< 0 = all accepted beauty camera samples, otherwise first N. */
+  int32_t max_events;
+  uint64_t memory_bytes; /**< Capture/reconstruction budget; host output buffers are separate. */
+  float error; /**< 0 = strict; positive values use native error validation at render reset. */
+  float z_tolerance, volume_step;
+} ccl_deep_params;
+typedef struct ccl_deep_object {
+  uint32_t id;
+  const char *name;
+} ccl_deep_object;
+/** Reconstructed visibility before EXR FLOAT quantization. A surface has z == z_back.
+ * object_index indexes info.objects, or -1 for an interval without surface provenance.
+ * Facing/provenance must be preserved when passing samples to a deep serializer.
+ * All depths are camera depth in the native scene's units; alpha is effective
+ * pixel opacity, not intrinsic material opacity. */
+typedef struct ccl_deep_sample {
+  double z, z_back, alpha;
+  int32_t object_index, facing;
+} ccl_deep_sample;
+/** Entire image delivered after completed capture. Strings, lists and tile are
+ * borrowed for this callback only. Pixel getter coordinates are file-top-origin.
+ * Object/holdout manifests are the native ID mappings, not host-assigned IDs. */
+typedef struct ccl_deep_info {
+  uint32_t size;
+  int32_t width, height, volume, ids, sample_limit;
+  const char *layer, *view;
+  float error, z_tolerance, volume_shader_error, volume_step_min, volume_step_max;
+  int32_t volume_shader_adaptive;
+  uint64_t row_sample_limit;
+  const ccl_deep_object *objects, *holdouts;
+  uint64_t object_count, holdout_count;
+} ccl_deep_info;
+/** Called synchronously on the render worker, after all capture workers finish.
+ * Return 0 on success; nonzero/throwing sets session error, reported by wait.
+ * May call only ccl_deep_tile_get_pixel and ccl_last_error. Do not retain tile or
+ * info, invoke getters from other threads, or block waiting for session work.
+ * Copy data into host-owned storage if it must survive the callback. */
+typedef int32_t(CCL_CALL *ccl_deep_fn)(ccl_deep_tile *tile, const ccl_deep_info *info, void *user);
+/** Fill native deep defaults, before or after init, even in a core-only build.
+ * Caller owns params and initializes size. Thread-safe; INVALID_ARGUMENT for
+ * NULL/short struct, CALLBACK_REENTRY during a callback; tail bytes preserved. */
+CCL_API ccl_status CCL_CALL ccl_deep_params_default(ccl_deep_params *params);
+/** Copy deep settings and retain callback/user; NULL params disables deep output.
+ * Requires init and a valid session. UNSUPPORTED in a core-only build. All boolean
+ * values are 0/1, limits positive (samples may be 0), floats finite/nonnegative;
+ * malformed settings or enabled settings without fn return INVALID_ARGUMENT.
+ * Scene/device support and native error bounds are validated by native rendering.
+ * Same editing contract as nodes: an edit to a paused job blocks in cancel/wait,
+ * any successful edit requires reset, and unpaused/waited-on jobs return IN_USE.
+ * CALLBACK_REENTRY during callbacks. Does not own/free user; old callback is
+ * quiescent on successful return. Flat output callbacks are unaffected. */
+CCL_API ccl_status CCL_CALL ccl_session_set_deep_output(ccl_session *session,
+    const ccl_deep_params *params, ccl_deep_fn fn, void *user);
+/** Copy a pixel's reconstructed samples. Only the current deep callback's thread
+ * may use its borrowed tile. NULL samples with capacity=0 queries count; outputs
+ * count and accepted_camera_samples are required and caller-owned. A short buffer
+ * returns BUFFER_TOO_SMALL and writes the required count, leaving samples intact.
+ * Results are cached until another pixel is requested. Visit rows sequentially
+ * to avoid repeated spill reads; only one native row is retained by this wrapper.
+ * INVALID_ARGUMENT for invalid tile/coordinates/pointers, UNSUPPORTED without
+ * deep, OUT_OF_MEMORY on allocation failure, INTERNAL for reconstruction/cancel
+ * failure. No native exception crosses the boundary. Other API calls remain
+ * forbidden here. Copying/serializing these doubles is the host's responsibility;
+ * arbitrary FLOAT conversion is not a guarantee of the native EXR error bound. */
+CCL_API ccl_status CCL_CALL ccl_deep_tile_get_pixel(ccl_deep_tile *tile, int32_t x, int32_t y,
+    ccl_deep_sample *samples, uint64_t capacity, uint64_t *count, uint32_t *accepted_camera_samples);
 
 #ifdef __cplusplus
 }

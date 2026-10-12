@@ -1,11 +1,11 @@
-# Cycles C API — Phases 1–6
+# Cycles C API — Phases 1–7; Phase 8 draft stopped
 
 Experimental shared-library boundary for host applications such as Gaffer.
 **Experimental until Phase 7**; the stable ABI promise has not begun.
 The contract is [cycles_c.h](cycles_c.h): it contains no Cycles C++ headers or
-deep types. It initializes resource paths, enumerates native devices, reports
+native deep types. Optional C deep callback types are drafted but not yet qualified. It initializes resource paths, enumerates native devices, reports
 compiled capabilities, routes logs and introspects built-in node types, sockets,
-defaults, flags and enums. API 1.5 creates device-selected native Sessions and
+defaults, flags and enums. API 1.6 creates device-selected native Sessions and
 borrows their scenes, edits sockets by name or cached ID, and builds shader graphs
 including OSL scripts. It renders through native Sessions, with progress and named
 float-pass callbacks, and supports the documented blocking pause/edit/reset flow.
@@ -533,3 +533,43 @@ The existing process-lifetime library retention rule still applies.
   remains above 1.3 TB free. Large artifacts: phase7-20261013 and
   phase7-debug-20261013 beneath D:/CyclesDeepScratch/c-api.
 - Evidence: [Phase 7](../../builds/validation/c-api/phase7.json).
+
+
+## Phase 8 draft results (2026-10-13) - STOPPED, NOT ACCEPTED
+
+The optional deep callback extension is drafted as API 1.7 (three additional
+ccl_* functions; the previous 95 remain). Core builds retain unsupported stubs;
+deep-enabled builds deliver reconstructed visibility samples and ID manifests.
+No native Cycles or kernel changes were made.
+
+CPU Release deep-on and core-only builds completed in separate D: directories.
+The initial deep-on suite passed **21/22** tests in 17.31 seconds. The new deep
+test passed its opaque, no-ID callback case, then aborted on its invalid
+combination of strict error=0 and IDs. Native Cycles explicitly rejects that
+combination: IDs require numeric error tolerance (src/session/deep.cpp).
+This is a test-configuration mistake, not evidence of deep render parity failure.
+
+**Stop for approval:** correct the test matrix to strict byte comparison without
+IDs, and a separate numeric-error IDs case, still byte-identical to native
+standalone output at the same settings. No native restriction, comparator,
+reference or threshold has been changed after the failure. Standalone EXR byte
+comparison is pending; transparent cases were not reached. Phase 8 is not passed.
+
+Wrapper correction in the draft preserves the outer callback re-entry guard
+across nested logging/callback scopes. The corresponding contract assertion and
+final deep test-source edits need rebuilding and retesting: a read-only Ninja
+dry run reports those two test executables pending. The initial 21/22 result is
+not qualification of those final test-source edits. The core-only build completed
+but its tests were not run after the stop.
+
+Test integration initially reused native app translation units as separate
+sources, colliding with the source-keyed compile-command proof. Including those
+existing helpers inside the API test translation unit fixed the test integration;
+the unchanged proof then passed (173 native units deep-on; 158 core-only).
+No acceptance criterion was relaxed.
+
+Phases 9 and 10 have not started. Nothing was published. No build/test process
+remains running; D: free space was 1,390,720,962,560 bytes at the stop.
+Large artifacts: D:/CyclesDeepScratch/c-api/phase8-20261013 and
+D:/CyclesDeepScratch/c-api/phase8-core-20261013.
+Evidence: [Phase 8 stopped result](../../builds/validation/c-api/phase8.json).

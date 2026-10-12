@@ -1,0 +1,31 @@
+{
+  "phase": 8,
+  "passed": false,
+  "status": "stopped-awaiting-test-matrix-approval",
+  "api_version_draft": "1.7",
+  "draft_exports": 98,
+  "native_changes": false,
+  "initial_ctests": {
+    "passed": 21,
+    "total": 22,
+    "seconds": 17.31,
+    "failed": "cycles_c_deep",
+    "exit_code": "0xc0000409",
+    "reason": "Test combines strict error=0 with IDs; native Cycles requires numeric error for IDs",
+    "log": "D:/CyclesDeepScratch/c-api/phase8-20261013/ctests-initial.log"
+  },
+  "standalone_byte_comparison": "not run",
+  "pending_rebuild_tests": [
+    "cycles_c_contract",
+    "cycles_c_deep"
+  ],
+  "core_only_tests": "not run after stop",
+  "native_compile_command_parity": {
+    "deep_on": 173,
+    "core_only": 158
+  },
+  "proposed_correction": "Strict byte identity without IDs; numeric-error IDs cases byte-identical to native standalone at identical settings. Await approval.",
+  "phases_9_10": "not started",
+  "published": false,
+  "free_d_bytes": 1390720962560
+}

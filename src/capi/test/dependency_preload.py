@@ -77,7 +77,7 @@ def child(args):
             getter.argtypes=[ctypes.c_uint32,ctypes.c_uint32,ctypes.c_uint32,ctypes.c_char_p]
             getter.restype=ctypes.c_void_p
             assert not getter(0,0,0,None)
-            assert not getter(1,6,95*ctypes.sizeof(ctypes.c_void_p),b'wrong-table-signature')
+            assert not getter(1,7,98*ctypes.sizeof(ctypes.c_void_p),b'wrong-table-signature')
         else:
             assert result['init_status']==13 and not result['private_backend_loaded'], result
             for text in ('OpenImageIO.dll', '3.1.13.0', 'missing symbols:', '@v3_1@OpenImageIO@@'):

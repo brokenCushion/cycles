@@ -4,6 +4,10 @@ import subprocess
 import sys
 
 EXPECTED = {
+    'ccl_deep_params_default',
+    'ccl_session_set_deep_output',
+    'ccl_deep_tile_get_pixel',
+
     'ccl_session_reset',
     'ccl_session_start',
     'ccl_session_pause',

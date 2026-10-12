@@ -96,5 +96,8 @@
     ccl_pointcloud_resize;
     ccl_geometry_set_attribute;
     ccl_volume_set_grid;
+    ccl_deep_params_default;
+    ccl_session_set_deep_output;
+    ccl_deep_tile_get_pixel;
   local: *;
 };

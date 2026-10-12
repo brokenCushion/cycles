@@ -59,6 +59,7 @@ template<typename F> ccl_status boundary(F fn) noexcept
 
 void log_bridge(ccl::LogLevel level, const char *, const char *, const char *message) noexcept
 {
+  const bool previous_callback = in_callback;
   try {
     std::lock_guard<std::mutex> lock(log_mutex);
     if (!log_callback) {
@@ -78,10 +79,10 @@ void log_bridge(ccl::LogLevel level, const char *, const char *, const char *mes
     catch (...) {
       /* A misbehaving C++ host callback must not unwind through Cycles. */
     }
-    in_callback = false;
+    in_callback = previous_callback;
   }
   catch (...) {
-    in_callback = false;
+    in_callback = previous_callback;
   }
 }
 
@@ -623,3 +624,5 @@ ccl_status CCL_CALL ccl_socket_enum_value(const char *name,
 #include "geometry_api.inc"
 
 #include "session_api.inc"
+
+#include "deep_api.inc"

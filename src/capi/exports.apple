@@ -93,3 +93,6 @@ _ccl_session_set_samples
 _ccl_session_progress
 _ccl_session_set_progress_callback
 _ccl_session_set_output_callback
+_ccl_deep_params_default
+_ccl_session_set_deep_output
+_ccl_deep_tile_get_pixel

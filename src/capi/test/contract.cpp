@@ -131,6 +131,14 @@ int main()
                return CCL_SUCCESS;
              }) == CCL_SUCCESS);
   TEST_CHECK(calls == 1 && ccl_last_error()[0] == '\0');
+  {
+    CallbackScope outer;
+    log_bridge(ccl::LOG_LEVEL_INFO, "test", "test", "contract");
+    TEST_CHECK(in_callback && calls == 2);
+    { CallbackScope nested; }
+    TEST_CHECK(in_callback);
+  }
+  TEST_CHECK(!in_callback);
   TEST_CHECK(ccl_set_log_callback(nullptr, nullptr) == CCL_SUCCESS);
   for (const auto type : ccl::Device::available_types()) {
     std::string name = ccl::Device::string_from_type(type);

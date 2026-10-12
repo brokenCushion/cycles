@@ -56,7 +56,12 @@ int main(int argc, char **argv)
   printf("Cycles C API %u.%u.%u\n", version.major, version.minor, version.patch);
   int32_t supported = -1;
   CHECK(ccl_has_feature("cpu", &supported) == CCL_SUCCESS && supported == 1);
+  /* Phase 8 adds the optional implementation; core builds must still report false. */
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  CHECK(ccl_has_feature("deep", &supported) == CCL_SUCCESS && supported == 1);
+#else
   CHECK(ccl_has_feature("deep", &supported) == CCL_SUCCESS && supported == 0);
+#endif
   CHECK(ccl_has_feature("unknown", &supported) == CCL_SUCCESS && supported == 0);
   uint32_t count = 999;
   CHECK(ccl_device_count(&count) == CCL_ERROR_NOT_INITIALIZED && count == 999);

@@ -50,6 +50,8 @@ struct ccl_session {
   std::vector<OutputPass> output_passes;
   ccl_output_fn output_fn = nullptr;
   void *output_user = nullptr;
+  ccl_deep_fn deep_fn = nullptr;
+  void *deep_user = nullptr;
 };
 struct ccl_shader_graph {
   ccl_scene *scene;

@@ -62,7 +62,7 @@ endif()
 target_compile_definitions(cycles_c PRIVATE CCL_C_API_BUILD)
 set_target_properties(cycles_c PROPERTIES
   CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES
-  WINDOWS_EXPORT_ALL_SYMBOLS OFF VERSION 1.6.0 SOVERSION 1)
+  WINDOWS_EXPORT_ALL_SYMBOLS OFF VERSION 1.7.0 SOVERSION 1)
 # Localize linked static-library symbols as well as the wrapper's own symbols.
 if(APPLE)
   set_target_properties(cycles_c PROPERTIES INSTALL_RPATH "@loader_path")
@@ -132,6 +132,15 @@ if(BUILD_TESTING)
     add_test(NAME cycles_c_rendering COMMAND cycles_c_rendering ${CMAKE_INSTALL_PREFIX}
       ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/rendering-tests CPU)
     set_tests_properties(cycles_c_rendering PROPERTIES TIMEOUT 300)
+    if(WITH_CYCLES_DEEP_OPAQUE)
+      add_executable(cycles_c_deep test/deep.cpp)
+      target_include_directories(cycles_c_deep PRIVATE ..)
+      target_link_libraries(cycles_c_deep PRIVATE cycles_c ${LIB} cycles_deep_exr)
+      cycles_c_keep_registrations(cycles_c_deep)
+      add_test(NAME cycles_c_deep COMMAND cycles_c_deep ${CMAKE_INSTALL_PREFIX}
+        ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/deep-tests)
+      set_tests_properties(cycles_c_deep PROPERTIES TIMEOUT 180)
+    endif()
   endif()
 
   add_executable(cycles_c_controls test/controls.cpp)

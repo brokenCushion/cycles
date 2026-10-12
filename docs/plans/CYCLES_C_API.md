@@ -1,7 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
 Status: Phases 1–4 accepted; Phase 5 passed after authorized wrapper fixes
-(2026-10-13). Phases 6 and 7 passed; continuing to the optional deep extension (Phase 8). Windows ABI swaps verified; other platforms remain unqualified.
+(2026-10-13). Phases 6 and 7 passed; Phase 8 draft stopped on an invalid strict-plus-IDs test configuration, awaiting approval to correct the test matrix. Windows ABI swaps verified; other platforms remain unqualified.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -689,3 +689,43 @@ not isolate dependencies or promise compatibility.
   remains above 1.3 TB free. Large artifacts: phase7-20261013 and
   phase7-debug-20261013 beneath D:/CyclesDeepScratch/c-api.
 - Evidence: [Phase 7](../../builds/validation/c-api/phase7.json).
+
+
+## Phase 8 draft results (2026-10-13) - STOPPED, NOT ACCEPTED
+
+The optional deep callback extension is drafted as API 1.7 (three additional
+ccl_* functions; the previous 95 remain). Core builds retain unsupported stubs;
+deep-enabled builds deliver reconstructed visibility samples and ID manifests.
+No native Cycles or kernel changes were made.
+
+CPU Release deep-on and core-only builds completed in separate D: directories.
+The initial deep-on suite passed **21/22** tests in 17.31 seconds. The new deep
+test passed its opaque, no-ID callback case, then aborted on its invalid
+combination of strict error=0 and IDs. Native Cycles explicitly rejects that
+combination: IDs require numeric error tolerance (src/session/deep.cpp).
+This is a test-configuration mistake, not evidence of deep render parity failure.
+
+**Stop for approval:** correct the test matrix to strict byte comparison without
+IDs, and a separate numeric-error IDs case, still byte-identical to native
+standalone output at the same settings. No native restriction, comparator,
+reference or threshold has been changed after the failure. Standalone EXR byte
+comparison is pending; transparent cases were not reached. Phase 8 is not passed.
+
+Wrapper correction in the draft preserves the outer callback re-entry guard
+across nested logging/callback scopes. The corresponding contract assertion and
+final deep test-source edits need rebuilding and retesting: a read-only Ninja
+dry run reports those two test executables pending. The initial 21/22 result is
+not qualification of those final test-source edits. The core-only build completed
+but its tests were not run after the stop.
+
+Test integration initially reused native app translation units as separate
+sources, colliding with the source-keyed compile-command proof. Including those
+existing helpers inside the API test translation unit fixed the test integration;
+the unchanged proof then passed (173 native units deep-on; 158 core-only).
+No acceptance criterion was relaxed.
+
+Phases 9 and 10 have not started. Nothing was published. No build/test process
+remains running; D: free space was 1,390,720,962,560 bytes at the stop.
+Large artifacts: D:/CyclesDeepScratch/c-api/phase8-20261013 and
+D:/CyclesDeepScratch/c-api/phase8-core-20261013.
+Evidence: [Phase 8 stopped result](../../builds/validation/c-api/phase8.json).

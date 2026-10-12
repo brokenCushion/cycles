@@ -1,7 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
 Status: Phases 1–4 accepted; Phase 5 passed after authorized wrapper fixes
-(2026-10-13). Proceeding to Phase 6. Experimental until Phase 7.
+(2026-10-13). Phase 6 stopped for the pause/edit contract decision below. Experimental until Phase 7.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -521,3 +521,41 @@ and no native Cycles/kernel code changes; record each fix in phase results. Stop
 if a fix requires a test/criterion change, native/internal change, an uncovered
 design tradeoff, an action leaving this machine, or D: free space below 200 GB.
 Per-phase result entries and local commits remain required.
+
+### Phase 6 design stop: pause and safe editing (2026-10-13)
+
+Baseline: Phase 5's final **11/11** CTests and **9/9** native tests; no Phase 6
+implementation, render, test modification or internal patch has been made.
+
+Source inspection found a contract choice left open by section 4:
+- `Session::set_pause()` (`src/session/session.cpp:657`) sets a request and returns;
+  it does not join an in-flight batch. `run_wait_for_work()` (line 450) handles
+  the request later and ignores pause for background/offline sessions.
+- `Session::wait()` (line 716) waits for the render job to leave RENDER, not for
+  pause acknowledgment. Waiting on a paused interactive job is not a pause barrier.
+- `ready_to_reset()` delegates to display feedback, not renderer idleness
+  (`src/integrator/path_trace.cpp:108`); it requires a display driver.
+- Native scene-update synchronization uses `Scene::mutex` (session.cpp:325),
+  while executing batches uses a separate protected buffer mutex (line 214).
+  Merely recording a wrapper pause flag does not establish the plan's strict
+  not-rendering condition for edits. This is source analysis, not a measured race.
+
+Options requiring a user choice before implementing the public contract:
+1. **Wrapper-only quiescent editing (recommended):** keep ordinary pause/resume
+   native and accumulation-preserving. Before the first edit in a paused running
+   session, synchronously cancel/wait for that job; require reset before resume.
+   The scene/device stay owned by the same Session. This guarantees no rendering
+   during edits, but edits can block, cancellation/output behavior must be tested,
+   and the interrupted accumulation cannot simply resume. The planned
+   pause/edit/reset/resume test remains required, unchanged.
+2. **Native-style scene locking:** retain asynchronous pause and synchronize edits
+   with the native scene mutex. An old batch may still be completing. This needs
+   agreement to refine the strict no-rendering editing promise and verification
+   of each edit/lifetime path; it is not asserted safe merely from the mutex name.
+3. **True acknowledged pause:** investigate a minimal native pause-acknowledgment
+   hook for strict idleness with preserved accumulation. That would need separate
+   permission under the wrapper-only rule; no internal change is proposed as done.
+
+Stopped under the user's uncovered-design-tradeoff condition. Phase 5 remains
+passed; Phase 6 has no acceptance failure. Phases 7–10 have not started. No action
+leaving this machine, renderer modification or new render occurred.

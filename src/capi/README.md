@@ -352,3 +352,18 @@ Installed exports (86), registration (184 types), reflection, retained C hosts a
 shader tests pass; qualified previous binaries remain unchanged. Render parity,
 Linux/macOS and sanitizers are not covered by Phase 5. The refined user rule allows
 wrapper bug fixes with unchanged tests/criteria; results above record both fixes.
+
+## Phase 6 design review required (2026-10-13)
+
+Phase 5 passed and was committed as `04eb35d65`. Phase 6 baseline is the final
+11/11 CTests plus 9/9 native tests. No Phase 6 render-control implementation or
+acceptance test change has been made.
+
+Native pause is asynchronous; native wait waits for job completion, not paused
+idleness. Background sessions ignore pause, and ready_to_reset is a display
+heuristic. A wrapper pause flag alone cannot enforce the planned no-rendering
+edit condition. The plan records the source locations and three alternatives:
+quiesce with cancel/wait before edits and require reset (recommended), relax the
+promise to native scene-mutex synchronization, or seek a native acknowledged-pause
+hook. These differ in accumulation, latency and integration scope, so work stopped
+under the user's design-decision rule. No Cycles internal change was made.

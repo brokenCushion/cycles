@@ -45,6 +45,14 @@ ccl_device void volume_guiding_filter_x(KernelGlobals kg,
   ccl_global float *buffer = film_pass_pixel_render_buffer(
       kg, center_x, y, offset, stride, render_buffer);
 
+  /* Sampling must not read estimates while other paths are accumulating them.
+   * Freeze sum/count at the same power-of-two epochs as the guiding colors. */
+  kernel_assert(kernel_data.film.pass_volume_majorant_snapshot != PASS_UNUSED);
+  buffer[kernel_data.film.pass_volume_majorant_snapshot] =
+      buffer[kernel_data.film.pass_volume_majorant];
+  buffer[kernel_data.film.pass_volume_majorant_snapshot + 1] =
+      buffer[kernel_data.film.pass_volume_majorant_sample_count];
+
   /* Apply Gaussian filter in x direction. */
   float3 scatter = zero_float3(), transmit = zero_float3();
   for (int dx = 0; dx < filter_width; dx++) {

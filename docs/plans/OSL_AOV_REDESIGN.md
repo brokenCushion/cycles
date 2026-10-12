@@ -34,10 +34,24 @@ Brecht [requires intermediate storage](https://lists.aswf.io/g/osl-dev/message/5
 for synchronization, viewport changes, and texture retries. These are design
 requests, not evidence that the PR meets acceptance.
 
-The fetched head still uses an OR between the primary-path conditions in its
-CPU AOV loop, whereas SVM requires AND; its debug flattening case checks only
-`render_buffer` and lacks the cache-miss discard. Preserve SVM's exact rules
-when replacing these paths, rather than retaining their current conditions.
+## Issues found in the current PR head
+
+Two notes for Alex while adapting head `86f9dc3e37db2709b316a7cfa5b410be58434138`:
+
+- **Primary-path condition:** the surface check in
+  [intern/cycles/kernel/osl/closures.cpp:203-204](https://projects.blender.org/blender/blender/src/commit/86f9dc3e37db2709b316a7cfa5b410be58434138/intern/cycles/kernel/osl/closures.cpp#L203)
+  and the volume check at
+  [276-277](https://projects.blender.org/blender/blender/src/commit/86f9dc3e37db2709b316a7cfa5b410be58434138/intern/cycles/kernel/osl/closures.cpp#L276)
+  use OR. It would help to reuse the SVM eligibility condition, which requires
+  transparent-background primary status AND single-pass-not-done, plus a valid
+  render buffer. OR permits additional paths. The same head's reference is
+  [intern/cycles/kernel/svm/aov.h:13-19](https://projects.blender.org/blender/blender/src/commit/86f9dc3e37db2709b316a7cfa5b410be58434138/intern/cycles/kernel/svm/aov.h#L13).
+- **Cache-miss discard:** the debug-closure case in
+  [intern/cycles/kernel/osl/osl.h:124-140](https://projects.blender.org/blender/blender/src/commit/86f9dc3e37db2709b316a7cfa5b410be58434138/intern/cycles/kernel/osl/osl.h#L124)
+  checks only `render_buffer` before the film write. There is no
+  `SR_CACHE_MISS` guard there. For current on-demand texture loading, discarding
+  the intermediate record before any film write would avoid committing an
+  incomplete result and then adding the retried result again.
 
 ## OSL 1.15.3 capability check
 
@@ -102,12 +116,60 @@ Material callables currently pass a null output pointer; they need integration.
 
 CPU uses `ShadingSystem::execute` and execution-private host scratch, preserving
 existing thread ownership. OptiX supplies device-addressable scratch to the
-existing fused direct callable; capacity must follow compiled output sizes,
-with no new AOV-count cap. A per-active-path device arena is a candidate;
-allocation/lifetime, reentry, memory bounds and stack usage need review before
-implementation. Output storage is separate from OSL's internal groupdata.
+existing fused direct callable using the launch-scoped storage described below,
+with no new AOV-count cap. Output storage is separate from OSL's internal groupdata.
 The GPU flush uses existing film atomics; CPU retains existing film-writer
 scheduling assumptions. There is no direct OSL write into shared film memory.
+
+## GPU scratch sizing
+
+The film flush/discard runs in the same kernel invocation immediately after the
+OSL callable returns. The scratch contents therefore live only for that
+invocation within the launch; nothing must persist with a path between kernels.
+Use one device buffer, indexed by the launch thread index
+(`optixGetLaunchIndex().x` for the current one-dimensional launch), rather than
+the integrator path index or render pixel:
+
+`scratch_bytes = max_launch_threads * max_slot_bytes_per_group`
+
+`max_slot_bytes_per_group` is the maximum aligned byte span of the compiled
+groups' output symlocs: the largest output offset plus its typed size, including
+any requested derivatives and padding. Finalize it after JIT, independently of
+selected film passes. Each thread receives its own record and passes that record
+pointer to OSL with placement shade index zero. Clear before evaluation and
+flush/discard before reusing it for another evaluation in the same thread.
+
+Allocate once per device for the configured maximum launch size, reuse across
+serialized launches, and resize when shader recompilation changes the maximum
+record size. Wait for existing users before reallocating. AOV selection changes
+alone require neither resizing nor recompilation. Concurrent launches must be
+serialized or assigned disjoint buffer regions; nested evaluations must not
+overwrite a still-live record.
+
+For an illustrative batch of **65,536 launch threads**, 64 AOV
+nodes retaining both a color (three 32-bit floats) and a value (one float) need
+`64 * 16 = 1,024` bytes per thread, or **64 MiB** total. A color-only layout
+would be 48 MiB. At 262,144 threads the dual-output layout is 256 MiB; at
+1,048,576 threads it is 1 GiB. These are arithmetic estimates before extra
+padding or metadata, not measurements on this busy machine.
+
+Size from the actual queue's maximum launch work size, not the number of
+hardware-resident threads. Current
+[OptiX enqueue](https://github.com/blender/cycles/blob/a456b761034dda42c32eef9f4aae0fa5a5c9f604/src/device/optix/queue.cpp#L215)
+launches `work_size` threads; the
+[path scheduler](https://github.com/blender/cycles/blob/a456b761034dda42c32eef9f4aae0fa5a5c9f604/src/integrator/path_trace_work_gpu.cpp#L519)
+can dispatch large batches. The 65,536 example is not a verified launch cap.
+Storage scales with the largest supported launch, rather than reserving a
+record for every path in flight; memory savings depend on that launch bound
+being smaller than the full path pool.
+
+A stack/local-memory record is an alternative for small fixed layouts, but the
+required group size is known only after JIT, after the caller kernel is compiled.
+A fixed caller array would need a conservative limit or kernel recompilation;
+dynamic local allocation also requires stack/occupancy analysis. A device buffer
+can be sized from the final descriptors without a new AOV-count cap or caller
+rebuild, making it the preferred starting point. Validate allocation bounds and
+performance when implementation is authorized.
 
 ## Checks required after Alex agrees
 

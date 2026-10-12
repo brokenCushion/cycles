@@ -224,24 +224,6 @@ ccl_transform public_transform(const ccl::Transform &t)
 }
 }  // namespace
 
-ccl_status CCL_CALL ccl_session_params_default(ccl_session_params *p)
-{
-  return boundary([&] {
-    if (!p || p->size < sizeof(*p))
-      return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid session params size");
-    auto size = p->size;
-    *p = {};
-    p->size = size;
-    p->device_index = UINT32_MAX;
-    p->headless = p->background = 1;
-    p->bvh_layout = "AUTO";
-    p->bvh_compact_structure = p->bvh_unaligned_nodes = 1;
-    p->hair_subdivisions = 3;
-    p->texture_resolution = 1.0f;
-    p->use_texture_cache = 1;
-    return CCL_SUCCESS;
-  });
-}
 ccl_status CCL_CALL ccl_session_create(const ccl_session_params *p, ccl_session **out)
 {
   return boundary([&] {

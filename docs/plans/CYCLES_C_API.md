@@ -1,7 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
 Status: Phases 1–4 accepted; Phase 5 passed after authorized wrapper fixes
-(2026-10-13). Phase 6 passed; Phase 7 stopped for the loader design decision below. Experimental until Phase 7.
+(2026-10-13). Phases 6 and 7 passed; continuing to the optional deep extension (Phase 8). Windows ABI swaps verified; other platforms remain unqualified.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -640,3 +640,52 @@ issue, release or other external publication occurred. D: remains above 1.3 TB.
 Evidence: [Phase 7 loader preflight](../../builds/validation/c-api/phase7.json).
 Reproduction: `src/capi/test/dependency_preload.py`; full imports, exports and
 host logs: `D:/CyclesDeepScratch/c-api/phase7-20261013`.
+
+
+## Phase 7 loader decision approved (2026-10-13)
+
+The public DLL will retain all 95 ccl_* exports and load a private native backend
+only after dependency preflight. The private table getter checks API version, size
+and signature. Windows checks PE imports against already loaded modules and file
+version resources where available, returning CCL_ERROR_DEPENDENCY_MISMATCH.
+Measure forwarding against the retained Phase 3 benchmark; preserve all prior
+CTests, native tests and Phase 6 render parity. No native/kernel changes.
+
+Linux/macOS will use dlopen(RTLD_LOCAL): inspect ELF DT_NEEDED/dynamic symbol
+versions or Mach-O load commands/export tries against loaded images, compare
+available library versions, then load the private backend and handshake. These
+platform implementations remain pending their own builds; RTLD_LOCAL alone does
+not isolate dependencies or promise compatibility.
+
+
+## Phase 7 results (2026-10-13) - PASSED
+
+- API 1.6 retains **95 exact ccl_* exports**. The public front imports only
+  **KERNEL32.dll and VERSION.dll**. The private backend exports exactly
+  `cycles_c_private_get_table`; API version, table size and signature are checked.
+  Invalid handshake requests and malformed/truncated PE images are rejected.
+- Real matched OIIO 3.1.13 initializes successfully and exposes all **184** source-
+  inventoried node types. Preloaded Gaffer OIIO 3.0.6 returns
+  **CCL_ERROR_DEPENDENCY_MISMATCH**, names expected/loaded versions and missing
+  imports, and never loads the backend. No crash or loader error 127 reaches the
+  host. The host's own OIIO call succeeds before and after both cases.
+- Release **13/13 CTests**, CPU Debug **13/13**, retained native **9/9**. CPU render
+  parity is exact on all nine channels of four fixtures. OptiX passes the unchanged
+  calibrated policy for surface/transparency/volume/OSL, five ordinary and four
+  seed references each, zero count failures and zero statistical fallback pixels.
+  CUDA/OptiX scene and geometry checks and CPU/OptiX OSL checks also pass.
+- One unchanged Phase 6 C host runs against old 1.5 Release, split 1.6 Release and
+  split 1.6 CPU Debug; no host rebuild. Both new builds pass export/import checks.
+- Same unchanged benchmark host, 9 rounds of 1M setters: name **38.908 -> 38.191
+  ns**, ID **15.669 -> 16.244 ns**, direct C++ **1.502 -> 1.482 ns** (medians).
+  The measured ID increment is **0.575 ns**; the name decrease is measurement
+  variation, not a claimed speedup. No native renderer timing claim is made.
+- Wrapper correction during qualification: retain the full deduplicated missing-
+  symbol message rather than truncating a large transitive import diagnostic.
+  No test or acceptance threshold was loosened. All **158** native compile
+  commands match API on/off; prior DLLs and production hashes are preserved.
+- Windows x64 only. OSL/OCIO resource/version limitations and Linux/macOS design
+  are documented above. No native/kernel change or external publication. D:
+  remains above 1.3 TB free. Large artifacts: phase7-20261013 and
+  phase7-debug-20261013 beneath D:/CyclesDeepScratch/c-api.
+- Evidence: [Phase 7](../../builds/validation/c-api/phase7.json).

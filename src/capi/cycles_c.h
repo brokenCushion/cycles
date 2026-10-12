@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-/** API version 1.5.0 (experimental until the Phase 7 swap test).
+/** API version 1.6.0 (experimental until the Phase 7 swap test).
  * Use default platform struct alignment. Initialize every struct to zero and
  * set size to sizeof(struct). A larger size is accepted; unknown tail bytes
  * are ignored/preserved. A smaller size returns CCL_ERROR_INVALID_ARGUMENT.
@@ -38,6 +38,8 @@ typedef int32_t ccl_status;
 #define CCL_ERROR_OUT_OF_MEMORY INT32_C(4)
 #define CCL_ERROR_INTERNAL INT32_C(5)
 #define CCL_ERROR_CALLBACK_REENTRY INT32_C(6)
+/** Loaded host dependencies are incompatible with the private renderer backend. */
+#define CCL_ERROR_DEPENDENCY_MISMATCH INT32_C(13)
 
 typedef struct ccl_version {
   uint32_t size;
@@ -101,7 +103,14 @@ CCL_API ccl_status CCL_CALL ccl_has_feature(const char *name, int32_t *supported
  * Any thread; serialized. Repeating identical paths succeeds; different paths
  * return ALREADY_INITIALIZED. NULL/undersized params, empty/relative paths:
  * INVALID_ARGUMENT. Allocation failure: OUT_OF_MEMORY; other native exception:
- * INTERNAL. CALLBACK_REENTRY in a callback. No rendering is started. */
+ * INTERNAL. CALLBACK_REENTRY in a callback. No rendering is started.
+ * Windows loads the private backend only after checking imported symbols in
+ * already-loaded same-named modules and available dependency version resources.
+ * DEPENDENCY_MISMATCH rejects incompatible dependencies or backend handshakes;
+ * ccl_last_error names incompatible modules, expected versions and missing symbols.
+ * Keep the front, private backend and matching dependencies installed together.
+ * The host must not concurrently load/unload dependencies during initialization.
+ * Linux/macOS dependency preflight is not yet qualified. */
 CCL_API ccl_status CCL_CALL ccl_init(const ccl_init_params *params);
 
 /** Borrow this thread's last error message. Valid until its next status-returning

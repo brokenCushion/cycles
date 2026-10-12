@@ -107,51 +107,8 @@ ccl_status discover()
 }
 }  // namespace
 
-ccl_status CCL_CALL ccl_api_version(ccl_version *out)
-{
-  return boundary([&]() -> ccl_status {
-    if (!out || out->size < sizeof(*out)) {
-      return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid version output size");
-    }
-    out->major = 1;
-    out->minor = 5;
-    out->patch = 0;
-    return CCL_SUCCESS;
-  });
-}
-
-ccl_status CCL_CALL ccl_has_feature(const char *name, int32_t *supported)
-{
-  return boundary([&]() -> ccl_status {
-    if (!name || !supported) {
-      return fail(CCL_ERROR_INVALID_ARGUMENT, "NULL feature name or output");
-    }
-    bool available = std::strcmp(name, "cpu") == 0;
-#ifdef WITH_CUDA
-    available |= std::strcmp(name, "cuda") == 0;
-#endif
-#ifdef WITH_OPTIX
-    available |= std::strcmp(name, "optix") == 0;
-#endif
-#ifdef WITH_HIP
-    available |= std::strcmp(name, "hip") == 0;
-#endif
-#ifdef WITH_HIPRT
-    available |= std::strcmp(name, "hiprt") == 0;
-#endif
-#ifdef WITH_METAL
-    available |= std::strcmp(name, "metal") == 0;
-#endif
-#ifdef WITH_ONEAPI
-    available |= std::strcmp(name, "oneapi") == 0;
-#endif
-#ifdef WITH_OSL
-    available |= std::strcmp(name, "osl") == 0;
-#endif
-    *supported = available ? 1 : 0;
-    return CCL_SUCCESS;
-  });
-}
+#define CCL_BOOTSTRAP_FORWARD(name, args)
+#include "bootstrap_api.inc"
 
 ccl_status CCL_CALL ccl_init(const ccl_init_params *params)
 {

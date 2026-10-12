@@ -10,6 +10,28 @@ borrows their scenes, edits sockets by name or cached ID, and builds shader grap
 including OSL scripts. It renders through native Sessions, with progress and named
 float-pass callbacks, and supports the documented blocking pause/edit/reset flow.
 
+
+## Workspace and timing rules (2026-10-13 update)
+
+- All new temporary artifacts, including builds, renders, logs, caches and process
+  TEMP/TMP directories, must live under `D:/temp/cycles_c_api/`. This location is
+  disposable: commit long-term code, scripts, documentation and small evidence
+  to this repository. Do not make disposable files the sole durable record.
+- Leave all existing `D:/CyclesDeepScratch/` contents in place and unchanged;
+  do not move or delete them. Existing references remain valid. Future builds
+  and test runs must use new paths under the new temporary root, rather than
+  writing into previous build directories.
+- Another session owns `C:/Users/jun/Documents/ChatGPT/cycles_osl_aov` and
+  `D:/temp/cycles_osl_aov`. Do not read, write, clean or otherwise operate in
+  those folders. Concurrent builds and renders may share machine resources.
+- Timing and benchmark measurements collected while the machine is busy are
+  provisional. Repeat any such measurement used for acceptance (including
+  forwarding overhead) when the machine is idle, and record the contention
+  status and repeat results. Do not stop another session's jobs to obtain idle
+  measurements. Record uncertainty if idle status cannot be established.
+- These rules do not approve the pending Phase 8 test-matrix correction or
+  change any acceptance criterion. The existing stop rules still apply.
+
 ## Build and test
 
 Use the repository's [build prerequisites](../../BUILDING.md), including its

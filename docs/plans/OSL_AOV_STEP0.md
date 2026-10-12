@@ -73,12 +73,40 @@ unchanged acceptance criteria. A wholesale backport is not yet justified:
 the patch includes extra vector support and does not establish CPU/OptiX
 parity or beauty invariance required here.
 
-Resolve the intermediate-buffer feedback before committing to the plan's
-closure design. The linked
+The user supplied the linked
 [OSL developer discussion](https://lists.aswf.io/g/osl-dev/topic/implementing_aovs/111028312)
-returned a JavaScript-required page, so the underlying reasoning was not read;
-the buffer recommendation is known only from the author's tracker comment.
-No alternative design has been selected and no criteria have been relaxed.
+again. All eight messages were subsequently read in a browser on 2026-10-13;
+the earlier plain HTTP request had returned a JavaScript-required page.
+
+The discussion is directly about #134021. In
+[message #5476](https://lists.aswf.io/g/osl-dev/message/5476), Larry Gritz
+discourages the debug closure for ordinary AOVs and recommends output placement:
+`add_symlocs`, `SymLocationDesc`, `SymArena::Outputs`, and an execution output
+buffer pointer. The JIT generates writes to declared output locations.
+
+In [message #5479](https://lists.aswf.io/g/osl-dev/message/5479), Brecht proposes
+a shader-layout intermediate buffer, followed by writing to the actual film:
+
+- Multiple threads can accumulate samples for the same pixel, requiring
+  synchronization such as the existing film atomics.
+- Viewport AOV selection changes should avoid recompiling all shaders.
+- On-demand GPU texture loading can require shader retries; an execution that
+  misses a texture must not contribute AOV writes.
+
+[Message #5481](https://lists.aswf.io/g/osl-dev/message/5481) explains the shared
+pixel samples in wavefront GPU rendering. In
+[message #5482](https://lists.aswf.io/g/osl-dev/message/5482), Alex recognizes
+the missing film atomics and outlines per-group output locations followed by
+copying intermediate results to the film. Arbitrary user AOV names and
+precompiled shader output names remain an integration question in the thread.
+
+Recommendation: evaluate the original plan's renderer-output alternative
+first, using intermediate execution storage and Cycles film writers. This is
+a design recommendation, not a proven implementation. Larry's warning is
+specifically about the debug closure; it does not establish that a dedicated
+internal closure is impossible. No design switch has been implemented and
+no criteria have been relaxed. CPU/OptiX output-placement support in the
+bundled OSL version still needs checking.
 
 This checkpoint does not validate the upstream patch's behavior. CPU and
 OptiX implementation remain pending the next user instruction.

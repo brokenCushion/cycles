@@ -1,0 +1,100 @@
+{
+  "phase": 7,
+  "status": "stopped_design_decision_required",
+  "baseline_ctests": "13/13",
+  "phase6_commit": "4d1a54699",
+  "matched": {
+    "host": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\install",
+    "cycles_c": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\install\\cycles_c.dll",
+    "modules": [
+      {
+        "name": "OpenImageIO_Util.dll",
+        "path": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\install\\OpenImageIO_Util.dll",
+        "sha256": "ee1ea0e25cd0ac2a929f4c9c7487ce8b9df46bf4bb00f29875861b326d681355"
+      },
+      {
+        "name": "OpenImageIO.dll",
+        "path": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\install\\OpenImageIO.dll",
+        "sha256": "04546bd62390f739bcc6d998445c1806b7b0831cc93bca9f87bb4ee258495041"
+      }
+    ],
+    "init_reached": true,
+    "library_loaded": true,
+    "actual_api": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\install\\cycles_c.dll",
+    "init_status": 0,
+    "init_error": "",
+    "reflection_status": 0,
+    "node_types": 184,
+    "stage": "init"
+  },
+  "mismatched": {
+    "host": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\build-gaffer\\gaffer-1.7.2.0-windows\\bin",
+    "cycles_c": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\install\\cycles_c.dll",
+    "modules": [
+      {
+        "name": "OpenImageIO_Util.dll",
+        "path": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\build-gaffer\\gaffer-1.7.2.0-windows\\bin\\OpenImageIO_Util.dll",
+        "sha256": "fb4d580cb85d7d2b0af5ce291f9c22d8c37a9d32a12c5869f2e700f512db7cc2"
+      },
+      {
+        "name": "OpenImageIO.dll",
+        "path": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\build-gaffer\\gaffer-1.7.2.0-windows\\bin\\OpenImageIO.dll",
+        "sha256": "a3cb3ffefa782a5987d2102988d2e6fc1e356390ff5450bb0edff35727a29ca1"
+      }
+    ],
+    "init_reached": false,
+    "stage": "cycles_c_load",
+    "winerror": 127,
+    "error": "[WinError 127] The specified procedure could not be found",
+    "library_loaded": false
+  },
+  "version_pair": {
+    "build": "OIIO 3.1.13.0",
+    "preloaded_host": "OIIO 3.0.6.0 from Gaffer 1.7.2.0"
+  },
+  "import_evidence": [
+    {
+      "dependency": "OpenImageIO.dll",
+      "missing_import_count": 54,
+      "example_missing_imports": [
+        "??0ImageBuf@v3_1@OpenImageIO@@QEAA@$$QEAV012@@Z",
+        "??0ImageBuf@v3_1@OpenImageIO@@QEAA@AEBVImageSpec@12@W4InitializePixels@12@@Z",
+        "??0ImageBuf@v3_1@OpenImageIO@@QEAA@XZ"
+      ],
+      "import_namespace": "OpenImageIO::v3_1",
+      "preloaded_export_namespace": "OpenImageIO_v3_0"
+    },
+    {
+      "dependency": "OpenImageIO_Util.dll",
+      "missing_import_count": 35,
+      "example_missing_imports": [
+        "??0ustring@v3_1@OpenImageIO@@QEAA@AEBV012@_K1@Z",
+        "??0ustring@v3_1@OpenImageIO@@QEAA@PEBD@Z",
+        "??0ustring@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@@Z"
+      ],
+      "import_namespace": "OpenImageIO::v3_1",
+      "preloaded_export_namespace": "OpenImageIO_v3_0"
+    }
+  ],
+  "failed_requirement": "ccl_init must report an incompatible preloaded OIIO clearly without a crash. The OS rejects the DLL before ccl_init is callable.",
+  "recommended_design": "Dependency-free public cycles_c bootstrap DLL plus private native backend loaded only after dependency preflight. Same shared version-matched dependency policy; no Cycles internal/kernel changes.",
+  "tradeoffs": [
+    "Two wrapper DLLs to package instead of one",
+    "Forwarding layer for C API calls; rerun cached-socket microbenchmark",
+    "Platform-specific dependency inspection and preflight must be qualified before declaring ABI stable"
+  ],
+  "alternative": "Require host-side preflight and accept loader-time failure instead; this changes the approved ccl_init criterion and is not authorized.",
+  "not_implemented": [
+    "Bootstrap/backend split",
+    "Runtime OIIO/OSL/OpenVDB/OCIO/Embree version checks",
+    "Two-new-build and debug/release ABI swap qualification",
+    "Phases 8, 9 and 10"
+  ],
+  "unchanged": [
+    "Cycles native sources and kernels",
+    "Phase 6 accepted DLL",
+    "Qualified production/reference outputs"
+  ],
+  "free_disk_bytes": 1396208705536,
+  "root": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013"
+}

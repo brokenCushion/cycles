@@ -422,3 +422,41 @@ render/device/export checks and results will be recorded below.
   above 1.3 TB free. Windows only; no sanitizer/cross-platform qualification or
   full production regression is claimed. ABI remains experimental until Phase 7.
 - Evidence: [Phase 6](../../builds/validation/c-api/phase6.json).
+
+
+## Phase 7 preflight results (2026-10-13) — STOPPED for design review
+
+Phase 6 is committed as `4d1a54699`. Phase 7 baseline repeats **13/13 CTests**.
+An isolated Windows host preloaded each real OIIO DLL set, verified the loaded
+paths/hashes, then attempted to load the accepted Phase 6 library:
+
+| Preloaded OIIO | DLL load | `ccl_init` | Result |
+| --- | --- | --- | --- |
+| Build-matched **3.1.13.0** | succeeds | SUCCESS; reflection returns 184 types | Initialization smoke passes |
+| Gaffer 1.7.2.0's **3.0.6.0** | **WinError 127**, missing procedure | **unreachable** | Required clear init-time rejection cannot run |
+
+Neither host crashed. The DLL directly imports 54 symbols from OpenImageIO and
+35 from OpenImageIO_Util absent in that older host set. Import names use
+`OpenImageIO::v3_1`, while the preloaded library exports `OpenImageIO_v3_0`.
+Windows resolves these imports before executing `ccl_init`; adding checks inside
+that function cannot fix this case. This is not a parser or numerical failure.
+The probe is not a complete dependency-coexistence qualification: other dependency
+checks, renderer use in a matched host, and debug/release ABI swaps remain pending.
+
+**Recommended next design, not implemented:** keep the public `cycles_c.dll`
+free of renderer/dependency imports. It performs dependency preflight at init,
+then loads a private native backend DLL. The shared, version-matched dependency
+choice remains unchanged. This adds a second DLL and C-call forwarding (measure
+its socket-setter overhead); platform-specific version inspection still needs
+qualification. It does not require native Cycles/kernel changes.
+
+Alternative: require host-side preflight and accept loader-time rejection. That
+would change the approved init-time error criterion, so it is not applied.
+The user must choose the loader design before continuation under the recorded
+stop rule. No runtime guard, split or criterion change has been made. Phase 6
+DLL hashes remain unchanged. Phases **8–10 have not started**; no push, fork,
+issue, release or other external publication occurred. D: remains above 1.3 TB.
+
+Evidence: [Phase 7 loader preflight](../../builds/validation/c-api/phase7.json).
+Reproduction: `src/capi/test/dependency_preload.py`; full imports, exports and
+host logs: `D:/CyclesDeepScratch/c-api/phase7-20261013`.

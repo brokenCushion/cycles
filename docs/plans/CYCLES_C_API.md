@@ -1,7 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
-Status: Phases 1–4 accepted. Phase 5 acceptance failed; stopped under the
-2026-10-13 user rule. Phases 6–10 not started. Experimental until Phase 7.
+Status: Phases 1–4 accepted; Phase 5 passed after authorized wrapper fixes
+(2026-10-13). Proceeding to Phase 6. Experimental until Phase 7.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -400,6 +400,24 @@ Phase 5 results (2026-10-13) — **FAILED; stopped, not accepted**:
 - Evidence: [Phase 5 stopped results](../../builds/validation/c-api/phase5.json).
   Full build/install/logs: `D:/CyclesDeepScratch/c-api/phase5-20261013`.
 
+Phase 5 resumed results (2026-10-13) — **PASSED**:
+- Fixed two wrapper defects with the existing tests/criteria unchanged: native
+  motion_steps=0 now permits the single center buffer, and VDB loading registers
+  OpenVDB's built-in types before reading files. No native values or renderer code
+  changed. The earlier failure above remains part of the record.
+- **11/11** CTests and **9/9** preserved native tests pass. Geometry suite passes
+  in CPU, CUDA and OptiX sessions: triangle and polygon/subdivision storage,
+  curves, points, object instancing, attribute domains/payloads/packing/motion,
+  VDB file/grid loading, invalid input and stale-handle checks. No render starts.
+- Installed-library inventory/reflection and exact **86** exports pass. Retained
+  C hosts, device editing, and OSL graph tests also pass. Phase 1–4 and production
+  hashes unchanged. Existing tests are byte-for-byte unchanged from `d78055335`.
+- API 1.4 adds six geometry functions. Reflected topology sockets remain the
+  native route; hosts supply regular polygon triangulation and subd topology.
+  Render parity is explicitly deferred to Phase 6, not claimed here.
+- Updated [evidence](../../builds/validation/c-api/phase5.json); all large files
+  remain in `D:/CyclesDeepScratch/c-api/phase5-20261013`.
+
 ### Phase 6: Session, rendering and outputs
 - Session lifecycle mirroring GafferCycles' usage (start, pause, reset, wait,
   cancel, set_samples), progress, errors, and output callbacks with pass
@@ -493,3 +511,13 @@ Phase 5 results (2026-10-13) — **FAILED; stopped, not accepted**:
    Phase 7 requires matched-host success and mismatched-OIIO clear failure without
    a crash. Which exact VFX Reference Platform stack should be supported remains
    a deployment question; version matching constrains swappable renderer builds.
+
+## Continuation authorization (2026-10-13)
+
+The user approved correcting the Phase 5 motion_steps=0 wrapper defect and
+continuing Phases 5–10. The refined stop rule supersedes earlier failure stops:
+fix bugs in new wrapper code without stopping when tests/criteria stay unchanged
+and no native Cycles/kernel code changes; record each fix in phase results. Stop
+if a fix requires a test/criterion change, native/internal change, an uncovered
+design tradeoff, an action leaving this machine, or D: free space below 200 GB.
+Per-phase result entries and local commits remain required.

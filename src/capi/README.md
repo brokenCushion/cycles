@@ -1,11 +1,11 @@
-# Cycles C API — Phases 1–4 accepted; Phase 5 draft stopped
+# Cycles C API — Phases 1–5
 
 Experimental shared-library boundary for host applications such as Gaffer.
 **Experimental until Phase 7**; the stable ABI promise has not begun.
 The contract is [cycles_c.h](cycles_c.h): it contains no Cycles C++ headers or
 deep types. It initializes resource paths, enumerates native devices, reports
 compiled capabilities, routes logs and introspects built-in node types, sockets,
-defaults, flags and enums. The accepted API 1.3 creates device-selected native Sessions and
+defaults, flags and enums. API 1.4 creates device-selected native Sessions and
 borrows their scenes, edits sockets by name or cached ID, and builds shader graphs
 including OSL scripts. It does **not** start renders yet.
 
@@ -36,7 +36,7 @@ For a build without the unrelated USD/Hydra integration, set both
 is compiled as C11, uses LoadLibrary/GetProcAddress or dlopen/dlsym, and has no
 Cycles import-library dependency. `cycles_c_contract` additionally checks native
 enumeration, exception containment, struct sizes, thread-local errors and logging.
-`cycles_c_exports` requires the exact 86 public functions in the unqualified Phase 5 draft (80 in Phase 4), rejecting extra
+`cycles_c_exports` requires the exact 86 public functions, rejecting extra
 symbols even if they start with `ccl_`. No tests depend on deep being enabled.
 
 ## Reflection and registration completeness
@@ -296,7 +296,7 @@ exports on Windows, linker export lists on ELF/Mach-O. Dependencies may still
 be separate runtime libraries; a C ABI does not make them self-contained or
 guarantee compatibility between arbitrary dependency versions.
 
-Accepted coverage is limited to Phases 1–4. The Phase 5 draft below is not qualified. ABI evolution and render
+Verified coverage includes Phases 1–5; render parity is still pending. ABI evolution and render
 parity remain acceptance gates in the [plan](../../docs/plans/CYCLES_C_API.md).
 
 ## Continuing Phases 5–10 (2026-10-13)
@@ -332,3 +332,23 @@ prefix. Native sources and all checked Phase 1–4/production binaries are uncha
 No internal Cycles change or external publishing action occurred. See
 [stopped results](../../builds/validation/c-api/phase5.json) and the
 [plan](../../docs/plans/CYCLES_C_API.md) for the failure and unrun checks.
+
+## Phase 5 resumed results (2026-10-13)
+
+**Passed: 11/11 CTests, 9/9 preserved native tests; CPU/CUDA/OptiX geometry suites.**
+The two wrapper fixes are center-only handling for native motion_steps=0 and
+OpenVDB type registration before file loading. Existing tests and criteria are
+unchanged from the stopped commit. No Cycles internals or kernels changed.
+
+The earlier stopped result is superseded by this entry. API 1.4 adds geometry
+allocation and copied standard/custom attributes (including packed normals,
+byte colors, subdivision and motion) plus VDB file/grid loading. Use existing
+node sockets for topology/shaders and object references for instancing. Ordinary
+polygon triangulation is supplied by the host, matching native Mesh; subdivision
+polygons use the native subd sockets and attribute set. Tags retain native update
+behavior. All six new functions have ownership/thread/error contracts in the header.
+
+Installed exports (86), registration (184 types), reflection, retained C hosts and
+shader tests pass; qualified previous binaries remain unchanged. Render parity,
+Linux/macOS and sanitizers are not covered by Phase 5. The refined user rule allows
+wrapper bug fixes with unchanged tests/criteria; results above record both fixes.

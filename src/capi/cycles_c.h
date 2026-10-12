@@ -698,7 +698,7 @@ typedef struct ccl_attribute_desc {
  * FLOAT4/RGBA ccl_float4, MATRIX ccl_transform; CORNER_BYTE instead uses ccl_uchar4.
  * Encoded normal elements take ccl_float3 and use native normal packing. All floats
  * must be finite. Step 0 is center; 1..motion_steps-1 follow native noncenter order.
- * Set motion_steps first (odd 1..129). New motion buffers are initialized from the
+ * Native motion_steps=0 permits center-only data; for motion set odd 1..129 first. New motion buffers are initialized from the
  * center, then this step is replaced. Noncenter writes require an existing matching
  * center attribute. Other existing motion steps are preserved. Voxel data uses
  * ccl_volume_set_grid instead. Reserved built-in P/radius cannot be retyped.

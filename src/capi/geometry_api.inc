@@ -274,7 +274,8 @@ ccl_status CCL_CALL ccl_geometry_set_attribute(
     if (!fits_count(count) || (count && !data) ||
         count != Attribute::element_size(&g, elements[d->element], set->prim))
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Attribute count does not match geometry");
-    const uint32_t steps = g.get_motion_steps();
+    /* Native zero means no motion, with one writable center buffer. */
+    const uint32_t steps = std::max(1u, g.get_motion_steps());
     if (steps < 1 || steps > Geometry::MAX_MOTION_STEPS || !(steps & 1) || step >= steps)
       return fail(CCL_ERROR_INVALID_ARGUMENT, "Invalid motion step/count");
     const auto *old = set->find(name);
@@ -340,6 +341,8 @@ ccl_status CCL_CALL ccl_volume_set_grid(ccl_node *node,
 #if defined(WITH_OPENVDB) && defined(WITH_NANOVDB)
     if (!std::filesystem::is_regular_file(filename))
       return fail(CCL_ERROR_NOT_FOUND, "VDB file missing");
+    /* Embedding hosts need not have registered OpenVDB grid types. */
+    openvdb::initialize();
     openvdb::io::File file(filename);
 #  ifdef OPENVDB_USE_DELAYED_LOADING
     file.setCopyMaxBytes(0);

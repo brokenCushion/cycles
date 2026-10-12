@@ -1,10 +1,10 @@
 {
   "phase": 5,
-  "status": "acceptance-failed-stopped",
-  "time_utc": "2026-10-12T13:15:47.572154+00:00",
+  "status": "passed",
+  "time_utc": "2026-10-12T13:21:41.695117+00:00",
   "branch": "c-api",
   "baseline_commit": "91f3a42e7",
-  "api_version": "1.4.0 experimental, unqualified draft",
+  "api_version": "1.4.0 experimental until Phase 7",
   "build_root": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013",
   "baseline": {
     "passed": 10,
@@ -12,20 +12,9 @@
     "log": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013\\baseline.log"
   },
   "after": {
-    "passed": 10,
+    "passed": 11,
     "total": 11,
-    "log": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013\\phase5-ctests.log",
-    "failed": "cycles_c_geometry"
-  },
-  "failure": {
-    "operation": "First center POSITION attribute write on freshly resized mesh",
-    "actual": "CCL_ERROR_INVALID_ARGUMENT: Invalid motion step/count",
-    "expected": "CCL_SUCCESS for native non-motion geometry",
-    "native_default": "src/scene/geometry.cpp:42 SOCKET_UINT(motion_steps, \"Motion Steps\", 0)",
-    "wrapper_issue": "geometry_set_attribute rejects steps < 1 even for center step 0",
-    "classification": "wrapper validation bug, not a harness-only issue",
-    "fix_applied": false,
-    "retry": false
+    "log": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013\\final-ctests.log"
   },
   "build": {
     "success": true,
@@ -82,18 +71,48 @@
       "unchanged": true
     }
   },
-  "d_free_bytes": 1396912332800,
+  "d_free_bytes": 1396910989312,
   "identities": {
-    "dll_sha256": "33b17f42a6add3a7009cb40b82c530aa3394fb0bd382a6a01f9db51691b681e5",
-    "header_sha256": "0e9d7c2eda3999c77a54666068f268d4235779a7c4b0cca3402a277b710f5327"
+    "dll_sha256": "1b8da5585750bae4f0d60ab8fa86430e914f93454f1d68f59a6ff24f5b72842c",
+    "header_sha256": "a209a73d23a839f764c17df7bc537e3ade4e07f5b8230f55dd2193e6cbbd49f8",
+    "phase1_phase2_phase3_and_production_preserved": true,
+    "direct_dependencies": [
+      "ADVAPI32.dll",
+      "CFGMGR32.dll",
+      "KERNEL32.dll",
+      "MSVCP140.dll",
+      "OpenColorIO_2_5.dll",
+      "OpenImageDenoise.dll",
+      "OpenImageIO.dll",
+      "OpenImageIO_Util.dll",
+      "VCRUNTIME140.dll",
+      "VCRUNTIME140_1.dll",
+      "VERSION.dll",
+      "api-ms-win-crt-convert-l1-1-0.dll",
+      "api-ms-win-crt-environment-l1-1-0.dll",
+      "api-ms-win-crt-filesystem-l1-1-0.dll",
+      "api-ms-win-crt-heap-l1-1-0.dll",
+      "api-ms-win-crt-locale-l1-1-0.dll",
+      "api-ms-win-crt-math-l1-1-0.dll",
+      "api-ms-win-crt-runtime-l1-1-0.dll",
+      "api-ms-win-crt-stdio-l1-1-0.dll",
+      "api-ms-win-crt-string-l1-1-0.dll",
+      "api-ms-win-crt-time-l1-1-0.dll",
+      "api-ms-win-crt-utility-l1-1-0.dll",
+      "embree4.dll",
+      "openvdb.dll",
+      "oslcomp.dll",
+      "oslexec.dll",
+      "oslquery.dll",
+      "sycl8.dll",
+      "tbb12.dll"
+    ]
   },
   "not_run": [
-    "Remaining geometry assertions after first center attribute",
-    "CUDA/OptiX geometry suite",
-    "separate installed geometry smoke",
-    "post-phase legacy native suite",
-    "Phase6 rendering/parity",
-    "Phases7-10"
+    "Render parity (Phase 6)",
+    "Linux/macOS builds",
+    "Sanitizers",
+    "Phases 7-10"
   ],
   "user_decisions_recorded": [
     "continue phases locally with per-phase commits",
@@ -101,5 +120,39 @@
     "local Gaffer clone/build on D:",
     "local-only upstream proposal"
   ],
-  "external_actions": false
+  "external_actions": false,
+  "prior_failure": {
+    "operation": "First center POSITION attribute write on freshly resized mesh",
+    "actual": "CCL_ERROR_INVALID_ARGUMENT: Invalid motion step/count",
+    "expected": "CCL_SUCCESS for native non-motion geometry",
+    "native_default": "src/scene/geometry.cpp:42 SOCKET_UINT(motion_steps, \"Motion Steps\", 0)",
+    "wrapper_issue": "geometry_set_attribute rejects steps < 1 even for center step 0",
+    "classification": "wrapper validation bug, not a harness-only issue",
+    "fix_applied": false,
+    "retry": false
+  },
+  "native_regression": {
+    "passed": 9,
+    "total": 9,
+    "log": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013\\post-existing-tests.log"
+  },
+  "geometry_devices": {
+    "CPU": {
+      "passed": true,
+      "log": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013\\geometry-CPU.log"
+    },
+    "CUDA": {
+      "passed": true,
+      "log": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013\\geometry-CUDA.log"
+    },
+    "OPTIX": {
+      "passed": true,
+      "log": "D:\\CyclesDeepScratch\\c-api\\phase5-20261013\\geometry-OPTIX.log"
+    }
+  },
+  "fixes": [
+    "Treat native motion_steps=0 as one center buffer for validation, leaving native value unchanged.",
+    "Initialize OpenVDB native type registry before synchronous grid file loading."
+  ],
+  "tests_unchanged_from_stopped_commit": true
 }

@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-/** Phase 1 ABI, version 1.0.0 (experimental until the Phase 7 swap test).
+/** Phase 2 ABI, version 1.1.0 (experimental until the Phase 7 swap test).
  * Use default platform struct alignment. Initialize every struct to zero and
  * set size to sizeof(struct). A larger size is accepted; unknown tail bytes
  * are ignored/preserved. A smaller size returns CCL_ERROR_INVALID_ARGUMENT.
@@ -131,6 +131,135 @@ CCL_API ccl_status CCL_CALL ccl_device_count(uint32_t *count);
  * out is unchanged. Device indices are local to this library instance only.
  */
 CCL_API ccl_status CCL_CALL ccl_device_info(uint32_t index, ccl_device_desc *out);
+
+/** Reflection added in API 1.1. All queries require init, are serialized and
+ * may run on any thread except a log callback. Inputs are borrowed for the call;
+ * outputs are caller-owned; returned strings are immutable library-owned UTF-8
+ * valid until process exit. No native struct layout or pointer is exposed.
+ * On failure output is unchanged. Common errors: NOT_INITIALIZED,
+ * CALLBACK_REENTRY, OUT_OF_MEMORY, INTERNAL; NULL/undersized output or invalid
+ * direction/index: INVALID_ARGUMENT; unknown node name: NOT_FOUND.
+ * Built-in registry only: instance-specific OSL sockets belong to Phase 4.
+ */
+#define CCL_ERROR_NOT_FOUND INT32_C(7)
+#define CCL_ERROR_NO_DEFAULT INT32_C(8)
+#define CCL_ERROR_UNSUPPORTED INT32_C(9)
+
+typedef int32_t ccl_socket_type;
+#define CCL_SOCKET_UNDEFINED INT32_C(0)
+#define CCL_SOCKET_BOOLEAN INT32_C(1)
+#define CCL_SOCKET_FLOAT INT32_C(2)
+#define CCL_SOCKET_INT INT32_C(3)
+#define CCL_SOCKET_UINT INT32_C(4)
+#define CCL_SOCKET_UINT64 INT32_C(5)
+#define CCL_SOCKET_COLOR INT32_C(6)
+#define CCL_SOCKET_VECTOR INT32_C(7)
+#define CCL_SOCKET_POINT INT32_C(8)
+#define CCL_SOCKET_NORMAL INT32_C(9)
+#define CCL_SOCKET_POINT2 INT32_C(10)
+#define CCL_SOCKET_CLOSURE INT32_C(11)
+#define CCL_SOCKET_STRING INT32_C(12)
+#define CCL_SOCKET_ENUM INT32_C(13)
+#define CCL_SOCKET_TRANSFORM INT32_C(14)
+#define CCL_SOCKET_NODE INT32_C(15)
+#define CCL_SOCKET_BOOLEAN_ARRAY INT32_C(16)
+#define CCL_SOCKET_FLOAT_ARRAY INT32_C(17)
+#define CCL_SOCKET_INT_ARRAY INT32_C(18)
+#define CCL_SOCKET_COLOR_ARRAY INT32_C(19)
+#define CCL_SOCKET_VECTOR_ARRAY INT32_C(20)
+#define CCL_SOCKET_POINT_ARRAY INT32_C(21)
+#define CCL_SOCKET_NORMAL_ARRAY INT32_C(22)
+#define CCL_SOCKET_POINT2_ARRAY INT32_C(23)
+#define CCL_SOCKET_STRING_ARRAY INT32_C(24)
+#define CCL_SOCKET_TRANSFORM_ARRAY INT32_C(25)
+#define CCL_SOCKET_NODE_ARRAY INT32_C(26)
+
+#define CCL_SOCKET_LINKABLE UINT32_C(1)
+#define CCL_SOCKET_ANIMATABLE UINT32_C(2)
+#define CCL_SOCKET_SVM_INTERNAL UINT32_C(4)
+#define CCL_SOCKET_OSL_INTERNAL UINT32_C(8)
+#define CCL_SOCKET_LINK_TEXTURE_GENERATED UINT32_C(16)
+#define CCL_SOCKET_LINK_TEXTURE_NORMAL UINT32_C(32)
+#define CCL_SOCKET_LINK_TEXTURE_UV UINT32_C(64)
+#define CCL_SOCKET_LINK_TEXTURE_INCOMING UINT32_C(128)
+#define CCL_SOCKET_LINK_INCOMING UINT32_C(256)
+#define CCL_SOCKET_LINK_NORMAL UINT32_C(512)
+#define CCL_SOCKET_LINK_POSITION UINT32_C(1024)
+#define CCL_SOCKET_LINK_TANGENT UINT32_C(2048)
+#define CCL_SOCKET_LINK_OSL_INITIALIZER UINT32_C(4096)
+
+typedef int32_t ccl_socket_direction;
+#define CCL_SOCKET_INPUT INT32_C(0)
+#define CCL_SOCKET_OUTPUT INT32_C(1)
+
+typedef struct ccl_node_type_desc {
+  uint32_t size;
+  const char *name;
+  const char *base; /**< Empty string when there is no base type. */
+  int32_t is_shader;
+  int32_t is_abstract; /**< Native type has no create function. */
+  uint32_t input_count, output_count;
+} ccl_node_type_desc;
+
+typedef struct ccl_socket_desc {
+  uint32_t size;
+  const char *name;
+  const char *ui_name;
+  ccl_socket_type type;
+  uint32_t flags;         /**< CCL_SOCKET_* bit flags; never native enum ordinals. */
+  const char *node_type;  /**< Required node base type, or empty when unconstrained. */
+  int32_t has_default;    /**< Distinguishes no default from an empty array. */
+  uint64_t default_count; /**< 1 for scalar defaults, array element count otherwise. */
+  uint32_t enum_count;
+} ccl_socket_desc;
+
+typedef struct ccl_default_value {
+  uint32_t size;
+  ccl_socket_type type;     /**< Scalar element type (COLOR for COLOR_ARRAY, etc.). */
+  int32_t signed_value;     /**< BOOLEAN (0/1), INT, or ENUM. */
+  uint64_t unsigned_value;  /**< UINT or UINT64. */
+  float floats[12];         /**< FLOAT:1, POINT2:2, COLOR/VECTOR/POINT/NORMAL:3;
+                             * TRANSFORM:12, row-major affine 3x4, translation at 3/7/11. */
+  const char *string_value; /**< STRING only; borrowed, never freed by host. */
+  int32_t node_is_null;     /**< NODE default is null; no native pointer crosses ABI. */
+} ccl_default_value;
+
+typedef struct ccl_enum_value {
+  uint32_t size;
+  const char *name;
+  int32_t value; /**< Numeric values need not be contiguous or unique. */
+} ccl_enum_value;
+
+/** Count registered built-in node types. Ownership/threading/errors as above.
+ * The list is sorted by UTF-8 name and stable for this process, not across builds. */
+CCL_API ccl_status CCL_CALL ccl_node_type_count(uint32_t *count);
+/** Describe the type at index; includes inherited socket counts. Ownership,
+ * threading and errors as above. Out-of-range index: INVALID_ARGUMENT. */
+CCL_API ccl_status CCL_CALL ccl_node_type_info(uint32_t index, ccl_node_type_desc *out);
+/** Describe a socket in native declaration order (including inherited sockets).
+ * node_name and direction select the input/output list. Ownership/threading/errors
+ * as above; NULL name or out-of-range index: INVALID_ARGUMENT. */
+CCL_API ccl_status CCL_CALL ccl_socket_info(const char *node_name,
+                                            ccl_socket_direction direction,
+                                            uint32_t index,
+                                            ccl_socket_desc *out);
+/** Read one default element; scalar defaults use element=0. Only the field for
+ * the returned scalar type is populated; unused fields are zero. Ownership,
+ * threading and common errors as above. NO_DEFAULT for outputs/closures/missing
+ * defaults; INVALID_ARGUMENT for an out-of-range element (including empty arrays).
+ * UNSUPPORTED if a native non-null node default cannot be represented. */
+CCL_API ccl_status CCL_CALL ccl_socket_default_value(const char *node_name,
+                                                     ccl_socket_direction direction,
+                                                     uint32_t index,
+                                                     uint64_t element,
+                                                     ccl_default_value *out);
+/** Read one named enum entry, sorted by UTF-8 name. Ownership/threading/errors as
+ * above; INVALID_ARGUMENT if enum_index is out of range or socket has no enum. */
+CCL_API ccl_status CCL_CALL ccl_socket_enum_value(const char *node_name,
+                                                  ccl_socket_direction direction,
+                                                  uint32_t index,
+                                                  uint32_t enum_index,
+                                                  ccl_enum_value *out);
 
 #ifdef __cplusplus
 }

@@ -1,7 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
-Status: Phase 1 implemented and tested; awaiting user review (2026-10-12).
-Requested by the GafferCycles author. Phase 2 has not started.
+Status: Phase 1 accepted; Phase 2 implemented and tested, awaiting review (2026-10-12).
+Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
 ## 1. Goal
@@ -85,7 +85,7 @@ practical.
 
 Phase 1's actual contract is [cycles_c.h](../../src/capi/cycles_c.h).
 It uses fixed-width status codes and size-prefixed structs, documented ownership,
-threading and error behavior. The seven implemented functions are:
+threading and error behavior. The seven Phase 1 functions are:
 
 ```c
 ccl_status  ccl_api_version(ccl_version *out);
@@ -96,6 +96,27 @@ ccl_status  ccl_set_log_callback(ccl_log_fn fn, void *user);
 ccl_status  ccl_device_count(uint32_t *count);
 ccl_status  ccl_device_info(uint32_t index, ccl_device_desc *out);
 ```
+
+Phase 2 (API 1.1) adds these fully documented queries. The header defines
+`ccl_node_type_desc`, `ccl_socket_desc`, `ccl_default_value`, `ccl_enum_value`,
+explicit socket-type/flag constants and input/output direction values.
+
+```c
+ccl_status ccl_node_type_count(uint32_t *count);
+ccl_status ccl_node_type_info(uint32_t index, ccl_node_type_desc *out);
+ccl_status ccl_socket_info(const char *node_name, ccl_socket_direction direction,
+                           uint32_t index, ccl_socket_desc *out);
+ccl_status ccl_socket_default_value(const char *node_name, ccl_socket_direction direction,
+                                    uint32_t index, uint64_t element, ccl_default_value *out);
+ccl_status ccl_socket_enum_value(const char *node_name, ccl_socket_direction direction,
+                                 uint32_t index, uint32_t enum_index, ccl_enum_value *out);
+```
+
+Single-record queries replace the provisional bulk socket/enum arrays: each
+output has its own size field, avoiding a future struct-size/array-stride ABI
+ambiguity. Node descriptors give both socket counts; socket descriptors give
+default and enum counts. Defaults are one typed C scalar/vector/transform/string
+per element. No raw Cycles default-value storage escapes.
 
 Refinements from the initial outline:
 
@@ -111,18 +132,11 @@ Refinements from the initial outline:
 - Phase 1 retains one loaded library until process exit; unloading and simultaneous
   versions require lifecycle work before the Phase 7 compatibility promise.
 
-Before going beyond Phase 1, review extending the status/out convention to the
-fallible queries below; define node/graph deletion invalidation, session edit
+Before later phases, retain the status/out convention for fallible queries; define node/graph deletion invalidation, session edit
 synchronization (pause alone may not suffice), and callback/buffer lifetimes.
 No later-phase function below is implemented or part of the exported ABI yet.
 
 ```c
-/* Introspection */
-int         ccl_node_type_count(void);
-const char *ccl_node_type_name(int index);
-ccl_status  ccl_node_type_sockets(const char *type, ccl_socket_desc *out, int capacity, int *count);
-ccl_status  ccl_socket_enum_values(const char *type, const char *socket, ...);
-
 /* Session and scene */
 ccl_status  ccl_session_create(const ccl_session_params *params, ccl_session **out);
 void        ccl_session_destroy(ccl_session *s);
@@ -212,6 +226,37 @@ Build, install, logs and command records:
 - Node types, sockets, socket types, defaults, enum values, flags.
 - Acceptance: for every node type, a C dump matches the C++ reflection data
   (generated comparison test).
+- Independently derive the expected type inventory from every source
+  `NODE_DEFINE`, including an explicit accounting of abstract and generated
+  registrations. Compare against the **loaded DLL**, not just a second binary
+  linking the same static libraries. If registrations are dropped, whole-archive
+  the self-registering libraries and repeat both comparisons.
+
+Phase 2 results (2026-10-12):
+- Baseline Phase 1 tests: 4/4 passed. Phase 2 tests: 6/6 passed (including the
+  installed standalone smoke). Preserved native regression CTests: 9/9 passed.
+- The source-derived inventory caught `buffer_params` and `buffer_pass` missing
+  from the DLL. Whole-archive retention of `cycles_scene` and `cycles_session`
+  fixes this without modifying registration or renderer code.
+- Actual DLL inventory: all 118 `NODE_DEFINE` registrations, 64 generated
+  conversion types and two used abstract bases, 184 total. The lazy unused
+  `procedural_base` is accounted for separately.
+- Full C-DLL/native dump equality: 184 types, 1,277 sockets, 963 default elements
+  and 816 enum entries. Added array-conversion, error/bounds, concurrent-query,
+  larger-struct and source-parser negative tests. Null native empty strings are
+  normalized to non-null empty C strings as required by the public contract.
+- Installed DLL inventory/parity/exports pass, as does the unchanged Phase 1 C
+  host against API 1.1. Exactly twelve public C functions are exported.
+- All 158 existing compilation commands match API-on versus API-off. Native
+  sources, Phase 1 DLL and qualified production executable hashes are unchanged.
+- Direct runtime dependency list is recorded in `src/capi/README.md`; mixed
+  dependency isolation is a Phase 7 decision/test, not a Phase 2 implementation.
+- Full 81/30/65 rendering, Linux/macOS builds and dependency coexistence were not
+  tested here. No Phase 3 work has started.
+
+Small evidence: [Phase 2 results](../../builds/validation/c-api/phase2.json).
+Full dumps, pre-fix inventory, build/install and logs:
+`D:/CyclesDeepScratch/c-api/phase2-20261012`.
 
 ### Phase 3: Scene, nodes and sockets
 - Create, delete and edit scene-level nodes by type name. Singletons. Typed and
@@ -247,6 +292,16 @@ Build, install, logs and command records:
   vs release build) and confirm it works and reports each version.
 - Acceptance: no host rebuild needed; `ccl_api_version` and features reflect
   the loaded library.
+- Dependency coexistence is also an acceptance gate: the host may already have
+  loaded its own OpenImageIO, OSL, OpenVDB, Embree, OCIO and USD versions (as
+  Gaffer does). Add a test host that preloads a **different OIIO version** before
+  loading `cycles_c`, exercises both interfaces and checks actual loaded-module
+  identities. Successful DLL loading alone is not sufficient. Document the
+  supported version combinations and reject unsupported combinations clearly.
+- Decide with the GafferCycles author between static/hidden dependencies,
+  renamed private dependency DLLs (including transitive imports), or a shared
+  version-matched VFX Reference Platform dependency set. Phase 2 only documents
+  these options; it does not implement dependency isolation.
 
 ### Phase 8: Deep extension
 - Expose the existing deep output (Z/ZBack/A/id) through
@@ -298,3 +353,8 @@ Build, install, logs and command records:
    is a direct C API preferred?
 6. Preferred naming and prefix (`ccl_`), and any ABI conventions Gaffer already
    uses for other renderers.
+7. How should Cycles coexist with Gaffer's already-loaded OIIO/OSL/OpenVDB/
+   Embree/OCIO/USD versions? Prefer static and hidden dependencies, renamed private
+   DLLs, or version matching to the VFX Reference Platform? Which versions must
+   the Phase 7 preload-and-use test support? Version matching constrains which
+   renderer builds can be swapped and is not arbitrary-version isolation.

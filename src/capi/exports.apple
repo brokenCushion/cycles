@@ -5,3 +5,8 @@ _ccl_last_error
 _ccl_set_log_callback
 _ccl_device_count
 _ccl_device_info
+_ccl_node_type_count
+_ccl_node_type_info
+_ccl_socket_info
+_ccl_socket_default_value
+_ccl_socket_enum_value

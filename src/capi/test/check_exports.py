@@ -6,6 +6,8 @@ import sys
 EXPECTED = {
     'ccl_api_version', 'ccl_has_feature', 'ccl_init', 'ccl_last_error',
     'ccl_set_log_callback', 'ccl_device_count', 'ccl_device_info',
+    'ccl_node_type_count', 'ccl_node_type_info', 'ccl_socket_info',
+    'ccl_socket_default_value', 'ccl_socket_enum_value',
 }
 
 
@@ -39,4 +41,4 @@ if __name__ == '__main__':
     text = subprocess.check_output([tool, *args, library], text=True)
     names = exported(text, sys.platform)
     check(names)
-    print('PASS: exactly seven public C function exports:', ', '.join(sorted(names)))
+    print('PASS: exactly twelve public C function exports:', ', '.join(sorted(names)))

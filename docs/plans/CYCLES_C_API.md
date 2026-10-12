@@ -1,6 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
-Status: approved to start (2026-10-12). Requested by the GafferCycles author.
+Status: Phase 1 implemented and tested; awaiting user review (2026-10-12).
+Requested by the GafferCycles author. Phase 2 has not started.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
 ## 1. Goal
@@ -52,9 +53,9 @@ practical.
    defaults and enum values at runtime, so they can build UIs and adapt to the
    loaded library version.
 5. **Versioning.**
-   - `ccl_api_version()` returns `{major, minor, patch}`. Major changes mean a
+   - `ccl_api_version(&version)` writes `{size, major, minor, patch}`. Major changes mean a
      breaking change (avoid). Minor adds functions.
-   - `ccl_has_feature("deep")` and similar report optional capabilities.
+   - `ccl_has_feature("deep", &supported)` and similar report optional capabilities.
    - Structs passed across the boundary start with a `size` field so they can
      grow.
    - Enums are `int32_t` with explicit values, never reordered.
@@ -80,20 +81,42 @@ practical.
     exported. Dependencies (OIIO, OSL, Embree, OpenVDB, etc.) stay internal to
     the library.
 
-## 4. API outline (to be refined in Phase 1)
+## 4. API surface and future outline
+
+Phase 1's actual contract is [cycles_c.h](../../src/capi/cycles_c.h).
+It uses fixed-width status codes and size-prefixed structs, documented ownership,
+threading and error behavior. The seven implemented functions are:
 
 ```c
-/* Library */
-ccl_version ccl_api_version(void);
-int         ccl_has_feature(const char *name);          /* "deep", "osl", "optix", ... */
-ccl_status  ccl_init(const ccl_init_params *params);   /* paths: kernels, OSL shaders, temp */
+ccl_status  ccl_api_version(ccl_version *out);
+ccl_status  ccl_has_feature(const char *name, int32_t *supported);
+ccl_status  ccl_init(const ccl_init_params *params);
 const char *ccl_last_error(void);
-void        ccl_set_log_callback(ccl_log_fn fn, void *user);
+ccl_status  ccl_set_log_callback(ccl_log_fn fn, void *user);
+ccl_status  ccl_device_count(uint32_t *count);
+ccl_status  ccl_device_info(uint32_t index, ccl_device_desc *out);
+```
 
-/* Devices */
-int         ccl_device_count(void);
-ccl_status  ccl_device_info(int index, ccl_device_desc *out);
+Refinements from the initial outline:
 
+- Fallible queries and callback registration return status; errors do not look
+  like empty device lists. Version output can grow without a struct-by-value ABI.
+- Init accepts native Cycles resource and user roots. Independent kernel, OSL and
+  temp-path overrides are not promised by the existing native path interface.
+- Enumeration copies an immutable native-device snapshot. Its strings remain
+  library-owned and valid for process lifetime. Backend feature flags describe
+  compiled support, not hardware availability. `deep` remains false until Phase 8.
+- Logging has serialized callbacks and an explicit no-reentry rule. Replacing a
+  callback waits for it to finish before the host releases the old user data.
+- Phase 1 retains one loaded library until process exit; unloading and simultaneous
+  versions require lifecycle work before the Phase 7 compatibility promise.
+
+Before going beyond Phase 1, review extending the status/out convention to the
+fallible queries below; define node/graph deletion invalidation, session edit
+synchronization (pause alone may not suffice), and callback/buffer lifetimes.
+No later-phase function below is implemented or part of the exported ABI yet.
+
+```c
 /* Introspection */
 int         ccl_node_type_count(void);
 const char *ccl_node_type_name(int index);
@@ -164,6 +187,26 @@ ccl_status  ccl_session_set_deep_output(ccl_session *s, const ccl_deep_callbacks
   `ccl_*` symbols are exported.
 - Acceptance: builds on Windows (clang-cl toolchain as the rest of the repo),
   the C test runs, and existing regression is unaffected.
+
+Phase 1 results (2026-10-12):
+- Windows clang-cl 20.1.8 Release build and isolated installation passed, with
+  deep disabled. All 548 installed paths stayed within the new D: prefix.
+- Plain-C dynamic host, private contract tests and exact export-table check
+  passed; installed standalone version smoke also passed (4/4 CTests).
+- The installed DLL also passed with the C host in a separate directory. The
+  host imports only Windows/C runtime libraries, not Cycles or its C++ libraries.
+- CUDA and OptiX RTX 3080 plus Ryzen CPU discovery matches native enumeration.
+  Exactly seven `ccl_*` functions are exported, with no extra symbols.
+- Existing nine CTests passed before and after on the preserved qualified
+  binaries, with test output redirected to D:. The 158 existing compilation
+  commands are identical between API-on and API-off configurations. No native
+  rendering/kernel sources or qualified executable hashes changed.
+- The full 81/30/65 render matrix was not rerun. Linux/macOS, safe unload,
+  rendering through the API and cross-version ABI swaps are not verified here.
+
+Small evidence: [Phase 1 results](../../builds/validation/c-api/phase1.json).
+Build, install, logs and command records:
+`D:/CyclesDeepScratch/c-api/phase1-20261012`.
 
 ### Phase 2: Introspection
 - Node types, sockets, socket types, defaults, enum values, flags.

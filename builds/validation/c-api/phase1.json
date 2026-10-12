@@ -1,0 +1,113 @@
+{
+  "phase": 1,
+  "status": "passed-review-pending",
+  "time_utc": "2026-10-12T11:36:44.441020+00:00",
+  "branch": "c-api",
+  "plan_commit": "373c3ecc0",
+  "base_branch": "deep-output",
+  "toolchain": "clang-cl 20.1.8 / CMake 3.31.2 / Ninja / Windows x64 Release",
+  "build_root": "D:\\CyclesDeepScratch\\c-api\\phase1-20261012",
+  "deep_enabled": false,
+  "rendering_api_implemented": false,
+  "tests": {
+    "existing_before": {
+      "passed": 9,
+      "total": 9,
+      "binaries": "preserved qualified Phase9"
+    },
+    "existing_after": {
+      "passed": 9,
+      "total": 9,
+      "binaries": "same preserved qualified Phase9"
+    },
+    "fresh_build": {
+      "passed": 4,
+      "total": 4,
+      "names": [
+        "cycles_version",
+        "cycles_c_host",
+        "cycles_c_contract",
+        "cycles_c_exports"
+      ]
+    },
+    "installed_dynamic_host": true,
+    "installed_export_table": true,
+    "host_imports_no_cycles": true
+  },
+  "native_compile_command_parity": {
+    "passed": true,
+    "compilation_units": 158,
+    "api_off_matches_on": true
+  },
+  "installed_files": 548,
+  "install_destinations_verified": true,
+  "identities": {
+    "dll_sha256": "d7053828800cd58c2dd75c202ea87eaa009a3b501e46cca5f04d6c9ce17097df",
+    "header_sha256": "ed96751378e2448a60552adc0f57c352bdcbfb425d252208f9bf632faa882b74",
+    "host_sha256": "d34d22760c1dd598fc835cf4f2b22ec6bc7cca62dcec7274fa5abadd467ed188",
+    "production_executables_unchanged": true,
+    "native_source_unchanged": true
+  },
+  "exports": [
+    "ccl_api_version",
+    "ccl_has_feature",
+    "ccl_init",
+    "ccl_last_error",
+    "ccl_set_log_callback",
+    "ccl_device_count",
+    "ccl_device_info"
+  ],
+  "devices": [
+    {
+      "backend": "CUDA",
+      "description": "NVIDIA GeForce RTX 3080"
+    },
+    {
+      "backend": "OPTIX",
+      "description": "NVIDIA GeForce RTX 3080"
+    },
+    {
+      "backend": "CPU",
+      "description": "AMD Ryzen 9 5900X 12-Core Processor"
+    }
+  ],
+  "warning": "HIP compiled but HIP runtime unavailable; native discovery warning, no HIP device advertised.",
+  "not_checked": [
+    "Full 81/30/65 renderer regression not rerun",
+    "Linux/macOS builds",
+    "Safe unload or simultaneous Cycles libraries",
+    "Cross-version ABI swap",
+    "Rendering through C API (Phase6)"
+  ],
+  "configuration_repairs": [
+    "Compilation-command comparison normalized Windows path separators before excluding src/capi",
+    "Disabled WITH_CYCLES_USD as well as Hydra; inherited USD otherwise pulled an unrelated display target with unavailable epoxy header",
+    "Built native default target before install to generate required OSL shaders"
+  ],
+  "logs": {
+    "baseline.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase1-20261012\\baseline.log",
+      "sha256": "b0ac297292b96545c316b6f659ff1560e61fd6b4bd4a2c3b572518c884b3ac78"
+    },
+    "post-existing-tests.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase1-20261012\\post-existing-tests.log",
+      "sha256": "5968beb318c08c7559b61da18c9e3cd760c38b6d644fbeb2dcd8cfa59d81667c"
+    },
+    "post-build-tests.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase1-20261012\\post-build-tests.log",
+      "sha256": "10e0e1038adc7cdc45a3d32a0143d271ea711328c75dc0e8afb18640ef089553"
+    },
+    "installed-host.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase1-20261012\\installed-host.log",
+      "sha256": "4832ceb1bde8904d04df3cf15b0f05e1fc71f7e2768d3009fb74517e9c8e715c"
+    },
+    "installed-exports.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase1-20261012\\installed-exports.log",
+      "sha256": "743f65bb83f99faa1d7c889d4256f7f64eb2badca9607851abf983f5c5e92d9e"
+    },
+    "host-dependencies.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase1-20261012\\host-dependencies.log",
+      "sha256": "1cbd2b71554fd7c2b36519aaf775a4cacaf8e944aaf1eade1d59bacc180a22de"
+    }
+  }
+}

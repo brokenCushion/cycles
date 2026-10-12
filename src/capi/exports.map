@@ -1,0 +1,11 @@
+{
+  global:
+    ccl_api_version;
+    ccl_has_feature;
+    ccl_init;
+    ccl_last_error;
+    ccl_set_log_callback;
+    ccl_device_count;
+    ccl_device_info;
+  local: *;
+};

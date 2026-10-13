@@ -1,4 +1,4 @@
-# Cycles C API — Phases 1–7; Phase 8 draft stopped
+# Cycles C API — Phases 1–7; Phase 8 stopped at byte parity
 
 Experimental shared-library boundary for host applications such as Gaffer.
 **Experimental until Phase 7**; the stable ABI promise has not begun.
@@ -632,3 +632,45 @@ on the preservation incident before continuing. Future drivers must validate
 their actual root, configure build/install paths and toolchain TEMP/TMP against
 D:/temp/cycles_c_api before any command, instead of relying on text replacement.
 Evidence: [path incident](../../builds/validation/c-api/phase8-path-incident.json).
+
+
+## Fresh Phase 8 qualification approved (2026-10-13)
+
+`D:/CyclesDeepScratch/c-api/phase8-20261013`: **overwritten by an incorrect
+script root on 2026-10-13; contents superseded, not evidence**. Leave it as-is.
+Phase 8 qualification relies only on the fresh build under D:/temp/cycles_c_api.
+Every future build/test/install driver must resolve and guard build, output,
+install, TEMP/TMP and CMAKE_INSTALL_PREFIX paths before executing. Only committed
+files may use repository destinations; all temporary output stays in the C API
+temporary root. The guard self-test must reject CyclesDeepScratch destinations.
+
+
+## Phase 8 fresh results (2026-10-13) - FAILED BYTE PARITY; STOPPED
+
+Qualification uses only `D:/temp/cycles_c_api/phase8-core-qualified-20261013`
+and `phase8-deep-qualified-20261013`. Core **13/13** and deep **22/22** CTests
+pass, including the nine native tests and all opaque/transparent callback cases
+(strict without IDs; numeric 1e-3 with IDs). Final callback guard assertions and
+exception/error cases were rebuilt and passed. Both builds expose 98 ccl_*
+functions, one private backend getter, and only KERNEL32/VERSION front imports.
+Native compile commands match API off/on: core 158, deep 173. No native changes.
+
+The first standalone comparison, strict opaque without IDs, **fails byte
+identity**: native 10,951 bytes versus API 12,504 bytes. Hashes and command are
+retained in the small Phase 8 report and fresh comparison directory. The cause
+is not established; no equivalence is inferred from callback tests. Remaining
+standalone comparisons were not run after failure. No comparator, threshold or
+reference was changed. Phases 9-10 have not started; nothing was published.
+
+The new qualification drivers resolve/guard output, build/install and TEMP/TMP
+paths, inspect generated install destinations and verify the actual manifest.
+The self-test rejects old scratch, sibling temp, traversal and an old install
+prefix. Toolchains and source fixtures remain read-only inputs outside the temp
+root. Only committed reports/docs/code may use repository output paths.
+
+Harness-only corrections: convert Path command arguments to strings before JSON
+logging (serialization self-check passes); provide the installed DLL directory
+in subprocess PATH, then rerun the unchanged tests after initial dependency-load
+failures. Timing/benchmark durations are provisional and were not used to accept
+a performance claim. No build, test or render remains running for this work.
+Evidence: [fresh Phase 8 results](../../builds/validation/c-api/phase8.json).

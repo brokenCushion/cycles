@@ -890,3 +890,23 @@ are pending. Phase 10 remains pending because this is a stop condition. D: has
 1.389 TB free. No build/render/upload job remains running for this work. The
 existing scratch tree and the other session's worktree/temp directories were
 not modified. Phase 8 is passed independently of this Phase 9 build decision.
+## Phase 9 dependency route approved (2026-10-13)
+
+Phase 8 accepted by the user. The API README now notes native static/dynamic BVH
+rounding differences at near-coincident surfaces and requires matching parity settings.
+
+Use GafferHQ's official prebuilt Windows dependencies, then compile Gaffer and
+cycles_c front/backend locally against the same OIIO, OSL, OpenVDB, OCIO, Embree,
+USD and TBB versions. Validate the Phase 7 loader check inside Gaffer, old/new
+backend scene parity and two-library swaps. All outputs stay guarded under
+D:/temp/cycles_c_api. Nothing is pushed/published; Phase 10 remains a local proposal.
+
+Download approval is separately required BEFORE acquiring the archive:
+- Gaffer checkout afb285e7f5b7245944f3111321068bcee0ae3888 identifies as 1.8.0.0
+  and selects Cortex 10.7.3.1. That exact Cortex tag's Windows workflow selects
+  `gafferDependencies-11.0.0a8-windows-platform25.zip`.
+- Official URL: https://github.com/GafferHQ/dependencies/releases/download/11.0.0a8/gafferDependencies-11.0.0a8-windows-platform25.zip
+- GitHub release API reports 415,817,133 bytes (415.82 MB / 396.55 MiB).
+- Published SHA-256: `9dc1c6eea1eb6ffd762dbe73af0913e824193dde61ca51433d1559cba74b5712`.
+- Verify this digest after download, before extraction/use. Metadata only was
+  queried; no archive downloaded. Waiting for the user's explicit download OK.

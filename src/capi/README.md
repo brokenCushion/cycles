@@ -106,6 +106,7 @@ Call `ccl_session_params_default`, then choose a device index from enumeration
 curves, texture resolution/cache, and background mode, plus thread/headless setup.
 Only single-device selection is exposed; internal multi-device BVH combinations
 are not a public option. Unsupported OSL/device combinations fail without fallback.
+BVH type (static vs dynamic) can change results at near-coincident surfaces, as in native Cycles, so parity comparisons must match it.
 Creation starts the native waiting thread, **not a render**. Start/pause/reset/wait,
 render output and progress remain Phase 6.
 

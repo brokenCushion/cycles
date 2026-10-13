@@ -1,7 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
 Status: Phases 1–4 accepted; Phase 5 passed after authorized wrapper fixes
-(2026-10-13). Phases 6–8 passed; Phase 8 strict/numeric opaque/transparent files are byte-identical after matching fixture BVH settings. Phase 9 next. Superseded scratch outputs excluded. Windows ABI swaps verified; other platforms remain unqualified.
+(2026-10-13). Phases 6–8 passed; Phase 8 strict/numeric opaque/transparent files are byte-identical after matching fixture BVH settings. Phase 9 stopped at the Windows dependency-build scope decision; Phase 10 pending. Superseded scratch outputs excluded. Windows ABI swaps verified; other platforms remain unqualified.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -861,3 +861,32 @@ builds only qualify; the overwritten scratch directory remains superseded.
 No performance acceptance relies on these concurrent-machine test timings.
 Small before/after reports and `builds/validation/c-api/phase8.json` retain the
 results; large outputs stay under the guarded temporary root. Proceed to Phase 9.
+## Phase 9 preflight (2026-10-13) — STOPPED FOR BUILD-SCOPE DECISION
+
+Local read-only upstream checkouts were created under D:/temp/cycles_c_api:
+Gaffer `afb285e7f5b7245944f3111321068bcee0ae3888` (the plan's inventory
+revision), dependencies `dc6671a600c0764f65f7e7dfb2c69019be1bf511`, and
+Cortex `a82231ae5d8dafd41882a1f203accfe10f888a10`. No changes were published.
+
+The requested source-built Windows dependency stack is not provided by the
+checked-in upstream recipes: Python uses `./configure`/`make` without a Windows
+override; the dependencies Windows CI only builds GafferResources and does not
+publish. Gaffer consumes a prebuilt Cortex 10.7.3.1 platform25 archive, while
+Cortex's Windows workflow consumes prebuilt dependencies 11.0.0a8. These source
+and workflow findings, versions and commands are recorded in
+`builds/validation/c-api/phase9-preflight.json`.
+
+Decision required: authorize the additional Windows dependency-build port, or
+allow the official prebuilt dependency bundle while compiling Cortex/Gaffer and
+matching cycles_c variants locally. Recommend the latter for the proof of
+concept, preserving the approved shared/version-matched contract. The current
+Cycles API's qualified OIIO 3.1.13 / OSL 1.15.3 stack differs from upstream
+Gaffer dependency recipes (OIIO 3.0.6.1 / OSL 1.14.8.0); no unchecked DLL mixing
+or loader-check bypass is permitted. Any native compatibility change encountered
+when rebuilding against the host stack still triggers the existing stop rule.
+
+No Gaffer backend or build has started; Phase 9 parity and library-swap criteria
+are pending. Phase 10 remains pending because this is a stop condition. D: has
+1.389 TB free. No build/render/upload job remains running for this work. The
+existing scratch tree and the other session's worktree/temp directories were
+not modified. Phase 8 is passed independently of this Phase 9 build decision.

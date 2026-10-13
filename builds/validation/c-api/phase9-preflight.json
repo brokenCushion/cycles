@@ -1,0 +1,95 @@
+{
+  "phase": 9,
+  "passed": false,
+  "status": "stopped-dependency-build-scope-decision",
+  "checkouts": {
+    "gaffer": {
+      "repository": "https://github.com/GafferHQ/gaffer.git",
+      "revision": "afb285e7f5b7245944f3111321068bcee0ae3888"
+    },
+    "dependencies": {
+      "repository": "https://github.com/GafferHQ/dependencies.git",
+      "revision": "dc6671a600c0764f65f7e7dfb2c69019be1bf511"
+    },
+    "cortex": {
+      "repository": "https://github.com/ImageEngine/cortex.git",
+      "revision": "a82231ae5d8dafd41882a1f203accfe10f888a10"
+    }
+  },
+  "recipes": {
+    "Python": {
+      "downloads": [
+        "https://www.python.org/ftp/python/3.11.14/Python-3.11.14.tgz"
+      ],
+      "windows_override": false,
+      "commands": [
+        "./configure --prefix={buildDir} {libraryType} --with-ensurepip=install",
+        "make -j {jobs}",
+        "make install"
+      ]
+    },
+    "OpenImageIO": {
+      "downloads": [
+        "https://github.com/AcademySoftwareFoundation/OpenImageIO/releases/download/v3.0.6.1/OpenImageIO-3.0.6.1.tar.gz"
+      ],
+      "windows_override": false,
+      "commands": [
+        "mkdir gafferBuild",
+        "cd gafferBuild && cmake -D CMAKE_CXX_STANDARD={c++Standard} -D CMAKE_INSTALL_PREFIX={buildDir} -D CMAKE_INSTALL_LIBDIR={buildDir}/lib -D CMAKE_PREFIX_PATH={buildDir} -D CMAKE_FIND_FRAMEWORK=LAST -D USE_FFMPEG=NO -D USE_GIF=0 -D USE_OPENVDB=NO -D USE_PYTHON=YES -D USE_EXTERNAL_PUGIXML=YES -D BUILD_MISSING_FMT=NO -D OIIO_BUILD_TESTS=NO -D OIIO_DOWNLOAD_MISSING_TESTDATA=NO -D PYTHON_VERSION={pythonVersion} -D Python_ROOT_DIR={buildDir} -D Python_FIND_STRATEGY=LOCATION -D USE_OPENGL=NO -D USE_QT=NO ..",
+        "cd gafferBuild && make install -j {jobs} VERBOSE=1",
+        "{extraCommands}"
+      ]
+    },
+    "OpenShadingLanguage": {
+      "downloads": [
+        "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/archive/refs/tags/v1.14.8.0.tar.gz"
+      ],
+      "windows_override": false,
+      "commands": [
+        "mkdir gafferBuild",
+        "cd gafferBuild && cmake -D CMAKE_CXX_STANDARD={c++Standard} -D CMAKE_INSTALL_PREFIX={buildDir} -D CMAKE_INSTALL_LIBDIR={buildDir}/lib -D CMAKE_PREFIX_PATH={buildDir} -D STOP_ON_WARNING=0 -D LLVM_STATIC=1 -D USE_BATCHED={useBatched} -D OSL_SHADER_INSTALL_DIR={buildDir}/shaders -D OSL_BUILD_PLUGINS=0 -D PYTHON_VERSION={pythonVersion} -D Python_ROOT_DIR={buildDir} -D Python_FIND_STRATEGY=LOCATION {extraArguments} ..",
+        "cd gafferBuild && make install -j {jobs} VERBOSE=1",
+        "{extraCommands}"
+      ]
+    },
+    "OpenVDB": {
+      "downloads": [
+        "https://github.com/AcademySoftwareFoundation/openvdb/archive/refs/tags/v12.1.1.tar.gz"
+      ],
+      "windows_override": false,
+      "commands": [
+        "mkdir build",
+        "cd build && cmake -D CMAKE_INSTALL_PREFIX={buildDir} -D CMAKE_PREFIX_PATH={buildDir} -D CMAKE_INSTALL_LIBDIR={buildDir}/lib -D OPENVDB_BUILD_PYTHON_MODULE=ON -D OPENVDB_BUILD_NANOVDB=ON -D OPENVDB_ENABLE_RPATH=OFF -D CONCURRENT_MALLOC=None -D VDB_PYTHON_INSTALL_DIRECTORY={buildDir}/python -D Python_ROOT_DIR={buildDir} -D Python_FIND_STRATEGY=LOCATION -D Python_FIND_VERSION={pythonVersion} -D Python_FIND_VERSION_MAJOR={pythonMajorVersion} -D BOOST_ROOT={buildDir} -D Boost_NO_SYSTEM_PATHS=ON ..",
+        "cd build && make VERBOSE=1 -j {jobs} && make install",
+        "cp build/openvdb/openvdb/python/libnanobind-static.a {buildDir}/lib"
+      ]
+    },
+    "Embree": {
+      "downloads": [
+        "https://github.com/embree/embree/archive/v4.4.0.tar.gz"
+      ],
+      "windows_override": false,
+      "commands": [
+        "mkdir gafferBuild",
+        "cd gafferBuild && cmake -D CMAKE_INSTALL_PREFIX={buildDir} -D CMAKE_PREFIX_PATH={buildDir} -D CMAKE_INSTALL_LIBDIR={buildDir}/lib -D EMBREE_TBB_ROOT={buildDir} -D EMBREE_STATIC_LIB=OFF -D EMBREE_ISPC_SUPPORT=OFF -D EMBREE_TUTORIALS=OFF -D EMBREE_RAY_MASK=ON -D EMBREE_FILTER_FUNCTION=ON -D EMBREE_BACKFACE_CULLING=OFF -D EMBREE_BACKFACE_CULLING_CURVES=ON -D EMBREE_BACKFACE_CULLING_SPHERES=ON -D EMBREE_NO_SPLASH=ON -D EMBREE_TASKING_SYSTEM=TBB ..",
+        "cd gafferBuild && make install -j {jobs} VERBOSE=1"
+      ]
+    }
+  },
+  "free_bytes": 1389539844096,
+  "evidence": [
+    "Gaffer .github/workflows/main/installDependencies.py defaults to prebuilt Cortex 10.7.3.1 platform25 archive.",
+    "Cortex .github/workflows/main.yml uses prebuilt gafferDependencies-11.0.0a8-windows-platform25.zip.",
+    "Dependencies .github/workflows/main.yml Windows jobs build only GafferResources, publish=false.",
+    "Python recipe invokes ./configure, make, make install without a Windows override; other core recipes likewise lack Windows overrides."
+  ],
+  "decision": "Local source-only Windows dependency build requires extending upstream build recipes. Request direction before expanding scope or replacing it with prebuilt dependencies.",
+  "recommendation": "Allow official prebuilt Windows dependencies, then build Cortex/Gaffer and two matching cycles_c variants locally; keep compatibility checks and parity criteria unchanged.",
+  "alternative": "Keep every dependency source-built and authorize the Windows dependency-build port as additional work.",
+  "limitations": [
+    "No Gaffer build or alternative backend implemented yet.",
+    "No Phase 9 render parity or library-swap acceptance achieved.",
+    "Phase 10 not started at this stop condition.",
+    "No publication, push, issue or PR created."
+  ]
+}

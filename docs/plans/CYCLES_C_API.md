@@ -1,7 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
 Status: Phases 1–4 accepted; Phase 5 passed after authorized wrapper fixes
-(2026-10-13). Phases 6 and 7 passed; Phase 8 fresh tests passed but strict opaque standalone byte parity failed; stopped. Superseded scratch outputs excluded. Windows ABI swaps verified; other platforms remain unqualified.
+(2026-10-13). Phases 6–8 passed; Phase 8 strict/numeric opaque/transparent files are byte-identical after matching fixture BVH settings. Phase 9 next. Superseded scratch outputs excluded. Windows ABI swaps verified; other platforms remain unqualified.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -830,3 +830,34 @@ in subprocess PATH, then rerun the unchanged tests after initial dependency-load
 failures. Timing/benchmark durations are provisional and were not used to accept
 a performance claim. No build, test or render remains running for this work.
 Evidence: [fresh Phase 8 results](../../builds/validation/c-api/phase8.json).
+
+## Phase 8 final results (2026-10-13) — PASSED
+
+The unchanged `tools/compare_deep_identity.py` confirmed that the original
+strict opaque pair had identical headers (no differing attributes, including
+run-specific attributes) and ZIPS compression with 20 scanline chunks, but a
+real payload mismatch: 2,751 versus 3,001 deep samples; A differed at 890/940
+pixels and Z/ZBack at 304/940. IDs were absent by design in this strict case.
+Full per-pixel counts/values and chunk layouts are preserved in
+`builds/validation/c-api/phase8-opaque-before.json`.
+
+Cause: the native XML reader forces **static BVH**, while the API test fixture
+used the default **dynamic BVH**. Camera, integrator, sampling lookup tables and
+vertices matched; the native static transform flag differed. Setting the test's
+existing `bvh_static=1` option aligns scene settings. This is a harness setup
+correction, with no wrapper, native renderer, comparator or criterion change.
+Temporary diagnostic instrumentation was removed.
+
+All four host-written EXRs are now **literally byte-identical** to standalone:
+opaque/transparent strict without IDs and opaque/transparent numeric 1e-3 with
+IDs. The strict opaque pair has 2,751 samples on both sides; all 940 pixels,
+headers and compressed chunks match. A direct native Session comparison is now
+also asserted inside the deep callback test to retain this regression coverage.
+
+Final deep build: **22/22 CTests**, including nine native tests; core remains
+**13/13**. Both expose 98 ccl_* functions, a single private table getter, and
+OS-only front imports. Native compile-command proofs remain unchanged. Fresh
+builds only qualify; the overwritten scratch directory remains superseded.
+No performance acceptance relies on these concurrent-machine test timings.
+Small before/after reports and `builds/validation/c-api/phase8.json` retain the
+results; large outputs stay under the guarded temporary root. Proceed to Phase 9.

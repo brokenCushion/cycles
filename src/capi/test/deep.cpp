@@ -149,6 +149,8 @@ int main(int argc, char **argv)
       ccl_session_params p{sizeof(p)};
       OK(ccl_session_params_default(&p));
       p.threads = 4;
+      // The native XML loader selects static BVH; parity requires the same scene settings.
+      p.bvh_static = 1;
       ccl_session *api;
       OK(ccl_session_create(&p, &api));
       ccl_scene *scene;
@@ -179,6 +181,27 @@ int main(int argc, char **argv)
       deep.error = ids ? 1e-3f : 0.0f;
       deep.transparent = transparent;
       deep.ids = ids;
+      // Independent native Session path isolates callback transport from scene conversion.
+      np.samples = 16;
+      np.use_auto_tile = np.use_resolution_divider = false;
+      np.temp_dir = root.string();
+      np.deep.enabled = true;
+      np.deep.error = deep.error;
+      np.deep.ids = ids;
+      np.deep.transparent = transparent;
+      np.deep.max_events = deep.max_events;
+      np.deep.memory_bytes = deep.memory_bytes;
+      np.deep.z_tolerance = deep.z_tolerance;
+      reference.set_output_driver(ccl::make_unique<ccl::DeepOutputDriver>(
+          "", "combined", ccl::DeepOutputDriver::LogFunction{},
+          (root / (label + "-native-session.exr")).string(), "", false));
+      ccl::BufferParams native_buffers;
+      native_buffers.width = native_buffers.full_width = 47;
+      native_buffers.height = native_buffers.full_height = 20;
+      reference.reset(np, native_buffers);
+      reference.start();
+      reference.wait();
+      CHECK(!reference.progress.get_error());
       auto bad = deep;
       bad.memory_bytes = 0;
       CHECK(ccl_session_set_deep_output(api, &bad, deep_output, &result) ==
@@ -189,6 +212,14 @@ int main(int argc, char **argv)
       OK(ccl_session_start(api));
       OK(ccl_session_wait(api));
       CHECK(result.called && std::filesystem::file_size(result.output) > 0);
+      // These fixtures have no run-specific header metadata: literal identity also
+      // enforces the established deterministic-header and deep-payload criterion.
+      auto bytes = [](const std::filesystem::path &path) {
+        std::ifstream stream(path, std::ios::binary);
+        CHECK(stream.good());
+        return std::vector<char>(std::istreambuf_iterator<char>(stream), {});
+      };
+      CHECK(bytes(result.output) == bytes(root / (label + "-native-session.exr")));
       uint64_t count;
       uint32_t population;
       CHECK(ccl_deep_tile_get_pixel(result.expired, 0, 0, nullptr, 0, &count, &population) ==

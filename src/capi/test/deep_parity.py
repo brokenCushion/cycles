@@ -13,8 +13,8 @@ from workspace_guard import output, environment, disk, REPO
 def main():
     root = output(sys.argv[1])
     install = output(root / 'install')
-    api_outputs = output(root / 'build/src/capi/deep-tests')
-    dest = output(root / 'standalone-comparison')
+    api_outputs = output(sys.argv[2] if len(sys.argv) > 2 else root / 'build/src/capi/deep-tests')
+    dest = output(sys.argv[3] if len(sys.argv) > 3 else root / 'standalone-comparison')
     dest.mkdir(exist_ok=False)
     env = environment(root / 'temp')
     results = []
@@ -46,7 +46,7 @@ def main():
                        native_sha256=hashlib.sha256(native).hexdigest(),
                        api_sha256=hashlib.sha256(subject).hexdigest())
             results.append(row)
-            output(root / 'deep-parity.json').write_text(json.dumps(results, indent=2) + '\n')
+            output(dest / 'deep-parity.json').write_text(json.dumps(results, indent=2) + '\n')
             assert row['byte_identical'], row
             print('PASS byte identity:', label, flush=True)
 

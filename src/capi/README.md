@@ -735,3 +735,41 @@ are pending. Phase 10 remains pending because this is a stop condition. D: has
 1.389 TB free. No build/render/upload job remains running for this work. The
 existing scratch tree and the other session's worktree/temp directories were
 not modified. Phase 8 is passed independently of this Phase 9 build decision.
+
+## Phase 9 package/build results (2026-10-13) — STOPPED AT RUNTIME POLICY
+
+Downloaded only the explicitly approved GafferHQ archive. Its 415,817,133-byte
+size and SHA-256 `9dc1c6eea1eb6ffd762dbe73af0913e824193dde61ca51433d1559cba74b5712`
+matched before extraction. This is a **pre-release dependency set matching
+Gaffer 1.8 development (main), not a released Gaffer**. Guarded archive/extraction
+and all build/install/test/TEMP outputs are under D:/temp/cycles_c_api.
+
+The front/backend and native standalone compiled and installed using the package
+(OIIO 3.0.6.1, OSL 1.14.8, OpenVDB 12.1.1, Embree 4.4.0, TBB 2021.13.0).
+USD 0.26.5 is present for the host; this core API build does not link USD.
+No native renderer/kernel source changed. Build-only adaptations import the
+shipped OIIO libraries without absent utility executables, relocate OCIO metadata,
+use packaged OIIO pugixml, enumerate runtime DLLs for the version manifest, and
+provide TBB's auto-link library search path. The exact comparator/tests are unchanged.
+
+**7/13 CTests passed; six fail during ccl_init.** The package runtime manifest
+records Microsoft runtime 14.40.33816.0, while test hosts have 14.51.36247.0 loaded.
+MSVCP140.dll, VCRUNTIME140.dll and VCRUNTIME140_1.dll have no missing required
+symbols, but the current exact-version policy rejects them. The render test's
+0xc0000409 follows its failed initialization assertion; no render parity was run.
+This is not evidence of a rendering failure or a successful integration.
+
+Stop for the uncovered policy decision: retain exact checks for renderer
+libraries, but allow MSVC v14 updates under Microsoft's compatibility rules
+(runtime at least as new as the build tools, required symbols present), or require
+an exact runtime deployment. The former is recommended but **not implemented**.
+Microsoft documents the compatibility constraints at
+https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017?view=msvc-170 .
+Do not bypass this check or force an older runtime into a newer compiler's build.
+
+Gaffer compilation/alternative backend, in-Gaffer Phase 7 checks, old/new scene
+parity and two-library swaps are still pending. SCons is also not installed in
+the checked Python environments. Phase 10 remains pending at this stop condition.
+Phase 8 remains accepted. No publication, push or new render occurred; no jobs
+remain running for this work. See `builds/validation/c-api/phase9.json` for the
+small evidence, exact tests and DLL hashes. Earlier preflight stop is superseded.

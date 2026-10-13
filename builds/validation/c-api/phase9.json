@@ -1,0 +1,62 @@
+{
+  "phase": 9,
+  "passed": false,
+  "status": "stopped-msvc-runtime-version-policy",
+  "package": {
+    "url": "https://github.com/GafferHQ/dependencies/releases/download/11.0.0a8/gafferDependencies-11.0.0a8-windows-platform25.zip",
+    "bytes": 415817133,
+    "sha256": "9dc1c6eea1eb6ffd762dbe73af0913e824193dde61ca51433d1559cba74b5712",
+    "verified_before_extraction": true,
+    "scope": "Pre-release dependency set matching Gaffer 1.8 development (main), not a released Gaffer."
+  },
+  "build": "Compiled and installed front, backend, standalone and tests against the approved host dependency package; no native source changes.",
+  "root": "D:\\temp\\cycles_c_api\\phase9-matched-cycles-7",
+  "sha256": {
+    "cycles_c.dll": "29506bfae40e8081fdf8cdd4ab6192e1b75f3af98b619b24dd7ffb38f934b92a",
+    "cycles_c_backend_private.dll": "68ac5b2212abc40a4b422238f47de198cdd8f73ebc3e53a01fdb5aee9345dee9"
+  },
+  "package_versions": {
+    "OIIO": "3.0.6.1",
+    "OSL": "1.14.8",
+    "OpenVDB": "12.1.1",
+    "Embree": "4.4.0",
+    "TBB": "2021.13.0",
+    "USD": "0.26.5"
+  },
+  "usd_note": "USD is present in the host package; this core API build does not link USD.",
+  "ctests": {
+    "passed": 7,
+    "total": 13,
+    "log": "Internal ctest changing into directory: D:/temp/cycles_c_api/phase9-matched-cycles-7/build\nTest project D:/temp/cycles_c_api/phase9-matched-cycles-7/build\n      Start  1: cycles_version\n 1/13 Test  #1: cycles_version ...................   Passed    0.11 sec\n      Start  2: cycles_c_host\n 2/13 Test  #2: cycles_c_host ....................***Failed    0.29 sec\nFAIL line 74: ccl_init(&params) == CCL_SUCCESS\nCycles C API 1.7.0\n\n      Start  3: cycles_c_contract\n 3/13 Test  #3: cycles_c_contract ................   Passed    0.06 sec\n      Start  4: cycles_c_scene_host\n 4/13 Test  #4: cycles_c_scene_host ..............***Failed    0.15 sec\nFAIL 24: ccl_init(&init) == CCL_SUCCESS (VCRUNTIME140.dll: expected version 14.40.33816.0, loaded 14.51.36247.0; missing symbols: none\n)\n\n      Start  5: cycles_c_editing\n 5/13 Test  #5: cycles_c_editing .................   Passed    0.06 sec\n      Start  6: cycles_c_shaders\n 6/13 Test  #6: cycles_c_shaders .................   Passed    0.14 sec\n      Start  7: cycles_c_geometry\n 7/13 Test  #7: cycles_c_geometry ................   Passed    0.07 sec\n      Start  8: cycles_c_rendering\n 8/13 Test  #8: cycles_c_rendering ...............Exit code 0xc0000409\n***Exception:   0.27 sec\nFAIL 308: (ccl_init(&init)) == CCL_SUCCESS (MSVCP140.dll: expected version 14.40.33816.0, loaded 14.51.36247.0; missing symbols: none\nVCRUNTIME140.dll: expected version 14.40.33816.0, loaded 14.51.36247.0; missing symbols: none\nVCRUNTIME140_1.dll: expected version 14.40.33816.0, loaded 14.51.36247.0; missing symbols: none\n)\n\n      Start  9: cycles_c_controls\n 9/13 Test  #9: cycles_c_controls ................   Passed    0.20 sec\n      Start 10: cycles_c_benchmark\n10/13 Test #10: cycles_c_benchmark ...............***Failed    0.27 sec\nFAIL 49: ccl_init(&p) == CCL_SUCCESS\n\n      Start 11: cycles_c_source_inventory\n11/13 Test #11: cycles_c_source_inventory ........***Failed    0.93 sec\nTraceback (most recent call last):\n  File \"C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\src\\capi\\test\\source_inventory.py\", line 96, in <module>\n    assert dll.ccl_init(C.byref(init)) == 0\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n\n      Start 12: cycles_c_reflection\n12/13 Test #12: cycles_c_reflection ..............***Failed    0.20 sec\nFAIL line 74: ccl_init(&params) == CCL_SUCCESS\nTraceback (most recent call last):\n  File \"C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\src\\capi\\test\\compare_reflection.py\", line 26, in <module>\n    a = subprocess.check_output([host, library, resource, user], text=True)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\jun\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\subprocess.py\", line 466, in check_output\n    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\jun\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\subprocess.py\", line 571, in run\n    raise CalledProcessError(retcode, process.args,\nsubprocess.CalledProcessError: Command '['D:/temp/cycles_c_api/phase9-matched-cycles-7/build/bin/cycles_c_host.exe', 'D:/temp/cycles_c_api/phase9-matched-cycles-7/build/bin/cycles_c.dll', 'D:/temp/cycles_c_api/phase9-matched-cycles-7/install', 'D:/temp/cycles_c_api/phase9-matched-cycles-7/build/src/capi']' returned non-zero exit status 1.\n\n      Start 13: cycles_c_exports\n13/13 Test #13: cycles_c_exports .................   Passed    0.09 sec\n\n54% tests passed, 6 tests failed out of 13\n\nTotal Test time (real) =   3.01 sec\n\nThe following tests FAILED:\n\t  2 - cycles_c_host (Failed)\n\t  4 - cycles_c_scene_host (Failed)\n\t  8 - cycles_c_rendering (Exit code 0xc0000409\n)\n\t 10 - cycles_c_benchmark (Failed)\n\t 11 - cycles_c_source_inventory (Failed)\n\t 12 - cycles_c_reflection (Failed)\nErrors while running CTest\n"
+  },
+  "blocker": {
+    "modules": [
+      "MSVCP140.dll",
+      "VCRUNTIME140.dll",
+      "VCRUNTIME140_1.dll"
+    ],
+    "package_version": "14.40.33816.0",
+    "loaded_version": "14.51.36247.0",
+    "missing_symbols": [],
+    "explanation": "The build harness records all bundled DLL versions, including Microsoft runtimes. Existing exact-version policy rejects the newer process runtime at ccl_init."
+  },
+  "harness_repairs": [
+    "OIIO library-only CMake imports avoid missing optional command-line tools.",
+    "OCIO imports relocated to actual package DLL/import-library paths.",
+    "Pugixml uses the package OIIO header-only implementation.",
+    "Explicit bundled runtime DLL list supplies build version resources.",
+    "Long DLL list passed through guarded CMake cache file.",
+    "TBB auto-link search uses package lib directory."
+  ],
+  "proposed_decision": "Keep exact version checks for renderer dependencies; permit MSVC v14 runtime updates only under Microsoft compatibility rules, meeting the build-tool minimum and all imported symbols. Not implemented.",
+  "source": "https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017?view=msvc-170",
+  "pending": [
+    "Gaffer local build and proof-of-concept backend",
+    "Phase 7 initialization inside Gaffer",
+    "Old/new Gaffer scene parity and two-build swap",
+    "Phase 10 local proposal"
+  ],
+  "no_native_or_criteria_changes": true,
+  "published": false,
+  "free_bytes": 1387172413440
+}

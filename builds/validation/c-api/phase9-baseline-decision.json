@@ -1,0 +1,60 @@
+{
+  "phase": 9,
+  "passed": false,
+  "status": "stopped-native-renderer-baseline-decision",
+  "build_tool": {
+    "name": "SCons",
+    "version": "4.10.1",
+    "source": "https://files.pythonhosted.org/packages/ce/bf/931fb9fbb87234c32b8b1b1c15fba23472a10777c12043336675633809a7/scons-4.10.1-py3-none-any.whl",
+    "metadata_source": "https://pypi.org/pypi/SCons/4.10.1/json",
+    "wheel": "scons-4.10.1-py3-none-any.whl",
+    "sha256": "bd9d1c52f908d874eba92a8c0c0a8dcf2ed9f3b88ab956d0fce1da479c4e7126",
+    "bytes": 4136069,
+    "environment": "D:\\temp\\cycles_c_api\\build-tools\\venv",
+    "version_output": "SCons by Steven Knight et al.:\n\tSCons: v4.10.1.055b01f429d58b686701a56df863a817c36bb103, Sun, 16 Nov 2025 14:18:20 -0700, by bdbaddog on M1Dog2021\n\tSCons path: ['D:\\\\temp\\\\cycles_c_api\\\\build-tools\\\\venv\\\\Lib\\\\site-packages\\\\SCons']\nCopyright (c) 2001 - 2025 The SCons Foundation\n"
+  },
+  "baseline": {
+    "version": "5.1.0",
+    "path": "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\cycles\\include\\util\\version.h",
+    "sha256": "57078a39c33f3be4c5187fb5572de978f0c7d9d5f47c149fe1b1ffe638ff4463"
+  },
+  "api": {
+    "version": "5.3.0",
+    "path": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\src\\util\\version.h",
+    "sha256": "ee308f2f37935720aa229a5bd3b924938c4c989c487167f42aabba597060cb81"
+  },
+  "cortex": {
+    "tag": "10.7.3.1",
+    "revision": "469e5c10e73522bb3f87f989bda054a7d1f6c34c"
+  },
+  "cortex_status": "Build explicitly cancelled at baseline design stop; partial objects preserved, not qualified.",
+  "gaffer_status": "Dependency preparation only; initial SCons dry-run cannot create configure cache. No Gaffer binary or alternative backend yet.",
+  "ctests": {
+    "passed": 14,
+    "total": 14,
+    "log": "Internal ctest changing into directory: D:/temp/cycles_c_api/phase9-matched-cycles-7/build\nTest project D:/temp/cycles_c_api/phase9-matched-cycles-7/build\n      Start  1: cycles_version\n 1/14 Test  #1: cycles_version ...................   Passed    0.03 sec\n      Start  2: cycles_c_dependency_policy\n 2/14 Test  #2: cycles_c_dependency_policy .......   Passed    0.01 sec\n      Start  3: cycles_c_host\n 3/14 Test  #3: cycles_c_host ....................   Passed    0.15 sec\n      Start  4: cycles_c_contract\n 4/14 Test  #4: cycles_c_contract ................   Passed    0.03 sec\n      Start  5: cycles_c_scene_host\n 5/14 Test  #5: cycles_c_scene_host ..............   Passed    0.14 sec\n      Start  6: cycles_c_editing\n 6/14 Test  #6: cycles_c_editing .................   Passed    0.03 sec\n      Start  7: cycles_c_shaders\n 7/14 Test  #7: cycles_c_shaders .................   Passed    0.06 sec\n      Start  8: cycles_c_geometry\n 8/14 Test  #8: cycles_c_geometry ................   Passed    0.04 sec\n      Start  9: cycles_c_rendering\n 9/14 Test  #9: cycles_c_rendering ...............   Passed    1.64 sec\n      Start 10: cycles_c_controls\n10/14 Test #10: cycles_c_controls ................   Passed    0.18 sec\n      Start 11: cycles_c_benchmark\n11/14 Test #11: cycles_c_benchmark ...............   Passed    0.65 sec\n      Start 12: cycles_c_source_inventory\n12/14 Test #12: cycles_c_source_inventory ........   Passed    0.92 sec\n      Start 13: cycles_c_reflection\n13/14 Test #13: cycles_c_reflection ..............   Passed    0.25 sec\n      Start 14: cycles_c_exports\n14/14 Test #14: cycles_c_exports .................   Passed    0.08 sec\n\n100% tests passed, 0 tests failed out of 14\n\nTotal Test time (real) =   4.22 sec\n"
+  },
+  "loader": {
+    "public_exports": 98,
+    "private_exports": [
+      "cycles_c_private_get_table"
+    ],
+    "front_imports": [
+      "kernel32.dll",
+      "version.dll"
+    ],
+    "passed": true
+  },
+  "proposed_decision": "Build the existing Gaffer C++ backend and C API backend against the same Cycles 5.3 source/configuration and host dependencies; keep cross-version 5.1 comparison separate.",
+  "rationale": "An exact old/new-backend comparison using bundled Cycles 5.1 versus API Cycles 5.3 would confound native-version and wrapper differences. No render difference is claimed: comparison has not run.",
+  "pending": [
+    "User decision on native renderer baseline",
+    "Complete Cortex/Gaffer builds",
+    "C API backend and in-host dependency test",
+    "Render parity and library swap",
+    "Phase 10 local proposal"
+  ],
+  "native_changes": false,
+  "published": false,
+  "free_bytes": 1385305026560
+}

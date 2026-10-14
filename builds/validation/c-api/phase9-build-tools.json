@@ -1,0 +1,11 @@
+{
+  "name": "SCons",
+  "version": "4.10.1",
+  "source": "https://files.pythonhosted.org/packages/ce/bf/931fb9fbb87234c32b8b1b1c15fba23472a10777c12043336675633809a7/scons-4.10.1-py3-none-any.whl",
+  "metadata_source": "https://pypi.org/pypi/SCons/4.10.1/json",
+  "wheel": "scons-4.10.1-py3-none-any.whl",
+  "sha256": "bd9d1c52f908d874eba92a8c0c0a8dcf2ed9f3b88ab956d0fce1da479c4e7126",
+  "bytes": 4136069,
+  "environment": "D:\\temp\\cycles_c_api\\build-tools\\venv",
+  "version_output": "SCons by Steven Knight et al.:\n\tSCons: v4.10.1.055b01f429d58b686701a56df863a817c36bb103, Sun, 16 Nov 2025 14:18:20 -0700, by bdbaddog on M1Dog2021\n\tSCons path: ['D:\\\\temp\\\\cycles_c_api\\\\build-tools\\\\venv\\\\Lib\\\\site-packages\\\\SCons']\nCopyright (c) 2001 - 2025 The SCons Foundation\n"
+}

@@ -1,12 +1,18 @@
 # Plan: stable C API and shared-library build for Cycles
 
 Status: Phases 1–4 accepted; Phase 5 passed after authorized wrapper fixes
-(2026-10-13). Phases 6–8 passed; Phase 8 strict/numeric opaque/transparent files are byte-identical after matching fixture BVH settings. Phase 9 runtime-policy correction passes 14/14 tests (2026-10-14); Gaffer integration awaits approval to obtain the missing SCons build tool. Phase 10 pending. Superseded scratch outputs excluded. Windows ABI swaps verified; other platforms remain unqualified.
+(2026-10-13). Phases 6–8 passed; Phase 8 strict/numeric opaque/transparent files are byte-identical after matching fixture BVH settings. Phase 9 runtime-policy correction passes 14/14 tests (2026-10-14); SCons installed, Gaffer integration stopped for the native 5.1 versus 5.3 baseline decision. Phase 10 pending. Superseded scratch outputs excluded. Windows ABI swaps verified; other platforms remain unqualified.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
 
 ## Workspace and timing rules (2026-10-13 update)
+
+- 2026-10-14: routine build tools from PyPI or official project releases may be
+  downloaded without further approval, only into isolated environments under
+  D:/temp/cycles_c_api. Record name, version, source and hash. Admin/system-wide
+  installs, drivers, unofficial sources and non-build-tool downloads still need
+  approval. Publication remains prohibited.
 
 - All new temporary artifacts, including builds, renders, logs, caches and process
   TEMP/TMP directories, must live under `D:/temp/cycles_c_api/`. This location is
@@ -977,3 +983,36 @@ published; Phase 10 local proposal remains pending.
 Phase 8 remains accepted. No publication, push or new render occurred; no jobs
 remain running for this work. See `builds/validation/c-api/phase9.json` for the
 small evidence, exact tests and DLL hashes. Earlier preflight stop is superseded.
+
+## Phase 9 build tools and baseline decision (2026-10-14)
+
+Installed SCons **4.10.1** into `D:/temp/cycles_c_api/build-tools/venv`, not
+system Python. The PyPI wheel is 4,136,069 bytes, SHA-256
+`bd9d1c52f908d874eba92a8c0c0a8dcf2ed9f3b88ab956d0fce1da479c4e7126`;
+the downloaded digest matches PyPI metadata. Version/source/hash are retained in
+[build-tool evidence](../../builds/validation/c-api/phase9-build-tools.json).
+
+Copied the approved dependency bundle into a separate guarded Gaffer build root.
+It contains Cortex 10.7.0 headers, lacking `IECoreScene/PointInstancer.h` required
+by this Gaffer checkout. Selected Gaffer's specified Cortex **10.7.3.1**, revision
+`469e5c1` (full revision in evidence), and started its local build against the same
+bundle. The initial Gaffer dry-run could not initialize SCons' configure cache;
+it was only a preflight, not a compilation or qualification failure.
+
+**Design stop:** the bundle's native Cycles headers identify **5.1.0**, while our
+API wraps **5.3.0**. Exact image parity between these would combine native-version
+differences with wrapper differences. No image mismatch is claimed; no Gaffer
+render has run. Recommend compiling the existing Gaffer C++ backend against the
+same 5.3 source/configuration as the API backend, including matching feature
+defines and dependencies. That changes the bundled baseline and may require
+Gaffer-side adaptation; obtain the user's decision before doing so. Porting the
+wrapper to 5.1 or treating cross-version images as the acceptance baseline are
+different scopes and have not been selected. No criterion was relaxed.
+
+Cancelled only the verified Cortex build process tree at this stop. Partial
+objects remain under the guarded root and are not qualification evidence.
+Retested the existing matched API install: **14/14 CTests**, **98 exports**,
+private backend getter and OS-only front imports pass. No timing acceptance is
+inferred. No Cycles internal changes, publication or changes to old scratch or
+the other worktree. Phase 9 integration/parity/swap and Phase 10 remain pending.
+[Baseline evidence](../../builds/validation/c-api/phase9-baseline-decision.json).

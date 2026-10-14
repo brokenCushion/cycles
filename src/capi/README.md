@@ -44,6 +44,16 @@ which is absent locally and from the approved package. An additional download
 requires user approval under the external-action stop rule. The dependency set
 is pre-release 11.0.0a8 for Gaffer 1.8 development, not a released Gaffer.
 
+**Update 2026-10-14:** SCons 4.10.1 is now installed in an isolated temporary
+venv; [source/version/wheel hash](../../builds/validation/c-api/phase9-build-tools.json)
+are recorded. Routine official build-tool downloads are now preauthorized under
+the guarded root. The current stop is the **native renderer baseline**: Gaffer's
+bundle contains Cycles 5.1.0, while this API wraps 5.3.0. Recommend rebuilding
+Gaffer's existing C++ backend against the same 5.3 source/settings for exact
+wrapper parity, subject to user review. Cortex 10.7.3.1 prerequisite compilation
+was cancelled at this decision; no Gaffer render has run. The matched API still
+passes 14/14 CTests and export checks. See [baseline evidence](../../builds/validation/c-api/phase9-baseline-decision.json).
+
 - All new temporary artifacts, including builds, renders, logs, caches and process
   TEMP/TMP directories, must live under `D:/temp/cycles_c_api/`. This location is
   disposable: commit long-term code, scripts, documentation and small evidence

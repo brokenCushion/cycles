@@ -80,3 +80,14 @@ paused session after resetting it. Harness repairs use native ieDisplay output,
 remove/re-add native outputs before edits, preserve FLOAT precision, recognize
 OptiX device IDs and avoid Python message-handler lock contention. CPU exactness
 and the existing GPU policy were not relaxed. No Cycles internals were changed.
+
+## Licensing
+
+- `Renderer.cpp` is new code written against Gaffer's public renderer
+  interface. It is licensed under Apache-2.0, like the rest of this repository.
+- `native-cycles53.patch` modifies source files from
+  [GafferHQ/gaffer](https://github.com/GafferHQ/gaffer), which is distributed
+  under the BSD 3-Clause License: Copyright (c) 2011-2019 John Haddon and
+  Copyright (c) 2011-2019 Image Engine Design Inc., with later contributors as
+  recorded in the Gaffer repository. The Gaffer code it contains or modifies
+  remains under Gaffer's license; see Gaffer's `LICENSE` file for the full terms.

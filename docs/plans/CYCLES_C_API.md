@@ -1,7 +1,7 @@
 # Plan: stable C API and shared-library build for Cycles
 
 Status: Phases 1–4 accepted; Phase 5 passed after authorized wrapper fixes
-(2026-10-13). Phases 6–8 passed; Phase 8 strict/numeric opaque/transparent files are byte-identical after matching fixture BVH settings. Phase 9 host-matched build compiled; stopped at MSVC runtime-version policy after initialization tests failed. Phase 10 pending. Superseded scratch outputs excluded. Windows ABI swaps verified; other platforms remain unqualified.
+(2026-10-13). Phases 6–8 passed; Phase 8 strict/numeric opaque/transparent files are byte-identical after matching fixture BVH settings. Phase 9 runtime-policy correction passes 14/14 tests (2026-10-14); Gaffer integration awaits approval to obtain the missing SCons build tool. Phase 10 pending. Superseded scratch outputs excluded. Windows ABI swaps verified; other platforms remain unqualified.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -945,6 +945,35 @@ Do not bypass this check or force an older runtime into a newer compiler's build
 Gaffer compilation/alternative backend, in-Gaffer Phase 7 checks, old/new scene
 parity and two-library swaps are still pending. SCons is also not installed in
 the checked Python environments. Phase 10 remains pending at this stop condition.
+
+## Phase 9 runtime-policy results (2026-10-14)
+
+The user approved a runtime-only exception to exact version matching. The front
+records the maximum of the selected toolchain redistributable and dependency
+package runtime versions at configure time: **14.44.35211.0**, versus package
+14.40.33816.0. Loaded MSVC runtimes must have major 14 and meet that minimum;
+every imported symbol is still required. Renderer dependency matching is unchanged.
+UCRT remains an OS component checked for imports, not an MSVC-major-14 library.
+See the [API runtime policy](../../src/capi/README.md#microsoft-runtime-compatibility-2026-10-14).
+
+After the wrapper correction, the matched build passed **14/14 CTests**, including
+CPU native render parity, node inventory/reflection, and the added pure-policy
+test. The latter covers newer/equal/older versions, a non-14 major, unavailable
+versions, missing symbols despite a newer version, and unchanged renderer checks.
+The final sources were rebuilt and retested after adding UCRT coverage. The front
+still exports **98 ccl_* functions** and imports only OS libraries; the backend
+exports only its private table getter. No native/kernel or acceptance changes.
+Timing from the functional benchmark is not used as an acceptance measurement.
+
+Evidence: [runtime qualification](../../builds/validation/c-api/phase9-runtime-policy.json).
+This uses the approved **pre-release 11.0.0a8 dependency set for Gaffer 1.8 main**,
+not a released Gaffer. Phase 9 is not complete: Gaffer has not been built or
+tested with the API. Its Windows workflow installs SCons separately, and no
+local SCons command or packaged copy was found. Stop before downloading another
+tool under the user's external-action rule. Proposed next action: obtain SCons
+4.10.1 from PyPI into the guarded temporary root (this version is also pinned in
+Gaffer's macOS workflow), then continue the local build/integration. Nothing
+published; Phase 10 local proposal remains pending.
 Phase 8 remains accepted. No publication, push or new render occurred; no jobs
 remain running for this work. See `builds/validation/c-api/phase9.json` for the
 small evidence, exact tests and DLL hashes. Earlier preflight stop is superseded.

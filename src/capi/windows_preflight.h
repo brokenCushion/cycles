@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
+#include "dependency_policy.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -14,6 +15,10 @@ namespace loader {
 
 inline std::string expected_version(const std::string &name)
 {
+  if (microsoft_runtime(name)) return microsoft_runtime_minimum;
+  // UCRT is serviced with Windows and uses OS (10.x), not MSVC (14.x), versions.
+  if (_stricmp(name.c_str(), "ucrtbase.dll") == 0 ||
+      _strnicmp(name.c_str(), "api-ms-win-crt-", 15) == 0) return {};
   for (const auto &entry : build_versions)
     if (_stricmp(entry.name, name.c_str()) == 0)
       return entry.version;
@@ -184,17 +189,10 @@ inline std::string preflight(const std::filesystem::path &backend,
   }
   std::ostringstream errors;
   for (const auto &[name, check] : checks) {
-    if ((!check.expected.empty() && check.expected != check.actual) || !check.missing.empty()) {
-      errors << name << ": expected version "
-             << (check.expected.empty() ? "no version resource (import ABI)" : check.expected)
-             << ", loaded " << (check.actual.empty() ? "unavailable" : check.actual)
-             << "; missing symbols:";
-      if (check.missing.empty())
-        errors << " none";
-      for (const auto &symbol : check.missing)
-        errors << " " << symbol;
-      errors << "\n";
-    }
+    std::string missing, message;
+    for (const auto &symbol : check.missing) missing += symbol + " ";
+    if (dependency_policy(name, check.expected, check.actual, missing, message) != CCL_SUCCESS)
+      errors << message << "\n";
   }
   return errors.str();
 }

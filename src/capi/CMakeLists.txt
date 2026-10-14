@@ -79,6 +79,8 @@ install(FILES cycles_c.h DESTINATION include)
 cycles_install_libraries(cycles_c)
 
 if(BUILD_TESTING)
+  add_executable(cycles_c_dependency_policy test/dependency_policy.cpp)
+  add_test(NAME cycles_c_dependency_policy COMMAND cycles_c_dependency_policy)
   add_executable(cycles_c_host test/host.c)
   set_target_properties(cycles_c_host PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
   target_link_libraries(cycles_c_host PRIVATE ${CMAKE_DL_LIBS})

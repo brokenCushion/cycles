@@ -13,6 +13,37 @@ float-pass callbacks, and supports the documented blocking pause/edit/reset flow
 
 ## Workspace and timing rules (2026-10-13 update)
 
+### Microsoft runtime compatibility (2026-10-14)
+
+Only `vcruntime140*`, `msvcp140*`, `concrt140.dll` and `vcomp140.dll` accept
+newer versions: the loaded major must be 14 and its four-part version must be
+at least the maximum of the selected toolchain's x64 redistributable and the
+dependency package's runtime versions. Configure requires `VCToolsRedistDir`
+from the selected Visual Studio toolchain and records the inputs and minimum in
+`dispatch/dependency_versions.json`, embedding the minimum in the front DLL.
+The matched build requires **14.44.35211.0** (package: 14.40.33816.0).
+Missing versions, an older runtime, a different major, or any missing imported
+symbol return `CCL_ERROR_DEPENDENCY_MISMATCH` with the module, expected/loaded
+versions and missing symbols. Renderer dependencies retain exact matching;
+dependencies without version resources retain the documented import-ABI check.
+
+This follows [Microsoft's binary compatibility guarantee](https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017?view=msvc-170):
+the redistributable must be at least as recent as the build tools used by any
+component. It is not a general C++ dependency compatibility guarantee. UCRT is
+an OS-serviced component with Windows 10.x versioning, not an MSVC 14.x DLL;
+its required imports are checked without pinning the Windows servicing version.
+All imported-symbol checks remain active, including for newer runtimes.
+
+Phase 9 result: the matched build now passes **14/14 CTests**, including CPU
+render parity and the new runtime-policy test. Export verification retains 98
+public C functions, one private backend getter, and OS-only front imports.
+[Evidence](../../builds/validation/c-api/phase9-runtime-policy.json) records the
+build-time version inputs and hashes. No native Cycles changes were needed.
+Gaffer integration and Phase 10 remain pending: building Gaffer requires SCons,
+which is absent locally and from the approved package. An additional download
+requires user approval under the external-action stop rule. The dependency set
+is pre-release 11.0.0a8 for Gaffer 1.8 development, not a released Gaffer.
+
 - All new temporary artifacts, including builds, renders, logs, caches and process
   TEMP/TMP directories, must live under `D:/temp/cycles_c_api/`. This location is
   disposable: commit long-term code, scripts, documentation and small evidence

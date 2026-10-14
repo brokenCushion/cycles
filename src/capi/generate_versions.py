@@ -1,6 +1,8 @@
 """Freeze dependency version resources from CMake's actual bundled DLL list."""
 import ctypes as C
 import json
+import os
+import re
 import sys
 from pathlib import Path
 
@@ -35,7 +37,22 @@ def main():
         assert key not in versions or versions[key] == value, ('Conflicting dependency versions', key)
         versions[key] = value
     assert versions
+    runtime = re.compile(r'^(?:vcruntime140.*|msvcp140.*|concrt140|vcomp140)\.dll$')
+    redist = os.environ.get('VCToolsRedistDir')
+    if not redist:
+        raise RuntimeError('VCToolsRedistDir required to record backend runtime minimum')
+    toolchain = {str(p.resolve()): version(p) for p in (Path(redist)/'x64').rglob('*.dll')
+                 if runtime.match(p.name.lower())}
+    assert toolchain, 'No toolchain x64 Microsoft runtime DLLs found'
+    package = {k: v for k, v in versions.items() if runtime.match(k)}
+    values = list(toolchain.values()) + list(package.values())
+    assert all(v and v.split('.')[0] == '14' for v in values), values
+    minimum = max(values, key=lambda v: tuple(map(int, v.split('.'))))
+    output.with_suffix('.json').write_text(json.dumps(dict(
+        microsoft_runtime_minimum=minimum, toolchain=toolchain, package=package,
+        renderer_versions=versions), indent=2)+'\n', encoding='utf-8')
     code = ['/* Generated from build dependency version resources. */',
+            'static const char *microsoft_runtime_minimum = '+json.dumps(minimum)+';',
             'static const struct { const char *name, *version; } build_versions[] = {']
     code += ['  {' + json.dumps(k) + ', ' + json.dumps(v) + '},' for k, v in sorted(versions.items())]
     code += ['};']

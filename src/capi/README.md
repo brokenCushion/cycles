@@ -1,4 +1,4 @@
-# Cycles C API — Phases 1–9 qualified on Windows
+# Cycles C API — Windows prototype qualified, local proposal complete
 
 Experimental shared-library boundary for host applications such as Gaffer.
 The original milestone was **experimental until Phase 7**. Phase 7 is accepted;
@@ -836,3 +836,12 @@ needed. Timings are provisional, with no Phase 9 performance acceptance claim.
 See [final evidence](../../builds/validation/c-api/phase9-final.json). Older stop
 reports above are historical and superseded. The prototype subset and unqualified
 host features are explicit in the guide; this is not a production Gaffer backend.
+
+## Phase 10 results (2026-10-14) — LOCAL DRAFT COMPLETE
+
+The [local proposal](../../docs/plans/CYCLES_C_API_PROPOSAL.md) links the working
+prototype, exact native adaptation and measured results. It records open platform,
+dependency-deployment, ABI ownership and host-coverage questions. Links checked;
+no further renderer work or tests were needed for this documentation phase.
+Nothing was submitted or published. The GafferCycles author's review and explicit
+user approval are required before external submission or broader integration.

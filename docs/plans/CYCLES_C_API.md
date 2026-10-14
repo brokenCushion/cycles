@@ -3,7 +3,8 @@
 Status: Phases 1–9 passed on Windows (2026-10-14). Phase 9 uses the user-approved
 same-Cycles-5.3 native baseline; CPU exact, CUDA/OptiX calibrated policy and
 unchanged-host core/deep library swaps pass. Earlier stop records below are
-historical and superseded. Phase 10 local proposal is being finalized. Superseded
+historical and superseded. Phase 10 local proposal is complete, awaiting author
+review and explicit permission before external submission. Superseded
 scratch outputs remain excluded; Linux/macOS remain unqualified.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
@@ -1082,3 +1083,17 @@ unqualified. Timing gathered during concurrent builds is provisional; Phase 9
 has no timing acceptance and makes no performance claim. Phase 7 forwarding
 measurements remain separate. Large files remain under D:/temp/cycles_c_api;
 old scratch and the other worktree are untouched. No publication occurred.
+
+## Phase 10 results (2026-10-14) — LOCAL DRAFT COMPLETE
+
+The [upstream discussion draft](CYCLES_C_API_PROPOSAL.md) is saved locally with
+links to the public header, working host prototype, native port inventory and
+Phase 9 evidence. It separates the measured two-build compatibility result from
+a future maintenance promise, states the pre-release Windows dependency scope,
+and lists unqualified host/platform paths and questions for joint ownership.
+Local document links were checked. No renderer changes or additional renders
+were needed for this phase. No post, issue, PR, fork, push or release occurred.
+
+Waiting on the user/GafferCycles author: review the proposed interface and subset,
+then decide whether to discuss it with Cycles maintainers. External submission
+still needs explicit permission. This finishes the authorized local Phases 5–10.

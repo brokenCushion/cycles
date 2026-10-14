@@ -1,7 +1,10 @@
 # Plan: stable C API and shared-library build for Cycles
 
-Status: Phases 1–4 accepted; Phase 5 passed after authorized wrapper fixes
-(2026-10-13). Phases 6–8 passed; Phase 8 strict/numeric opaque/transparent files are byte-identical after matching fixture BVH settings. Phase 9 runtime-policy correction passes 14/14 tests (2026-10-14); SCons installed, Gaffer integration stopped for the native 5.1 versus 5.3 baseline decision. Phase 10 pending. Superseded scratch outputs excluded. Windows ABI swaps verified; other platforms remain unqualified.
+Status: Phases 1–9 passed on Windows (2026-10-14). Phase 9 uses the user-approved
+same-Cycles-5.3 native baseline; CPU exact, CUDA/OptiX calibrated policy and
+unchanged-host core/deep library swaps pass. Earlier stop records below are
+historical and superseded. Phase 10 local proposal is being finalized. Superseded
+scratch outputs remain excluded; Linux/macOS remain unqualified.
 Requested by the GafferCycles author.
 Branch: `c-api`, created from `deep-output`. All API code lives in `src/capi/`.
 
@@ -1016,3 +1019,66 @@ private backend getter and OS-only front imports pass. No timing acceptance is
 inferred. No Cycles internal changes, publication or changes to old scratch or
 the other worktree. Phase 9 integration/parity/swap and Phase 10 remain pending.
 [Baseline evidence](../../builds/validation/c-api/phase9-baseline-decision.json).
+
+## Phase 9 matched baseline authorization (2026-10-14)
+
+The user approved building Gaffer's existing C++ backend against the same Cycles
+5.3 sources, feature definitions and libraries as the C API backend. This
+supersedes the baseline decision stop above. Only Gaffer-side changes forced by
+the 5.1-to-5.3 interface changes are allowed; Cycles remains unchanged. Record
+the final patch with file/line ranges and reasons for the Phase 10 proposal.
+CPU comparisons remain exact, GPU comparisons use the existing policy, and the
+same Gaffer executable must load two different API builds without rebuilding.
+
+The Cortex 10.7.3.1 prerequisite now builds successfully against the approved
+dependency set. A build-harness correction confines C++20 (required by Cycles
+5.3 headers) to the native adapter; Gaffer's core retains C++17. Applying C++20
+globally exposed incompatible fmt runtime-format calls, so that attempt is not
+qualification evidence. Integration builds and render comparisons are pending.
+
+## Phase 9 final results (2026-10-14) — PASS
+
+The local Gaffer native C++ backend and C-only CyclesC plugin use the same
+Cycles 5.3 source, definitions and native libraries. Gaffer main revision
+`afb285e7f5b7245944f3111321068bcee0ae3888` and the approved 11.0.0a8 platform25
+package are a pre-release Gaffer 1.8 development set. Cortex 10.7.3.1 was built
+locally; the package runtime was upgraded only in the disposable host copy to
+installed MSVC 14.44.35211.0, satisfying the approved runtime minimum. Exact
+renderer-dependency matching remains unchanged and initialization succeeds
+inside Gaffer for both API builds.
+
+| Acceptance | Result |
+| --- | --- |
+| Three shared 64x48/16-sample scenes, CPU | Nine channels bit-identical in all three. |
+| CUDA and OptiX | Three scenes per backend pass existing raw/count/bias policy; five ordinary plus four seed references per scene/backend (54 native reference renders). No extra calibration needed. |
+| GPU differences | Emissive scenes exact; lit RGB max 2.2351741790771484e-8. Alpha, normal, depth and counts exact. |
+| Interactive CPU transform/shader edit | Exact initial and edited RGBA; auxiliary passes exact. |
+| Unchanged host, core vs deep | Four scenes, including interactive edit, exact; capability off/on verified; host/plugin hashes unchanged, zero rebuilds. |
+| Matched builds | Core 14/14 CTests, deep 23/23 including nine native tests; both 98 ccl_* exports, one private backend getter, OS-only front imports. |
+
+[Final evidence](../../builds/validation/c-api/phase9-final.json) records actual
+hashes, comparisons and native patch line ranges. The
+[host adaptation inventory](../../src/capi/gaffer/README.md) and checked-in patch
+retain 146 added/95 removed native adapter lines in 11 files, plus separate
+SConstruct integration. No native Cycles or kernel source changes were needed.
+Zero host changes refers to swapping the two API builds after initial adapter
+implementation, not the cost of implementing a host adapter.
+
+Tests found two prototype fixes: transfer vertex normals/smoothing, and explicitly
+resume after reset preserves pause. Harness fixes: native interactive display
+capture with remove/re-add outputs (avoids stale completed frames), avoid a Python
+message handler while native edits block, scalar Python command results, OptiX
+ID suffix recognition, FLOAT-preserving EXR handling and unchanged normalized
+count input to the existing policy. Its count normalization already multiplies
+by the sample limit. Harness self-tests reject one-ULP and signed-zero changes.
+The final native-vs-API CPU comparisons were repeated against the final host
+binary. Build corrections stage atomic headers/extensions, restrict C++20 to the
+native adapter, and release a loaded test DLL before relinking. Criteria were
+not relaxed. Earlier failed harness attempts are retained under the temporary root.
+
+The selected subset is not a full GafferCycles replacement. Gaffer-side OSL,
+volumes, motion, subdivision, object deletion and the full interactive UI remain
+unqualified. Timing gathered during concurrent builds is provisional; Phase 9
+has no timing acceptance and makes no performance claim. Phase 7 forwarding
+measurements remain separate. Large files remain under D:/temp/cycles_c_api;
+old scratch and the other worktree are untouched. No publication occurred.

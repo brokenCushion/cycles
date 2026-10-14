@@ -18,6 +18,11 @@ args = json.loads((REPO/'src/capi/test/windows_cpu_config.json').read_text())
 args = [s.replace('@BUILD@',str(build)).replace('@INSTALL@',str(install)) for s in args]
 replace = {'WITH_LIBS_PRECOMPILED':'OFF', 'WITH_CYCLES_DEEP_OPAQUE':'OFF',
            'WITH_CYCLES_OPENIMAGEDENOISE':'OFF'}
+if '--gpu' in sys.argv:
+    replace.update(WITH_CYCLES_DEVICE_CUDA='ON', WITH_CYCLES_DEVICE_OPTIX='ON',
+                   WITH_CYCLES_CUDA_BINARIES='ON')
+if '--deep' in sys.argv:
+    replace['WITH_CYCLES_DEEP_OPAQUE'] = 'ON'
 args = [s for s in args if not any(s.startswith('-D'+k+'=') for k in replace)]
 args += ['-D'+k+'='+v for k,v in replace.items()]
 args += ['-DCMAKE_PREFIX_PATH='+dep.as_posix(), '-DOSL_ROOT_DIR='+dep.as_posix(),

@@ -15,10 +15,12 @@ package = output('D:/temp/cycles_c_api/phase9-package/extracted/gafferDependenci
 build, install = output(root/'build'), output(root/'install')
 env = environment(root/'temp')
 env.update(PYTHONUTF8='1', PYTHONNOUSERSITE='1')
+env['CYCLES_MATCHED_CONFIG'] = str(output(root/'native-config.json'))
 if not build.exists():
     shutil.copytree(package, build)
 env['PATH'] = str(build/'bin')+';'+str(build/'lib')+';'+env['PATH']
 options = dict(BUILD_DIR=str(build), INSTALL_DIR=str(install),
+               CYCLES_ROOT=str(output(root/'cycles53')), CXXSTD='c++17',
                BUILD_CACHEDIR=str(output(root/'cache')), BUILD_TYPE='RELEASE',
                INKSCAPE='disableGraphics', SPHINX='', GLEW_LIB_SUFFIX='32',
                LOCATE_DEPENDENCY_LIBPATH=str(build/'lib'),
@@ -29,7 +31,7 @@ options_path.write_text('\n'.join(k+' = '+repr(v) for k,v in options.items())+'\
 wrapper = output(root/'toolchain.cmd')
 wrapper.write_text('@echo off\ncall "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/Tools/VsDevCmd.bat" -arch=x64 -host_arch=x64 >nul\nif errorlevel 1 exit /b %errorlevel%\n%*\n')
 python = output('D:/temp/cycles_c_api/build-tools/venv/Scripts/python.exe')
-args = [str(wrapper),str(python),'-B','-m','SCons','-j','8','buildCore',
+args = [str(wrapper),str(python),'-B','-m','SCons','-j','8','buildCore','buildExtensions',
         'OPTIONS='+str(options_path)]
 if '--dry-run' in sys.argv: args.append('-n')
 attempt = len(list(root.glob('build-*.log'))) + 1

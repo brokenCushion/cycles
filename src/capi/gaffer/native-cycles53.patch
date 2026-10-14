@@ -1,0 +1,611 @@
+diff --git a/SConstruct b/SConstruct
+index 833f0b0..fb31e23 100644
+--- a/SConstruct
++++ b/SConstruct
+@@ -1044,6 +1044,13 @@ cyclesDefines = [
+ 	( "WITH_SSE2NEON" ),
+ ]
+ 
++# C API proof-of-concept: native baseline uses identical build inputs.
++import json
++with open(os.environ["CYCLES_MATCHED_CONFIG"]) as f:
++    matchedCycles = json.load(f)
++cyclesDefines = [tuple(d) if isinstance(d, list) else d for d in matchedCycles["defines"]]
++
++
+ 
+ ###############################################################################################
+ # USD configuration
+@@ -1754,6 +1761,24 @@ if env["PLATFORM"] == "win32" :
+ 
+ extensionSources = []
+ extensionTargets = []
++# Keep host libraries; derive native libraries from the qualified CMake link.
++libraries["GafferCycles"]["envAppends"]["LIBS"] = [
++    "IECoreScene", "IECoreImage", "IECoreVDB", "Gaffer", "GafferScene", "GafferDispatch", "GafferOSL"
++] + matchedCycles["libs"]
++libraries["GafferCycles"]["envAppends"].setdefault("LINKFLAGS", []).extend([
++    "/WHOLEARCHIVE:" + p for p in matchedCycles["libs"]
++    if p.endswith(("cycles_scene.lib", "cycles_session.lib"))
++])
++# Cycles 5.3 headers require C++20 only in the native adapter.
++for section in ("envAppends", "pythonEnvAppends"):
++    libraries["GafferCycles"][section].setdefault("CXXFLAGS", []).append(
++        "/std:c++20" if sys.platform == "win32" else "-std=c++20")
++# C-only dynamically loaded Cycles proof-of-concept.
++libraries["GafferCyclesC"] = {
++    "envAppends": {
++        "LIBS": ["Gaffer", "GafferScene", "IECoreScene", "OpenImageIO", "OpenImageIO_Util"],
++    },
++}
+ for libraryName, libraryDef in libraries.items() :
+ 
+ 	# skip this library if we don't have the config we need
+diff --git a/src/GafferCycles/IECoreCyclesPreview/Attributes.cpp b/src/GafferCycles/IECoreCyclesPreview/Attributes.cpp
+index 1ba3d11..ac4cc89 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/Attributes.cpp
++++ b/src/GafferCycles/IECoreCyclesPreview/Attributes.cpp
+@@ -559,12 +559,12 @@ Attributes::Attributes( const IECore::CompoundObject *attributes, ShaderCache *s
+ 	IECore::ConstCompoundObjectPtr modifiedAttributes = ShaderNetworkAlgo::convertUSDMeshLightAttributes( attributes );
+ 	attributes = modifiedAttributes.get();
+ 
+-	updateVisibility( g_cameraVisibilityAttributeName,       (int)ccl::PATH_RAY_CAMERA,         attributes );
+-	updateVisibility( g_diffuseVisibilityAttributeName,      (int)ccl::PATH_RAY_DIFFUSE,        attributes );
+-	updateVisibility( g_glossyVisibilityAttributeName,       (int)ccl::PATH_RAY_GLOSSY,         attributes );
+-	updateVisibility( g_transmissionVisibilityAttributeName, (int)ccl::PATH_RAY_TRANSMIT,       attributes );
+-	updateVisibility( g_shadowVisibilityAttributeName,       (int)ccl::PATH_RAY_SHADOW,         attributes );
+-	updateVisibility( g_scatterVisibilityAttributeName,      (int)ccl::PATH_RAY_VOLUME_SCATTER, attributes );
++	updateVisibility( g_cameraVisibilityAttributeName,       (int)ccl::PATH_RAY_VISIBILITY_CAMERA,         attributes );
++	updateVisibility( g_diffuseVisibilityAttributeName,      (int)ccl::PATH_RAY_VISIBILITY_DIFFUSE,        attributes );
++	updateVisibility( g_glossyVisibilityAttributeName,       (int)ccl::PATH_RAY_VISIBILITY_GLOSSY,         attributes );
++	updateVisibility( g_transmissionVisibilityAttributeName, (int)ccl::PATH_RAY_VISIBILITY_TRANSMIT,       attributes );
++	updateVisibility( g_shadowVisibilityAttributeName,       (int)ccl::PATH_RAY_VISIBILITY_SHADOW,         attributes );
++	updateVisibility( g_scatterVisibilityAttributeName,      (int)ccl::PATH_RAY_VISIBILITY_VOLUME_SCATTER, attributes );
+ 
+ 	m_useHoldout = attributeValue<bool>( g_useHoldoutAttributeName, attributes, m_useHoldout );
+ 	m_isShadowCatcher = attributeValue<bool>( g_isShadowCatcherAttributeName, attributes, m_isShadowCatcher );
+@@ -616,7 +616,7 @@ Attributes::Attributes( const IECore::CompoundObject *attributes, ShaderCache *s
+ 		{
+ 			// If the light has been converted from a USD light, we override diffuse and glossy visibility
+ 			// based on the USD light's diffuse and specular parameters. See ShaderNetworkAlgo::transferUSDLightParameters()
+-			constexpr int rayMask = (int)( ccl::PATH_RAY_DIFFUSE | ccl::PATH_RAY_GLOSSY );
++			constexpr int rayMask = (int)( ccl::PATH_RAY_VISIBILITY_DIFFUSE | ccl::PATH_RAY_VISIBILITY_GLOSSY );
+ 			m_visibility = ( m_visibility & ~rayMask ) | ( rayVisibility->readable() & rayMask );
+ 		}
+ 	}
+@@ -809,6 +809,29 @@ void Attributes::applyShader( ccl::Geometry *geometry, ccl::Scene *scene ) const
+ 	}
+ }
+ 
++int Attributes::lightType() const
++{
++    const std::string name = m_lightAttribute && m_lightAttribute->outputShader()
++        ? m_lightAttribute->outputShader()->getName() : "point_light";
++    if( name == "spot_light" ) return ccl::LIGHT_SPOT;
++    if( name == "distant_light" ) return ccl::LIGHT_SUN;
++    if( name == "background_light" ) return ccl::LIGHT_BACKGROUND;
++    if( name == "quad_light" || name == "disk_light" || name == "portal" ) return ccl::LIGHT_AREA;
++    return ccl::LIGHT_POINT;
++}
++
++ccl::Light *Attributes::createLight( ccl::Scene *scene ) const
++{
++    switch( lightType() )
++    {
++        case ccl::LIGHT_SPOT : return SceneAlgo::createNodeWithLock<ccl::SpotLight>( scene );
++        case ccl::LIGHT_SUN : return SceneAlgo::createNodeWithLock<ccl::SunLight>( scene );
++        case ccl::LIGHT_BACKGROUND : return SceneAlgo::createNodeWithLock<ccl::BackgroundLight>( scene );
++        case ccl::LIGHT_AREA : return SceneAlgo::createNodeWithLock<ccl::AreaLight>( scene );
++        default : return SceneAlgo::createNodeWithLock<ccl::PointLight>( scene );
++    }
++}
++
+ void Attributes::applyLight( ccl::Light *light, ccl::Scene *scene ) const
+ {
+ 	if( m_lightAttribute )
+diff --git a/src/GafferCycles/IECoreCyclesPreview/Attributes.h b/src/GafferCycles/IECoreCyclesPreview/Attributes.h
+index 5cd1248..a90d8dd 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/Attributes.h
++++ b/src/GafferCycles/IECoreCyclesPreview/Attributes.h
+@@ -139,6 +139,8 @@ class Attributes : public IECoreScenePreview::Renderer::AttributesInterface
+ 
+ 		// Applies attributes relevant to `light`. Instancing is not an
+ 		// issue here because we never instance lights.
++		ccl::Light *createLight( ccl::Scene *scene ) const;
++		int lightType() const;
+ 		void applyLight( ccl::Light *light, ccl::Scene *scene ) const;
+ 
+ 		int getVolumePrecision() const;
+diff --git a/src/GafferCycles/IECoreCyclesPreview/CurvesAlgo.cpp b/src/GafferCycles/IECoreCyclesPreview/CurvesAlgo.cpp
+index 5e461fc..f705f05 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/CurvesAlgo.cpp
++++ b/src/GafferCycles/IECoreCyclesPreview/CurvesAlgo.cpp
+@@ -81,7 +81,11 @@ ccl::Hair *convertPrimary( const IECoreScene::CurvesPrimitive *curve, ccl::Scene
+ 		numKeys += verticesPerCurve[i];
+ 	}
+ 
+-	hair->reserve_curves( numCurves, numKeys );
++	hair->resize_curves( numCurves, numKeys );
++    auto setKey = [&]( size_t key, ccl::float3 position, float radius ) {
++        hair->attributes.find(ccl::ATTR_STD_POSITION)->data_for_write<ccl::packed_float3>()[key] = position;
++        hair->attributes.find(ccl::ATTR_STD_RADIUS)->data_for_write<float>()[key] = radius;
++    };
+ 
+ 	const vector<Imath::V3f> &points = p->readable();
+ 
+@@ -95,10 +99,11 @@ ccl::Hair *convertPrimary( const IECoreScene::CurvesPrimitive *curve, ccl::Scene
+ 			size_t firstKey = key;
+ 			for( int j = 0; j < verticesPerCurve[i]; ++j, ++key )
+ 			{
+-				hair->add_curve_key( ccl::make_float3( points[key].x, points[key].y, points[key].z ), width[key] / 2.0f );
++				setKey( key, ccl::make_float3( points[key].x, points[key].y, points[key].z ), width[key] / 2.0f );
+ 			}
+ 
+-			hair->add_curve( firstKey, 0 );
++			hair->get_curve_first_key()[i] = firstKey;
++            hair->get_curve_shader()[i] = 0;
+ 		}
+ 	}
+ 	else
+@@ -116,10 +121,11 @@ ccl::Hair *convertPrimary( const IECoreScene::CurvesPrimitive *curve, ccl::Scene
+ 			size_t firstKey = key;
+ 			for( int j = 0; j < verticesPerCurve[i]; ++j, ++key )
+ 			{
+-				hair->add_curve_key( ccl::make_float3( points[key].x, points[key].y, points[key].z ), constantWidth / 2.0f );
++				setKey( key, ccl::make_float3( points[key].x, points[key].y, points[key].z ), constantWidth / 2.0f );
+ 			}
+ 
+-			hair->add_curve( firstKey, 0 );
++			hair->get_curve_first_key()[i] = firstKey;
++            hair->get_curve_shader()[i] = 0;
+ 		}
+ 	}
+ 
+diff --git a/src/GafferCycles/IECoreCyclesPreview/GeometryAlgo.cpp b/src/GafferCycles/IECoreCyclesPreview/GeometryAlgo.cpp
+index 751026c..b69941a 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/GeometryAlgo.cpp
++++ b/src/GafferCycles/IECoreCyclesPreview/GeometryAlgo.cpp
+@@ -143,7 +143,7 @@ ccl::Attribute *convertTypedPrimitiveVariable( const std::string &name, const Pr
+ 	// space for its own usage. For instance, vertex attributes on subdivs reserve one extra element for
+ 	// each non-quad face.
+ 
+-	const size_t allocatedSize = attribute->element_size( attributes.geometry, attributes.prim );
++	const size_t allocatedSize = attribute->element_size( attributes.geometry, attribute->element, attributes.prim );
+ 	if( dataSize( data ) > allocatedSize )
+ 	{
+ 		msg(
+@@ -162,7 +162,7 @@ ccl::Attribute *convertTypedPrimitiveVariable( const std::string &name, const Pr
+ 	{
+ 		if constexpr( std::is_same_v<T, V3fVectorData> )
+ 		{
+-			ccl::packed_normal *pn = attribute->data_normal();
++			ccl::packed_normal *pn = attribute->data_for_write<ccl::packed_normal>();
+ 			for( const auto &v : data->readable() )
+ 			{
+ 				*pn++ = ccl::packed_normal( ccl::make_float3( v.x, v.y, v.z ) );
+@@ -183,7 +183,7 @@ ccl::Attribute *convertTypedPrimitiveVariable( const std::string &name, const Pr
+ 	else if constexpr( std::is_same_v<T, V3fVectorData> || std::is_same_v<T, Color3fVectorData> )
+ 	{
+ 		// Special case for arrays of `float3`, where each element actually contains 4 floats for alignment purposes.
+-		ccl::float3 *f3 = attribute->data_float3();
++		ccl::packed_float3 *f3 = attribute->data_for_write<ccl::packed_float3>();
+ 		for( const auto &v : data->readable() )
+ 		{
+ 			*f3++ = ccl::make_float3( v.x, v.y, v.z );
+@@ -192,7 +192,7 @@ ccl::Attribute *convertTypedPrimitiveVariable( const std::string &name, const Pr
+ 	else
+ 	{
+ 		// All other cases, (including int to float conversion) are a simple element-by-element copy.
+-		std::copy( data->baseReadable(), data->baseReadable() + data->baseSize(), (float *)attribute->data() );
++		std::copy( data->baseReadable(), data->baseReadable() + data->baseSize(), static_cast<float *>(attribute->data_for_write()) );
+ 	}
+ 
+ 	return attribute;
+@@ -395,35 +395,25 @@ void convertMotion( const IECoreScenePreview::Renderer::Samples<const IECoreScen
+ 	geometry.set_use_motion_blur( true );
+ 	geometry.set_motion_steps( samples.size() );
+ 
+-	ccl::Attribute *positionAttribute = geometry.attributes.add( ccl::ATTR_STD_MOTION_VERTEX_POSITION, ccl::ustring( "motion_P" ) );
+-	ccl::float4 *positionData = positionAttribute->data_float4();
+-
+-	const float *radius = nullptr;
+-	if( geometry.is_pointcloud() )
+-	{
+-		radius = static_cast<const ccl::PointCloud *>( &geometry )->get_radius().data();
+-	}
+-
+-	for( size_t sampleIndex = 0; sampleIndex < samples.size(); ++sampleIndex )
+-	{
+-		if( sampleIndex == primarySampleIndex )
+-		{
+-			// Cycles has a slightly odd way of representing motion samples, where the primary
+-			// sample is stored in the main position attribute, and the remaining samples are
+-			// stored in ATTR_STD_MOTION_VERTEX_POSITION. So we skip the primary sample here.
+-			continue;
+-		}
+-		const V3fVectorData *pData = samples[sampleIndex]->variableData<V3fVectorData>( "P", PrimitiveVariable::Vertex );
+-		if( !pData )
+-		{
+-			continue;
+-		}
+-		const std::vector<Imath::V3f> &p = pData->readable();
+-		for( size_t i = 0; i < p.size(); ++i )
+-		{
+-			*positionData++ = ccl::make_float4( p[i].x, p[i].y, p[i].z, radius ? radius[i] : 0.0f );
+-		}
+-	}
++    ccl::Attribute *positionAttribute = geometry.attributes.find( ccl::ATTR_STD_POSITION );
++    positionAttribute->add_motion( &geometry );
++    ccl::Attribute *radiusAttribute = geometry.attributes.find( ccl::ATTR_STD_RADIUS );
++    if( radiusAttribute ) radiusAttribute->add_motion( &geometry );
++    int step = 1;
++    for( size_t sampleIndex = 0; sampleIndex < samples.size(); ++sampleIndex )
++    {
++        if( sampleIndex == primarySampleIndex ) continue;
++        const auto *pData = samples[sampleIndex]->variableData<V3fVectorData>( "P", PrimitiveVariable::Vertex );
++        auto *dst = positionAttribute->data_for_write<ccl::packed_float3>(step);
++        if( pData )
++        {
++            const auto &p = pData->readable();
++            for( size_t i = 0; i < p.size(); ++i ) dst[i] = ccl::make_float3(p[i].x, p[i].y, p[i].z);
++        }
++        if( radiusAttribute ) std::copy_n( radiusAttribute->data<float>(), radiusAttribute->size,
++                                          radiusAttribute->data_for_write<float>(step) );
++        ++step;
++    }
+ }
+ 
+ void convertVoxelGrids( const IECoreVDB::VDBObject *vdbObject, ccl::Volume *volume, ccl::Scene *scene, int precision, float clipping )
+@@ -529,7 +519,7 @@ void convertVoxelGrids( const IECoreVDB::VDBObject *vdbObject, ccl::Volume *volu
+ 		params.frame = 0.0f;
+ 
+ 		std::scoped_lock lock( scene->mutex );
+-		attr->data_voxel() = scene->image_manager->add_image( std::move( loader ), params, false );
++		attr->data_voxel_for_write() = scene->image_manager->add_image( std::move( loader ), params, false );
+ 	}
+ }
+ 
+diff --git a/src/GafferCycles/IECoreCyclesPreview/IECoreCycles.cpp b/src/GafferCycles/IECoreCyclesPreview/IECoreCycles.cpp
+index f338e08..06d2a78 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/IECoreCycles.cpp
++++ b/src/GafferCycles/IECoreCyclesPreview/IECoreCycles.cpp
+@@ -340,6 +340,15 @@ IECore::CompoundDataPtr lightData()
+ 	{
+ 		IECore::CompoundDataPtr _sockets = getSockets( cNodeType, false );
+ 		IECore::CompoundDataMap _in = _sockets->readable();
++        for( const char *name : { "pointlight", "spotlight", "arealight", "sunlight", "backgroundlight" } )
++        {
++            auto sockets = getSockets( ccl::NodeType::find( ccl::ustring( name ) ), false );
++            _in.insert( sockets->readable().begin(), sockets->readable().end() );
++        }
++        _in["size"] = _in.at("radius");
++        auto spotSockets = getSockets( ccl::NodeType::find( ccl::ustring("spotlight") ), false );
++        _in["spot_angle"] = spotSockets->readable().at("angle");
++        _in["spot_smooth"] = spotSockets->readable().at("smooth");
+ 
+ 		const ccl::SocketType *socketType = cNodeType->find_input( ccl::ustring( "light_type" ) );
+ 		const ccl::NodeEnum *enums = socketType->enum_values;
+@@ -354,6 +363,7 @@ IECore::CompoundDataPtr lightData()
+ 			IECore::CompoundDataMap &in = sockets->writable();
+ 
+ 			std::string type( it->first.c_str() );
++            if( type == "sun" ) type = "distant";
+ 			type += "_light";
+ 
+ 			in["size"] = _in["size"]->copy();
+diff --git a/src/GafferCycles/IECoreCyclesPreview/MeshAlgo.cpp b/src/GafferCycles/IECoreCyclesPreview/MeshAlgo.cpp
+index 26e9299..c0c24cb 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/MeshAlgo.cpp
++++ b/src/GafferCycles/IECoreCyclesPreview/MeshAlgo.cpp
+@@ -121,10 +121,10 @@ ccl::Mesh *convertPrimary( const IECoreScene::MeshPrimitive *mesh, ccl::Scene *s
+ 	const size_t numVerts = points.size();
+ 
+ 	ccl::Mesh *cmesh = SceneAlgo::createNodeWithLock<ccl::Mesh>( scene );
+-	cmesh->reserve_mesh( numVerts, numFaces );
++	cmesh->resize_mesh( numVerts, mesh->interpolation() == "catmullClark" ? 0 : numFaces );
+ 	for( size_t i = 0; i < numVerts; i++ )
+ 	{
+-		cmesh->add_vertex( ccl::make_float3( points[i].x, points[i].y, points[i].z ) );
++		cmesh->attributes.find( ccl::ATTR_STD_POSITION )->data_for_write<ccl::packed_float3>()[i] = ccl::make_float3( points[i].x, points[i].y, points[i].z );
+ 	}
+ 
+ 	if( mesh->interpolation() == "catmullClark" )
+@@ -137,15 +137,19 @@ ccl::Mesh *convertPrimary( const IECoreScene::MeshPrimitive *mesh, ccl::Scene *s
+ 		{
+ 			ncorners += vertsPerFace[i];
+ 		}
+-		cmesh->reserve_subd_faces( numFaces, ncorners );
++		cmesh->resize_subd_faces( numFaces, ncorners );
++        int ptexOffset = 0;
+ 
+ 		int indexOffset = 0;
+ 		for( size_t i = 0; i < vertsPerFace.size(); i++ )
+ 		{
+-			cmesh->add_subd_face(
+-				const_cast<int*>(&vertexIds[indexOffset]), vertsPerFace[i],
+-				/* shader = */ 0, /* smooth = */ true
+-			);
++			cmesh->get_subd_start_corner()[i] = indexOffset;
++            cmesh->get_subd_num_corners()[i] = vertsPerFace[i];
++            cmesh->get_subd_shader()[i] = 0;
++            cmesh->get_subd_smooth()[i] = true;
++            cmesh->get_subd_ptex_offset()[i] = ptexOffset;
++            ptexOffset += vertsPerFace[i] == 4 ? 1 : vertsPerFace[i];
++            std::copy_n( &vertexIds[indexOffset], vertsPerFace[i], &cmesh->get_subd_face_corners()[indexOffset] );
+ 			indexOffset += vertsPerFace[i];
+ 		}
+ 
+@@ -188,10 +192,9 @@ ccl::Mesh *convertPrimary( const IECoreScene::MeshPrimitive *mesh, ccl::Scene *s
+ 		const bool smooth = hasSmoothNormals( mesh );
+ 		for( size_t i = 0; i < vertexIds.size(); i+= 3 )
+ 		{
+-			cmesh->add_triangle(
+-				vertexIds[i], vertexIds[i+1], vertexIds[i+2],
+-				/* shader = */ 0, /* smooth = */ smooth
+-			);
++			std::copy_n( &vertexIds[i], 3, &cmesh->get_triangles()[i] );
++            cmesh->get_shader()[i / 3] = 0;
++            cmesh->get_smooth()[i / 3] = smooth;
+ 		}
+ 	}
+ 
+@@ -247,7 +250,8 @@ ccl::Mesh *convertPrimary( const IECoreScene::MeshPrimitive *mesh, ccl::Scene *s
+ 		// be generated from a rest pose and normalised 0-1. The below matches Cycles'
+ 		// fallback behaviour when `ATTR_STD_GENERATED` is not provided by the host.
+ 		ccl::Attribute *generated = cmesh->subd_attributes.add( ccl::ATTR_STD_GENERATED );
+-		std::copy_n( cmesh->get_verts().data(), cmesh->get_verts().size(), generated->data_float3() );
++		std::copy_n( cmesh->attributes.find(ccl::ATTR_STD_POSITION)->data<ccl::packed_float3>(),
++                     cmesh->num_verts(), generated->data_for_write<ccl::packed_float3>() );
+ 	}
+ 
+ 	return cmesh;
+diff --git a/src/GafferCycles/IECoreCyclesPreview/PointsAlgo.cpp b/src/GafferCycles/IECoreCyclesPreview/PointsAlgo.cpp
+index 064e880..c06c5a3 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/PointsAlgo.cpp
++++ b/src/GafferCycles/IECoreCyclesPreview/PointsAlgo.cpp
+@@ -74,7 +74,12 @@ ccl::PointCloud *convertPrimary( const IECoreScene::PointsPrimitive *points, ccl
+ 	PrimitiveVariableMap variablesToConvert = points->variables;
+ 
+ 	size_t numPoints = points->getNumPoints();
+-	pointcloud->reserve( numPoints );
++	pointcloud->resize( numPoints );
++    auto setPoint = [&]( size_t i, ccl::float3 position, float radius ) {
++        pointcloud->attributes.find(ccl::ATTR_STD_POSITION)->data_for_write<ccl::packed_float3>()[i] = position;
++        pointcloud->attributes.find(ccl::ATTR_STD_RADIUS)->data_for_write<float>()[i] = radius;
++        pointcloud->get_shader()[i] = 0;
++    };
+ 
+ 	const vector<Imath::V3f> &pos = p->readable();
+ 
+@@ -84,7 +89,7 @@ ccl::PointCloud *convertPrimary( const IECoreScene::PointsPrimitive *points, ccl
+ 
+ 		for( size_t i = 0; i < numPoints; ++i )
+ 		{
+-			pointcloud->add_point( SocketAlgo::setVector( pos[i] ), width[i] * 0.5f, 0);
++			setPoint( i, SocketAlgo::setVector( pos[i] ), width[i] * 0.5f );
+ 		}
+ 		variablesToConvert.erase( "width" );
+ 	}
+@@ -94,7 +99,7 @@ ccl::PointCloud *convertPrimary( const IECoreScene::PointsPrimitive *points, ccl
+ 
+ 		for( size_t i = 0; i < numPoints; ++i )
+ 		{
+-			pointcloud->add_point( SocketAlgo::setVector( pos[i] ), width[i], 0);
++			setPoint( i, SocketAlgo::setVector( pos[i] ), width[i] );
+ 		}
+ 		variablesToConvert.erase( "radius" );
+ 	}
+@@ -116,7 +121,7 @@ ccl::PointCloud *convertPrimary( const IECoreScene::PointsPrimitive *points, ccl
+ 
+ 		for( size_t i = 0; i < numPoints; ++i )
+ 		{
+-			pointcloud->add_point( SocketAlgo::setVector( pos[i] ), width, 0);
++			setPoint( i, SocketAlgo::setVector( pos[i] ), width );
+ 		}
+ 	}
+ 
+diff --git a/src/GafferCycles/IECoreCyclesPreview/Renderer.cpp b/src/GafferCycles/IECoreCyclesPreview/Renderer.cpp
+index 3a4829f..50d4bbe 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/Renderer.cpp
++++ b/src/GafferCycles/IECoreCyclesPreview/Renderer.cpp
+@@ -729,8 +729,8 @@ class CyclesLight : public IECoreScenePreview::Renderer::ObjectInterface
+ 
+ 	public :
+ 
+-		CyclesLight( ccl::Scene *scene, const std::string &name, NodeDeleter *nodeDeleter )
+-			:	m_scene( scene ), m_light( SceneAlgo::createNodeWithLock<ccl::Light>( scene ), NodeDeleter::GeometryDeleter( nodeDeleter ) ), m_object( SceneAlgo::createNodeWithLock<ccl::Object>( scene ), NodeDeleter::ObjectDeleter( nodeDeleter ) )
++		CyclesLight( ccl::Scene *scene, const std::string &name, NodeDeleter *nodeDeleter, const Attributes *attributes )
++			:	m_scene( scene ), m_light( attributes->createLight( scene ), NodeDeleter::GeometryDeleter( nodeDeleter ) ), m_object( SceneAlgo::createNodeWithLock<ccl::Object>( scene ), NodeDeleter::ObjectDeleter( nodeDeleter ) )
+ 		{
+ 			m_object->set_geometry( m_light.get() );
+ 			m_object->set_random_id( std::hash<string>()( name ) );
+@@ -762,6 +762,7 @@ class CyclesLight : public IECoreScenePreview::Renderer::ObjectInterface
+ 		bool attributes( const IECoreScenePreview::Renderer::AttributesInterface *attributes ) override
+ 		{
+ 			const Attributes *cyclesAttributes = static_cast<const Attributes *>( attributes );
++			if( cyclesAttributes->lightType() != m_light->get_light_type() ) return false;
+ 			cyclesAttributes->applyLight( m_light.get(), m_scene );
+ 			cyclesAttributes->applyObject( m_object.get(), m_scene );
+ 			applyEnvironmentMapRotation();
+@@ -1251,13 +1252,13 @@ IECore::InternedString g_backgroundShaderOptionName( "cycles:background:shader"
+ IECore::InternedString g_seedOptionName( "cycles:integrator:seed" );
+ IECore::InternedString g_denoiserTypeOptionName( "cycles:integrator:denoiser_type" );
+ 
+-const boost::container::flat_map<std::string, ccl::PathRayFlag> g_rayTypes = {
+-	{ "camera", ccl::PATH_RAY_CAMERA },
+-	{ "diffuse", ccl::PATH_RAY_DIFFUSE },
+-	{ "glossy", ccl::PATH_RAY_GLOSSY },
+-	{ "transmission", ccl::PATH_RAY_TRANSMIT },
+-	{ "shadow", ccl::PATH_RAY_SHADOW },
+-	{ "scatter", ccl::PATH_RAY_VOLUME_SCATTER }
++const boost::container::flat_map<std::string, ccl::PathRayVisibilityFlag> g_rayTypes = {
++	{ "camera", ccl::PATH_RAY_VISIBILITY_CAMERA },
++	{ "diffuse", ccl::PATH_RAY_VISIBILITY_DIFFUSE },
++	{ "glossy", ccl::PATH_RAY_VISIBILITY_GLOSSY },
++	{ "transmission", ccl::PATH_RAY_VISIBILITY_TRANSMIT },
++	{ "shadow", ccl::PATH_RAY_VISIBILITY_SHADOW },
++	{ "scatter", ccl::PATH_RAY_VISIBILITY_VOLUME_SCATTER }
+ };
+ 
+ const boost::container::flat_map<int, ccl::LogLevel> g_logLevels = {
+@@ -1399,7 +1400,7 @@ class CyclesRenderer final : public IECoreScenePreview::Renderer
+ 			}
+ 			else
+ 			{
+-				result = new CyclesLight( m_scene, name, m_nodeDeleter.get() );
++				result = new CyclesLight( m_scene, name, m_nodeDeleter.get(), typedAttributes );
+ 			}
+ 			result->attributes( attributes );
+ 			return result;
+@@ -1788,7 +1789,7 @@ class CyclesRenderer final : public IECoreScenePreview::Renderer
+ 				it->second.modified = false;
+ 			}
+ 
+-			uint32_t backgroundVisibility = ccl::PATH_RAY_ALL_VISIBILITY;
++			uint32_t backgroundVisibility = ccl::PATH_RAY_VISIBILITY_ALL;
+ 			for( const auto &[name, rayType] : g_rayTypes )
+ 			{
+ 				if( !optionValue<bool>( "cycles:background:visibility:" + name, true ) )
+diff --git a/src/GafferCycles/IECoreCyclesPreview/ShaderNetworkAlgo.cpp b/src/GafferCycles/IECoreCyclesPreview/ShaderNetworkAlgo.cpp
+index a986519..f1a3650 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/ShaderNetworkAlgo.cpp
++++ b/src/GafferCycles/IECoreCyclesPreview/ShaderNetworkAlgo.cpp
+@@ -529,7 +529,7 @@ void convertLight( const IECoreScene::ShaderNetwork *light, ccl::Light *cyclesLi
+ 	}
+ 	else if( lightShader->getName() == "distant_light" )
+ 	{
+-		cyclesLight->set_light_type( ccl::LIGHT_DISTANT );
++		cyclesLight->set_light_type( ccl::LIGHT_SUN );
+ 	}
+ 	else if( lightShader->getName() == "background_light" )
+ 	{
+@@ -541,20 +541,20 @@ void convertLight( const IECoreScene::ShaderNetwork *light, ccl::Light *cyclesLi
+ 	)
+ 	{
+ 		cyclesLight->set_light_type( ccl::LIGHT_AREA );
+-		cyclesLight->set_size( 1.0f );
+-		cyclesLight->set_sizeu( 2.0f );
+-		cyclesLight->set_sizev( 2.0f );
++		// Cycles 5.3 area dimensions no longer have a separate size multiplier.
++		static_cast<ccl::AreaLight *>( cyclesLight )->set_sizeu( 2.0f );
++		static_cast<ccl::AreaLight *>( cyclesLight )->set_sizev( 2.0f );
+ 
+-		cyclesLight->set_ellipse( false );
++		static_cast<ccl::AreaLight *>( cyclesLight )->set_ellipse( false );
+ 	}
+ 	else if( lightShader->getName() == "disk_light" )
+ 	{
+ 		cyclesLight->set_light_type( ccl::LIGHT_AREA );
+-		cyclesLight->set_size( 1.0f );
+-		cyclesLight->set_sizeu( 2.0f );
+-		cyclesLight->set_sizev( 2.0f );
++		// Cycles 5.3 area dimensions no longer have a separate size multiplier.
++		static_cast<ccl::AreaLight *>( cyclesLight )->set_sizeu( 2.0f );
++		static_cast<ccl::AreaLight *>( cyclesLight )->set_sizev( 2.0f );
+ 
+-		cyclesLight->set_ellipse( true );
++		static_cast<ccl::AreaLight *>( cyclesLight )->set_ellipse( true );
+ 	}
+ 	else
+ 	{
+@@ -573,29 +573,37 @@ void convertLight( const IECoreScene::ShaderNetwork *light, ccl::Light *cyclesLi
+ 		// Convert angle-based parameters, where we use degrees and Cycles uses radians.
+ 		else if( name == "angle" )
+ 		{
+-			cyclesLight->set_angle( IECore::degreesToRadians( parameterValue<float>( value.get(), name, 0.0f ) ) );
++			static_cast<ccl::SunLight *>( cyclesLight )->set_angle( IECore::degreesToRadians( parameterValue<float>( value.get(), name, 0.0f ) ) );
+ 		}
+ 		else if( name == "spot_angle" )
+ 		{
+-			cyclesLight->set_spot_angle( IECore::degreesToRadians( parameterValue<float>( value.get(), name, 45.0f ) ) );
++			static_cast<ccl::SpotLight *>( cyclesLight )->set_angle( IECore::degreesToRadians( parameterValue<float>( value.get(), name, 45.0f ) ) );
+ 		}
+ 		else if( name == "spread" )
+ 		{
+-			cyclesLight->set_spread( IECore::degreesToRadians( parameterValue<float>( value.get(), name, 180.0f ) ) );
++			static_cast<ccl::AreaLight *>( cyclesLight )->set_spread( IECore::degreesToRadians( parameterValue<float>( value.get(), name, 180.0f ) ) );
+ 		}
+ 		else if( name == "width" )
+ 		{
+-			cyclesLight->set_sizeu( parameterValue<float>( value.get(), name, 2.0f ) );
++			static_cast<ccl::AreaLight *>( cyclesLight )->set_sizeu( parameterValue<float>( value.get(), name, 2.0f ) );
+ 			// No oval support yet, just apply width to height.
+ 			if( lightShader->getName() == "disk_light" )
+ 			{
+-				cyclesLight->set_sizev( parameterValue<float>( value.get(), name, 2.0f ) );
++				static_cast<ccl::AreaLight *>( cyclesLight )->set_sizev( parameterValue<float>( value.get(), name, 2.0f ) );
+ 			}
+ 		}
+ 		else if( name == "height" )
+ 		{
+-			cyclesLight->set_sizev( parameterValue<float>( value.get(), name, 2.0f ) );
++			static_cast<ccl::AreaLight *>( cyclesLight )->set_sizev( parameterValue<float>( value.get(), name, 2.0f ) );
+ 		}
++		else if( name == "size" )
++        {
++            SocketAlgo::setSocket( cyclesLight, "radius", value.get() );
++        }
++        else if( name == "spot_smooth" )
++        {
++            SocketAlgo::setSocket( cyclesLight, "smooth", value.get() );
++        }
+ 		// Convert generic parameters.
+ 		else
+ 		{
+@@ -954,14 +962,14 @@ void transferCommonUSDLightParameters( const Shader *usdShader, Shader *shader )
+ 	}
+ 	shader->parameters()[g_colorParameter] = new Color3fData( color );
+ 
+-	int visibility = (int)ccl::PATH_RAY_ALL_VISIBILITY;
++	int visibility = (int)ccl::PATH_RAY_VISIBILITY_ALL;
+ 	if( parameterValue( usdShader, g_diffuseParameter, 1.0f ) == 0.0f )
+ 	{
+-		visibility &= ~(int)ccl::PATH_RAY_DIFFUSE;
++		visibility &= ~(int)ccl::PATH_RAY_VISIBILITY_DIFFUSE;
+ 	}
+ 	if( parameterValue( usdShader, g_specularParameter, 1.0f ) == 0.0f )
+ 	{
+-		visibility &= ~(int)ccl::PATH_RAY_GLOSSY;
++		visibility &= ~(int)ccl::PATH_RAY_VISIBILITY_GLOSSY;
+ 	}
+ 	shader->blindData()->writable()[g_USDRayVisibilityBlindDataKey] = new IntData( visibility );
+ 
+diff --git a/src/GafferCycles/IECoreCyclesPreview/SocketAlgo.cpp b/src/GafferCycles/IECoreCyclesPreview/SocketAlgo.cpp
+index 351edea..7da1940 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/SocketAlgo.cpp
++++ b/src/GafferCycles/IECoreCyclesPreview/SocketAlgo.cpp
+@@ -187,7 +187,7 @@ void setFloat3Socket( ccl::Node *node, const ccl::SocketType &socket, const IECo
+ template<typename T>
+ void setFloat3ArraySocket( ccl::Node *node, const ccl::SocketType &socket, const T &value )
+ {
+-	ccl::array<ccl::float3> array( value.size() );
++	ccl::array<ccl::packed_float3> array( value.size() );
+ 	for( size_t i = 0; i < value.size(); ++i )
+ 	{
+ 		array[i] = ccl::make_float3( value[i][0], value[i][1], value[i][2] );
+@@ -537,7 +537,7 @@ void setRampSocket( ccl::Node *node, const ccl::SocketType *socket, const IECore
+ {
+ 	IECore::SplinefColor3f evaluator = ramp.evaluator();
+ 
+-	ccl::array<ccl::float3> rampTable( RAMP_TABLE_SIZE );
++	ccl::array<ccl::packed_float3> rampTable( RAMP_TABLE_SIZE );
+ 	for (int i = 0; i < RAMP_TABLE_SIZE; i++)
+ 	{
+ 		Color3f solve = evaluator( (float)i / (float)(RAMP_TABLE_SIZE - 1) );
+diff --git a/src/GafferCycles/IECoreCyclesPreview/SphereAlgo.cpp b/src/GafferCycles/IECoreCyclesPreview/SphereAlgo.cpp
+index b3b9779..cf4aa6c 100644
+--- a/src/GafferCycles/IECoreCyclesPreview/SphereAlgo.cpp
++++ b/src/GafferCycles/IECoreCyclesPreview/SphereAlgo.cpp
+@@ -81,8 +81,10 @@ ccl::Geometry *convert( const IECoreScenePreview::Renderer::Samples<const IECore
+ 	warnIfUnsupported( sphere );
+ 	ccl::PointCloud *pointcloud = SceneAlgo::createNodeWithLock<ccl::PointCloud>( scene );
+ 
+-	pointcloud->reserve( 1 );
+-	pointcloud->add_point( ccl::make_float3( 0.0f, 0.0f, 0.0f ), sphere->radius(), 0);
++	pointcloud->resize( 1 );
++    pointcloud->attributes.find(ccl::ATTR_STD_POSITION)->data_for_write<ccl::packed_float3>()[0] = ccl::zero_float3();
++    pointcloud->attributes.find(ccl::ATTR_STD_RADIUS)->data_for_write<float>()[0] = sphere->radius();
++    pointcloud->get_shader()[0] = 0;
+ 
+ 	for( const auto &[name, variable] : sphere->variables )
+ 	{

@@ -1,7 +1,8 @@
-# Cycles C API — Phases 1–8 qualified on Windows
+# Cycles C API — Phases 1–9 qualified on Windows
 
 Experimental shared-library boundary for host applications such as Gaffer.
-**Experimental until Phase 7**; the stable ABI promise has not begun.
+The original milestone was **experimental until Phase 7**. Phase 7 is accepted;
+this remains a local prototype without an upstream-maintained compatibility promise.
 The contract is [cycles_c.h](cycles_c.h): it contains no Cycles C++ headers or
 native deep types. Optional C deep callbacks are qualified in API 1.7. It initializes resource paths, enumerates native devices, reports
 compiled capabilities, routes logs and introspects built-in node types, sockets,
@@ -814,3 +815,24 @@ the checked Python environments. Phase 10 remains pending at this stop condition
 Phase 8 remains accepted. No publication, push or new render occurred; no jobs
 remain running for this work. See `builds/validation/c-api/phase9.json` for the
 small evidence, exact tests and DLL hashes. Earlier preflight stop is superseded.
+
+## Phase 9 final results (2026-10-14) — PASS
+
+The local Gaffer proof of concept passes CPU exactness (three scenes, nine
+channels), CUDA/OptiX existing calibrated beauty/count/bias policy, and interactive
+CPU transform/shader edits. The same host/plugin loads core-only and deep-enabled
+API builds with exact outputs and zero rebuilds. In-host dependency checks pass;
+core/deep builds pass 14/14 and 23/23 CTests and both retain 98 C exports, the
+private backend getter and OS-only front imports. The Gaffer 1.8 main/dependencies
+11.0.0a8 combination is pre-release, not a supported released Gaffer package.
+
+Native comparison uses the same Cycles 5.3 libraries/configuration. Its required
+C++ adaptation is recorded by file/line and reason in the
+[Gaffer prototype guide](gaffer/README.md). No internal Cycles changes were needed.
+The new host adapter fixes omitted vertex normals and explicitly resumes after
+paused reset. Harness capture/precision/device-ID fixes did not relax criteria.
+All 54 native GPU reference renders were small fixtures; no extra controls were
+needed. Timings are provisional, with no Phase 9 performance acceptance claim.
+See [final evidence](../../builds/validation/c-api/phase9-final.json). Older stop
+reports above are historical and superseded. The prototype subset and unqualified
+host features are explicit in the guide; this is not a production Gaffer backend.

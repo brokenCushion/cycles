@@ -1,0 +1,1077 @@
+{
+  "phase": 9,
+  "passed": true,
+  "status": "qualified-local-proof-of-concept",
+  "gaffer_commit": "afb285e7f5b7245944f3111321068bcee0ae3888",
+  "scope": "Pre-release Gaffer 1.8 main; approved dependencies 11.0.0a8 platform25; Windows only",
+  "builds": {
+    "core": {
+      "ctests": 14,
+      "public_exports": 98,
+      "private_exports": [
+        "cycles_c_private_get_table"
+      ],
+      "front_imports": [
+        "kernel32.dll",
+        "version.dll"
+      ],
+      "hashes": {
+        "cycles_c.dll": "707eba00c51d0b729212a6ecc62d078628f99e442950cfb88bee57a2509cf9a6",
+        "cycles_c_backend_private.dll": "4171b7ae24c319de032a988d8b549137ebf9686c5259cbd796a23c2bf8ef85de"
+      },
+      "deep_enabled": false,
+      "tests_sha256": "4682f5a6ad712c6516ebfef1324194facd27c955dd8d3162f91b825eb9afadd1"
+    },
+    "deep": {
+      "ctests": 23,
+      "public_exports": 98,
+      "private_exports": [
+        "cycles_c_private_get_table"
+      ],
+      "front_imports": [
+        "kernel32.dll",
+        "version.dll"
+      ],
+      "hashes": {
+        "cycles_c.dll": "854e5378872b8afa98e7724952043141a61801af4b66f9d2a39f04b3adaab907",
+        "cycles_c_backend_private.dll": "e83d299519f6b5906a09ff157f690cbc8a9569f8b6c647e057808e44b1a5f2b2"
+      },
+      "deep_enabled": true,
+      "tests_sha256": "11a4e526dbd8a601fdc6f2e703001090ef4879c94946339b64120a7629546849"
+    }
+  },
+  "native_baseline": {
+    "defines": [
+      [
+        "CCL_NAMESPACE_BEGIN",
+        "namespace ccl {"
+      ],
+      [
+        "CCL_NAMESPACE_END",
+        "}"
+      ],
+      [
+        "EMBREE_MAJOR_VERSION",
+        "4"
+      ],
+      "IMATH_DLL",
+      "NDEBUG",
+      "NOMINMAX",
+      "OPENEXR_DLL",
+      "WIN32_LEAN_AND_MEAN",
+      "WITH_CUDA",
+      "WITH_CUDA_DYNLOAD",
+      "WITH_EMBREE",
+      "WITH_KERNEL_AVX2",
+      "WITH_KERNEL_SSE42",
+      "WITH_NANOVDB",
+      "WITH_OCIO",
+      "WITH_OPENSUBDIV",
+      "WITH_OPENVDB",
+      "WITH_OPTIX",
+      "WITH_OSL",
+      "WITH_PUGIXML",
+      "WITH_SYSTEM_PUGIXML",
+      "WITH_TBB",
+      "_USE_MATH_DEFINES"
+    ],
+    "libs": [
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_device.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_scene.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_session.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_bvh.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_subd.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_graph.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_util.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_kernel_osl.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\extern_sky.lib",
+      "psapi.lib",
+      "Version.lib",
+      "Dbghelp.lib",
+      "Shlwapi.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\Lib\\OpenImageIO.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\Lib\\zlib.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\extern_cuew.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_kernel_cpu.lib",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_integrator.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\Lib\\osdGPU.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\Lib\\osdCPU.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\oslcomp.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\oslexec.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\oslquery.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\oslnoise.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\OpenImageIO.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\OpenImageIO_Util.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\Lib\\embree4.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\OpenColorIO.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\OpenEXR.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\IlmThread.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\Iex.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\OpenEXRCore.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\lib\\Imath.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\Lib\\openvdb.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\Lib\\tbb.lib",
+      "D:\\temp\\cycles_c_api\\phase9-package\\extracted\\gafferDependencies-11.0.0a8-windows-platform25\\Lib\\zstd.lib",
+      "kernel32.lib",
+      "user32.lib",
+      "gdi32.lib",
+      "winspool.lib",
+      "shell32.lib",
+      "ole32.lib",
+      "oleaut32.lib",
+      "uuid.lib",
+      "comdlg32.lib",
+      "advapi32.lib"
+    ],
+    "prefix": "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\cycles53",
+    "static_hashes": {
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_bvh.lib": "03dcaf1288728ecdaf87418bdb110e7941c07d4ea403a05288ecbb0e1583b8eb",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_device.lib": "1a28ba0fd205e44baf994383c20d244f521c7397cbea4c44f03877e97b331299",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_graph.lib": "44b2bada9ef602f5bac7269e1dc64c14ae73cb5f1b875f4f88956049bdecd913",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_integrator.lib": "4eaf0516a3dc3d0cdfdf4e827debad199789b4221153689148df3f6360248176",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_kernel_cpu.lib": "3c79ad4ad81633a7af0686753dc0a9a3664b130c96444cee794952d7633c836b",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_kernel_osl.lib": "b0a021abad5aae3e022da3d1d8a09fa9819571d3ac9dd9c27d8645d6c2b690e5",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_scene.lib": "c648302ab18ad42f15f73cc7b52fd4b8852ebeb82d62b164be9a28318066b9a9",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_session.lib": "45d741d3ddfb3a22815e1f2a424f8cf77e85fba8968bd4e45ae58ee222e1eefe",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_subd.lib": "e5049ac295dff925c17bd17430eb503a19aba1b2bd430f370af13e7d6c52b1b8",
+      "D:\\temp\\cycles_c_api\\phase9-matched-gpu-core\\build\\lib\\cycles_util.lib": "bc5891aeedd2dd722e7f922556f5bac846d6a66e68425df52ee9a2f7b2210d34"
+    }
+  },
+  "patch": {
+    "path": "src\\capi\\gaffer\\native-cycles53.patch",
+    "sha256": "8e9a8c65e3ff9b2a011feac5618ed26ef2a3f1853d1c8881787cb1e2a3b5ea01",
+    "hunks": {
+      "SConstruct": [
+        "-1044,6 +1044,13",
+        "-1754,6 +1761,24"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/Attributes.cpp": [
+        "-559,12 +559,12",
+        "-616,7 +616,7",
+        "-809,6 +809,29"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/Attributes.h": [
+        "-139,6 +139,8"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/CurvesAlgo.cpp": [
+        "-81,7 +81,11",
+        "-95,10 +99,11",
+        "-116,10 +121,11"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/GeometryAlgo.cpp": [
+        "-143,7 +143,7",
+        "-162,7 +162,7",
+        "-183,7 +183,7",
+        "-192,7 +192,7",
+        "-395,35 +395,25",
+        "-529,7 +519,7"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/IECoreCycles.cpp": [
+        "-340,6 +340,15",
+        "-354,6 +363,7"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/MeshAlgo.cpp": [
+        "-121,10 +121,10",
+        "-137,15 +137,19",
+        "-188,10 +192,9",
+        "-247,7 +250,8"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/PointsAlgo.cpp": [
+        "-74,7 +74,12",
+        "-84,7 +89,7",
+        "-94,7 +99,7",
+        "-116,7 +121,7"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/Renderer.cpp": [
+        "-729,8 +729,8",
+        "-762,6 +762,7",
+        "-1251,13 +1252,13",
+        "-1399,7 +1400,7",
+        "-1788,7 +1789,7"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/ShaderNetworkAlgo.cpp": [
+        "-529,7 +529,7",
+        "-541,20 +541,20",
+        "-573,29 +573,37",
+        "-954,14 +962,14"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/SocketAlgo.cpp": [
+        "-187,7 +187,7",
+        "-537,7 +537,7"
+      ],
+      "src/GafferCycles/IECoreCyclesPreview/SphereAlgo.cpp": [
+        "-81,8 +81,10"
+      ]
+    }
+  },
+  "cpu": {
+    "emission": {
+      "rgba.R": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.G": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.B": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.A": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.X": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.Y": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.Z": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "depth.Z": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "sample_count.X": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      }
+    },
+    "meshes": {
+      "rgba.R": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.G": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.B": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.A": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.X": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.Y": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.Z": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "depth.Z": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "sample_count.X": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      }
+    },
+    "point-light": {
+      "rgba.R": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.G": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.B": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.A": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.X": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.Y": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.Z": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "depth.Z": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "sample_count.X": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      }
+    }
+  },
+  "gpu": {
+    "CUDA": {
+      "passed": true,
+      "fixtures": {
+        "emission": {
+          "passed": true,
+          "raw_passed": true,
+          "count_passed": true,
+          "bias_passed": true,
+          "all_nine_channels": {
+            "rgba.R": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.G": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.B": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.A": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Y": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "depth.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "sample_count.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            }
+          }
+        },
+        "meshes": {
+          "passed": true,
+          "raw_passed": true,
+          "count_passed": true,
+          "bias_passed": true,
+          "all_nine_channels": {
+            "rgba.R": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.G": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.B": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.A": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Y": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "depth.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "sample_count.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            }
+          }
+        },
+        "point-light": {
+          "passed": true,
+          "raw_passed": true,
+          "count_passed": true,
+          "bias_passed": true,
+          "all_nine_channels": {
+            "rgba.R": {
+              "bit_identical": false,
+              "different_pixels": 302,
+              "max_absolute": 1.4901161193847656e-08
+            },
+            "rgba.G": {
+              "bit_identical": false,
+              "different_pixels": 266,
+              "max_absolute": 2.2351741790771484e-08
+            },
+            "rgba.B": {
+              "bit_identical": false,
+              "different_pixels": 264,
+              "max_absolute": 1.4901161193847656e-08
+            },
+            "rgba.A": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Y": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "depth.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "sample_count.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            }
+          }
+        }
+      },
+      "policy_sha256": "376154687e2b5bbd9369c83fe3b603e331a57d48253e242ba74d27fd4c8235c9",
+      "controls": 5,
+      "seeds": 4
+    },
+    "OPTIX": {
+      "passed": true,
+      "fixtures": {
+        "emission": {
+          "passed": true,
+          "raw_passed": true,
+          "count_passed": true,
+          "bias_passed": true,
+          "all_nine_channels": {
+            "rgba.R": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.G": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.B": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.A": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Y": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "depth.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "sample_count.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            }
+          }
+        },
+        "meshes": {
+          "passed": true,
+          "raw_passed": true,
+          "count_passed": true,
+          "bias_passed": true,
+          "all_nine_channels": {
+            "rgba.R": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.G": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.B": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "rgba.A": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Y": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "depth.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "sample_count.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            }
+          }
+        },
+        "point-light": {
+          "passed": true,
+          "raw_passed": true,
+          "count_passed": true,
+          "bias_passed": true,
+          "all_nine_channels": {
+            "rgba.R": {
+              "bit_identical": false,
+              "different_pixels": 266,
+              "max_absolute": 1.4901161193847656e-08
+            },
+            "rgba.G": {
+              "bit_identical": false,
+              "different_pixels": 266,
+              "max_absolute": 1.4901161193847656e-08
+            },
+            "rgba.B": {
+              "bit_identical": false,
+              "different_pixels": 270,
+              "max_absolute": 2.2351741790771484e-08
+            },
+            "rgba.A": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Y": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "normal.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "depth.Z": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            },
+            "sample_count.X": {
+              "bit_identical": true,
+              "different_pixels": 0,
+              "max_absolute": 0.0
+            }
+          }
+        }
+      },
+      "policy_sha256": "376154687e2b5bbd9369c83fe3b603e331a57d48253e242ba74d27fd4c8235c9",
+      "controls": 5,
+      "seeds": 4
+    }
+  },
+  "interactive": {
+    "initial_and_auxiliary": {
+      "rgba.R": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.G": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.B": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "rgba.A": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.X": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.Y": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "normal.Z": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "depth.Z": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "sample_count.X": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      }
+    },
+    "edited_rgba": {
+      "A": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "B": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "G": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "R": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      }
+    }
+  },
+  "swap": {
+    "passed": true,
+    "host_before": {
+      "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\lib\\Gaffer.dll": "c45028036bd9e24e4e74052c225f84b7e752ad33e4331d941f4a13d7d7f89e67",
+      "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\lib\\GafferScene.dll": "8652e47ff2c4ffeb6c2c0841354265387e0923d2343c4644087f1f75c6ce0bb3",
+      "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\lib\\GafferCycles.dll": "88511ec7fd8db6a760fcff564f8253e19871ce74a9ec2f8226f1bd4d216940f1",
+      "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\lib\\GafferCyclesC.dll": "ec43c4c9caef951df9769ee02a29bf92d8ccb78d758877a5a412b671062d222c"
+    },
+    "host_after": {
+      "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\lib\\Gaffer.dll": "c45028036bd9e24e4e74052c225f84b7e752ad33e4331d941f4a13d7d7f89e67",
+      "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\lib\\GafferScene.dll": "8652e47ff2c4ffeb6c2c0841354265387e0923d2343c4644087f1f75c6ce0bb3",
+      "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\lib\\GafferCycles.dll": "88511ec7fd8db6a760fcff564f8253e19871ce74a9ec2f8226f1bd4d216940f1",
+      "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\lib\\GafferCyclesC.dll": "ec43c4c9caef951df9769ee02a29bf92d8ccb78d758877a5a412b671062d222c"
+    },
+    "libraries": {
+      "core": {
+        "cycles_c.dll": "707eba00c51d0b729212a6ecc62d078628f99e442950cfb88bee57a2509cf9a6",
+        "cycles_c_backend_private.dll": "4171b7ae24c319de032a988d8b549137ebf9686c5259cbd796a23c2bf8ef85de"
+      },
+      "deep": {
+        "cycles_c.dll": "854e5378872b8afa98e7724952043141a61801af4b66f9d2a39f04b3adaab907",
+        "cycles_c_backend_private.dll": "e83d299519f6b5906a09ff157f690cbc8a9569f8b6c647e057808e44b1a5f2b2"
+      }
+    },
+    "comparisons": {
+      "emission": {
+        "rgba.R": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.G": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.B": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.A": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.X": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.Y": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.Z": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "depth.Z": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "sample_count.X": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        }
+      },
+      "meshes": {
+        "rgba.R": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.G": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.B": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.A": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.X": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.Y": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.Z": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "depth.Z": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "sample_count.X": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        }
+      },
+      "point-light": {
+        "rgba.R": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.G": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.B": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.A": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.X": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.Y": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.Z": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "depth.Z": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "sample_count.X": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        }
+      },
+      "interactive": {
+        "rgba.R": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.G": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.B": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "rgba.A": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.X": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.Y": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "normal.Z": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "depth.Z": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        },
+        "sample_count.X": {
+          "bit_identical": true,
+          "different_pixels": 0,
+          "max_absolute": 0.0
+        }
+      }
+    },
+    "edited": {
+      "A": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "B": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "G": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      },
+      "R": {
+        "bit_identical": true,
+        "different_pixels": 0,
+        "max_absolute": 0.0
+      }
+    },
+    "host_rebuilds": 0
+  },
+  "runtime_deployment": [
+    {
+      "source": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Redist\\MSVC\\14.44.35112\\x64\\Microsoft.VC143.CRT\\concrt140.dll",
+      "destination": "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\bin\\concrt140.dll",
+      "prior_sha256": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "sha256": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "original_package_sha256": "3bfe7958b6c5cc0150927e6da0551829b8e3e1a3a8bb446adbf64f7f84751f74"
+    },
+    {
+      "source": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Redist\\MSVC\\14.44.35112\\x64\\Microsoft.VC143.CRT\\msvcp140.dll",
+      "destination": "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\bin\\msvcp140.dll",
+      "prior_sha256": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "sha256": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "original_package_sha256": "7b8a6f283884e6448559dcf510b00c1a885bfb8e598ea05cd2c290c874657326"
+    },
+    {
+      "source": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Redist\\MSVC\\14.44.35112\\x64\\Microsoft.VC143.CRT\\msvcp140_1.dll",
+      "destination": "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\bin\\msvcp140_1.dll",
+      "prior_sha256": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "sha256": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "original_package_sha256": "d5b7e39b158ca6d64d10713b69d7baea9ba9c686a9442c9d7217f6914c6a955d"
+    },
+    {
+      "source": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Redist\\MSVC\\14.44.35112\\x64\\Microsoft.VC143.CRT\\msvcp140_2.dll",
+      "destination": "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\bin\\msvcp140_2.dll",
+      "prior_sha256": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "sha256": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "original_package_sha256": "fbb8557f73ab9a207bd67643fdcf9ae34527325d227c53707cebdf0d1c8c4658"
+    },
+    {
+      "source": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Redist\\MSVC\\14.44.35112\\x64\\Microsoft.VC143.CRT\\msvcp140_atomic_wait.dll",
+      "destination": "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\bin\\msvcp140_atomic_wait.dll",
+      "prior_sha256": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "sha256": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "original_package_sha256": "d2dc98b3d9cbfebd92d16aeb6be475b68ec30943503014e33b645e5ca7de2cfb"
+    },
+    {
+      "source": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Redist\\MSVC\\14.44.35112\\x64\\Microsoft.VC143.CRT\\msvcp140_codecvt_ids.dll",
+      "destination": "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\bin\\msvcp140_codecvt_ids.dll",
+      "prior_sha256": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "sha256": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "original_package_sha256": "d5fbe10526c30aae0665c2409acb55a50cb6d9cd159138ab9ebb19db87bcd59f"
+    },
+    {
+      "source": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Redist\\MSVC\\14.44.35112\\x64\\Microsoft.VC143.CRT\\vcruntime140.dll",
+      "destination": "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\bin\\vcruntime140.dll",
+      "prior_sha256": "642ae52687a7a6bfb03d0b20dc7e07f4b11ceca634f7eb7ba184d6711ab51a51",
+      "sha256": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "original_package_sha256": "642ae52687a7a6bfb03d0b20dc7e07f4b11ceca634f7eb7ba184d6711ab51a51"
+    },
+    {
+      "source": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Redist\\MSVC\\14.44.35112\\x64\\Microsoft.VC143.CRT\\vcruntime140_1.dll",
+      "destination": "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\bin\\vcruntime140_1.dll",
+      "prior_sha256": "0e560532e721b6938dafe4055eedd0251ba5eb5994cd96937cebbcf16a7ddae5",
+      "sha256": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "original_package_sha256": "0e560532e721b6938dafe4055eedd0251ba5eb5994cd96937cebbcf16a7ddae5"
+    },
+    {
+      "source": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Redist\\MSVC\\14.44.35112\\x64\\Microsoft.VC143.CRT\\vcruntime140_threads.dll",
+      "destination": "D:\\temp\\cycles_c_api\\phase9-gaffer-build\\build\\bin\\vcruntime140_threads.dll",
+      "prior_sha256": null,
+      "sha256": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "original_package_sha256": null
+    }
+  ],
+  "dependency_check_inside_gaffer": "ccl_init succeeded for both builds in every swap fixture",
+  "native_cycles_changes": [],
+  "published": false,
+  "free_bytes": 1381867929600,
+  "timings": "Provisional; concurrent work may affect timings. No timing-based acceptance in Phase 9.",
+  "repairs": [
+    "Adapter transferred vertex normals and smoothing instead of flat-shading the lit mesh.",
+    "Adapter explicitly resumes after reset preserves interactive pause state.",
+    "Harness uses native ieDisplay for interactive capture, removes/re-adds outputs, avoids stale display buffers and Python message-handler lock contention.",
+    "Harness recognizes native OptiX device ID suffix, unwraps Python command scalars, preserves FLOAT channels and normalized sample counts.",
+    "Build harness confines C++20 to native Cycles adapter, stages atomic headers/buildExtensions, and releases loaded test DLL before relinking."
+  ],
+  "limitations": [
+    "Subset: static triangle meshes, unindexed vertex normals, basic SVM shaders, constant point lights, one camera, final and interactive transform/shader edits.",
+    "No claim of full GafferCycles replacement, OSL/volume/subdivision/motion qualification inside Gaffer, or arbitrary future major-version compatibility.",
+    "No performance acceptance claim; prior Phase 7 forwarding benchmark remains the performance evidence."
+  ]
+}

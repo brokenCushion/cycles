@@ -262,6 +262,13 @@ include_directories(
 ###########################################################################
 # Sources.
 
+# Optional C interface to the renderer.
+option(WITH_CYCLES_C_API "Build the Cycles C shared library" OFF)
+if(WITH_CYCLES_C_API)
+  # Static Cycles objects must be linkable into the shared wrapper.
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
 # Independent deep-opacity reference and optional CPU capture.
 option(WITH_CYCLES_DEEP_TESTS "Build experimental deep-opacity reference tests" OFF)
 option(WITH_CYCLES_DEEP_OPAQUE "Enable experimental CPU opaque camera capture" OFF)

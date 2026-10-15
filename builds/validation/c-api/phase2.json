@@ -1,0 +1,816 @@
+{
+  "phase": 2,
+  "status": "passed-review-pending",
+  "time_utc": "2026-10-12T11:58:13.451481+00:00",
+  "branch": "c-api",
+  "phase1_commit": "704f2d44d",
+  "api_version": "1.1.0",
+  "toolchain": "clang-cl 20.1.8 / CMake 3.31.2 / Ninja / Windows x64 Release",
+  "build_root": "D:\\CyclesDeepScratch\\c-api\\phase2-20261012",
+  "baseline": {
+    "passed": 4,
+    "total": 4
+  },
+  "after": {
+    "passed": 6,
+    "total": 6
+  },
+  "preserved_native_ctests": {
+    "passed": 9,
+    "total": 9
+  },
+  "source_inventory": {
+    "node_define_count": 118,
+    "source_definitions": [
+      {
+        "class": "DenoiseParams",
+        "name": "denoise_params",
+        "file": "device/denoise.cpp"
+      },
+      {
+        "class": "Background",
+        "name": "background",
+        "file": "scene/background.cpp"
+      },
+      {
+        "class": "Camera",
+        "name": "camera",
+        "file": "scene/camera.cpp"
+      },
+      {
+        "class": "Film",
+        "name": "film",
+        "file": "scene/film.cpp"
+      },
+      {
+        "class": "Hair",
+        "name": "hair",
+        "file": "scene/hair.cpp"
+      },
+      {
+        "class": "Integrator",
+        "name": "integrator",
+        "file": "scene/integrator.cpp"
+      },
+      {
+        "class": "PointLight",
+        "name": "pointlight",
+        "file": "scene/light.cpp"
+      },
+      {
+        "class": "SpotLight",
+        "name": "spotlight",
+        "file": "scene/light.cpp"
+      },
+      {
+        "class": "AreaLight",
+        "name": "arealight",
+        "file": "scene/light.cpp"
+      },
+      {
+        "class": "SunLight",
+        "name": "sunlight",
+        "file": "scene/light.cpp"
+      },
+      {
+        "class": "BackgroundLight",
+        "name": "backgroundlight",
+        "file": "scene/light.cpp"
+      },
+      {
+        "class": "Mesh",
+        "name": "mesh",
+        "file": "scene/mesh.cpp"
+      },
+      {
+        "class": "Object",
+        "name": "object",
+        "file": "scene/object.cpp"
+      },
+      {
+        "class": "ParticleSystem",
+        "name": "particle_system",
+        "file": "scene/particles.cpp"
+      },
+      {
+        "class": "Pass",
+        "name": "pass",
+        "file": "scene/pass.cpp"
+      },
+      {
+        "class": "PointCloud",
+        "name": "pointcloud",
+        "file": "scene/pointcloud.cpp"
+      },
+      {
+        "class": "SceneAttributes",
+        "name": "scene_attributes",
+        "file": "scene/scene_attributes.cpp"
+      },
+      {
+        "class": "Shader",
+        "name": "shader",
+        "file": "scene/shader.cpp"
+      },
+      {
+        "class": "ImageTextureNode",
+        "name": "image_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "EnvironmentTextureNode",
+        "name": "environment_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "SkyTextureNode",
+        "name": "sky_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "GradientTextureNode",
+        "name": "gradient_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "NoiseTextureNode",
+        "name": "noise_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "GaborTextureNode",
+        "name": "gabor_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "VoronoiTextureNode",
+        "name": "voronoi_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "IESLightNode",
+        "name": "ies_light",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "WhiteNoiseTextureNode",
+        "name": "white_noise_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "WaveTextureNode",
+        "name": "wave_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MagicTextureNode",
+        "name": "magic_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "CheckerTextureNode",
+        "name": "checker_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "BrickTextureNode",
+        "name": "brick_texture",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "NormalNode",
+        "name": "normal",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MappingNode",
+        "name": "mapping",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "RGBToBWNode",
+        "name": "rgb_to_bw",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MetallicBsdfNode",
+        "name": "metallic_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "GlossyBsdfNode",
+        "name": "glossy_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "GlassBsdfNode",
+        "name": "glass_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "RefractionBsdfNode",
+        "name": "refraction_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "ToonBsdfNode",
+        "name": "toon_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "SheenBsdfNode",
+        "name": "sheen_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "DiffuseBsdfNode",
+        "name": "diffuse_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "PrincipledBsdfNode",
+        "name": "principled_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "TranslucentBsdfNode",
+        "name": "translucent_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "TransparentBsdfNode",
+        "name": "transparent_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "RayPortalBsdfNode",
+        "name": "ray_portal_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "SubsurfaceScatteringNode",
+        "name": "subsurface_scattering",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "EmissionNode",
+        "name": "emission",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "BackgroundNode",
+        "name": "background_shader",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "HoldoutNode",
+        "name": "holdout",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "AmbientOcclusionNode",
+        "name": "ambient_occlusion",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "AbsorptionVolumeNode",
+        "name": "absorption_volume",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "ScatterVolumeNode",
+        "name": "scatter_volume",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "VolumeCoefficientsNode",
+        "name": "volume_coefficients",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "PrincipledVolumeNode",
+        "name": "principled_volume",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "PrincipledHairBsdfNode",
+        "name": "principled_hair_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "HairBsdfNode",
+        "name": "hair_bsdf",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "GeometryNode",
+        "name": "geometry",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "TextureCoordinateNode",
+        "name": "texture_coordinate",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "UVMapNode",
+        "name": "uvmap",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "LightPathNode",
+        "name": "light_path",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "LightFalloffNode",
+        "name": "light_falloff",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "ObjectInfoNode",
+        "name": "object_info",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "ParticleInfoNode",
+        "name": "particle_info",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "HairInfoNode",
+        "name": "hair_info",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "PointInfoNode",
+        "name": "point_info",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "VolumeInfoNode",
+        "name": "volume_info",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "VertexColorNode",
+        "name": "vertex_color",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "ValueNode",
+        "name": "value",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "ColorNode",
+        "name": "color",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "AddClosureNode",
+        "name": "add_closure",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MixClosureNode",
+        "name": "mix_closure",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MixClosureWeightNode",
+        "name": "mix_closure_weight",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "InvertNode",
+        "name": "invert",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MixNode",
+        "name": "mix",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MixColorNode",
+        "name": "mix_color",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MixFloatNode",
+        "name": "mix_float",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MixVectorNode",
+        "name": "mix_vector",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MixVectorNonUniformNode",
+        "name": "mix_vector_non_uniform",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "CombineColorNode",
+        "name": "combine_color",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "CombineXYZNode",
+        "name": "combine_xyz",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "GammaNode",
+        "name": "gamma",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "BrightContrastNode",
+        "name": "brightness_contrast",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "SeparateColorNode",
+        "name": "separate_color",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "SeparateXYZNode",
+        "name": "separate_xyz",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "HSVNode",
+        "name": "hsv",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "AttributeNode",
+        "name": "attribute",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "CameraNode",
+        "name": "camera_info",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "FresnelNode",
+        "name": "fresnel",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "LayerWeightNode",
+        "name": "layer_weight",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "WireframeNode",
+        "name": "wireframe",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "WavelengthNode",
+        "name": "wavelength",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "BlackbodyNode",
+        "name": "blackbody",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "OutputNode",
+        "name": "output",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MapRangeNode",
+        "name": "map_range",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "VectorMapRangeNode",
+        "name": "vector_map_range",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "ClampNode",
+        "name": "clamp",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "OutputAOVNode",
+        "name": "aov_output",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "MathNode",
+        "name": "math",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "VectorMathNode",
+        "name": "vector_math",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "VectorRotateNode",
+        "name": "vector_rotate",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "VectorTransformNode",
+        "name": "vector_transform",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "BumpNode",
+        "name": "bump",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "RGBCurvesNode",
+        "name": "rgb_curves",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "VectorCurvesNode",
+        "name": "vector_curves",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "FloatCurveNode",
+        "name": "float_curve",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "RGBRampNode",
+        "name": "rgb_ramp",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "SetNormalNode",
+        "name": "set_normal",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "NormalMapNode",
+        "name": "normal_map",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "RadialTilingNode",
+        "name": "radial_tiling",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "TangentNode",
+        "name": "tangent",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "BevelNode",
+        "name": "bevel",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "DisplacementNode",
+        "name": "displacement",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "VectorDisplacementNode",
+        "name": "vector_displacement",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "RaycastNode",
+        "name": "raycast",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "SceneTimeNode",
+        "name": "scene_time",
+        "file": "scene/shader_nodes.cpp"
+      },
+      {
+        "class": "Volume",
+        "name": "volume",
+        "file": "scene/volume.cpp"
+      },
+      {
+        "class": "BufferPass",
+        "name": "buffer_pass",
+        "file": "session/buffers.cpp"
+      },
+      {
+        "class": "BufferParams",
+        "name": "buffer_params",
+        "file": "session/buffers.cpp"
+      }
+    ],
+    "generated_types": [
+      "convert_float_to_float",
+      "convert_float_to_int",
+      "convert_float_to_color",
+      "convert_float_to_vector",
+      "convert_float_to_point",
+      "convert_float_to_normal",
+      "convert_float_to_string",
+      "convert_float_to_closure",
+      "convert_int_to_float",
+      "convert_int_to_int",
+      "convert_int_to_color",
+      "convert_int_to_vector",
+      "convert_int_to_point",
+      "convert_int_to_normal",
+      "convert_int_to_string",
+      "convert_int_to_closure",
+      "convert_color_to_float",
+      "convert_color_to_int",
+      "convert_color_to_color",
+      "convert_color_to_vector",
+      "convert_color_to_point",
+      "convert_color_to_normal",
+      "convert_color_to_string",
+      "convert_color_to_closure",
+      "convert_vector_to_float",
+      "convert_vector_to_int",
+      "convert_vector_to_color",
+      "convert_vector_to_vector",
+      "convert_vector_to_point",
+      "convert_vector_to_normal",
+      "convert_vector_to_string",
+      "convert_vector_to_closure",
+      "convert_point_to_float",
+      "convert_point_to_int",
+      "convert_point_to_color",
+      "convert_point_to_vector",
+      "convert_point_to_point",
+      "convert_point_to_normal",
+      "convert_point_to_string",
+      "convert_point_to_closure",
+      "convert_normal_to_float",
+      "convert_normal_to_int",
+      "convert_normal_to_color",
+      "convert_normal_to_vector",
+      "convert_normal_to_point",
+      "convert_normal_to_normal",
+      "convert_normal_to_string",
+      "convert_normal_to_closure",
+      "convert_string_to_float",
+      "convert_string_to_int",
+      "convert_string_to_color",
+      "convert_string_to_vector",
+      "convert_string_to_point",
+      "convert_string_to_normal",
+      "convert_string_to_string",
+      "convert_string_to_closure",
+      "convert_closure_to_float",
+      "convert_closure_to_int",
+      "convert_closure_to_color",
+      "convert_closure_to_vector",
+      "convert_closure_to_point",
+      "convert_closure_to_normal",
+      "convert_closure_to_string",
+      "convert_closure_to_closure"
+    ],
+    "abstract_definitions": [
+      {
+        "class": "Geometry",
+        "name": "geometry_base",
+        "file": "scene/geometry.cpp"
+      },
+      {
+        "class": "Light",
+        "name": "light",
+        "file": "scene/light.cpp"
+      },
+      {
+        "class": "Procedural",
+        "name": "procedural_base",
+        "file": "scene/procedural.cpp"
+      }
+    ],
+    "lazy_abstract_not_registered": [
+      "procedural_base"
+    ],
+    "before_missing": [
+      "buffer_params",
+      "buffer_pass"
+    ],
+    "after_missing": [],
+    "after_unexpected": [],
+    "dll_count": 184
+  },
+  "reflection": {
+    "passed": true,
+    "records": {
+      "NODE": 184,
+      "SOCKET": 1277,
+      "DEFAULT": 963,
+      "ENUM": 816
+    }
+  },
+  "identities": {
+    "dll_sha256": "54ba7c6a3295d42c874371bff1bf17727f9102c7049cc556d13d839456392289",
+    "header_sha256": "76987604a467a1bef584dd85736693ed9b5fa2b302db78415dcba6ecbc25158d",
+    "phase1_and_production_preserved": true,
+    "direct_dependencies": [
+      "ADVAPI32.dll",
+      "CFGMGR32.dll",
+      "KERNEL32.dll",
+      "MSVCP140.dll",
+      "OpenColorIO_2_5.dll",
+      "OpenImageDenoise.dll",
+      "OpenImageIO.dll",
+      "OpenImageIO_Util.dll",
+      "VCRUNTIME140.dll",
+      "VCRUNTIME140_1.dll",
+      "VERSION.dll",
+      "api-ms-win-crt-convert-l1-1-0.dll",
+      "api-ms-win-crt-environment-l1-1-0.dll",
+      "api-ms-win-crt-filesystem-l1-1-0.dll",
+      "api-ms-win-crt-heap-l1-1-0.dll",
+      "api-ms-win-crt-locale-l1-1-0.dll",
+      "api-ms-win-crt-math-l1-1-0.dll",
+      "api-ms-win-crt-runtime-l1-1-0.dll",
+      "api-ms-win-crt-stdio-l1-1-0.dll",
+      "api-ms-win-crt-string-l1-1-0.dll",
+      "api-ms-win-crt-time-l1-1-0.dll",
+      "api-ms-win-crt-utility-l1-1-0.dll",
+      "embree4.dll",
+      "openvdb.dll",
+      "oslcomp.dll",
+      "oslexec.dll",
+      "oslquery.dll",
+      "sycl8.dll",
+      "tbb12.dll"
+    ]
+  },
+  "whole_archive_libraries": [
+    "cycles_scene",
+    "cycles_session"
+  ],
+  "installed_manifest_files": 548,
+  "native_compile_command_parity": {
+    "passed": true,
+    "compilation_units": 158,
+    "api_off_matches_on": true
+  },
+  "installed_checks": {
+    "source_inventory": true,
+    "native_parity": true,
+    "exact_exports": 12,
+    "unchanged_phase1_host": true
+  },
+  "additional_contract_tests": [
+    "All eleven nonempty array default types",
+    "Unknown type/flag rejection",
+    "Missing type/bad direction/index/no-default errors",
+    "Four concurrent readers, 100 queries each",
+    "Extended struct tail preserved",
+    "Malformed inventory shape/dropped node/changed default negative checks"
+  ],
+  "dependency_isolation_implemented": false,
+  "not_checked": [
+    "Linux/macOS builds",
+    "Different dependency versions coexisting in host (Phase7)",
+    "Full 81/30/65 rendering",
+    "Safe unload or multiple concurrent library versions"
+  ],
+  "logs": {
+    "baseline.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase2-20261012\\baseline.log",
+      "sha256": "0849f8bc2f6be8901a35c04b598da27e31cc2b2d4d92d4597d45125ec0f471d8"
+    },
+    "final-tests.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase2-20261012\\final-tests.log",
+      "sha256": "86f45d0a7bf5e0208c34a99468e600b704db76ae14422c70371ffed4ffc2062a"
+    },
+    "post-existing-tests.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase2-20261012\\post-existing-tests.log",
+      "sha256": "2bdc60d965746606418ed118b78a6adf109ff37c9c7cdea727eb1f5e0451c165"
+    },
+    "installed-source-inventory.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase2-20261012\\installed-source-inventory.log",
+      "sha256": "8d49945a27e7bb196c92b8829a29d2e9f0f3f64184d86e442678a34bfd396361"
+    },
+    "installed-dump-parity.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase2-20261012\\installed-dump-parity.log",
+      "sha256": "eb4f39df3e6da56b88de956d034248a151fb9c1890d3e575077a512131ab05e4"
+    },
+    "installed-exports.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase2-20261012\\installed-exports.log",
+      "sha256": "f7f1e60436ba2cb1a3a97ccdfed9c1c0b37a7ac806295fac07a7def3baf7c98d"
+    },
+    "unchanged-phase1-host.log": {
+      "path": "D:\\CyclesDeepScratch\\c-api\\phase2-20261012\\unchanged-phase1-host.log",
+      "sha256": "a6d3635ccbfab5c4fa89fb52aa0ce902ea14bc1343c334c4b7a5cdb0b56090a6"
+    }
+  }
+}

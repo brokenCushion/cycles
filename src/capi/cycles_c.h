@@ -1,0 +1,899 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+#ifndef CYCLES_C_H
+#define CYCLES_C_H
+
+#include <stdint.h>
+
+#if defined(_WIN32)
+#  define CCL_CALL __cdecl
+#  if defined(CCL_C_API_BUILD)
+#    define CCL_API __declspec(dllexport)
+#  else
+#    define CCL_API
+#  endif
+#else
+#  define CCL_CALL
+#  define CCL_API __attribute__((visibility("default")))
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** API version 1.7.0 (Windows ABI swap-tested; other platforms unqualified).
+ * Use default platform struct alignment. Initialize every struct to zero and
+ * set size to sizeof(struct). A larger size is accepted; unknown tail bytes
+ * are ignored/preserved. A smaller size returns CCL_ERROR_INVALID_ARGUMENT.
+ * All text is NUL-terminated UTF-8. Pointers must reference valid accessible
+ * memory; invalid pointers cannot be diagnosed. No C++ exceptions escape.
+ * Calls are thread-safe unless stated otherwise, but must not race DLL unload.
+ * Load one Cycles library per process and retain it until process exit; backend
+ * driver/global teardown and simultaneous library versions are not yet supported.
+ */
+typedef int32_t ccl_status;
+#define CCL_SUCCESS INT32_C(0)
+#define CCL_ERROR_INVALID_ARGUMENT INT32_C(1)
+#define CCL_ERROR_NOT_INITIALIZED INT32_C(2)
+#define CCL_ERROR_ALREADY_INITIALIZED INT32_C(3)
+#define CCL_ERROR_OUT_OF_MEMORY INT32_C(4)
+#define CCL_ERROR_INTERNAL INT32_C(5)
+#define CCL_ERROR_CALLBACK_REENTRY INT32_C(6)
+/** Loaded host dependencies are incompatible with the private renderer backend. */
+#define CCL_ERROR_DEPENDENCY_MISMATCH INT32_C(13)
+
+typedef struct ccl_version {
+  uint32_t size;
+  uint32_t major, minor, patch;
+} ccl_version;
+
+typedef struct ccl_init_params {
+  uint32_t size;
+  /** Absolute Cycles resource directory (kernel/ and shader/ beneath it).
+   * Required: a DLL cannot infer this from the host executable location. */
+  const char *resource_path;
+  /** Absolute writable user-resource directory; required. Does not override
+   * OS temporary paths or independently select an OSL shader/cache directory. */
+  const char *user_path;
+} ccl_init_params;
+
+typedef struct ccl_device_desc {
+  uint32_t size;
+  /** Library-owned immutable strings, valid until process exit. Do not free. */
+  const char *id;
+  const char *description;
+  /** Backend name, e.g. CPU, CUDA, OPTIX; hosts must tolerate new names. */
+  const char *backend;
+  /** Empty if native discovery reported no error. */
+  const char *error;
+  int32_t display_device;
+  int32_t has_osl;
+  int32_t has_nanovdb;
+  int32_t meets_driver_requirement;
+} ccl_device_desc;
+
+/** Log severity: explicit values independent of native Cycles enum ordinals. */
+typedef int32_t ccl_log_level;
+#define CCL_LOG_FATAL INT32_C(0)
+#define CCL_LOG_ERROR INT32_C(1)
+#define CCL_LOG_WARNING INT32_C(2)
+#define CCL_LOG_INFO INT32_C(3)
+#define CCL_LOG_DEBUG INT32_C(4)
+#define CCL_LOG_TRACE INT32_C(5)
+/** Runs synchronously, serialized, possibly on a worker thread. message is
+ * borrowed only during the call; user remains host-owned. Must not throw,
+ * block waiting for API work, or reenter any API except ccl_last_error(). */
+typedef void(CCL_CALL *ccl_log_fn)(ccl_log_level level, const char *message, void *user);
+
+/** Write this library's API version, not the underlying Cycles version.
+ * out is caller-owned; writes only known fields. Any thread, before/after init.
+ * Returns INVALID_ARGUMENT for NULL/undersized out, CALLBACK_REENTRY from a
+ * callback. On error out is unchanged. */
+CCL_API ccl_status CCL_CALL ccl_api_version(ccl_version *out);
+
+/** Query a compile-time capability: cpu, cuda, optix, hip, hiprt, metal,
+ * oneapi, osl, deep. Unknown names return success with 0, including unknown future
+ * extensions. A compiled backend may have no available hardware.
+ * name is borrowed for this call; supported is caller-owned (written on success).
+ * Any thread, before/after init. NULL arguments: INVALID_ARGUMENT; callback:
+ * CALLBACK_REENTRY. Does not probe drivers. */
+CCL_API ccl_status CCL_CALL ccl_has_feature(const char *name, int32_t *supported);
+
+/** Initialize process-wide Cycles resource paths. Copies both strings before
+ * return. Does not create directories or verify resource completeness.
+ * Any thread; serialized. Repeating identical paths succeeds; different paths
+ * return ALREADY_INITIALIZED. NULL/undersized params, empty/relative paths:
+ * INVALID_ARGUMENT. Allocation failure: OUT_OF_MEMORY; other native exception:
+ * INTERNAL. CALLBACK_REENTRY in a callback. No rendering is started.
+ * Windows loads the private backend only after checking imported symbols in
+ * already-loaded same-named modules and available dependency version resources.
+ * DEPENDENCY_MISMATCH rejects incompatible dependencies or backend handshakes;
+ * ccl_last_error names incompatible modules, expected versions and missing symbols.
+ * Keep the front, private backend and matching dependencies installed together.
+ * The host must not concurrently load/unload dependencies during initialization.
+ * Linux/macOS dependency preflight is not yet qualified. */
+CCL_API ccl_status CCL_CALL ccl_init(const ccl_init_params *params);
+
+/** Borrow this thread's last error message. Valid until its next status-returning
+ * API call; successful calls clear it. Never free. Any thread, including a log
+ * callback; never fails, never returns NULL. */
+CCL_API const char *CCL_CALL ccl_last_error(void);
+
+/** Set/replace a host-owned callback and user pointer; NULL disables it (logs
+ * then go to stderr). Native severity filtering remains unchanged. May precede
+ * init. Any thread; waits for an in-flight callback before returning, so the old
+ * user pointer can then be freed. CALLBACK_REENTRY if called from a callback;
+ * INTERNAL on synchronization failure. Callback must remain valid until replaced.
+ */
+CCL_API ccl_status CCL_CALL ccl_set_log_callback(ccl_log_fn fn, void *user);
+
+/** Discover native devices once and write immutable snapshot length. Driver
+ * discovery may be slow and emit logs. count is caller-owned; unchanged on error.
+ * Any thread, serialized. Requires init (NOT_INITIALIZED); NULL: INVALID_ARGUMENT;
+ * allocation/native exception: OUT_OF_MEMORY/INTERNAL; CALLBACK_REENTRY in callback.
+ */
+CCL_API ccl_status CCL_CALL ccl_device_count(uint32_t *count);
+
+/** Copy one device's metadata from the same immutable snapshot as device_count.
+ * out is caller-owned, strings remain library-owned; no device is allocated.
+ * Any thread, serialized; may perform first discovery. Errors as device_count,
+ * plus INVALID_ARGUMENT for an invalid index or NULL/undersized out. On error
+ * out is unchanged. Device indices are local to this library instance only.
+ */
+CCL_API ccl_status CCL_CALL ccl_device_info(uint32_t index, ccl_device_desc *out);
+
+/** Reflection added in API 1.1. All queries require init, are serialized and
+ * may run on any thread except a log callback. Inputs are borrowed for the call;
+ * outputs are caller-owned; returned strings are immutable library-owned UTF-8
+ * valid until process exit. No native struct layout or pointer is exposed.
+ * On failure output is unchanged. Common errors: NOT_INITIALIZED,
+ * CALLBACK_REENTRY, OUT_OF_MEMORY, INTERNAL; NULL/undersized output or invalid
+ * direction/index: INVALID_ARGUMENT; unknown node name: NOT_FOUND.
+ * Built-in registry only: instance-specific OSL sockets use ccl_node_socket_* below.
+ */
+#define CCL_ERROR_NOT_FOUND INT32_C(7)
+#define CCL_ERROR_NO_DEFAULT INT32_C(8)
+#define CCL_ERROR_UNSUPPORTED INT32_C(9)
+
+/** Extensible enumeration: hosts MUST skip sockets with unknown type values.
+ * A newer library reporting an unknown type is not an error. Never assume the
+ * last currently defined value is an upper bound in future libraries. */
+typedef int32_t ccl_socket_type;
+#define CCL_SOCKET_UNDEFINED INT32_C(0)
+#define CCL_SOCKET_BOOLEAN INT32_C(1)
+#define CCL_SOCKET_FLOAT INT32_C(2)
+#define CCL_SOCKET_INT INT32_C(3)
+#define CCL_SOCKET_UINT INT32_C(4)
+#define CCL_SOCKET_UINT64 INT32_C(5)
+#define CCL_SOCKET_COLOR INT32_C(6)
+#define CCL_SOCKET_VECTOR INT32_C(7)
+#define CCL_SOCKET_POINT INT32_C(8)
+#define CCL_SOCKET_NORMAL INT32_C(9)
+#define CCL_SOCKET_POINT2 INT32_C(10)
+#define CCL_SOCKET_CLOSURE INT32_C(11)
+#define CCL_SOCKET_STRING INT32_C(12)
+#define CCL_SOCKET_ENUM INT32_C(13)
+#define CCL_SOCKET_TRANSFORM INT32_C(14)
+#define CCL_SOCKET_NODE INT32_C(15)
+#define CCL_SOCKET_BOOLEAN_ARRAY INT32_C(16)
+#define CCL_SOCKET_FLOAT_ARRAY INT32_C(17)
+#define CCL_SOCKET_INT_ARRAY INT32_C(18)
+#define CCL_SOCKET_COLOR_ARRAY INT32_C(19)
+#define CCL_SOCKET_VECTOR_ARRAY INT32_C(20)
+#define CCL_SOCKET_POINT_ARRAY INT32_C(21)
+#define CCL_SOCKET_NORMAL_ARRAY INT32_C(22)
+#define CCL_SOCKET_POINT2_ARRAY INT32_C(23)
+#define CCL_SOCKET_STRING_ARRAY INT32_C(24)
+#define CCL_SOCKET_TRANSFORM_ARRAY INT32_C(25)
+#define CCL_SOCKET_NODE_ARRAY INT32_C(26)
+
+#define CCL_SOCKET_LINKABLE UINT32_C(1)
+#define CCL_SOCKET_ANIMATABLE UINT32_C(2)
+#define CCL_SOCKET_SVM_INTERNAL UINT32_C(4)
+#define CCL_SOCKET_OSL_INTERNAL UINT32_C(8)
+#define CCL_SOCKET_LINK_TEXTURE_GENERATED UINT32_C(16)
+#define CCL_SOCKET_LINK_TEXTURE_NORMAL UINT32_C(32)
+#define CCL_SOCKET_LINK_TEXTURE_UV UINT32_C(64)
+#define CCL_SOCKET_LINK_TEXTURE_INCOMING UINT32_C(128)
+#define CCL_SOCKET_LINK_INCOMING UINT32_C(256)
+#define CCL_SOCKET_LINK_NORMAL UINT32_C(512)
+#define CCL_SOCKET_LINK_POSITION UINT32_C(1024)
+#define CCL_SOCKET_LINK_TANGENT UINT32_C(2048)
+#define CCL_SOCKET_LINK_OSL_INITIALIZER UINT32_C(4096)
+
+typedef int32_t ccl_socket_direction;
+#define CCL_SOCKET_INPUT INT32_C(0)
+#define CCL_SOCKET_OUTPUT INT32_C(1)
+
+typedef struct ccl_node_type_desc {
+  uint32_t size;
+  const char *name;
+  const char *base; /**< Empty string when there is no base type. */
+  int32_t is_shader;
+  int32_t is_abstract; /**< Native type has no create function. */
+  uint32_t input_count, output_count;
+} ccl_node_type_desc;
+
+typedef struct ccl_socket_desc {
+  uint32_t size;
+  const char *name;
+  const char *ui_name;
+  ccl_socket_type type;
+  uint32_t flags;         /**< CCL_SOCKET_* bit flags; never native enum ordinals. */
+  const char *node_type;  /**< Required node base type, or empty when unconstrained. */
+  int32_t has_default;    /**< Distinguishes no default from an empty array. */
+  uint64_t default_count; /**< 1 for scalar defaults, array element count otherwise. */
+  uint32_t enum_count;
+} ccl_socket_desc;
+
+typedef struct ccl_default_value {
+  uint32_t size;
+  ccl_socket_type type;     /**< Scalar element type (COLOR for COLOR_ARRAY, etc.). */
+  int32_t signed_value;     /**< BOOLEAN (0/1), INT, or ENUM. */
+  uint64_t unsigned_value;  /**< UINT or UINT64. */
+  float floats[12];         /**< FLOAT:1, POINT2:2, COLOR/VECTOR/POINT/NORMAL:3;
+                             * TRANSFORM:12, row-major affine 3x4, translation at 3/7/11. */
+  const char *string_value; /**< STRING only; borrowed, never freed by host. */
+  int32_t node_is_null;     /**< NODE default is null; no native pointer crosses ABI. */
+} ccl_default_value;
+
+typedef struct ccl_enum_value {
+  uint32_t size;
+  const char *name;
+  int32_t value; /**< Numeric values need not be contiguous or unique. */
+} ccl_enum_value;
+
+/** Count registered built-in node types. Ownership/threading/errors as above.
+ * The list is sorted by UTF-8 name and stable for this process, not across builds. */
+CCL_API ccl_status CCL_CALL ccl_node_type_count(uint32_t *count);
+/** Describe the type at index; includes inherited socket counts. Ownership,
+ * threading and errors as above. Out-of-range index: INVALID_ARGUMENT. */
+CCL_API ccl_status CCL_CALL ccl_node_type_info(uint32_t index, ccl_node_type_desc *out);
+/** Describe a socket in native declaration order (including inherited sockets).
+ * node_name and direction select the input/output list. Ownership/threading/errors
+ * as above; NULL name or out-of-range index: INVALID_ARGUMENT. */
+CCL_API ccl_status CCL_CALL ccl_socket_info(const char *node_name,
+                                            ccl_socket_direction direction,
+                                            uint32_t index,
+                                            ccl_socket_desc *out);
+/** Read one default element; scalar defaults use element=0. Only the field for
+ * the returned scalar type is populated; unused fields are zero. Ownership,
+ * threading and common errors as above. NO_DEFAULT for outputs/closures/missing
+ * defaults; INVALID_ARGUMENT for an out-of-range element (including empty arrays).
+ * UNSUPPORTED if a native non-null node default cannot be represented. */
+CCL_API ccl_status CCL_CALL ccl_socket_default_value(const char *node_name,
+                                                     ccl_socket_direction direction,
+                                                     uint32_t index,
+                                                     uint64_t element,
+                                                     ccl_default_value *out);
+/** Read one named enum entry, sorted by UTF-8 name. Ownership/threading/errors as
+ * above; INVALID_ARGUMENT if enum_index is out of range or socket has no enum. */
+CCL_API ccl_status CCL_CALL ccl_socket_enum_value(const char *node_name,
+                                                  ccl_socket_direction direction,
+                                                  uint32_t index,
+                                                  uint32_t enum_index,
+                                                  ccl_enum_value *out);
+
+/** Scene editing added in API 1.2. All functions below require init and run
+ * serialized on any thread except a callback. Scene reads require an idle job;
+ * edits while paused synchronously cancel/wait and require reset (see render controls).
+ * Inputs are borrowed for the call; setters copy values, arrays and strings.
+ * Handles are library-owned: never dereference/free them or use after deletion
+ * or Session destruction. A Session owns its scene and all nodes. Destroying it invalidates
+ * every node handle. NULL is not a valid scene/node (except a null reference).
+ * Common errors: NOT_INITIALIZED, INVALID_ARGUMENT (invalid handle/NULL output),
+ * CALLBACK_REENTRY, OUT_OF_MEMORY, INTERNAL. Output values remain unchanged on
+ * failure except get_array's documented required-capacity result. */
+typedef struct ccl_shader_graph ccl_shader_graph;
+typedef struct ccl_session ccl_session;
+typedef struct ccl_scene ccl_scene;
+typedef struct ccl_node ccl_node;
+typedef uint64_t ccl_socket_id;
+#define CCL_ERROR_TYPE_MISMATCH INT32_C(10)
+#define CCL_ERROR_IN_USE INT32_C(11)
+#define CCL_ERROR_BUFFER_TOO_SMALL INT32_C(12)
+typedef struct ccl_float2 {
+  float x, y;
+} ccl_float2;
+typedef struct ccl_float3 {
+  float x, y, z;
+} ccl_float3;
+/** Fixed layout: row-major affine 3x4; translations at m[3], m[7], m[11]. */
+typedef struct ccl_transform {
+  float m[12];
+} ccl_transform;
+
+/** Creation-only session settings. Call ccl_session_params_default before editing.
+ * device_index is an index from ccl_device_info; UINT32_MAX selects CPU.
+ * Strings are copied at creation. All booleans must be 0 or 1.
+ * Scene settings correspond to native SceneParams; buffer settings use session_reset.
+ */
+typedef struct ccl_session_params {
+  uint32_t size;
+  uint32_t device_index;
+  int32_t threads; /**< 0 = native automatic; otherwise positive. */
+  int32_t headless, background;
+  int32_t use_osl;        /**< Rejects devices without OSL; never falls back. */
+  const char *bvh_layout; /**< AUTO, BVH2, EMBREE, OPTIX, METAL, HIPRT, EMBREEGPU. */
+  int32_t bvh_static;
+  int32_t bvh_spatial_split, bvh_compact_structure, bvh_unaligned_nodes;
+  int32_t bvh_time_steps;
+  int32_t hair_subdivisions; /**< Exponent 0..4, native clamped tessellation range. */
+  int32_t hair_shape;        /**< 0 ribbon, 1 thick, 2 thick linear. */
+  float texture_resolution;  /**< Finite positive native resolution scale. */
+  int32_t texture_limit;     /**< 0 unlimited; otherwise nonnegative pixels. */
+  int32_t use_texture_cache, auto_texture_cache;
+  const char *texture_cache_path; /**< NULL/empty = native default; copied. */
+} ccl_session_params;
+/** Fill defaults without requiring init. Caller owns params, initializes size.
+ * Thread-safe; INVALID_ARGUMENT for NULL/short struct, CALLBACK_REENTRY in callback.
+ * Default strings are immutable library-owned; unknown tail bytes are preserved. */
+CCL_API ccl_status CCL_CALL ccl_session_params_default(ccl_session_params *params);
+/** Create native Session and its device-owned Scene; does not start rendering.
+ * Caller owns session until session_destroy. Common editing errors; UNSUPPORTED
+ * for unavailable CPU/OSL, INVALID_ARGUMENT for settings/device index, INTERNAL
+ * for native device failure. No automatic device fallback. */
+CCL_API ccl_status CCL_CALL ccl_session_create(const ccl_session_params *params,
+                                               ccl_session **out);
+/** Destroy session and all borrowed scene/node handles, joining native waiting
+ * thread and releasing devices. Blocks until workers/callbacks finish; IN_USE
+ * while another host thread waits. Common editing contract/errors; no render starts.
+ * References between scene nodes need not be cleared first. */
+CCL_API ccl_status CCL_CALL ccl_session_destroy(ccl_session *session);
+/** Borrow the session-owned scene; repeated calls return the same handle.
+ * Never destroy/free it separately. Valid until session_destroy. Common editing
+ * threading/errors apply; no ownership transfer and no rendering. */
+CCL_API ccl_status CCL_CALL ccl_session_scene(ccl_session *session, ccl_scene **out);
+/** Shader graph editing (API 1.3). All calls use the common editing contract:
+ * init required, serialized on any non-callback thread; borrowed call inputs,
+ * copied names/values; NOT_INITIALIZED, CALLBACK_REENTRY, OUT_OF_MEMORY, INTERNAL
+ * and INVALID_ARGUMENT for invalid handles, wrong ownership or NULL outputs.
+ * A scene owns unattached graphs. shader_set_graph consumes a graph and ALL its
+ * node handles/instance socket IDs, because native attachment may remove proxy
+ * nodes. To change an attached graph, build and attach a replacement. No render,
+ * shader execution or GPU kernel compilation is performed by this interface.
+ */
+/** Create a graph with its native output node. Scene owns it until destroy,
+ * successful attachment, or session destruction. Common graph contract. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_create(ccl_scene *scene, ccl_shader_graph **out);
+/** Discard an unattached graph and invalidate all its nodes/OSL IDs.
+ * Common graph contract; attached/consumed handles are invalid. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_destroy(ccl_shader_graph *graph);
+/** Add a reflected built-in shader node; optional name is copied (NULL = type).
+ * Graph owns returned node. NOT_FOUND for unknown type; UNSUPPORTED for abstract,
+ * non-shader or output types (use graph_output). Common graph contract. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_add(ccl_shader_graph *graph,
+                                                 const char *type,
+                                                 const char *name,
+                                                 ccl_node **out);
+/** Borrow the graph's sole output node; repeated calls give same handle.
+ * Common graph contract; use existing typed setters for its settings. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_output(ccl_shader_graph *graph, ccl_node **out);
+/** Connect canonical case-sensitive reflected socket names in this graph.
+ * Native numeric/color conversions are preserved. NOT_FOUND for missing sockets,
+ * IN_USE for an already connected input (disconnect first), TYPE_MISMATCH for
+ * unsupported conversion, INVALID_ARGUMENT for cycles/cross-graph endpoints.
+ * Common graph contract. Does not replace an existing connection on failure. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_connect(
+    ccl_shader_graph *graph, ccl_node *from, const char *output, ccl_node *to, const char *input);
+/** Disconnect one input; an already disconnected input succeeds. NOT_FOUND for
+ * missing socket. Common graph contract/ownership checks. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_disconnect(ccl_shader_graph *graph,
+                                                        ccl_node *node,
+                                                        const char *input);
+/** Transfer graph to a scene shader and tag its native update. Both must belong
+ * to the same scene; TYPE_MISMATCH for a non-shader scene item. Replaces previous
+ * graph. Consumes graph and its node handles/OSL IDs. Common graph contract. */
+CCL_API ccl_status CCL_CALL ccl_shader_set_graph(ccl_node *shader, ccl_shader_graph *graph);
+/** Load an OSL script using native Cycles OSL loading, in an OSL-enabled session.
+ * path must be absolute .osl or .oso. Native .osl loading writes/reuses a sibling
+ * .oso by modification time: use a host-owned writable cache for source files.
+ * Graph owns node; optional name copied. UNSUPPORTED without OSL session/build;
+ * NOT_FOUND for missing file, INVALID_ARGUMENT for path/extension, INTERNAL for
+ * compile/query failure. Native unsupported parameter shapes are omitted, as in
+ * the XML loader. No inline-source or custom AOV support is promised here.
+ * Common graph contract. Discover instance sockets with functions below. */
+CCL_API ccl_status CCL_CALL ccl_shader_graph_add_osl(ccl_shader_graph *graph,
+                                                     const char *path,
+                                                     const char *name,
+                                                     ccl_node **out);
+/** Count sockets on an actual node, including OSL's instance-defined type.
+ * Common editing contract; direction must be INPUT or OUTPUT. */
+CCL_API ccl_status CCL_CALL ccl_node_socket_count(ccl_node *node,
+                                                  ccl_socket_direction direction,
+                                                  uint32_t *out);
+/** Describe an instance socket. Strings borrowed until node invalidation (OSL),
+ * otherwise library lifetime. Unknown future socket types must be skipped.
+ * Common editing contract; INVALID_ARGUMENT for short struct/index/direction. */
+CCL_API ccl_status CCL_CALL ccl_node_socket_info(ccl_node *node,
+                                                 ccl_socket_direction direction,
+                                                 uint32_t index,
+                                                 ccl_socket_desc *out);
+/** Find a canonical input name on this node, including OSL. Use returned ID with
+ * all existing typed _id accessors. Built-in IDs remain library-instance stable;
+ * OSL IDs are valid only for this instance until graph attachment/destruction.
+ * NOT_FOUND for unknown name; common editing contract. */
+CCL_API ccl_status CCL_CALL ccl_node_socket_find(ccl_node *node,
+                                                 const char *name,
+                                                 ccl_socket_id *out);
+
+/** Borrow camera, dicing_camera, film, integrator, background or scene_attribute.
+ * Cannot delete these nodes. Common editing contract; unknown name: NOT_FOUND.
+ * Repeated queries return the same handle while the scene lives. */
+CCL_API ccl_status CCL_CALL ccl_scene_singleton(ccl_scene *scene,
+                                                const char *type,
+                                                ccl_node **out);
+/** Create a scene-owned object, mesh, hair, pointcloud, volume, shader, pass,
+ * particle_system or concrete light type from reflection (pointlight etc.).
+ * Copies optional name (NULL uses native type name). Shaders start with an empty
+ * native output graph. Common editing contract;
+ * unknown type: NOT_FOUND; abstract/shader-graph/singleton type: UNSUPPORTED. */
+CCL_API ccl_status CCL_CALL ccl_node_create(ccl_scene *scene,
+                                            const char *type,
+                                            const char *name,
+                                            ccl_node **out);
+/** Delete a node belonging to scene. Common editing contract; referenced node:
+ * IN_USE; borrowed singleton/default node: UNSUPPORTED; wrong scene:
+ * INVALID_ARGUMENT. Clear incoming references first. Cycles retains deleted
+ * shaders internally until scene destruction; the API handle is invalidated. */
+CCL_API ccl_status CCL_CALL ccl_node_delete(ccl_scene *scene, ccl_node *node);
+/** Tag scene managers after a group of socket edits. Setters already mark socket
+ * changes; this call propagates them via native tag_update. Common contract.
+ * Geometry updates conservatively request a rebuild. */
+CCL_API ccl_status CCL_CALL ccl_node_tag_update(ccl_node *node);
+/** Resolve an INPUT socket once. ID is stable for this loaded library instance,
+ * for the exact node type, across scenes and edits; never persist or share it
+ * with another library instance/build. Zero is invalid. Common contract;
+ * unknown node type/socket: NOT_FOUND. No native pointer crosses the boundary. */
+CCL_API ccl_status CCL_CALL ccl_socket_find(const char *node_type,
+                                            const char *name,
+                                            ccl_socket_id *out);
+
+/** Typed socket access contract (applies to every set/get and _id variant below):
+ * names resolve INPUT sockets; IDs bypass name lookup and must belong to the
+ * exact node type. Unknown name: NOT_FOUND; wrong/invalid ID: INVALID_ARGUMENT;
+ * wrong accessor type: TYPE_MISMATCH. Common editing ownership/threading/errors
+ * above. Getters write caller-owned outputs only on success. Setters copy inputs.
+ * bool is int32 0/1 (other values INVALID_ARGUMENT); enum is an existing numeric
+ * entry (unknown entry INVALID_ARGUMENT). float3 accepts COLOR/VECTOR/POINT/NORMAL.
+ * String getters borrow UTF-8 until the next scene edit/destruction; never free.
+ * Node references may be NULL, otherwise must be live in the same scene and
+ * satisfy the socket's node-type constraint (INVALID_ARGUMENT/TYPE_MISMATCH).
+ * A returned node handle is borrowed from the scene, not separately owned.
+ * UNDEFINED/CLOSURE and future unrecognized types have no value accessor. */
+/** Copy a bool into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_bool(ccl_node *node, const char *socket, int32_t value);
+/** Read a bool from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_bool(ccl_node *node, const char *socket, int32_t *out);
+/** Copy a bool into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_bool_id(ccl_node *node,
+                                                 ccl_socket_id socket,
+                                                 int32_t value);
+/** Read a bool from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_bool_id(ccl_node *node,
+                                                 ccl_socket_id socket,
+                                                 int32_t *out);
+/** Copy a float into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_float(ccl_node *node, const char *socket, float value);
+/** Read a float from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_float(ccl_node *node, const char *socket, float *out);
+/** Copy a float into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_float_id(ccl_node *node,
+                                                  ccl_socket_id socket,
+                                                  float value);
+/** Read a float from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_float_id(ccl_node *node,
+                                                  ccl_socket_id socket,
+                                                  float *out);
+/** Copy a int into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_int(ccl_node *node, const char *socket, int32_t value);
+/** Read a int from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_int(ccl_node *node, const char *socket, int32_t *out);
+/** Copy a int into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_int_id(ccl_node *node,
+                                                ccl_socket_id socket,
+                                                int32_t value);
+/** Read a int from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_int_id(ccl_node *node,
+                                                ccl_socket_id socket,
+                                                int32_t *out);
+/** Copy a uint into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_uint(ccl_node *node, const char *socket, uint32_t value);
+/** Read a uint from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_uint(ccl_node *node, const char *socket, uint32_t *out);
+/** Copy a uint into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_uint_id(ccl_node *node,
+                                                 ccl_socket_id socket,
+                                                 uint32_t value);
+/** Read a uint from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_uint_id(ccl_node *node,
+                                                 ccl_socket_id socket,
+                                                 uint32_t *out);
+/** Copy a uint64 into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_uint64(ccl_node *node,
+                                                const char *socket,
+                                                uint64_t value);
+/** Read a uint64 from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_uint64(ccl_node *node, const char *socket, uint64_t *out);
+/** Copy a uint64 into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_uint64_id(ccl_node *node,
+                                                   ccl_socket_id socket,
+                                                   uint64_t value);
+/** Read a uint64 from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_uint64_id(ccl_node *node,
+                                                   ccl_socket_id socket,
+                                                   uint64_t *out);
+/** Copy a float2 into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_float2(ccl_node *node,
+                                                const char *socket,
+                                                ccl_float2 value);
+/** Read a float2 from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_float2(ccl_node *node,
+                                                const char *socket,
+                                                ccl_float2 *out);
+/** Copy a float2 into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_float2_id(ccl_node *node,
+                                                   ccl_socket_id socket,
+                                                   ccl_float2 value);
+/** Read a float2 from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_float2_id(ccl_node *node,
+                                                   ccl_socket_id socket,
+                                                   ccl_float2 *out);
+/** Copy a float3 into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_float3(ccl_node *node,
+                                                const char *socket,
+                                                ccl_float3 value);
+/** Read a float3 from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_float3(ccl_node *node,
+                                                const char *socket,
+                                                ccl_float3 *out);
+/** Copy a float3 into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_float3_id(ccl_node *node,
+                                                   ccl_socket_id socket,
+                                                   ccl_float3 value);
+/** Read a float3 from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_float3_id(ccl_node *node,
+                                                   ccl_socket_id socket,
+                                                   ccl_float3 *out);
+/** Copy a string into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_string(ccl_node *node,
+                                                const char *socket,
+                                                const char *value);
+/** Read a string from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_string(ccl_node *node,
+                                                const char *socket,
+                                                const char **out);
+/** Copy a string into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_string_id(ccl_node *node,
+                                                   ccl_socket_id socket,
+                                                   const char *value);
+/** Read a string from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_string_id(ccl_node *node,
+                                                   ccl_socket_id socket,
+                                                   const char **out);
+/** Copy a enum into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_enum(ccl_node *node, const char *socket, int32_t value);
+/** Read a enum from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_enum(ccl_node *node, const char *socket, int32_t *out);
+/** Copy a enum into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_enum_id(ccl_node *node,
+                                                 ccl_socket_id socket,
+                                                 int32_t value);
+/** Read a enum from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_enum_id(ccl_node *node,
+                                                 ccl_socket_id socket,
+                                                 int32_t *out);
+/** Copy a transform into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_transform(ccl_node *node,
+                                                   const char *socket,
+                                                   ccl_transform value);
+/** Read a transform from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_transform(ccl_node *node,
+                                                   const char *socket,
+                                                   ccl_transform *out);
+/** Copy a transform into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_transform_id(ccl_node *node,
+                                                      ccl_socket_id socket,
+                                                      ccl_transform value);
+/** Read a transform from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_transform_id(ccl_node *node,
+                                                      ccl_socket_id socket,
+                                                      ccl_transform *out);
+/** Copy a node into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_node(ccl_node *node, const char *socket, ccl_node *value);
+/** Read a node from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_node(ccl_node *node, const char *socket, ccl_node **out);
+/** Copy a node into an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_node_id(ccl_node *node,
+                                                 ccl_socket_id socket,
+                                                 ccl_node *value);
+/** Read a node from an input socket; typed access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_node_id(ccl_node *node,
+                                                 ccl_socket_id socket,
+                                                 ccl_node **out);
+
+/** Array access uses the exact CCL_SOCKET_*_ARRAY type, not its scalar type.
+ * Host elements: BOOLEAN_ARRAY int32_t (0/1), INT_ARRAY int32_t, FLOAT_ARRAY float,
+ * POINT2_ARRAY ccl_float2, COLOR/VECTOR/POINT/NORMAL_ARRAY ccl_float3,
+ * TRANSFORM_ARRAY ccl_transform, STRING_ARRAY const char*, NODE_ARRAY ccl_node* (non-null entries
+ * only). Elements are tightly packed, properly aligned C values, not native layouts. Set copies
+ * count elements (and pointed-to strings); NULL data allowed only at count=0. Invalid
+ * bool/string/reference/overflow: INVALID_ARGUMENT; unknown array type: UNSUPPORTED; socket type
+ * mismatch: TYPE_MISMATCH. No partial writes. Get copies up to capacity elements only if capacity
+ * >= required. Always writes required on success or BUFFER_TOO_SMALL; data is unchanged on
+ * BUFFER_TOO_SMALL. Query length with data=NULL, capacity=0 (success even for nonempty arrays).
+ * Returned strings/node handles are borrowed as in typed access. Common editing
+ * ownership/threading/errors and name/ID rules above apply. */
+/** Copy array into socket; array access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_array(
+    ccl_node *node, const char *socket, ccl_socket_type type, const void *data, uint64_t count);
+/** Copy array from socket or query length; array access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_array(ccl_node *node,
+                                               const char *socket,
+                                               ccl_socket_type type,
+                                               void *data,
+                                               uint64_t capacity,
+                                               uint64_t *required);
+/** Copy array into socket; array access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_set_array_id(
+    ccl_node *node, ccl_socket_id socket, ccl_socket_type type, const void *data, uint64_t count);
+/** Copy array from socket or query length; array access contract above. */
+CCL_API ccl_status CCL_CALL ccl_node_get_array_id(ccl_node *node,
+                                                  ccl_socket_id socket,
+                                                  ccl_socket_type type,
+                                                  void *data,
+                                                  uint64_t capacity,
+                                                  uint64_t *required);
+
+
+/** Geometry/attribute calls use the common editing contract: initialized library,
+ * live scene-owned node, serialized calls, no callback reentry and no concurrent
+ * rendering. Inputs are copied; no host allocation is retained. Invalid handles,
+ * sizes, counts or flags return INVALID_ARGUMENT; wrong node/type/element returns
+ * TYPE_MISMATCH; unavailable features return UNSUPPORTED; allocation/native errors
+ * return OUT_OF_MEMORY/INTERNAL. Tag updates after completing related edits.
+ * Resize first, then fill topology sockets and attributes before rendering. */
+/** Resize mesh vertices/triangles using native allocation. Existing data is retained
+ * where native resizing permits; newly allocated elements MUST be filled by caller.
+ * Counts must fit native signed int (triangles <= INT_MAX/3). Not for Volume nodes. */
+CCL_API ccl_status CCL_CALL ccl_mesh_resize(ccl_node *mesh, uint64_t vertices, uint64_t triangles);
+/** Resize subdivision faces/corners after mesh vertices. Fill subd_* sockets,
+ * including ptex offsets, and subd attributes; subdivision_type selects native
+ * linear/Catmull-Clark processing. Polygon tessellation belongs to the host, as
+ * with native Mesh. Counts fit signed int. Allocation/lifetime contract above. */
+CCL_API ccl_status CCL_CALL ccl_mesh_resize_subdivision(ccl_node *mesh, uint64_t faces, uint64_t corners);
+/** Resize curves/keys. Fill curve_first_key/curve_shader sockets and P/radius
+ * attributes. Counts fit signed int; allocation/lifetime contract above. */
+CCL_API ccl_status CCL_CALL ccl_hair_resize(ccl_node *hair, uint64_t curves, uint64_t keys);
+/** Resize point cloud. Fill shader socket and P/radius attributes. Counts fit
+ * signed int; allocation/lifetime contract above. */
+CCL_API ccl_status CCL_CALL ccl_pointcloud_resize(ccl_node *points, uint64_t count);
+
+typedef int32_t ccl_attribute_element;
+enum {
+  CCL_ATTRIBUTE_OBJECT = 1, CCL_ATTRIBUTE_MESH = 2,
+  CCL_ATTRIBUTE_FACE = 3, CCL_ATTRIBUTE_VERTEX = 4,
+  CCL_ATTRIBUTE_CORNER = 5, CCL_ATTRIBUTE_CURVE = 6,
+  CCL_ATTRIBUTE_CURVE_KEY = 7, CCL_ATTRIBUTE_VOXEL = 8,
+  CCL_ATTRIBUTE_VERTEX_NORMAL = 9, CCL_ATTRIBUTE_CORNER_BYTE = 10,
+  CCL_ATTRIBUTE_CORNER_NORMAL = 11, CCL_ATTRIBUTE_CURVE_KEY_NORMAL = 12
+};
+/** Attribute payload type; explicit values independent of native TypeDesc. */
+typedef int32_t ccl_attribute_type;
+enum {
+  CCL_ATTRIBUTE_FLOAT = 1, CCL_ATTRIBUTE_FLOAT2 = 2, CCL_ATTRIBUTE_FLOAT3 = 3,
+  CCL_ATTRIBUTE_COLOR = 4, CCL_ATTRIBUTE_POINT = 5, CCL_ATTRIBUTE_NORMAL = 6,
+  CCL_ATTRIBUTE_FLOAT4 = 7, CCL_ATTRIBUTE_MATRIX = 8, CCL_ATTRIBUTE_RGBA = 9
+};
+/** A tightly packed four-float payload (also used for linear RGBA). */
+typedef struct ccl_float4 { float x, y, z, w; } ccl_float4;
+/** CORNER_BYTE uses four bytes per element, preserving encoded vertex colors. */
+typedef struct ccl_uchar4 { uint8_t x, y, z, w; } ccl_uchar4;
+/** Copied attribute description. standard is NULL/empty for custom attributes,
+ * otherwise an uppercase native semantic token without ATTR_STD_ (e.g. POSITION,
+ * VERTEX_NORMAL, UV, VOLUME_DENSITY). Unknown semantics are UNSUPPORTED. name may
+ * be NULL for standards (uses native default name); custom names must be nonempty.
+ * type/element must match a standard's native layout. subdivision selects the
+ * mesh subd attribute set (0/1); smooth_fvar is native subdivision smoothing (0/1).
+ * Unknown enum values must be skipped by hosts, never assumed to be a known type. */
+typedef struct ccl_attribute_desc {
+  uint32_t size;
+  const char *name;
+  const char *standard;
+  ccl_attribute_type type;
+  ccl_attribute_element element;
+  int32_t subdivision;
+  int32_t smooth_fvar;
+} ccl_attribute_desc;
+/** Add/replace one attribute step. count must equal native element count. Payloads:
+ * FLOAT float, FLOAT2 ccl_float2, FLOAT3/COLOR/POINT/NORMAL ccl_float3,
+ * FLOAT4/RGBA ccl_float4, MATRIX ccl_transform; CORNER_BYTE instead uses ccl_uchar4.
+ * Encoded normal elements take ccl_float3 and use native normal packing. All floats
+ * must be finite. Step 0 is center; 1..motion_steps-1 follow native noncenter order.
+ * Native motion_steps=0 permits center-only data; for motion set odd 1..129 first. New motion buffers are initialized from the
+ * center, then this step is replaced. Noncenter writes require an existing matching
+ * center attribute. Other existing motion steps are preserved. Voxel data uses
+ * ccl_volume_set_grid instead. Reserved built-in P/radius cannot be retyped.
+ * Validation occurs before modification; native allocation failure may require
+ * discarding the scene. Common geometry ownership/threading/errors apply. */
+CCL_API ccl_status CCL_CALL ccl_geometry_set_attribute(ccl_node *geometry,
+    const ccl_attribute_desc *desc, uint32_t step, const void *data, uint64_t count);
+/** Load a named grid from an absolute VDB filename into a volume voxel attribute.
+ * desc must select VOXEL, no subdivision/smoothing; type is FLOAT/COLOR/FLOAT3
+ * matching scalar/vector grid channels. Optional standard follows rules above.
+ * File/grid is read synchronously, owned by the scene; no file handle is retained.
+ * clipping is finite and nonnegative. Missing file/grid: NOT_FOUND; unsupported
+ * build/grid: UNSUPPORTED; malformed file/native IO failure: INTERNAL. Existing
+ * attribute remains on validation/read failure. Common geometry contract applies. */
+CCL_API ccl_status CCL_CALL ccl_volume_set_grid(ccl_node *volume,
+    const ccl_attribute_desc *desc, const char *filename, const char *grid, float clipping);
+
+
+/** Rendering control: all calls are serialized; wait releases the API lock so
+ * another host thread may query progress, resume or cancel. Destroy/reset/start
+ * and edits return IN_USE while a wait call holds the session. No callback may
+ * reenter the API except ccl_last_error, throw, or wait for another API call.
+ * Invalid/uninitialized handles use the common editing errors; native failures
+ * return INTERNAL and allocation failures OUT_OF_MEMORY.
+ * Progress and output callbacks may overlap; synchronize shared host data.
+ * Callbacks are synchronous on native worker threads; their arguments are borrowed
+ * only during the call. User data remains host-owned until callback replacement
+ * or session destruction returns. Callback exceptions/errors cancel the job.
+ * All functions require init and a live session (NOT_INITIALIZED/INVALID_ARGUMENT).
+ * Other common errors: CALLBACK_REENTRY, OUT_OF_MEMORY, INTERNAL (native failure).
+ * Scene reads return IN_USE during a job, including paused jobs. Editing a paused
+ * job synchronously cancels/waits before touching native scene data. This can block
+ * for in-flight work and serializes other API calls. The first attempted edit may
+ * quiesce even if subsequent argument validation fails. Edits require reset before
+ * resume. Editing unpaused jobs returns IN_USE. Ordinary pause/resume without edits
+ * does not reset samples. Destroy also blocks until worker/callback completion. */
+typedef struct ccl_buffer_params {
+  uint32_t size;
+  int32_t width, height;
+  int32_t full_x, full_y, full_width, full_height;
+  int32_t samples;
+  double time_limit;
+  /** Native automatic tiling; 0 disables it, otherwise positive tile width. */
+  int32_t tile_size;
+  /** 0/1 native progressive resolution control, typically 0 for offline parity. */
+  int32_t use_resolution_divider;
+  /** Absolute writable temp directory, copied; NULL uses init's user directory. */
+  const char *temp_directory;
+} ccl_buffer_params;
+/** Copied progress snapshot. Messages are UTF-8 truncated to fit, NUL terminated.
+ * sample is the last tile's sample, not necessarily full-frame progress. */
+typedef struct ccl_progress {
+  uint32_t size;
+  double fraction, total_seconds, render_seconds;
+  int32_t sample, error, cancelled, pause_requested, reset_required;
+  char status[256], substatus[256], error_message[1024];
+} ccl_progress;
+typedef void(CCL_CALL *ccl_progress_fn)(const ccl_progress *progress, void *user);
+/** Pass request: name copied, channels must match a named scene pass at reset. */
+typedef struct ccl_output_pass { uint32_t size; const char *name; int32_t channels; } ccl_output_pass;
+/** One tightly packed float pass for a native tile, lower-left origin; unassociated
+ * native pass semantics, no color transform. final=0 update, final=1 finished tile.
+ * Pixel count = width*height*channels. Copy before returning to retain the pixels. */
+typedef struct ccl_render_tile {
+  uint32_t size;
+  int32_t x, y, width, height, full_width, full_height, channels, final;
+  const char *pass_name;
+  const float *pixels;
+  uint64_t float_count;
+} ccl_render_tile;
+/** Return 0 for success, nonzero to report output failure and cancel rendering. */
+typedef int32_t(CCL_CALL *ccl_output_fn)(const ccl_render_tile *tile, void *user);
+/** Queue fresh buffer/sample settings; copies params/strings. Positive dimensions
+ * and samples, bounded crop inside full dimensions, finite nonnegative time limit,
+ * tile_size>=0 and a 0/1 divider required (INVALID_ARGUMENT). Named output passes
+ * must exist with exact channels (NOT_FOUND/TYPE_MISMATCH). Running job must be
+ * paused (IN_USE otherwise); reset then blocks to quiesce it. Does not start a job.
+ * Restores native progress after cancellation and clears the reset-required flag. */
+CCL_API ccl_status CCL_CALL ccl_session_reset(ccl_session *session, const ccl_buffer_params *params);
+/** Start a reset, idle session; IN_USE if already active or reset is required.
+ * Asynchronous: failures during rendering are read via progress or wait. */
+CCL_API ccl_status CCL_CALL ccl_session_start(ccl_session *session);
+/** Request pause/resume (0/1). Background/offline jobs do not support pause
+ * (UNSUPPORTED). Pause is asynchronous and preserves samples; first subsequent
+ * edit blocks as described above. Resume after an edit requires reset (IN_USE);
+ * after that reset, resume starts the replacement job. */
+CCL_API ccl_status CCL_CALL ccl_session_pause(ccl_session *session, int32_t pause);
+/** Block until job ends. A paused/idle interactive job still waits until resumed
+ * or cancelled by another thread. Native error returns INTERNAL; cancellation
+ * without an error succeeds. Session remains valid; concurrent destruction IN_USE. */
+CCL_API ccl_status CCL_CALL ccl_session_wait(ccl_session *session);
+/** Synchronously cancel/wait; session stays valid but requires reset before start.
+ * May run while another thread waits. Callback contract above prevents deadlocks. */
+CCL_API ccl_status CCL_CALL ccl_session_cancel(ccl_session *session);
+/** Set native sample limit, positive and <= native MAX_SAMPLES; INVALID_ARGUMENT
+ * otherwise. Does not reset accumulated samples. Also updates queued reset limits. */
+CCL_API ccl_status CCL_CALL ccl_session_set_samples(ccl_session *session, int32_t samples);
+/** Copy progress on any host thread, including during rendering/wait. out is
+ * caller-owned, size required; INVALID_ARGUMENT for NULL/undersized output. */
+CCL_API ccl_status CCL_CALL ccl_session_progress(ccl_session *session, ccl_progress *out);
+/** Replace callback while idle (IN_USE during a job/wait); NULL disables it.
+ * Pointer/user are retained, never freed. Common callback/control contract above. */
+CCL_API ccl_status CCL_CALL ccl_session_set_progress_callback(ccl_session *session, ccl_progress_fn fn, void *user);
+/** Configure copied pass requests and callback while idle (IN_USE otherwise).
+ * count>0 requires passes and fn; count=0 disables output. Duplicate/empty names,
+ * channels outside 1..4 or bad struct sizes return INVALID_ARGUMENT. Pass existence
+ * is checked at reset. Unavailable in-progress pixels are skipped; missing final
+ * pixels report INTERNAL. Callback/user lifetime and error rules above apply. */
+CCL_API ccl_status CCL_CALL ccl_session_set_output_callback(ccl_session *session,
+    const ccl_output_pass *passes, uint32_t count, ccl_output_fn fn, void *user);
+
+/** Optional deep visibility extension: no RGB radiance. Independent of flat passes. */
+typedef struct ccl_deep_tile ccl_deep_tile;
+typedef struct ccl_deep_params {
+  uint32_t size;
+  int32_t transparent, volume, volume_shader_eval, ids;
+  int32_t samples; /**< 0 = all accepted beauty camera samples, otherwise first N. */
+  int32_t max_events;
+  uint64_t memory_bytes; /**< Capture/reconstruction budget; host output buffers are separate. */
+  float error; /**< 0 = strict; positive values use native error validation at render reset. */
+  float z_tolerance, volume_step;
+} ccl_deep_params;
+typedef struct ccl_deep_object {
+  uint32_t id;
+  const char *name;
+} ccl_deep_object;
+/** Reconstructed visibility before EXR FLOAT quantization. A surface has z == z_back.
+ * object_index indexes info.objects, or -1 for an interval without surface provenance.
+ * Facing/provenance must be preserved when passing samples to a deep serializer.
+ * All depths are camera depth in the native scene's units; alpha is effective
+ * pixel opacity, not intrinsic material opacity. */
+typedef struct ccl_deep_sample {
+  double z, z_back, alpha;
+  int32_t object_index, facing;
+} ccl_deep_sample;
+/** Entire image delivered after completed capture. Strings, lists and tile are
+ * borrowed for this callback only. Pixel getter coordinates are file-top-origin.
+ * Object/holdout manifests are the native ID mappings, not host-assigned IDs. */
+typedef struct ccl_deep_info {
+  uint32_t size;
+  int32_t width, height, volume, ids, sample_limit;
+  const char *layer, *view;
+  float error, z_tolerance, volume_shader_error, volume_step_min, volume_step_max;
+  int32_t volume_shader_adaptive;
+  uint64_t row_sample_limit;
+  const ccl_deep_object *objects, *holdouts;
+  uint64_t object_count, holdout_count;
+} ccl_deep_info;
+/** Called synchronously on the render worker, after all capture workers finish.
+ * Return 0 on success; nonzero/throwing sets session error, reported by wait.
+ * May call only ccl_deep_tile_get_pixel and ccl_last_error. Do not retain tile or
+ * info, invoke getters from other threads, or block waiting for session work.
+ * Copy data into host-owned storage if it must survive the callback. */
+typedef int32_t(CCL_CALL *ccl_deep_fn)(ccl_deep_tile *tile, const ccl_deep_info *info, void *user);
+/** Fill native deep defaults, before or after init, even in a core-only build.
+ * Caller owns params and initializes size. Thread-safe; INVALID_ARGUMENT for
+ * NULL/short struct, CALLBACK_REENTRY during a callback; tail bytes preserved. */
+CCL_API ccl_status CCL_CALL ccl_deep_params_default(ccl_deep_params *params);
+/** Copy deep settings and retain callback/user; NULL params disables deep output.
+ * Requires init and a valid session. UNSUPPORTED in a core-only build. All boolean
+ * values are 0/1, limits positive (samples may be 0), floats finite/nonnegative;
+ * malformed settings or enabled settings without fn return INVALID_ARGUMENT.
+ * Scene/device support and native error bounds are validated by native rendering.
+ * Same editing contract as nodes: an edit to a paused job blocks in cancel/wait,
+ * any successful edit requires reset, and unpaused/waited-on jobs return IN_USE.
+ * CALLBACK_REENTRY during callbacks. Does not own/free user; old callback is
+ * quiescent on successful return. Flat output callbacks are unaffected. */
+CCL_API ccl_status CCL_CALL ccl_session_set_deep_output(ccl_session *session,
+    const ccl_deep_params *params, ccl_deep_fn fn, void *user);
+/** Copy a pixel's reconstructed samples. Only the current deep callback's thread
+ * may use its borrowed tile. NULL samples with capacity=0 queries count; outputs
+ * count and accepted_camera_samples are required and caller-owned. A short buffer
+ * returns BUFFER_TOO_SMALL and writes the required count, leaving samples intact.
+ * Results are cached until another pixel is requested. Visit rows sequentially
+ * to avoid repeated spill reads; only one native row is retained by this wrapper.
+ * INVALID_ARGUMENT for invalid tile/coordinates/pointers, UNSUPPORTED without
+ * deep, OUT_OF_MEMORY on allocation failure, INTERNAL for reconstruction/cancel
+ * failure. No native exception crosses the boundary. Other API calls remain
+ * forbidden here. Copying/serializing these doubles is the host's responsibility;
+ * arbitrary FLOAT conversion is not a guarantee of the native EXR error bound. */
+CCL_API ccl_status CCL_CALL ccl_deep_tile_get_pixel(ccl_deep_tile *tile, int32_t x, int32_t y,
+    ccl_deep_sample *samples, uint64_t capacity, uint64_t *count, uint32_t *accepted_camera_samples);
+
+#ifdef __cplusplus
+}
+#endif
+#endif

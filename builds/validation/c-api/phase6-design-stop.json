@@ -1,0 +1,32 @@
+{
+  "phase": 6,
+  "status": "design-review-required",
+  "time_utc": "2026-10-12T13:23:56.472135+00:00",
+  "baseline_phase5_commit": "04eb35d65",
+  "baseline_ctests": {
+    "passed": 11,
+    "total": 11,
+    "log": "D:/CyclesDeepScratch/c-api/phase5-20261013/final-ctests.log"
+  },
+  "baseline_native": {
+    "passed": 9,
+    "total": 9,
+    "log": "D:/CyclesDeepScratch/c-api/phase5-20261013/post-existing-tests.log"
+  },
+  "reason": "Public pause/edit synchronization and accumulation semantics are unresolved. Native set_pause is asynchronous and wait is a job-completion wait.",
+  "evidence_kind": "source inspection, not measured race",
+  "recommended": "Preserve native ordinary pause; synchronously cancel/wait before first edit of paused running session; require reset before resume.",
+  "tradeoffs": [
+    "edit latency and cancellation/output semantics",
+    "cannot resume interrupted accumulation after edits",
+    "native-style locking would weaken strict no-rendering promise",
+    "acknowledged native pause may need separately authorized internal change"
+  ],
+  "phase6_code_changes": false,
+  "test_criterion_changes": false,
+  "internal_changes": false,
+  "renders_started": false,
+  "phases7_to10_started": false,
+  "external_actions": false,
+  "d_free_bytes": 1396910989312
+}

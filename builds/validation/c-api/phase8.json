@@ -1,0 +1,171 @@
+{
+  "phase": 8,
+  "passed": true,
+  "status": "phase8-passed",
+  "api_version": "1.7",
+  "superseded_directory": {
+    "path": "D:/CyclesDeepScratch/c-api/phase8-20261013",
+    "status": "overwritten by an incorrect script root on 2026-10-13; contents superseded, not evidence"
+  },
+  "qualification_source": "fresh builds only",
+  "builds": {
+    "core": {
+      "root": "D:\\temp\\cycles_c_api\\phase8-core-qualified-20261013",
+      "ctests_passed": 13,
+      "ctests_total": 13,
+      "test_log": "Internal ctest changing into directory: D:/temp/cycles_c_api/phase8-core-qualified-20261013/build\nTest project D:/temp/cycles_c_api/phase8-core-qualified-20261013/build\n      Start  1: cycles_version\n 1/13 Test  #1: cycles_version ...................   Passed    0.03 sec\n      Start  2: cycles_c_host\n 2/13 Test  #2: cycles_c_host ....................   Passed    0.23 sec\n      Start  3: cycles_c_contract\n 3/13 Test  #3: cycles_c_contract ................   Passed    0.06 sec\n      Start  4: cycles_c_scene_host\n 4/13 Test  #4: cycles_c_scene_host ..............   Passed    0.23 sec\n      Start  5: cycles_c_editing\n 5/13 Test  #5: cycles_c_editing .................   Passed    0.06 sec\n      Start  6: cycles_c_shaders\n 6/13 Test  #6: cycles_c_shaders .................   Passed    0.14 sec\n      Start  7: cycles_c_geometry\n 7/13 Test  #7: cycles_c_geometry ................   Passed    0.06 sec\n      Start  8: cycles_c_rendering\n 8/13 Test  #8: cycles_c_rendering ...............   Passed    1.80 sec\n      Start  9: cycles_c_controls\n 9/13 Test  #9: cycles_c_controls ................   Passed    0.21 sec\n      Start 10: cycles_c_benchmark\n10/13 Test #10: cycles_c_benchmark ...............   Passed    0.79 sec\n      Start 11: cycles_c_source_inventory\n11/13 Test #11: cycles_c_source_inventory ........   Passed    0.93 sec\n      Start 12: cycles_c_reflection\n12/13 Test #12: cycles_c_reflection ..............   Passed    0.35 sec\n      Start 13: cycles_c_exports\n13/13 Test #13: cycles_c_exports .................   Passed    0.08 sec\n\n100% tests passed, 0 tests failed out of 13\n\nTotal Test time (real) =   5.00 sec\n",
+      "exports": {
+        "public_exports": 98,
+        "private_exports": [
+          "cycles_c_private_get_table"
+        ],
+        "front_imports": [
+          "kernel32.dll",
+          "version.dll"
+        ],
+        "passed": true
+      },
+      "native_commands": {
+        "passed": true,
+        "count": 158
+      },
+      "sha256": {
+        "cycles_c.dll": "8dfe748f0919327a482b51a9dd583d87421fdae9a8955051596160331bc2fb74",
+        "cycles_c_backend_private.dll": "b87e296644b5b6777a1549553b9f8ab56ff850e89852b75427210d8807057c38"
+      }
+    },
+    "deep": {
+      "root": "D:\\temp\\cycles_c_api\\phase8-deep-qualified-20261013",
+      "ctests_passed": 22,
+      "ctests_total": 22,
+      "test_log": "Internal ctest changing into directory: D:/temp/cycles_c_api/phase8-deep-qualified-20261013/build\nTest project D:/temp/cycles_c_api/phase8-deep-qualified-20261013/build\n      Start  1: cycles_deep_capture\n 1/22 Test  #1: cycles_deep_capture ..............   Passed    8.36 sec\n      Start  2: cycles_deep_reference\n 2/22 Test  #2: cycles_deep_reference ............   Passed    0.08 sec\n      Start  3: cycles_deep_density_cell\n 3/22 Test  #3: cycles_deep_density_cell .........   Passed    0.10 sec\n      Start  4: cycles_deep_production\n 4/22 Test  #4: cycles_deep_production ...........   Passed    0.85 sec\n      Start  5: cycles_deep_volume\n 5/22 Test  #5: cycles_deep_volume ...............   Passed    2.11 sec\n      Start  6: cycles_deep_density\n 6/22 Test  #6: cycles_deep_density ..............   Passed    0.24 sec\n      Start  7: cycles_deep_exr\n 7/22 Test  #7: cycles_deep_exr ..................   Passed    0.10 sec\n      Start  8: cycles_deep_output_driver\n 8/22 Test  #8: cycles_deep_output_driver ........   Passed    0.21 sec\n      Start  9: cycles_version\n 9/22 Test  #9: cycles_version ...................   Passed    0.03 sec\n      Start 10: cycles_c_host\n10/22 Test #10: cycles_c_host ....................   Passed    0.20 sec\n      Start 11: cycles_c_contract\n11/22 Test #11: cycles_c_contract ................   Passed    0.03 sec\n      Start 12: cycles_c_scene_host\n12/22 Test #12: cycles_c_scene_host ..............   Passed    0.20 sec\n      Start 13: cycles_c_editing\n13/22 Test #13: cycles_c_editing .................   Passed    0.04 sec\n      Start 14: cycles_c_shaders\n14/22 Test #14: cycles_c_shaders .................   Passed    0.06 sec\n      Start 15: cycles_c_geometry\n15/22 Test #15: cycles_c_geometry ................   Passed    0.04 sec\n      Start 16: cycles_c_rendering\n16/22 Test #16: cycles_c_rendering ...............   Passed    1.65 sec\n      Start 17: cycles_c_deep\n17/22 Test #17: cycles_c_deep ....................   Passed    1.09 sec\n      Start 18: cycles_c_controls\n18/22 Test #18: cycles_c_controls ................   Passed    0.17 sec\n      Start 19: cycles_c_benchmark\n19/22 Test #19: cycles_c_benchmark ...............   Passed    0.78 sec\n      Start 20: cycles_c_source_inventory\n20/22 Test #20: cycles_c_source_inventory ........   Passed    0.90 sec\n      Start 21: cycles_c_reflection\n21/22 Test #21: cycles_c_reflection ..............   Passed    0.31 sec\n      Start 22: cycles_c_exports\n22/22 Test #22: cycles_c_exports .................   Passed    0.08 sec\n\n100% tests passed, 0 tests failed out of 22\n\nTotal Test time (real) =  17.66 sec\n",
+      "exports": {
+        "public_exports": 98,
+        "private_exports": [
+          "cycles_c_private_get_table"
+        ],
+        "front_imports": [
+          "kernel32.dll",
+          "version.dll"
+        ],
+        "passed": true
+      },
+      "native_commands": {
+        "passed": true,
+        "count": 173
+      },
+      "sha256": {
+        "cycles_c.dll": "d8c3a9ec6422f45ff9627a110cf904761e8ea2b2899e5f0ed65f7457948bfc2c",
+        "cycles_c_backend_private.dll": "7d875b67498f5024ae637fd3ecd599b26cf91371a4c2519dcac7374b61364b19"
+      }
+    }
+  },
+  "parity": [
+    {
+      "case": "opaque",
+      "byte_identical": false,
+      "native_bytes": 10951,
+      "api_bytes": 12504,
+      "native_sha256": "c985e4e67836279127c6cd20636107b06f7caa45c9b11bcbd8b5342112bee05c",
+      "api_sha256": "ebe25d209474d6f966f2902ee1b8701be421e8a27b63436ac7b3e3929e8a07c2"
+    }
+  ],
+  "guard": {
+    "self_test": "passed: rejects CyclesDeepScratch, sibling temp, traversal and old install prefix",
+    "new_outputs_root": "D:\\temp\\cycles_c_api",
+    "temp_tmp": "guarded per build",
+    "committed_outputs": "repo only"
+  },
+  "native_changes": false,
+  "phases_9_10": "not started",
+  "published": false,
+  "free_d_bytes": 1389686464512,
+  "timing": "provisional; not used for acceptance while other work may run",
+  "harness_corrections": [
+    "Convert Path arguments to strings before command JSON serialization; self-check below.",
+    "Add installed dependencies to test subprocess PATH; rerun unchanged tests."
+  ],
+  "pending": [
+    "remaining standalone byte comparisons",
+    "cause of opaque byte mismatch",
+    "Phase 9 Gaffer proof",
+    "Phase 10 local proposal"
+  ],
+  "original_parity_failure": [
+    {
+      "case": "opaque",
+      "byte_identical": false,
+      "native_bytes": 10951,
+      "api_bytes": 12504,
+      "native_sha256": "c985e4e67836279127c6cd20636107b06f7caa45c9b11bcbd8b5342112bee05c",
+      "api_sha256": "ebe25d209474d6f966f2902ee1b8701be421e8a27b63436ac7b3e3929e8a07c2"
+    }
+  ],
+  "diagnosis": {
+    "before": {
+      "pixels": 940,
+      "counts_equal": false,
+      "total_samples": [
+        2751,
+        3001
+      ],
+      "unequal_pixels": {
+        "A": 890,
+        "Z": 304,
+        "ZBack": 304
+      }
+    },
+    "after": {
+      "pixels": 940,
+      "counts_equal": true,
+      "total_samples": [
+        2751,
+        2751
+      ],
+      "unequal_pixels": {
+        "A": 0,
+        "Z": 0,
+        "ZBack": 0
+      }
+    },
+    "differing_headers": [],
+    "cause": "Native XML forces static BVH; API test used default dynamic BVH. Set the fixture bvh_static=1 to compare the same settings. No wrapper/native/comparator changes.",
+    "full_before": "phase8-opaque-before.json",
+    "full_after": "phase8-opaque-after.json"
+  },
+  "standalone_parity": [
+    {
+      "case": "opaque",
+      "byte_identical": true,
+      "native_bytes": 10951,
+      "api_bytes": 10951,
+      "native_sha256": "c985e4e67836279127c6cd20636107b06f7caa45c9b11bcbd8b5342112bee05c",
+      "api_sha256": "c985e4e67836279127c6cd20636107b06f7caa45c9b11bcbd8b5342112bee05c"
+    },
+    {
+      "case": "opaque-ids",
+      "byte_identical": true,
+      "native_bytes": 5115,
+      "api_bytes": 5115,
+      "native_sha256": "0f5084bd0ccee7877008beb7f0079cd77782e05f15419c098cf606c0604bd82a",
+      "api_sha256": "0f5084bd0ccee7877008beb7f0079cd77782e05f15419c098cf606c0604bd82a"
+    },
+    {
+      "case": "transparent",
+      "byte_identical": true,
+      "native_bytes": 12286,
+      "api_bytes": 12286,
+      "native_sha256": "de99828ed090f37578c70b1010a48639f371af44f1d1e87bd245e04693aebb26",
+      "api_sha256": "de99828ed090f37578c70b1010a48639f371af44f1d1e87bd245e04693aebb26"
+    },
+    {
+      "case": "transparent-ids",
+      "byte_identical": true,
+      "native_bytes": 5105,
+      "api_bytes": 5105,
+      "native_sha256": "1e2a61022642c497d6e3b970eee933f8cb09a270fdd7f37782e160021a55f07a",
+      "api_sha256": "1e2a61022642c497d6e3b970eee933f8cb09a270fdd7f37782e160021a55f07a"
+    }
+  ],
+  "correction": "Test fixture scene settings aligned with native XML; literal byte criterion unchanged. Added direct native Session byte assertion for all four cases."
+}

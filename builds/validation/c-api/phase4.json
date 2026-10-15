@@ -1,0 +1,204 @@
+{
+  "phase": 4,
+  "status": "passed-review-pending",
+  "time_utc": "2026-10-12T12:56:48.914256+00:00",
+  "branch": "c-api",
+  "phase3_commit": "d41fa6a17",
+  "api_version": "1.3.0",
+  "abi_status": "experimental until Phase 7",
+  "toolchain": "clang-cl 20.1.8 / CMake 3.31.2 / Ninja / Windows x64 Release",
+  "build_root": "D:\\CyclesDeepScratch\\c-api\\phase4-20261012",
+  "deep_enabled": false,
+  "baseline": {
+    "passed": 9,
+    "total": 9,
+    "log": "baseline.log"
+  },
+  "ownership_correction": {
+    "passed": 9,
+    "total": 9,
+    "log": "ownership-tests.log",
+    "native_session_owned_scene": true,
+    "no_render_started": true,
+    "original_scene_functions_removed": [
+      "ccl_scene_create",
+      "ccl_scene_destroy"
+    ],
+    "retained_phase3_declarations_unchanged": 65
+  },
+  "after": {
+    "passed": 10,
+    "total": 10,
+    "log": "final-ctests.log"
+  },
+  "preserved_native_ctests": {
+    "passed": 9,
+    "total": 9,
+    "log": "post-existing-tests.log"
+  },
+  "devices": {
+    "CPU": "AMD Ryzen 9 5900X 12-Core Processor",
+    "CUDA": "NVIDIA GeForce RTX 3080",
+    "OPTIX": "NVIDIA GeForce RTX 3080"
+  },
+  "session_scene_editing": {
+    "CPU": "PASS",
+    "CUDA": "PASS",
+    "OPTIX": "PASS",
+    "coverage": "13 factories, 6 singletons, 25 value types, 11 array types, 2 non-value rejections, references, copied storage, concurrency, exact native scene/device ownership, default/nondefault SceneParams mapping"
+  },
+  "shader_graphs": {
+    "passed": true,
+    "native_xml_graphs_per_device": 16,
+    "devices": [
+      "CPU",
+      "OPTIX"
+    ],
+    "fixtures": {
+      "scene_cube_surface.xml": 2,
+      "scene_cube_volume.xml": 2,
+      "scene_world_volume.xml": 5,
+      "scene_sphere_bump.xml": 2,
+      "scene_caustics.xml": 3,
+      "scene_osl_stripes.xml": 2
+    },
+    "comparison": "native XML loader versus API: node/socket types, all input values, all input connections after native attachment",
+    "legacy_xml_handling": "color comma separators normalized to equivalent whitespace in test DOM only; unknown legacy attributes ignored as native loader does; original fixtures unchanged",
+    "negative_tests": [
+      "cycles",
+      "cross-graph/scene endpoints",
+      "occupied input",
+      "unknown socket/type",
+      "non-shader/output creation",
+      "closure-to-numeric conversion",
+      "invalidated handles",
+      "OSL ID cross-instance and post-destruction use",
+      "missing/relative/malformed OSL files"
+    ],
+    "installed_plain_c_osl_devices": [
+      "CPU",
+      "OPTIX"
+    ],
+    "graph_attachment": "consumes graph, graph-node handles and OSL instance IDs; replacement supported",
+    "osl_input": "absolute .osl/.oso file; native sibling .oso compilation/cache; no inline source or shader execution"
+  },
+  "reflection": {
+    "passed": true,
+    "records": {
+      "NODE": 184,
+      "SOCKET": 1277,
+      "DEFAULT": 963,
+      "ENUM": 816
+    }
+  },
+  "exports": {
+    "count": 80,
+    "only_ccl_c_functions": true
+  },
+  "identities": {
+    "dll_sha256": "eefcbf57254f3126aed4cc60f616687390073ca16436c8f8d7046723a813c7cc",
+    "header_sha256": "342e6f25a0262aae130887a43cd95f50939ef442e8571afb807be4665dd5e8b1",
+    "phase1_phase2_phase3_and_production_preserved": true,
+    "direct_dependencies": [
+      "ADVAPI32.dll",
+      "CFGMGR32.dll",
+      "KERNEL32.dll",
+      "MSVCP140.dll",
+      "OpenColorIO_2_5.dll",
+      "OpenImageDenoise.dll",
+      "OpenImageIO.dll",
+      "OpenImageIO_Util.dll",
+      "VCRUNTIME140.dll",
+      "VCRUNTIME140_1.dll",
+      "VERSION.dll",
+      "api-ms-win-crt-convert-l1-1-0.dll",
+      "api-ms-win-crt-environment-l1-1-0.dll",
+      "api-ms-win-crt-filesystem-l1-1-0.dll",
+      "api-ms-win-crt-heap-l1-1-0.dll",
+      "api-ms-win-crt-locale-l1-1-0.dll",
+      "api-ms-win-crt-math-l1-1-0.dll",
+      "api-ms-win-crt-runtime-l1-1-0.dll",
+      "api-ms-win-crt-stdio-l1-1-0.dll",
+      "api-ms-win-crt-string-l1-1-0.dll",
+      "api-ms-win-crt-time-l1-1-0.dll",
+      "api-ms-win-crt-utility-l1-1-0.dll",
+      "embree4.dll",
+      "openvdb.dll",
+      "oslcomp.dll",
+      "oslexec.dll",
+      "oslquery.dll",
+      "sycl8.dll",
+      "tbb12.dll"
+    ]
+  },
+  "native_compile_command_parity": {
+    "passed": true,
+    "compilation_units": 158,
+    "api_off_matches_on": true
+  },
+  "install_file_count": 548,
+  "native_source_changes": false,
+  "benchmark": {
+    "iterations_per_round": 1000000,
+    "rounds": 9,
+    "unit": "ns_per_set",
+    "results": {
+      "direct_cpp": {
+        "median": 1.4869,
+        "min": 1.4786,
+        "max": 1.5051,
+        "samples": [
+          1.4798,
+          1.4869,
+          1.487,
+          1.4907,
+          1.4831,
+          1.4843,
+          1.4786,
+          1.5051,
+          1.4934
+        ]
+      },
+      "name": {
+        "median": 31.2149,
+        "min": 30.6848,
+        "max": 31.6704,
+        "samples": [
+          31.5843,
+          31.0285,
+          30.7785,
+          30.6848,
+          31.3301,
+          31.6704,
+          31.2149,
+          31.1738,
+          31.3179
+        ]
+      },
+      "id": {
+        "median": 13.2591,
+        "min": 13.1934,
+        "max": 13.7562,
+        "samples": [
+          13.2561,
+          13.1934,
+          13.3719,
+          13.2591,
+          13.3889,
+          13.1965,
+          13.7562,
+          13.2265,
+          13.3508
+        ]
+      }
+    }
+  },
+  "not_tested": [
+    "rendering through API (Phase 6)",
+    "full 81/30/65 renderer rerun",
+    "Linux/macOS",
+    "sanitizers",
+    "OSL-disabled build",
+    "mixed dependency coexistence / ABI swap (Phase 7)"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "phase": 8,
+  "status": "stopped-workspace-preservation-violation",
+  "passed": false,
+  "date": "2026-10-13",
+  "cause": "Copied driver used forward-slash literal; replacement used Windows Path string with backslashes, leaving old root unchanged. Driver loaded old configure command and toolchain.",
+  "actual_root": "D:/CyclesDeepScratch/c-api/phase8-20261013",
+  "intended_root": "D:/temp/cycles_c_api/phase8-20261013",
+  "tests_run": false,
+  "native_source_changes": false,
+  "rollback_attempted": false,
+  "build_log": "[1/10] Building CXX object src\\capi\\CMakeFiles\\cycles_c_backend_private.dir\\backend.cpp.obj\nclang-cl: warning: argument unused during compilation: '/MP' [-Wunused-command-line-argument]\nclang-cl: warning: argument unused during compilation: '/Zc:inline-' [-Wunused-command-line-argument]\n[2/10] Linking CXX shared library bin\\cycles_c_backend_private.dll\n[3/10] Building CXX object src\\capi\\CMakeFiles\\cycles_c.dir\\front.cpp.obj\nclang-cl: warning: argument unused during compilation: '/MP' [-Wunused-command-line-argument]\nclang-cl: warning: argument unused during compilation: '/Zc:inline-' [-Wunused-command-line-argument]\n[4/10] Linking CXX shared library bin\\cycles_c.dll\n[5/10] Linking C executable bin\\cycles_c_scene_host.exe\n[6/10] Linking CXX executable bin\\cycles_c_rendering.exe\n[7/10] Building CXX object src\\capi\\CMakeFiles\\cycles_c_deep.dir\\test\\deep.cpp.obj\nclang-cl: warning: argument unused during compilation: '/MP' [-Wunused-command-line-argument]\nclang-cl: warning: argument unused during compilation: '/Zc:inline-' [-Wunused-command-line-argument]\nIn file included from C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\src\\capi\\test\\deep.cpp:4:\nC:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\src\\capi\\test\\rendering.cpp(406,1): warning: non-void function does not return a value in all control paths [-Wreturn-type]\n  406 | }\n      | ^\n1 warning generated.\n[8/10] Linking CXX executable bin\\cycles_c_deep.exe\n[9/10] Building CXX object src\\capi\\CMakeFiles\\cycles_c_contract.dir\\test\\contract.cpp.obj\nclang-cl: warning: argument unused during compilation: '/MP' [-Wunused-command-line-argument]\nclang-cl: warning: argument unused during compilation: '/Zc:inline-' [-Wunused-command-line-argument]\n[10/10] Linking CXX executable bin\\cycles_c_contract.exe\n",
+  "install_log": "-- Install configuration: \"Release\"\n-- Installing: D:/CyclesDeepScratch/c-api/phase8-20261013/install/./cycles_c_backend_private.dll\n-- Installing: D:/CyclesDeepScratch/c-api/phase8-20261013/install/lib/cycles_c.lib\n-- Installing: D:/CyclesDeepScratch/c-api/phase8-20261013/install/./cycles_c.dll\n",
+  "installed_current_hashes": {
+    "cycles_c.dll": "86149bf27adf200f442be4056edb76fb879de62f00082c8df4545fe33660bae0",
+    "cycles_c_backend_private.dll": "5d9df7988ccc5b4e665063a601120abbbebf668375b41e3e432afa587f336081",
+    "lib/cycles_c.lib": "d56b91e36f503744911e19a2f6212aac14c072f5912e558dd02b06f2b24214a2"
+  },
+  "known_affected_categories": [
+    "API-on and API-off CMake generated state",
+    "configure/build/install logs",
+    "native-command-parity and install-destinations reports",
+    "C API build outputs and tests",
+    "installed front/backend DLLs and import library",
+    "old toolchain TEMP/TMP may contain new compiler temporary files"
+  ]
+}

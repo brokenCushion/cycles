@@ -1,0 +1,1041 @@
+{
+  "phase": 7,
+  "passed": true,
+  "api_version": "1.6.0",
+  "loader": {
+    "public_exports": 95,
+    "private_exports": [
+      "cycles_c_private_get_table"
+    ],
+    "front_imports": [
+      "kernel32.dll",
+      "version.dll"
+    ],
+    "passed": true
+  },
+  "matched_host": {
+    "host": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\install",
+    "cycles_c": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\install\\cycles_c.dll",
+    "modules": [
+      {
+        "name": "OpenImageIO_Util.dll",
+        "path": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\install\\OpenImageIO_Util.dll",
+        "sha256": "ee1ea0e25cd0ac2a929f4c9c7487ce8b9df46bf4bb00f29875861b326d681355"
+      },
+      {
+        "name": "OpenImageIO.dll",
+        "path": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\install\\OpenImageIO.dll",
+        "sha256": "04546bd62390f739bcc6d998445c1806b7b0831cc93bca9f87bb4ee258495041"
+      }
+    ],
+    "init_reached": true,
+    "host_call_before": 33882112,
+    "library_loaded": true,
+    "actual_api": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\install\\cycles_c.dll",
+    "init_status": 0,
+    "init_error": "",
+    "reflection_status": 0,
+    "node_types": 184,
+    "stage": "init",
+    "host_call_after": 33882112,
+    "private_backend_loaded": true
+  },
+  "mismatched_host": {
+    "host": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\build-gaffer\\gaffer-1.7.2.0-windows\\bin",
+    "cycles_c": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\install\\cycles_c.dll",
+    "modules": [
+      {
+        "name": "OpenImageIO_Util.dll",
+        "path": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\build-gaffer\\gaffer-1.7.2.0-windows\\bin\\OpenImageIO_Util.dll",
+        "sha256": "fb4d580cb85d7d2b0af5ce291f9c22d8c37a9d32a12c5869f2e700f512db7cc2"
+      },
+      {
+        "name": "OpenImageIO.dll",
+        "path": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\build-gaffer\\gaffer-1.7.2.0-windows\\bin\\OpenImageIO.dll",
+        "sha256": "a3cb3ffefa782a5987d2102988d2e6fc1e356390ff5450bb0edff35727a29ca1"
+      }
+    ],
+    "init_reached": true,
+    "host_call_before": 33817088,
+    "library_loaded": true,
+    "actual_api": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\install\\cycles_c.dll",
+    "init_status": 13,
+    "init_error": "Iex.dll: expected version no version resource (import ABI), loaded unavailable; missing symbols: ??0ArgExc@Iex_3_4@@QEAA@$$QEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??0ArgExc@Iex_3_4@@QEAA@AEAV?$basic_stringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??0ArgExc@Iex_3_4@@QEAA@AEBV01@@Z ??0ArgExc@Iex_3_4@@QEAA@PEBD@Z ??0BaseExc@Iex_3_4@@QEAA@AEBV01@@Z ??0ErrnoExc@Iex_3_4@@QEAA@AEBV01@@Z ??0ErrnoExc@Iex_3_4@@QEAA@PEBD@Z ??0InputExc@Iex_3_4@@QEAA@AEAV?$basic_stringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??0InputExc@Iex_3_4@@QEAA@AEBV01@@Z ??0InputExc@Iex_3_4@@QEAA@PEBD@Z ??0IoExc@Iex_3_4@@QEAA@AEAV?$basic_stringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??0IoExc@Iex_3_4@@QEAA@AEBV01@@Z ??0IoExc@Iex_3_4@@QEAA@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??0IoExc@Iex_3_4@@QEAA@PEBD@Z ??0LogicExc@Iex_3_4@@QEAA@AEAV?$basic_stringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??0LogicExc@Iex_3_4@@QEAA@AEBV01@@Z ??0LogicExc@Iex_3_4@@QEAA@PEBD@Z ??0MathExc@Iex_3_4@@QEAA@AEBV01@@Z ??0OverflowExc@Iex_3_4@@QEAA@AEBV01@@Z ??0OverflowExc@Iex_3_4@@QEAA@PEBD@Z ??0TypeExc@Iex_3_4@@QEAA@AEAV?$basic_stringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??0TypeExc@Iex_3_4@@QEAA@AEBV01@@Z ??0TypeExc@Iex_3_4@@QEAA@PEBD@Z ??1ArgExc@Iex_3_4@@UEAA@XZ ??1ErrnoExc@Iex_3_4@@UEAA@XZ ??1InputExc@Iex_3_4@@UEAA@XZ ??1IoExc@Iex_3_4@@UEAA@XZ ??1LogicExc@Iex_3_4@@UEAA@XZ ??1OverflowExc@Iex_3_4@@UEAA@XZ ??1TypeExc@Iex_3_4@@UEAA@XZ ?assign@BaseExc@Iex_3_4@@QEAAAEAV12@AEAV?$basic_stringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?throwErrnoExc@Iex_3_4@@YAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?throwErrnoExc@Iex_3_4@@YAXXZ\nIlmThread.dll: expected version no version resource (import ABI), loaded unavailable; missing symbols: ??0Semaphore@IlmThread_3_4@@QEAA@I@Z ??0Task@IlmThread_3_4@@QEAA@PEAVTaskGroup@1@@Z ??0TaskGroup@IlmThread_3_4@@QEAA@XZ ??1Semaphore@IlmThread_3_4@@UEAA@XZ ??1Task@IlmThread_3_4@@UEAA@XZ ??1TaskGroup@IlmThread_3_4@@QEAA@XZ ?addGlobalTask@ThreadPool@IlmThread_3_4@@SAXPEAVTask@2@@Z ?globalThreadPool@ThreadPool@IlmThread_3_4@@SAAEAV12@XZ ?numThreads@ThreadPool@IlmThread_3_4@@QEBAHXZ ?post@Semaphore@IlmThread_3_4@@QEAAXXZ ?setNumThreads@ThreadPool@IlmThread_3_4@@QEAAXH@Z ?wait@Semaphore@IlmThread_3_4@@QEAAXXZ\nImath.dll: expected version no version resource (import ABI), loaded unavailable; missing symbols: ??6@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@std@@AEAV01@Vhalf@Imath_3_2@@@Z\nOpenEXR.dll: expected version no version resource (import ABI), loaded unavailable; missing symbols: ??0?$TypedAttribute@H@Imf_3_4@@QEAA@AEBH@Z ??0?$TypedAttribute@M@Imf_3_4@@QEAA@AEBM@Z ??0?$TypedAttribute@N@Imf_3_4@@QEAA@AEBN@Z ??0?$TypedAttribute@UChromaticities@Imf_3_4@@@Imf_3_4@@QEAA@AEBUChromaticities@1@@Z ??0?$TypedAttribute@V?$Box@V?$Vec2@H@Imath_3_2@@@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Box@V?$Vec2@H@Imath_3_2@@@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Box@V?$Vec2@M@Imath_3_2@@@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Box@V?$Vec2@M@Imath_3_2@@@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Matrix33@M@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Matrix33@M@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Matrix33@N@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Matrix33@N@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Matrix44@M@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Matrix44@M@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Matrix44@N@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Matrix44@N@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Vec2@H@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Vec2@H@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Vec2@M@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Vec2@M@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Vec2@N@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Vec2@N@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Vec3@H@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Vec3@H@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Vec3@M@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Vec3@M@Imath_3_2@@@Z ??0?$TypedAttribute@V?$Vec3@N@Imath_3_2@@@Imf_3_4@@QEAA@AEBV?$Vec3@N@Imath_3_2@@@Z ??0?$TypedAttribute@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Imf_3_4@@QEAA@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??0?$TypedAttribute@V?$vector@MV?$allocator@M@std@@@std@@@Imf_3_4@@QEAA@AEBV?$vector@MV?$allocator@M@std@@@std@@@Z ??0?$TypedAttribute@V?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@@Imf_3_4@@QEAA@AEBV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@@Z ??0?$TypedAttribute@VCompressedIDManifest@Imf_3_4@@@Imf_3_4@@QEAA@AEBVCompressedIDManifest@1@@Z ??0?$TypedAttribute@VKeyCode@Imf_3_4@@@Imf_3_4@@QEAA@AEBVKeyCode@1@@Z ??0?$TypedAttribute@VRational@Imf_3_4@@@Imf_3_4@@QEAA@AEBVRational@1@@Z ??0?$TypedAttribute@VTimeCode@Imf_3_4@@@Imf_3_4@@QEAA@AEBVTimeCode@1@@Z ??0?$TypedAttribute@W4DeepImageState@Imf_3_4@@@Imf_3_4@@QEAA@AEBW4DeepImageState@1@@Z ??0?$TypedAttribute@W4Envmap@Imf_3_4@@@Imf_3_4@@QEAA@AEBW4Envmap@1@@Z ??0Channel@Imf_3_4@@QEAA@W4PixelType@1@HH_N@Z ??0Chromaticities@Imf_3_4@@QEAA@AEBV?$Vec2@M@Imath_3_2@@000@Z ??0CompressedIDManifest@Imf_3_4@@QEAA@XZ ??0DeepScanLineInputPart@Imf_3_4@@QEAA@AEAVMultiPartInputFile@1@H@Z ??0DeepScanLineOutputPart@Imf_3_4@@QEAA@AEAVMultiPartOutputFile@1@H@Z ??0DeepSlice@Imf_3_4@@QEAA@W4PixelType@1@PEAD_K22HHN_N3@Z ??0DeepTiledInputPart@Imf_3_4@@QEAA@AEAVMultiPartInputFile@1@H@Z ??0DeepTiledOutputPart@Imf_3_4@@QEAA@AEAVMultiPartOutputFile@1@H@Z ??0Header@Imf_3_4@@QEAA@AEBV01@@Z ??0Header@Imf_3_4@@QEAA@AEBV?$Box@V?$Vec2@H@Imath_3_2@@@Imath_3_2@@0MAEBV?$Vec2@M@3@MW4LineOrder@1@W4Compression@1@@Z ??0Header@Imf_3_4@@QEAA@HHMAEBV?$Vec2@M@Imath_3_2@@MW4LineOrder@1@W4Compression@1@@Z ??0IStream@Imf_3_4@@IEAA@QEBD@Z ??0InputPart@Imf_3_4@@QEAA@AEAVMultiPartInputFile@1@H@Z ??0MultiPartInputFile@Imf_3_4@@QEAA@AEAVIStream@1@H_N@Z ??0MultiPartOutputFile@Imf_3_4@@QEAA@AEAVOStream@1@PEBVHeader@1@H_NH@Z ??0OStream@Imf_3_4@@IEAA@QEBD@Z ??0OutputFile@Imf_3_4@@QEAA@AEAVOStream@1@AEBVHeader@1@H@Z ??0OutputPart@Imf_3_4@@QEAA@AEAVMultiPartOutputFile@1@H@Z ??0RgbaInputFile@Imf_3_4@@QEAA@AEAVIStream@1@H@Z ??0Slice@Imf_3_4@@QEAA@W4PixelType@1@PEAD_K2HHN_N3@Z ??0TiledInputPart@Imf_3_4@@QEAA@AEAVMultiPartInputFile@1@H@Z ??0TiledOutputFile@Imf_3_4@@QEAA@AEAVOStream@1@AEBVHeader@1@H@Z ??0TiledOutputPart@Imf_3_4@@QEAA@AEAVMultiPartOutputFile@1@H@Z ??0TimeCode@Imf_3_4@@QEAA@IIW4Packing@01@@Z ??1?$TypedAttribute@H@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@M@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@N@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@UChromaticities@Imf_3_4@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Box@V?$Vec2@H@Imath_3_2@@@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Box@V?$Vec2@M@Imath_3_2@@@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Matrix33@M@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Matrix33@N@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Matrix44@M@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Matrix44@N@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Vec2@H@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Vec2@M@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Vec2@N@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Vec3@H@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Vec3@M@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$Vec3@N@Imath_3_2@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$vector@MV?$allocator@M@std@@@std@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@V?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@VCompressedIDManifest@Imf_3_4@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@VKeyCode@Imf_3_4@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@VRational@Imf_3_4@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@VTimeCode@Imf_3_4@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@W4DeepImageState@Imf_3_4@@@Imf_3_4@@UEAA@XZ ??1?$TypedAttribute@W4Envmap@Imf_3_4@@@Imf_3_4@@UEAA@XZ ??1CompressedIDManifest@Imf_3_4@@QEAA@XZ ??1Header@Imf_3_4@@QEAA@XZ ??1IStream@Imf_3_4@@UEAA@XZ ??1OStream@Imf_3_4@@UEAA@XZ ??4Header@Imf_3_4@@QEAAAEAV01@$$QEAV01@@Z ??EConstIterator@ChannelList@Imf_3_4@@QEAAAEAV012@XZ ??EConstIterator@Header@Imf_3_4@@QEAAAEAV012@XZ ?attribute@ConstIterator@Header@Imf_3_4@@QEBAAEBVAttribute@3@XZ ?begin@ChannelList@Imf_3_4@@QEBA?AVConstIterator@12@XZ ?begin@Header@Imf_3_4@@QEBA?AVConstIterator@12@XZ ?channel@ConstIterator@ChannelList@Imf_3_4@@QEBAAEBUChannel@3@XZ ?channels@Header@Imf_3_4@@QEAAAEAVChannelList@2@XZ ?channels@Header@Imf_3_4@@QEBAAEBVChannelList@2@XZ ?compression@Header@Imf_3_4@@QEAAAEAW4Compression@2@XZ ?copyPixels@DeepScanLineOutputPart@Imf_3_4@@QEAAXAEAVDeepScanLineInputPart@2@@Z ?copyPixels@DeepTiledOutputPart@Imf_3_4@@QEAAXAEAVDeepTiledInputPart@2@@Z ?copyPixels@OutputFile@Imf_3_4@@QEAAXAEAVInputPart@2@@Z ?copyPixels@OutputPart@Imf_3_4@@QEAAXAEAVInputPart@2@@Z ?copyPixels@TiledOutputFile@Imf_3_4@@QEAAXAEAVTiledInputPart@2@@Z ?copyPixels@TiledOutputPart@Imf_3_4@@QEAAXAEAVTiledInputPart@2@@Z ?count@KeyCode@Imf_3_4@@QEBAHXZ ?dataWindow@Header@Imf_3_4@@QEBAAEBV?$Box@V?$Vec2@H@Imath_3_2@@@Imath_3_2@@XZ ?dataWindow@RgbaInputFile@Imf_3_4@@QEBAAEBV?$Box@V?$Vec2@H@Imath_3_2@@@Imath_3_2@@XZ ?displayWindow@Header@Imf_3_4@@QEBAAEBV?$Box@V?$Vec2@H@Imath_3_2@@@Imath_3_2@@XZ ?displayWindow@RgbaInputFile@Imf_3_4@@QEBAAEBV?$Box@V?$Vec2@H@Imath_3_2@@@Imath_3_2@@XZ ?dropFrame@TimeCode@Imf_3_4@@QEBA_NXZ ?dwaCompressionLevel@Header@Imf_3_4@@QEAAAEAMXZ ?end@ChannelList@Imf_3_4@@QEBA?AVConstIterator@12@XZ ?end@Header@Imf_3_4@@QEBA?AVConstIterator@12@XZ ?filmMfcCode@KeyCode@Imf_3_4@@QEBAHXZ ?filmType@KeyCode@Imf_3_4@@QEBAHXZ ?frame@TimeCode@Imf_3_4@@QEBAHXZ ?globalThreadCount@Imf_3_4@@YAHXZ ?hasName@Header@Imf_3_4@@QEBA_NXZ ?hasTileDescription@Header@Imf_3_4@@QEBA_NXZ ?header@MultiPartInputFile@Imf_3_4@@QEBAAEBVHeader@2@H@Z ?hours@TimeCode@Imf_3_4@@QEBAHXZ ?insert@ChannelList@Imf_3_4@@QEAAXQEBDAEBUChannel@2@@Z ?insert@DeepFrameBuffer@Imf_3_4@@QEAAXQEBDAEBUDeepSlice@2@@Z ?insert@FrameBuffer@Imf_3_4@@QEAAXQEBDAEBUSlice@2@@Z ?insert@Header@Imf_3_4@@QEAAXQEBDAEBVAttribute@2@@Z ?insertSampleCountSlice@DeepFrameBuffer@Imf_3_4@@QEAAXAEBUSlice@2@@Z ?isMemoryMapped@IStream@Imf_3_4@@UEBA_NXZ ?isOpenExrFile@Imf_3_4@@YA_NAEAVIStream@1@@Z ?lineOrder@Header@Imf_3_4@@QEAAAEAW4LineOrder@2@XZ ?minutes@TimeCode@Imf_3_4@@QEBAHXZ ?name@ConstIterator@ChannelList@Imf_3_4@@QEBAPEBDXZ ?name@ConstIterator@Header@Imf_3_4@@QEBAPEBDXZ ?name@Header@Imf_3_4@@QEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ?parts@MultiPartInputFile@Imf_3_4@@QEBAHXZ ?perfOffset@KeyCode@Imf_3_4@@QEBAHXZ ?perfsPerCount@KeyCode@Imf_3_4@@QEBAHXZ ?perfsPerFrame@KeyCode@Imf_3_4@@QEBAHXZ ?prefix@KeyCode@Imf_3_4@@QEBAHXZ ?readMemoryMapped@IStream@Imf_3_4@@UEAAPEADH@Z ?readPixelSampleCounts@DeepScanLineInputPart@Imf_3_4@@QEAAXHH@Z ?readPixelSampleCounts@DeepTiledInputPart@Imf_3_4@@QEAAXHHHHH@Z ?readPixels@DeepScanLineInputPart@Imf_3_4@@QEAAXHH@Z ?readPixels@InputPart@Imf_3_4@@QEAAXHH@Z ?readPixels@RgbaInputFile@Imf_3_4@@QEAAXHH@Z ?readTiles@DeepTiledInputPart@Imf_3_4@@QEAAXHHHHHH@Z ?readTiles@TiledInputPart@Imf_3_4@@QEAAXHHHHHH@Z ?seconds@TimeCode@Imf_3_4@@QEBAHXZ ?setFrameBuffer@DeepScanLineInputPart@Imf_3_4@@QEAAXAEBVDeepFrameBuffer@2@@Z ?setFrameBuffer@DeepScanLineOutputPart@Imf_3_4@@QEAAXAEBVDeepFrameBuffer@2@@Z ?setFrameBuffer@DeepTiledInputPart@Imf_3_4@@QEAAXAEBVDeepFrameBuffer@2@@Z ?setFrameBuffer@DeepTiledOutputPart@Imf_3_4@@QEAAXAEBVDeepFrameBuffer@2@@Z ?setFrameBuffer@InputPart@Imf_3_4@@QEAAXAEBVFrameBuffer@2@@Z ?setFrameBuffer@OutputFile@Imf_3_4@@QEAAXAEBVFrameBuffer@2@@Z ?setFrameBuffer@OutputPart@Imf_3_4@@QEAAXAEBVFrameBuffer@2@@Z ?setFrameBuffer@RgbaInputFile@Imf_3_4@@QEAAXPEAURgba@2@_K1@Z ?setFrameBuffer@TiledInputPart@Imf_3_4@@QEAAXAEBVFrameBuffer@2@@Z ?setFrameBuffer@TiledOutputFile@Imf_3_4@@QEAAXAEBVFrameBuffer@2@@Z ?setFrameBuffer@TiledOutputPart@Imf_3_4@@QEAAXAEBVFrameBuffer@2@@Z ?setGlobalThreadCount@Imf_3_4@@YAXH@Z ?setTileDescription@Header@Imf_3_4@@QEAAXAEBVTileDescription@2@@Z ?setType@Header@Imf_3_4@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?tileDescription@Header@Imf_3_4@@QEBAAEBVTileDescription@2@XZ ?timeAndFlags@TimeCode@Imf_3_4@@QEBAIW4Packing@12@@Z ?type@Header@Imf_3_4@@QEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ?userData@TimeCode@Imf_3_4@@QEBAIXZ ?value@?$TypedAttribute@H@Imf_3_4@@QEBAAEBHXZ ?value@?$TypedAttribute@M@Imf_3_4@@QEBAAEBMXZ ?value@?$TypedAttribute@N@Imf_3_4@@QEBAAEBNXZ ?value@?$TypedAttribute@UChromaticities@Imf_3_4@@@Imf_3_4@@QEBAAEBUChromaticities@2@XZ ?value@?$TypedAttribute@V?$Box@V?$Vec2@H@Imath_3_2@@@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Box@V?$Vec2@H@Imath_3_2@@@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Box@V?$Vec2@M@Imath_3_2@@@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Box@V?$Vec2@M@Imath_3_2@@@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Matrix33@M@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Matrix33@M@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Matrix33@N@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Matrix33@N@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Matrix44@M@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Matrix44@M@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Matrix44@N@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Matrix44@N@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Vec2@H@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Vec2@H@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Vec2@M@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Vec2@M@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Vec2@N@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Vec2@N@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Vec3@H@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Vec3@H@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Vec3@M@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Vec3@M@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$Vec3@N@Imath_3_2@@@Imf_3_4@@QEBAAEBV?$Vec3@N@Imath_3_2@@XZ ?value@?$TypedAttribute@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Imf_3_4@@QEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ?value@?$TypedAttribute@V?$vector@MV?$allocator@M@std@@@std@@@Imf_3_4@@QEBAAEBV?$vector@MV?$allocator@M@std@@@std@@XZ ?value@?$TypedAttribute@V?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@@Imf_3_4@@QEBAAEBV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@XZ ?value@?$TypedAttribute@VCompressedIDManifest@Imf_3_4@@@Imf_3_4@@QEBAAEBVCompressedIDManifest@2@XZ ?value@?$TypedAttribute@VKeyCode@Imf_3_4@@@Imf_3_4@@QEBAAEBVKeyCode@2@XZ ?value@?$TypedAttribute@VRational@Imf_3_4@@@Imf_3_4@@QEBAAEBVRational@2@XZ ?value@?$TypedAttribute@VTimeCode@Imf_3_4@@@Imf_3_4@@QEBAAEBVTimeCode@2@XZ ?value@?$TypedAttribute@W4Compression@Imf_3_4@@@Imf_3_4@@QEBAAEBW4Compression@2@XZ ?value@?$TypedAttribute@W4DeepImageState@Imf_3_4@@@Imf_3_4@@QEBAAEBW4DeepImageState@2@XZ ?value@?$TypedAttribute@W4Envmap@Imf_3_4@@@Imf_3_4@@QEBAAEBW4Envmap@2@XZ ?value@?$TypedAttribute@W4LineOrder@Imf_3_4@@@Imf_3_4@@QEBAAEBW4LineOrder@2@XZ ?writePixels@DeepScanLineOutputPart@Imf_3_4@@QEAAXH@Z ?writePixels@OutputFile@Imf_3_4@@QEAAXH@Z ?writePixels@OutputPart@Imf_3_4@@QEAAXH@Z ?writeTiles@DeepTiledOutputPart@Imf_3_4@@QEAAXHHHHHH@Z ?writeTiles@TiledOutputFile@Imf_3_4@@QEAAXHHHHHH@Z ?writeTiles@TiledOutputPart@Imf_3_4@@QEAAXHHHHHH@Z ?zipCompressionLevel@Header@Imf_3_4@@QEAAAEAHXZ\nOpenImageIO.dll: expected version 3.1.13.0, loaded 3.0.6.0; missing symbols: ??0ColorConfig@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@@Z ??0ImageBuf@v3_1@OpenImageIO@@QEAA@$$QEAV012@@Z ??0ImageBuf@v3_1@OpenImageIO@@QEAA@AEBVImageSpec@12@W4InitializePixels@12@@Z ??0ImageBuf@v3_1@OpenImageIO@@QEAA@XZ ??0ImageSpec@v3_1@OpenImageIO@@QEAA@AEBV012@@Z ??0ImageSpec@v3_1@OpenImageIO@@QEAA@HHHUTypeDesc@12@@Z ??0ImageSpec@v3_1@OpenImageIO@@QEAA@UTypeDesc@12@@Z ??0IteratorBase@ImageBuf@v3_1@OpenImageIO@@IEAA@AEBV123@AEBUROI@23@W4WrapMode@123@_N@Z ??0IteratorBase@ImageBuf@v3_1@OpenImageIO@@IEAA@AEBV123@W4WrapMode@123@_N@Z ??0TextureOpt_v2@v3_1@OpenImageIO@@QEAA@XZ ??1ColorConfig@v3_1@OpenImageIO@@QEAA@XZ ??1ImageBuf@v3_1@OpenImageIO@@QEAA@XZ ??1ImageSpec@v3_1@OpenImageIO@@QEAA@XZ ??1PixelStats@ImageBufAlgo@v3_1@OpenImageIO@@QEAA@XZ ??4ImageBuf@v3_1@OpenImageIO@@QEAAAEBV012@$$QEAV012@@Z ??4ImageSpec@v3_1@OpenImageIO@@QEAAAEAV012@$$QEAV012@@Z ??4ImageSpec@v3_1@OpenImageIO@@QEAAAEAV012@AEBV012@@Z ?apply@ColorProcessor@v3_1@OpenImageIO@@QEAAXPEAM@Z ?attribute@ImageSpec@v3_1@OpenImageIO@@QEAAXV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?attribute@ImageSpec@v3_1@OpenImageIO@@QEAAXV?$basic_string_view@DU?$char_traits@D@std@@@23@H@Z ?attribute@ImageSpec@v3_1@OpenImageIO@@QEAAXV?$basic_string_view@DU?$char_traits@D@std@@@23@M@Z ?attribute@ImageSpec@v3_1@OpenImageIO@@QEAAXV?$basic_string_view@DU?$char_traits@D@std@@@23@Vustring@23@@Z ?attribute@TextureSystem@v3_1@OpenImageIO@@QEAA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@H@Z ?channels@ImageBufAlgo@v3_1@OpenImageIO@@YA_NAEAVImageBuf@23@AEBV423@HV?$span@$$CBH$0?0@23@V?$span@$$CBM$0?0@23@V?$span@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0?0@23@_NH@Z ?computePixelHashSHA1@ImageBufAlgo@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVImageBuf@23@V?$basic_string_view@DU?$char_traits@D@std@@@23@UROI@23@HH@Z ?computePixelStats@ImageBufAlgo@v3_1@OpenImageIO@@YA?AUPixelStats@123@AEBVImageBuf@23@UROI@23@H@Z ?copy@ImageBuf@v3_1@OpenImageIO@@QEAA_NAEBV123@UTypeDesc@23@@Z ?copy@ImageBufAlgo@v3_1@OpenImageIO@@YA_NAEAVImageBuf@23@AEBV423@UTypeDesc@23@UROI@23@H@Z ?create@ImageInput@v3_1@OpenImageIO@@SA?AV?$unique_ptr@VImageInput@v3_1@OpenImageIO@@U?$default_delete@VImageInput@v3_1@OpenImageIO@@@std@@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@_NPEBVImageSpec@23@PEAVIOProxy@Filesystem@23@0@Z ?create@ImageOutput@v3_1@OpenImageIO@@SA?AV?$unique_ptr@VImageOutput@v3_1@OpenImageIO@@U?$default_delete@VImageOutput@v3_1@OpenImageIO@@@std@@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@PEAVIOProxy@Filesystem@23@0@Z ?create@TextureSystem@v3_1@OpenImageIO@@SA?AV?$shared_ptr@VTextureSystem@v3_1@OpenImageIO@@@std@@_NV?$shared_ptr@VImageCache@v3_1@OpenImageIO@@@5@@Z ?createColorProcessor@ColorConfig@v3_1@OpenImageIO@@QEBA?AV?$shared_ptr@VColorProcessor@v3_1@OpenImageIO@@@std@@Vustring@23@000@Z ?decode_wrapmode@Tex@v3_1@OpenImageIO@@YA?AW4Wrap@123@Vustring@23@@Z ?decode_wrapmode@Tex@v3_1@OpenImageIO@@YA?AW4Wrap@123@Vustringhash@23@@Z ?default_channel_names@ImageSpec@v3_1@OpenImageIO@@QEAAXXZ ?environment@TextureSystem@v3_1@OpenImageIO@@QEAA_NPEAVTextureHandle@123@PEAVPerthread@123@AEAVTextureOpt_v2@23@V?$Vec3Param@M@23@33HPEAM44@Z ?erase_attribute@ImageSpec@v3_1@OpenImageIO@@QEAAXV?$basic_string_view@DU?$char_traits@D@std@@@23@UTypeDesc@23@_N@Z ?error@ImageBuf@v3_1@OpenImageIO@@QEBAXV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?fill@ImageBufAlgo@v3_1@OpenImageIO@@YA_NAEAVImageBuf@23@V?$span@$$CBM$0?0@23@UROI@23@H@Z ?get_int_attribute@ImageSpec@v3_1@OpenImageIO@@QEBAHV?$basic_string_view@DU?$char_traits@D@std@@@23@H@Z ?get_perthread_info@TextureSystem@v3_1@OpenImageIO@@QEAAPEAVPerthread@123@PEAV4123@@Z ?get_string_attribute@ImageSpec@v3_1@OpenImageIO@@QEBA?AV?$basic_string_view@DU?$char_traits@D@std@@@23@V423@0@Z ?get_texture_handle@TextureSystem@v3_1@OpenImageIO@@QEAAPEAVTextureHandle@123@Vustring@23@PEAVPerthread@123@PEBVTextureOpt_v2@23@@Z ?get_texture_info@TextureSystem@v3_1@OpenImageIO@@QEAA_NPEAVTextureHandle@123@PEAVPerthread@123@HVustring@23@UTypeDesc@23@PEAX@Z ?getattribute@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@12@UTypeDesc@12@PEAX@Z ?geterror@ImageBuf@v3_1@OpenImageIO@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_N@Z ?geterror@ImageOutput@v3_1@OpenImageIO@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_N@Z ?geterror@TextureSystem@v3_1@OpenImageIO@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_N@Z ?getpixel@ImageBuf@v3_1@OpenImageIO@@QEBAXHHV?$span@M$0?0@23@@Z ?good@TextureSystem@v3_1@OpenImageIO@@QEAA_NPEAVTextureHandle@123@@Z ?isMonochrome@ImageBufAlgo@v3_1@OpenImageIO@@YA_NAEBVImageBuf@23@MUROI@23@H@Z ?is_udim@TextureSystem@v3_1@OpenImageIO@@QEAA_NPEAVTextureHandle@123@@Z ?localpixels@ImageBuf@v3_1@OpenImageIO@@QEAAPEAXXZ ?localpixels@ImageBuf@v3_1@OpenImageIO@@QEBAPEBXXZ ?make_writable@IteratorBase@ImageBuf@v3_1@OpenImageIO@@IEAAXXZ ?nchannels@ImageBuf@v3_1@OpenImageIO@@QEBAHXZ ?pos@IteratorBase@ImageBuf@v3_1@OpenImageIO@@QEAAXHHH@Z ?pos_xincr_local_past_end@IteratorBase@ImageBuf@v3_1@OpenImageIO@@IEAAXXZ ?release_tile@IteratorBase@ImageBuf@v3_1@OpenImageIO@@IEAAXXZ ?rerange@IteratorBase@ImageBuf@v3_1@OpenImageIO@@QEAAXHHHHHHW4WrapMode@234@@Z ?reset@ImageBuf@v3_1@OpenImageIO@@QEAAXAEBVImageSpec@23@W4InitializePixels@23@@Z ?resolve_udim@TextureSystem@v3_1@OpenImageIO@@QEAAPEAVTextureHandle@123@PEAV4123@PEAVPerthread@123@MM@Z ?retile@ImageBuf@v3_1@OpenImageIO@@IEBAPEBXHHHAEAPEAVImageCacheTile@23@AEAH111AEA_N_NW4WrapMode@123@@Z ?roi@ImageBuf@v3_1@OpenImageIO@@QEBA?AUROI@23@XZ ?roi_full@ImageBuf@v3_1@OpenImageIO@@QEBA?AUROI@23@XZ ?set_format@ImageSpec@v3_1@OpenImageIO@@QEAAXUTypeDesc@23@@Z ?setpixel@ImageBuf@v3_1@OpenImageIO@@QEAAXHHV?$span@$$CBM$0?0@23@@Z ?spec@ImageBuf@v3_1@OpenImageIO@@QEBAAEBVImageSpec@23@XZ ?specmod@ImageBuf@v3_1@OpenImageIO@@QEAAAEAVImageSpec@23@XZ ?storage@ImageBuf@v3_1@OpenImageIO@@QEBA?AW4IBStorage@123@XZ ?texture3d@TextureSystem@v3_1@OpenImageIO@@QEAA_NPEAVTextureHandle@123@PEAVPerthread@123@AEAVTextureOpt_v2@23@V?$Vec3Param@M@23@333HPEAM444@Z ?texture@TextureSystem@v3_1@OpenImageIO@@QEAA_NPEAVTextureHandle@123@PEAVPerthread@123@AEAVTextureOpt_v2@23@MMMMMMHPEAM33@Z ?write@ImageBuf@v3_1@OpenImageIO@@QEBA_NPEAVImageOutput@23@P6A_NPEAXM@Z1@Z ?xbegin@ImageBuf@v3_1@OpenImageIO@@QEBAHXZ ?xend@ImageBuf@v3_1@OpenImageIO@@QEBAHXZ ?ybegin@ImageBuf@v3_1@OpenImageIO@@QEBAHXZ ?yend@ImageBuf@v3_1@OpenImageIO@@QEBAHXZ\nOpenImageIO_Util.dll: expected version 3.1.13.0, loaded 3.0.6.0; missing symbols: ??$convert_type@MVhalf@Imath_3_2@@@v3_1@OpenImageIO@@YAXPEBMPEAVhalf@Imath_3_2@@_KV23@3@Z ??$convert_type@Vhalf@Imath_3_2@@M@v3_1@OpenImageIO@@YAXPEBVhalf@Imath_3_2@@PEAM_KMM@Z ??0?$span@$$CBVParamValue@v3_1@OpenImageIO@@$0?0@v3_1@OpenImageIO@@QEAA@PEBVParamValue@12@_K@Z ??0IOFile@Filesystem@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@23@W4Mode@IOProxy@123@@Z ??0IOMemReader@Filesystem@v3_1@OpenImageIO@@QEAA@PEBX_K@Z ??0ParamValue@v3_1@OpenImageIO@@QEAA@$$QEAV012@@Z ??0ParamValue@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@0@Z ??0ParamValue@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@H@Z ??0ParamValue@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@M@Z ??0ParamValue@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@UTypeDesc@12@0@Z ??0ParamValue@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@UTypeDesc@12@HPEBXUCopy@012@@Z ??0ParamValue@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@Vustring@12@@Z ??0ParamValue@v3_1@OpenImageIO@@QEAA@XZ ??0ParamValueList@v3_1@OpenImageIO@@QEAA@$$QEAV012@@Z ??0ParamValueList@v3_1@OpenImageIO@@QEAA@AEBV012@@Z ??0ParamValueList@v3_1@OpenImageIO@@QEAA@XZ ??0ParamValueSpan@v3_1@OpenImageIO@@QEAA@V?$initializer_list@VParamValue@v3_1@OpenImageIO@@@std@@@Z ??0ParamValueSpan@v3_1@OpenImageIO@@QEAA@XZ ??0SHA1@v3_1@OpenImageIO@@QEAA@PEBX_K@Z ??0Term@Sysutil@v3_1@OpenImageIO@@QEAA@XZ ??0Timer@v3_1@OpenImageIO@@QEAA@W4StartNowVal@012@W4PrintDtrVal@012@PEBD@Z ??0Timer@v3_1@OpenImageIO@@QEAA@_N@Z ??0TypeDesc@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@@Z ??0TypeDesc@v3_1@OpenImageIO@@QEAA@W4BASETYPE@012@H@Z ??0TypeDesc@v3_1@OpenImageIO@@QEAA@W4BASETYPE@012@W4AGGREGATE@012@H@Z ??0TypeDesc@v3_1@OpenImageIO@@QEAA@W4BASETYPE@012@W4AGGREGATE@012@W4VECSEMANTICS@012@H@Z ??0paropt@v3_1@OpenImageIO@@QEAA@AEBVparallel_options@12@@Z ??0paropt@v3_1@OpenImageIO@@QEAA@HW4SplitDir@012@_K@Z ??0paropt@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@HW4SplitDir@012@_K@Z ??0task_set@v3_1@OpenImageIO@@QEAA@PEAVthread_pool@12@@Z ??0tostring_formatting@v3_1@OpenImageIO@@QEAA@XZ ??0ustring@v3_1@OpenImageIO@@QEAA@AEBV012@_K1@Z ??0ustring@v3_1@OpenImageIO@@QEAA@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_K1@Z ??0ustring@v3_1@OpenImageIO@@QEAA@PEBD@Z ??0ustring@v3_1@OpenImageIO@@QEAA@PEBD_K@Z ??0ustring@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@@Z ??0ustring@v3_1@OpenImageIO@@QEAA@Vustringhash@12@@Z ??0ustring@v3_1@OpenImageIO@@QEAA@XZ ??0ustringhash@v3_1@OpenImageIO@@QEAA@AEBVustring@12@@Z ??0ustringhash@v3_1@OpenImageIO@@QEAA@PEBD@Z ??0ustringhash@v3_1@OpenImageIO@@QEAA@V?$basic_string_view@DU?$char_traits@D@std@@@12@@Z ??0ustringhash@v3_1@OpenImageIO@@QEAA@XZ ??0ustringhash@v3_1@OpenImageIO@@QEAA@_K@Z ??1IOFile@Filesystem@v3_1@OpenImageIO@@UEAA@XZ ??1IOMemReader@Filesystem@v3_1@OpenImageIO@@UEAA@XZ ??1ParamValue@v3_1@OpenImageIO@@QEAA@XZ ??1ParamValueList@v3_1@OpenImageIO@@QEAA@XZ ??1SHA1@v3_1@OpenImageIO@@QEAA@XZ ??1Timer@v3_1@OpenImageIO@@QEAA@XZ ??1task_set@v3_1@OpenImageIO@@QEAA@XZ ??4?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEAAAEAV01@AEBV01@@Z ??4ParamValue@v3_1@OpenImageIO@@QEAAAEBV012@$$QEAV012@@Z ??4ParamValueList@v3_1@OpenImageIO@@QEAAAEAV012@$$QEAV012@@Z ??4ParamValueList@v3_1@OpenImageIO@@QEAAAEAV012@AEBV012@@Z ??4ustring@v3_1@OpenImageIO@@QEAAAEAV012@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??4ustring@v3_1@OpenImageIO@@QEAAAEAV012@PEBD@Z ??4ustring@v3_1@OpenImageIO@@QEAAAEAV012@V?$basic_string_view@DU?$char_traits@D@std@@@12@@Z ??4ustringhash@v3_1@OpenImageIO@@QEAAAEAV012@AEBVustring@12@@Z ??8TypeDesc@v3_1@OpenImageIO@@QEBA_NAEBU012@@Z ??8ustring@v3_1@OpenImageIO@@QEBA_NAEBV012@@Z ??8ustring@v3_1@OpenImageIO@@QEBA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??8ustring@v3_1@OpenImageIO@@QEBA_NPEBD@Z ??8ustring@v3_1@OpenImageIO@@QEBA_NV?$basic_string_view@DU?$char_traits@D@std@@@12@@Z ??8ustringhash@v3_1@OpenImageIO@@QEBA_NAEBV012@@Z ??9TypeDesc@v3_1@OpenImageIO@@QEBA_NAEBU012@@Z ??9ustring@v3_1@OpenImageIO@@QEBA_NAEBV012@@Z ??9ustring@v3_1@OpenImageIO@@QEBA_NPEBD@Z ??AParamValueList@v3_1@OpenImageIO@@QEAA?AV?$AttrDelegate@VParamValueList@v3_1@OpenImageIO@@@12@V?$basic_string_view@DU?$char_traits@D@std@@@12@@Z ??AParamValueList@v3_1@OpenImageIO@@QEAAAEAVParamValue@12@H@Z ??AParamValueList@v3_1@OpenImageIO@@QEBAAEBVParamValue@12@H@Z ??Austring@v3_1@OpenImageIO@@QEBAAEBD_K@Z ??Bustring@v3_1@OpenImageIO@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ??Bustring@v3_1@OpenImageIO@@QEBA?AV?$basic_string_view@DU?$char_traits@D@std@@@12@XZ ??Mustring@v3_1@OpenImageIO@@QEBA_NAEBV012@@Z ??RErrorHandler@v3_1@OpenImageIO@@UEAAXHAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ??RTimer@v3_1@OpenImageIO@@QEBANXZ ?_Calculate_growth@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@AEBA_K_K@Z ?_Change_array@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@AEAAXQEAVParamValue@v3_1@OpenImageIO@@_K1@Z ?_Getal@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@AEAAAEAV?$allocator@VParamValue@v3_1@OpenImageIO@@@2@XZ ?_Xlength@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@CAXXZ ?add_or_replace@ParamValueList@v3_1@OpenImageIO@@QEAAXAEBVParamValue@23@_N@Z ?aligned_free@v3_1@OpenImageIO@@YAXPEAX@Z ?aligned_malloc@v3_1@OpenImageIO@@YAPEAX_K0@Z ?all_types_equal@TypeDesc@v3_1@OpenImageIO@@SA_NV?$span@$$CBUTypeDesc@v3_1@OpenImageIO@@$0?0@23@@Z ?ansi@Term@Sysutil@v3_1@OpenImageIO@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@34@@Z ?ansi_bgcolor@Term@Sysutil@v3_1@OpenImageIO@@QEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@HHH@Z ?ansi_fgcolor@Term@Sysutil@v3_1@OpenImageIO@@QEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@HHH@Z ?append@SHA1@v3_1@OpenImageIO@@QEAAXPEBX_K@Z ?append_error@pvt@Strutil@v3_1@OpenImageIO@@YAXV?$basic_string_view@DU?$char_traits@D@std@@@34@@Z ?assign@ustring@v3_1@OpenImageIO@@QEAAAEAV123@PEBD@Z ?at@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEBAAEBVParamValue@v3_1@OpenImageIO@@_K@Z ?back@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEAAAEAVParamValue@v3_1@OpenImageIO@@XZ ?base64_encode@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?basesize@TypeDesc@v3_1@OpenImageIO@@QEBA_KXZ ?basetype_merge@TypeDesc@v3_1@OpenImageIO@@SA?AW4BASETYPE@123@U123@00@Z ?basetype_merge@TypeDesc@v3_1@OpenImageIO@@SA?AW4BASETYPE@123@U123@0@Z ?basetype_merge@TypeDesc@v3_1@OpenImageIO@@SA?AW4BASETYPE@123@V?$span@$$CBUTypeDesc@v3_1@OpenImageIO@@$0?0@23@@Z ?basevalues@TypeDesc@v3_1@OpenImageIO@@QEBA_KXZ ?begin@?$span@$$CBVParamValue@v3_1@OpenImageIO@@$0?0@v3_1@OpenImageIO@@QEBAPEBVParamValue@23@XZ ?begin@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEAA?AV?$_Vector_iterator@V?$_Vector_val@U?$_Simple_types@VParamValue@v3_1@OpenImageIO@@@std@@@std@@@2@XZ ?begin@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEBA?AV?$_Vector_const_iterator@V?$_Vector_val@U?$_Simple_types@VParamValue@v3_1@OpenImageIO@@@std@@@std@@@2@XZ ?buffer@IOMemReader@Filesystem@v3_1@OpenImageIO@@QEBA?AV?$span@$$CBE$0?0@34@XZ ?c_str@TypeDesc@v3_1@OpenImageIO@@QEBAPEBDXZ ?c_str@ustring@v3_1@OpenImageIO@@QEBAPEBDXZ ?c_str@ustringhash@v3_1@OpenImageIO@@QEBAPEBDXZ ?c_str@v3_1@OpenImageIO@@YAPEBDV?$basic_string_view@DU?$char_traits@D@std@@@12@@Z ?clear@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEAAXXZ ?clear@ustring@v3_1@OpenImageIO@@QEAAXXZ ?close@IOFile@Filesystem@v3_1@OpenImageIO@@UEAAXXZ ?close@Plugin@v3_1@OpenImageIO@@YA_NPEAX@Z ?compare@ustring@v3_1@OpenImageIO@@QEBAHPEBD@Z ?compare@ustring@v3_1@OpenImageIO@@QEBAHV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?contains@ParamValueList@v3_1@OpenImageIO@@QEBA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@UTypeDesc@23@_N@Z ?contains@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?contains_any_char@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?convert_type@v3_1@OpenImageIO@@YA_NUTypeDesc@12@PEBX0PEAXH@Z ?copy@Filesystem@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@0AEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?create@Filter1D@v3_1@OpenImageIO@@SAPEAV123@V?$basic_string_view@DU?$char_traits@D@std@@@23@M@Z ?create@Filter2D@v3_1@OpenImageIO@@SAPEAV123@V?$basic_string_view@DU?$char_traits@D@std@@@23@MM@Z ?create_directory@Filesystem@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?create_shared@Filter2D@v3_1@OpenImageIO@@SA?AV?$shared_ptr@$$CBVFilter2D@v3_1@OpenImageIO@@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@MM@Z ?current_path@Filesystem@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ?data@ParamValue@v3_1@OpenImageIO@@QEBAPEBXXZ ?data@ustring@v3_1@OpenImageIO@@QEBAPEBDXZ ?datasize@ParamValue@v3_1@OpenImageIO@@QEBAHXZ ?debug@pvt@Strutil@v3_1@OpenImageIO@@YAXV?$basic_string_view@DU?$char_traits@D@std@@@34@@Z ?default_handler@ErrorHandler@v3_1@OpenImageIO@@SAAEAV123@XZ ?default_thread_pool@v3_1@OpenImageIO@@YAPEAVthread_pool@12@XZ ?default_thread_pool_shutdown@v3_1@OpenImageIO@@YAXXZ ?destroy@Filter2D@v3_1@OpenImageIO@@SAXPEAV123@@Z ?digest@SHA1@v3_1@OpenImageIO@@QEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ?elementsize@TypeDesc@v3_1@OpenImageIO@@QEBA_KXZ ?elementtype@TypeDesc@v3_1@OpenImageIO@@QEBA?AU123@XZ ?empty@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEBA_NXZ ?empty@ustring@v3_1@OpenImageIO@@QEBA_NXZ ?empty@ustringhash@v3_1@OpenImageIO@@QEBA_NXZ ?empty_std_string@ustring@v3_1@OpenImageIO@@0V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@A ?end@?$span@$$CBVParamValue@v3_1@OpenImageIO@@$0?0@v3_1@OpenImageIO@@QEBAPEBVParamValue@23@XZ ?end@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEAA?AV?$_Vector_iterator@V?$_Vector_val@U?$_Simple_types@VParamValue@v3_1@OpenImageIO@@@std@@@std@@@2@XZ ?end@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEBA?AV?$_Vector_const_iterator@V?$_Vector_val@U?$_Simple_types@VParamValue@v3_1@OpenImageIO@@@std@@@std@@@2@XZ ?ends_with@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?equivalent@TypeDesc@v3_1@OpenImageIO@@QEBA_NAEBU123@@Z ?erase@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEAA?AV?$_Vector_iterator@V?$_Vector_val@U?$_Simple_types@VParamValue@v3_1@OpenImageIO@@@std@@@std@@@2@V?$_Vector_const_iterator@V?$_Vector_val@U?$_Simple_types@VParamValue@v3_1@OpenImageIO@@@std@@@std@@@2@0@Z ?error@ErrorHandler@v3_1@OpenImageIO@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?error@IOProxy@Filesystem@v3_1@OpenImageIO@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ?escape_chars@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?excise_string_after_head@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEAV45@V?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?exists@Filesystem@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?extension@Filesystem@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@_N@Z ?file_size@Filesystem@v3_1@OpenImageIO@@YA_KV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?filename@Filesystem@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?filename_to_regex@Filesystem@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@_N@Z ?find@ParamValueList@v3_1@OpenImageIO@@QEAA?AV?$_Vector_iterator@V?$_Vector_val@U?$_Simple_types@VParamValue@v3_1@OpenImageIO@@@std@@@std@@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@UTypeDesc@23@_N@Z ?find@ParamValueList@v3_1@OpenImageIO@@QEBA?AV?$_Vector_const_iterator@V?$_Vector_val@U?$_Simple_types@VParamValue@v3_1@OpenImageIO@@@std@@@std@@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@UTypeDesc@23@_N@Z ?find@ParamValueSpan@v3_1@OpenImageIO@@QEBAPEBVParamValue@23@Vustring@23@UTypeDesc@23@_N@Z ?find@ustring@v3_1@OpenImageIO@@QEBA_KD_K@Z ?flush@IOFile@Filesystem@v3_1@OpenImageIO@@UEAAXXZ ?fopen@Filesystem@v3_1@OpenImageIO@@YAPEAU_iobuf@@V?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?free@ParamValueList@v3_1@OpenImageIO@@QEAAXXZ ?from_hash@ustring@v3_1@OpenImageIO@@SA?AV123@_K@Z ?fromstring@TypeDesc@v3_1@OpenImageIO@@QEAA_KV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?get_bool@ParamValueSpan@v3_1@OpenImageIO@@QEBA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@_N1@Z ?get_directory_entries@Filesystem@v3_1@OpenImageIO@@YA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEAV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@5@_N0@Z ?get_filterdesc@Filter2D@v3_1@OpenImageIO@@SAAEBVFilterDesc@23@H@Z ?get_filterdesc@Filter2D@v3_1@OpenImageIO@@SAXHPEAVFilterDesc@23@@Z ?get_float@ParamValue@v3_1@OpenImageIO@@QEBAMM@Z ?get_float@ParamValueList@v3_1@OpenImageIO@@QEBAMV?$basic_string_view@DU?$char_traits@D@std@@@23@M_N1@Z ?get_float@ParamValueSpan@v3_1@OpenImageIO@@QEBAMV?$basic_string_view@DU?$char_traits@D@std@@@23@M_N1@Z ?get_float@ParamValueSpan@v3_1@OpenImageIO@@QEBAMVustring@23@M_N1@Z ?get_float_indexed@ParamValue@v3_1@OpenImageIO@@QEBAMHM@Z ?get_int@ParamValue@v3_1@OpenImageIO@@QEBAHH@Z ?get_int@ParamValueSpan@v3_1@OpenImageIO@@QEBAHV?$basic_string_view@DU?$char_traits@D@std@@@23@H_N1@Z ?get_int@ParamValueSpan@v3_1@OpenImageIO@@QEBAHVustring@23@H_N1@Z ?get_int_indexed@ParamValue@v3_1@OpenImageIO@@QEBAHHH@Z ?get_local_time@Sysutil@v3_1@OpenImageIO@@YAXPEB_JPEAUtm@@@Z ?get_rest_arguments@Strutil@v3_1@OpenImageIO@@YA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEAV45@AEAV?$map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V12@U?$less@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V12@@std@@@2@@5@@Z ?get_string@ParamValue@v3_1@OpenImageIO@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@H@Z ?get_string@ParamValueSpan@v3_1@OpenImageIO@@QEBA?AV?$basic_string_view@DU?$char_traits@D@std@@@23@V423@0_N1@Z ?get_string@ParamValueSpan@v3_1@OpenImageIO@@QEBA?AV?$basic_string_view@DU?$char_traits@D@std@@@23@Vustring@23@V423@_N2@Z ?get_ustring@ParamValue@v3_1@OpenImageIO@@QEBA?AVustring@23@H@Z ?getattribute_indexed@ParamValueList@v3_1@OpenImageIO@@QEBA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@HUTypeDesc@23@PEAX_N@Z ?getattributetype@ParamValueList@v3_1@OpenImageIO@@QEBA?AUTypeDesc@23@V?$basic_string_view@DU?$char_traits@D@std@@@23@_N@Z ?getenv@Sysutil@v3_1@OpenImageIO@@YA?AV?$basic_string_view@DU?$char_traits@D@std@@@23@V423@0@Z ?geterror@pvt@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_N@Z ?gethash@SHA1@v3_1@OpenImageIO@@QEAAXAEAUHash@123@@Z ?getsym@Plugin@v3_1@OpenImageIO@@YAPEAXPEAXPEBD_N@Z ?hardware_concurrency@Sysutil@v3_1@OpenImageIO@@YAIXZ ?has_error@pvt@Strutil@v3_1@OpenImageIO@@YA_NXZ ?hash@ustring@v3_1@OpenImageIO@@QEBA_KXZ ?hash@ustringhash@v3_1@OpenImageIO@@QEBA_KXZ ?icontains@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?iends_with@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?iequals@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?info@ErrorHandler@v3_1@OpenImageIO@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?init@ParamValue@v3_1@OpenImageIO@@QEAAXV?$basic_string_view@DU?$char_traits@D@std@@@23@UTypeDesc@23@HPEBXUCopy@123@@Z ?init_noclear@ParamValue@v3_1@OpenImageIO@@AEAAXVustring@23@UTypeDesc@23@HW4Interp@123@V?$span@$$CBW4byte@std@@$0?0@23@UCopy@123@UFromUstring@123@@Z ?irfind@Strutil@v3_1@OpenImageIO@@YA_KV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?is_array@TypeDesc@v3_1@OpenImageIO@@QEBA_NXZ ?is_directory@Filesystem@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?is_floating_point@TypeDesc@v3_1@OpenImageIO@@QEBA_NXZ ?is_regular@Filesystem@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?is_signed@TypeDesc@v3_1@OpenImageIO@@QEBA_NXZ ?is_sized_array@TypeDesc@v3_1@OpenImageIO@@QEBA_NXZ ?is_unknown@TypeDesc@v3_1@OpenImageIO@@QEBA_NXZ ?is_unsized_array@TypeDesc@v3_1@OpenImageIO@@QEBA_NXZ ?is_vec3@TypeDesc@v3_1@OpenImageIO@@QEBA_NW4BASETYPE@123@@Z ?is_worker@thread_pool@v3_1@OpenImageIO@@QEBA_NXZ ?istarts_with@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?lap@Timer@v3_1@OpenImageIO@@QEAANXZ ?last_write_time@Filesystem@v3_1@OpenImageIO@@YAXV?$basic_string_view@DU?$char_traits@D@std@@@23@_J@Z ?last_write_time@Filesystem@v3_1@OpenImageIO@@YA_JV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?length@ustring@v3_1@OpenImageIO@@QEBA_KXZ ?max_open_files@Sysutil@v3_1@OpenImageIO@@YA_KXZ ?max_size@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEBA_KXZ ?maxthreads@paropt@v3_1@OpenImageIO@@QEAAAEAV123@H@Z ?maxthreads@paropt@v3_1@OpenImageIO@@QEBAHXZ ?memformat@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_JH@Z ?memory_used@Sysutil@v3_1@OpenImageIO@@YA_K_N@Z ?merge@ParamValueList@v3_1@OpenImageIO@@QEAAXAEBV123@_N@Z ?message@ErrorHandler@v3_1@OpenImageIO@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?minitems@paropt@v3_1@OpenImageIO@@QEBAHXZ ?name@ParamValue@v3_1@OpenImageIO@@QEBA?AVustring@23@XZ ?no_destroy@Filter2D@v3_1@OpenImageIO@@SAXPEBV123@@Z ?now@Timer@v3_1@OpenImageIO@@AEBA_JXZ ?num_filters@Filter2D@v3_1@OpenImageIO@@SAHXZ ?numelements@TypeDesc@v3_1@OpenImageIO@@QEBA_KXZ ?nvalues@ParamValue@v3_1@OpenImageIO@@QEBAHXZ ?oiio_print_debug@pvt@v3_1@OpenImageIO@@3HA ?oiio_print_uncaught_errors@pvt@v3_1@OpenImageIO@@3HA ?oiio_use_tbb@pvt@v3_1@OpenImageIO@@3HA ?open@Filesystem@v3_1@OpenImageIO@@YAXAEAV?$basic_ofstream@DU?$char_traits@D@std@@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@H@Z ?open@Plugin@v3_1@OpenImageIO@@YAPEAXPEBD_N@Z ?opened@IOProxy@Filesystem@v3_1@OpenImageIO@@UEBA_NXZ ?parallel_for@v3_1@OpenImageIO@@YAXHHV?$function_view@$$A6AXH@Z@12@Vparopt@12@@Z ?parallel_for_2D@v3_1@OpenImageIO@@YAX_J000$$QEAV?$function@$$A6AX_J0@Z@std@@Vparopt@12@@Z ?parallel_for_chunked@v3_1@OpenImageIO@@YAX_J00$$QEAV?$function@$$A6AX_J0@Z@std@@Vparopt@12@@Z ?parallel_for_chunked_2D@v3_1@OpenImageIO@@YAX_J00000$$QEAV?$function@$$A6AX_J000@Z@std@@Vparopt@12@@Z ?parent_path@Filesystem@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?parse_char@Strutil@v3_1@OpenImageIO@@YA_NAEAV?$basic_string_view@DU?$char_traits@D@std@@@23@D_N1@Z ?parse_float@Strutil@v3_1@OpenImageIO@@YA_NAEAV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAM_N@Z ?parse_identifier@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV423@V423@_N@Z ?parse_identifier@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV423@_N@Z ?parse_int@Strutil@v3_1@OpenImageIO@@YA_NAEAV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAH_N@Z ?parse_line@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV423@_N@Z ?parse_prefix@Strutil@v3_1@OpenImageIO@@YA_NAEAV?$basic_string_view@DU?$char_traits@D@std@@@23@V423@_N@Z ?parse_string@Strutil@v3_1@OpenImageIO@@YA_NAEAV?$basic_string_view@DU?$char_traits@D@std@@@23@0_NW4QuoteBehavior@123@@Z ?parse_until@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV423@V423@_N@Z ?parse_until_char@Strutil@v3_1@OpenImageIO@@YA_NAEAV?$basic_string_view@DU?$char_traits@D@std@@@23@D_N@Z ?parse_values@Strutil@v3_1@OpenImageIO@@YA_NAEAV?$basic_string_view@DU?$char_traits@D@std@@@23@V423@V?$span@H$0?0@23@11_N@Z ?parse_values@Strutil@v3_1@OpenImageIO@@YA_NAEAV?$basic_string_view@DU?$char_traits@D@std@@@23@V423@V?$span@M$0?0@23@11_N@Z ?parse_word@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV423@_N@Z ?path_is_absolute@Filesystem@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@_N@Z ?physical_memory@Sysutil@v3_1@OpenImageIO@@YA_KXZ ?plugin_extension@Plugin@v3_1@OpenImageIO@@YAPEBDXZ ?pread@IOFile@Filesystem@v3_1@OpenImageIO@@UEAA_KPEAX_K_J@Z ?proxytype@IOFile@Filesystem@v3_1@OpenImageIO@@UEBAPEBDXZ ?push@task_set@v3_1@OpenImageIO@@QEAAX$$QEAV?$future@X@std@@@Z ?push_queue_and_notify@thread_pool@v3_1@OpenImageIO@@AEAAXPEAV?$function@$$A6AXH@Z@std@@@Z ?pwrite@IOFile@Filesystem@v3_1@OpenImageIO@@UEAA_KPEBX_K_J@Z ?read@IOFile@Filesystem@v3_1@OpenImageIO@@UEAA_KPEAX_K@Z ?read_text_file@Filesystem@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_K@Z ?remove@Filesystem@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?remove_all@Filesystem@v3_1@OpenImageIO@@YA_KV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?remove_trailing_whitespace@Strutil@v3_1@OpenImageIO@@YAXAEAV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?rename@Filesystem@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@0AEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?replace@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@00_N@Z ?replace_extension@Filesystem@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV45@0@Z ?resize@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEAAX_K@Z ?resize@thread_pool@v3_1@OpenImageIO@@QEAAXH@Z ?resolve@paropt@v3_1@OpenImageIO@@QEAAXXZ ?rfind@Strutil@v3_1@OpenImageIO@@YA_KV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?safe_strcpy@Strutil@v3_1@OpenImageIO@@YAPEADPEADV?$basic_string_view@DU?$char_traits@D@std@@@23@_K@Z ?safe_strlen@Strutil@v3_1@OpenImageIO@@YA_KPEBD_K@Z ?scalartype@TypeDesc@v3_1@OpenImageIO@@QEBA?AU123@XZ ?scan_datetime@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAH11111@Z ?searchpath_find@Filesystem@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV45@AEBV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@5@_N2@Z ?searchpath_split@Filesystem@v3_1@OpenImageIO@@YA?AV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@_N@Z ?seconds@Timer@v3_1@OpenImageIO@@SAN_J@Z ?seek@IOFile@Filesystem@v3_1@OpenImageIO@@UEAA_N_J@Z ?seek@IOProxy@Filesystem@v3_1@OpenImageIO@@QEAA_N_JH@Z ?shrink_to_fit@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEAAXXZ ?singlethread@paropt@v3_1@OpenImageIO@@QEBA_NXZ ?size@?$vector@VParamValue@v3_1@OpenImageIO@@V?$allocator@VParamValue@v3_1@OpenImageIO@@@std@@@std@@QEBA_KXZ ?size@IOFile@Filesystem@v3_1@OpenImageIO@@UEBA_KXZ ?size@TypeDesc@v3_1@OpenImageIO@@QEBA_KXZ ?size@thread_pool@v3_1@OpenImageIO@@QEBAHXZ ?size@ustring@v3_1@OpenImageIO@@QEBA_KXZ ?skip_whitespace@Strutil@v3_1@OpenImageIO@@YAXAEAV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?sort@ParamValueList@v3_1@OpenImageIO@@QEAAX_N@Z ?split@Strutil@v3_1@OpenImageIO@@YAXV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@0H@Z ?split@Strutil@v3_1@OpenImageIO@@YAXV?$basic_string_view@DU?$char_traits@D@std@@@23@AEAV?$vector@V?$basic_string_view@DU?$char_traits@D@std@@@v3_1@OpenImageIO@@V?$allocator@V?$basic_string_view@DU?$char_traits@D@std@@@v3_1@OpenImageIO@@@std@@@std@@0H@Z ?splitdir@paropt@v3_1@OpenImageIO@@QEBA?AW4SplitDir@123@XZ ?splits@Strutil@v3_1@OpenImageIO@@YA?AV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@0H@Z ?splitsv@Strutil@v3_1@OpenImageIO@@YA?AV?$vector@V?$basic_string_view@DU?$char_traits@D@std@@@v3_1@OpenImageIO@@V?$allocator@V?$basic_string_view@DU?$char_traits@D@std@@@v3_1@OpenImageIO@@@std@@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@0H@Z ?starts_with@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@0@Z ?stof@Strutil@v3_1@OpenImageIO@@YAMAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEA_K@Z ?stof@Strutil@v3_1@OpenImageIO@@YAMPEBDPEA_K@Z ?stof@Strutil@v3_1@OpenImageIO@@YAMV?$basic_string_view@DU?$char_traits@D@std@@@23@PEA_K@Z ?stoi@Strutil@v3_1@OpenImageIO@@YAHV?$basic_string_view@DU?$char_traits@D@std@@@23@PEA_KH@Z ?stop@Timer@v3_1@OpenImageIO@@QEAANXZ ?stoui@Strutil@v3_1@OpenImageIO@@YAIV?$basic_string_view@DU?$char_traits@D@std@@@23@PEA_KH@Z ?string@ustring@v3_1@OpenImageIO@@QEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ?string_is_float@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?string_is_int@Strutil@v3_1@OpenImageIO@@YA_NV?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?strip@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string_view@DU?$char_traits@D@std@@@23@V423@0@Z ?substr@ustring@v3_1@OpenImageIO@@QEBA?AV123@_K0@Z ?tell@IOProxy@Filesystem@v3_1@OpenImageIO@@UEBA_JXZ ?temp_directory_path@Filesystem@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ?terminal_columns@Sysutil@v3_1@OpenImageIO@@YAHXZ ?this_program_path@Sysutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ?ticks_since_start@Timer@v3_1@OpenImageIO@@QEBA_JXZ ?timeintervalformat@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@NH@Z ?to_lower@Strutil@v3_1@OpenImageIO@@YAXAEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?to_upper@Strutil@v3_1@OpenImageIO@@YAXAEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?tostring@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@UTypeDesc@12@PEBXAEBUtostring_formatting@12@@Z ?type@ParamValue@v3_1@OpenImageIO@@QEBA?AUTypeDesc@23@XZ ?uhash@ustring@v3_1@OpenImageIO@@QEBA?AVustringhash@23@XZ ?uname@ParamValue@v3_1@OpenImageIO@@QEBA?AVustring@23@XZ ?unarray@TypeDesc@v3_1@OpenImageIO@@QEAAXXZ ?unescape_chars@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?unique_path@Filesystem@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?usleep@Sysutil@v3_1@OpenImageIO@@YAXK@Z ?utf16_to_utf8@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV?$basic_string@_SU?$char_traits@_S@std@@V?$allocator@_S@2@@5@@Z ?utf16_to_utf8@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@5@@Z ?utf8_to_utf16wstring@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@@Z ?verbosity@ErrorHandler@v3_1@OpenImageIO@@QEBAHXZ ?vsprintf@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEBDPEAD@Z ?wait@task_set@v3_1@OpenImageIO@@QEAAX_N@Z ?wait_for_task@task_set@v3_1@OpenImageIO@@QEAAX_K_N@Z ?warning@ErrorHandler@v3_1@OpenImageIO@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ?wordwrap@Strutil@v3_1@OpenImageIO@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_view@DU?$char_traits@D@std@@@23@HH00@Z ?write@IOFile@Filesystem@v3_1@OpenImageIO@@UEAA_KPEBX_K@Z\ntbb12.dll: expected version 2022.3.0.0, loaded 2021.13.0.0; missing symbols: ?get_thread_reference_vertex@r1@detail@tbb@@YAPEAVwait_tree_vertex_interface@d1@23@PEAV4523@@Z\n",
+    "stage": "init",
+    "host_call_after": 33817088,
+    "private_backend_loaded": false
+  },
+  "release_ctests": {
+    "passed": 13,
+    "total": 13
+  },
+  "debug_cpu_ctests": {
+    "passed": 13,
+    "total": 13
+  },
+  "native_tests": {
+    "passed": 9,
+    "total": 9
+  },
+  "abi_swaps": {
+    "host_sha256": "b6534270dc8fdc173f50e77c081ab8a0d989564ccdf1fe923636f4efa5609059",
+    "host_recompiled": false,
+    "runs": [
+      {
+        "label": "previous-release",
+        "version": "Cycles C API 1.5.0",
+        "passed": true,
+        "front_sha256": "db2e798eb3b45d1201064ecf66ca430aa662f9c84cbb92961c85378992387d3e"
+      },
+      {
+        "label": "split-release",
+        "version": "Cycles C API 1.6.0",
+        "passed": true,
+        "front_sha256": "1e961c7e98626caf7f74f79db33e49ad5aea7d44d4c70bc8968292d1bee2048e"
+      },
+      {
+        "label": "split-debug-cpu",
+        "version": "Cycles C API 1.6.0",
+        "passed": true,
+        "front_sha256": "8b75c4eb55e5b2c95e4fdd20427c0fb1a71152beaa1d095b8d4b4d0b0d93fd5a"
+      }
+    ]
+  },
+  "benchmark_before": {
+    "iterations_per_round": 1000000,
+    "rounds": 9,
+    "unit": "ns_per_set",
+    "results": {
+      "direct_cpp": {
+        "median": 1.5024,
+        "min": 1.4942,
+        "max": 1.5701,
+        "samples": [
+          1.4957,
+          1.5024,
+          1.5022,
+          1.5024,
+          1.5025,
+          1.503,
+          1.5701,
+          1.5035,
+          1.4942
+        ]
+      },
+      "name": {
+        "median": 38.908,
+        "min": 38.4075,
+        "max": 39.1875,
+        "samples": [
+          38.4075,
+          38.4177,
+          39.0161,
+          38.5824,
+          38.908,
+          38.985,
+          39.1875,
+          38.641,
+          38.9195
+        ]
+      },
+      "id": {
+        "median": 15.6692,
+        "min": 15.5496,
+        "max": 16.1012,
+        "samples": [
+          15.6755,
+          15.6084,
+          15.6692,
+          15.706,
+          16.1012,
+          15.7145,
+          15.6466,
+          15.5736,
+          15.5496
+        ]
+      }
+    }
+  },
+  "benchmark_after": {
+    "iterations_per_round": 1000000,
+    "rounds": 9,
+    "unit": "ns_per_set",
+    "results": {
+      "direct_cpp": {
+        "median": 1.4821,
+        "min": 1.4679,
+        "max": 1.9153,
+        "samples": [
+          1.4679,
+          1.471,
+          1.4788,
+          1.4821,
+          1.4851,
+          1.4702,
+          1.7142,
+          1.4902,
+          1.9153
+        ]
+      },
+      "name": {
+        "median": 38.1912,
+        "min": 37.7055,
+        "max": 38.3489,
+        "samples": [
+          38.1912,
+          38.0253,
+          37.7688,
+          38.3309,
+          37.7055,
+          38.3489,
+          38.2704,
+          38.2407,
+          37.7819
+        ]
+      },
+      "id": {
+        "median": 16.244,
+        "min": 16.1553,
+        "max": 17.8025,
+        "samples": [
+          16.1553,
+          16.1637,
+          16.4713,
+          16.4468,
+          16.2037,
+          16.244,
+          16.1843,
+          16.4707,
+          17.8025
+        ]
+      }
+    }
+  },
+  "gpu_parity": {
+    "passed": true,
+    "device": "OPTIX",
+    "policy_sha256": "376154687e2b5bbd9369c83fe3b603e331a57d48253e242ba74d27fd4c8235c9",
+    "denoising": false,
+    "ordinary_controls": 5,
+    "seed_controls": 4,
+    "fixtures": {
+      "scene_cube_surface": {
+        "passed": true,
+        "raw_passed": true,
+        "bias_passed": true,
+        "count_passed": true,
+        "statistical_pixels": 0,
+        "calibration": {
+          "renders": [
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_surface\\OPTIX-1-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_surface\\OPTIX-2-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_surface\\OPTIX-3-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_surface\\OPTIX-4-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_surface\\OPTIX-5-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            }
+          ],
+          "fallback_pixels": {
+            "min": 0,
+            "median": 0,
+            "max": 0
+          },
+          "max_ratio": {
+            "ViewLayer.Debug Sample Count.X": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.R": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.G": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.B": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.A": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "requires_seed_controls": false,
+          "ordinary_controls": 5,
+          "minimum_controls": 20,
+          "informational_only": true,
+          "complete": false
+        },
+        "report": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_surface.json",
+        "raw_comparison": {
+          "Combined.A": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Combined.B": {
+            "different_pixels": 8,
+            "max_absolute": 2.2351741790771484e-08,
+            "max_reference_ulp": 3.0
+          },
+          "Combined.G": {
+            "different_pixels": 10,
+            "max_absolute": 2.9802322387695312e-08,
+            "max_reference_ulp": 3.0
+          },
+          "Combined.R": {
+            "different_pixels": 9,
+            "max_absolute": 5.960464477539063e-08,
+            "max_reference_ulp": 2.0
+          },
+          "Depth.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.X": {
+            "different_pixels": 53,
+            "max_absolute": 5.960464477539063e-08,
+            "max_reference_ulp": 3.0
+          },
+          "Normal.Y": {
+            "different_pixels": 60,
+            "max_absolute": 1.1920928955078125e-07,
+            "max_reference_ulp": 3.0
+          },
+          "Normal.Z": {
+            "different_pixels": 60,
+            "max_absolute": 1.7881393432617188e-07,
+            "max_reference_ulp": 4.0
+          },
+          "Sample Count.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          }
+        }
+      },
+      "deep_output_driver_transparent_test": {
+        "passed": true,
+        "raw_passed": true,
+        "bias_passed": true,
+        "count_passed": true,
+        "statistical_pixels": 0,
+        "calibration": {
+          "renders": [
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\deep_output_driver_transparent_test\\OPTIX-1-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\deep_output_driver_transparent_test\\OPTIX-2-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\deep_output_driver_transparent_test\\OPTIX-3-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\deep_output_driver_transparent_test\\OPTIX-4-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\deep_output_driver_transparent_test\\OPTIX-5-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            }
+          ],
+          "fallback_pixels": {
+            "min": 0,
+            "median": 0,
+            "max": 0
+          },
+          "max_ratio": {
+            "ViewLayer.Debug Sample Count.X": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.R": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.G": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.B": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.A": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "requires_seed_controls": false,
+          "ordinary_controls": 5,
+          "minimum_controls": 20,
+          "informational_only": true,
+          "complete": false
+        },
+        "report": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\deep_output_driver_transparent_test.json",
+        "raw_comparison": {
+          "Combined.A": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Combined.B": {
+            "different_pixels": 25,
+            "max_absolute": 1.862645149230957e-09,
+            "max_reference_ulp": 1.0
+          },
+          "Combined.G": {
+            "different_pixels": 21,
+            "max_absolute": 1.862645149230957e-09,
+            "max_reference_ulp": 1.0
+          },
+          "Combined.R": {
+            "different_pixels": 23,
+            "max_absolute": 1.862645149230957e-09,
+            "max_reference_ulp": 1.0
+          },
+          "Depth.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Y": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Sample Count.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          }
+        }
+      },
+      "scene_cube_volume": {
+        "passed": true,
+        "raw_passed": true,
+        "bias_passed": true,
+        "count_passed": true,
+        "statistical_pixels": 0,
+        "calibration": {
+          "renders": [
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_volume\\OPTIX-1-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_volume\\OPTIX-2-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_volume\\OPTIX-3-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_volume\\OPTIX-4-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_volume\\OPTIX-5-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            }
+          ],
+          "fallback_pixels": {
+            "min": 0,
+            "median": 0,
+            "max": 0
+          },
+          "max_ratio": {
+            "ViewLayer.Debug Sample Count.X": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.R": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.G": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.B": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.A": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "requires_seed_controls": false,
+          "ordinary_controls": 5,
+          "minimum_controls": 20,
+          "informational_only": true,
+          "complete": false
+        },
+        "report": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_cube_volume.json",
+        "raw_comparison": {
+          "Combined.A": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Combined.B": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Combined.G": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Combined.R": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Depth.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Y": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Sample Count.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          }
+        }
+      },
+      "scene_osl_stripes": {
+        "passed": true,
+        "raw_passed": true,
+        "bias_passed": true,
+        "count_passed": true,
+        "statistical_pixels": 0,
+        "calibration": {
+          "renders": [
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_osl_stripes\\OPTIX-1-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_osl_stripes\\OPTIX-2-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_osl_stripes\\OPTIX-3-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_osl_stripes\\OPTIX-4-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_osl_stripes\\OPTIX-5-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            }
+          ],
+          "fallback_pixels": {
+            "min": 0,
+            "median": 0,
+            "max": 0
+          },
+          "max_ratio": {
+            "ViewLayer.Debug Sample Count.X": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.R": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.G": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.B": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.A": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "requires_seed_controls": false,
+          "ordinary_controls": 5,
+          "minimum_controls": 20,
+          "informational_only": true,
+          "complete": false
+        },
+        "report": "D:\\CyclesDeepScratch\\c-api\\phase7-20261013\\policy\\scene_osl_stripes.json",
+        "raw_comparison": {
+          "Combined.A": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Combined.B": {
+            "different_pixels": 76,
+            "max_absolute": 5.960464477539063e-08,
+            "max_reference_ulp": 3.0
+          },
+          "Combined.G": {
+            "different_pixels": 79,
+            "max_absolute": 2.9802322387695312e-08,
+            "max_reference_ulp": 2.0
+          },
+          "Combined.R": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Depth.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Y": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Sample Count.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          }
+        }
+      }
+    }
+  },
+  "cpu_parity": "Exact nine channels on all four fixtures, release and CPU Debug CTests",
+  "malformed_pe": {
+    "empty": {
+      "status": 5,
+      "error": "PE offset outside image"
+    },
+    "bad_magic": {
+      "status": 5,
+      "error": "Invalid DOS header"
+    },
+    "out_of_bounds": {
+      "status": 5,
+      "error": "PE offset outside image"
+    }
+  },
+  "native_compile_parity": {
+    "passed": true,
+    "compilation_units": 158,
+    "api_off_matches_on": true
+  },
+  "identities": {
+    "dll_sha256": "1e961c7e98626caf7f74f79db33e49ad5aea7d44d4c70bc8968292d1bee2048e",
+    "header_sha256": "33058fe1cbd635e79d2a349f9dc61c79686d82178d7bfde7965d3e79033bd590",
+    "phase1_phase2_phase3_and_production_preserved": true,
+    "direct_dependencies": [
+      "kernel32.dll",
+      "version.dll"
+    ]
+  },
+  "backend_sha256": "563c88666dd5e97b9c762708eaf3a6bd7ed0d37bbda1d2ab979618ce4d524801",
+  "debug_loader": {
+    "public_exports": 95,
+    "private_exports": [
+      "cycles_c_private_get_table"
+    ],
+    "front_imports": [
+      "kernel32.dll",
+      "version.dll"
+    ],
+    "passed": true
+  },
+  "limitations": [
+    "Windows x64 tested only; ELF/Mach-O preflight implementation pending",
+    "OSL/OCIO lack version resources; required version-namespaced imports checked, not patch-level semantic identity",
+    "Host must serialize dependency loads/unloads around init; retain libraries to process exit"
+  ],
+  "wrapper_fixes": [
+    "Deduplicate and retain complete missing-import diagnostics instead of silently truncating at 64 KiB"
+  ],
+  "roots": [
+    "D:\\CyclesDeepScratch\\c-api\\phase7-20261013",
+    "D:\\CyclesDeepScratch\\c-api\\phase7-debug-20261013"
+  ]
+}

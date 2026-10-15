@@ -395,6 +395,10 @@ add_subdirectory(session)
 add_subdirectory(subd)
 add_subdirectory(util)
 
+if(WITH_CYCLES_C_API)
+  add_subdirectory(capi)
+endif()
+
 if(WITH_CYCLES_DEEP_TESTS AND WITH_OPENVDB AND WITH_NANOVDB)
   add_executable(cycles_deep_vdb_grid_test deep/vdb_grid_test.cpp)
   target_include_directories(cycles_deep_vdb_grid_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

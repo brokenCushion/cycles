@@ -1,0 +1,881 @@
+{
+  "phase": 6,
+  "status": "passed",
+  "api_version": "1.5.0",
+  "baseline_ctests": "11/11",
+  "final_ctests": "13/13",
+  "retained_native_ctests": "9/9",
+  "exports": 95,
+  "node_types": 184,
+  "native_compilation_units_unchanged": 158,
+  "install_paths_audited": 558,
+  "identities": {
+    "dll_sha256": "db2e798eb3b45d1201064ecf66ca430aa662f9c84cbb92961c85378992387d3e",
+    "header_sha256": "1f31cad097362308325ca227583d3960b2defe71d8a23d2eadb7833e2d631adb",
+    "phase1_phase2_phase3_and_production_preserved": true,
+    "direct_dependencies": [
+      "ADVAPI32.dll",
+      "CFGMGR32.dll",
+      "KERNEL32.dll",
+      "MSVCP140.dll",
+      "OpenColorIO_2_5.dll",
+      "OpenImageDenoise.dll",
+      "OpenImageIO.dll",
+      "OpenImageIO_Util.dll",
+      "VCRUNTIME140.dll",
+      "VCRUNTIME140_1.dll",
+      "VERSION.dll",
+      "api-ms-win-crt-convert-l1-1-0.dll",
+      "api-ms-win-crt-environment-l1-1-0.dll",
+      "api-ms-win-crt-filesystem-l1-1-0.dll",
+      "api-ms-win-crt-heap-l1-1-0.dll",
+      "api-ms-win-crt-locale-l1-1-0.dll",
+      "api-ms-win-crt-math-l1-1-0.dll",
+      "api-ms-win-crt-runtime-l1-1-0.dll",
+      "api-ms-win-crt-stdio-l1-1-0.dll",
+      "api-ms-win-crt-string-l1-1-0.dll",
+      "api-ms-win-crt-time-l1-1-0.dll",
+      "api-ms-win-crt-utility-l1-1-0.dll",
+      "embree4.dll",
+      "openvdb.dll",
+      "oslcomp.dll",
+      "oslexec.dll",
+      "oslquery.dll",
+      "sycl8.dll",
+      "tbb12.dll"
+    ]
+  },
+  "preserved": [
+    "Phase 1",
+    "Phase 2",
+    "Phase 3",
+    "Phase 4",
+    "Phase 5",
+    "qualified production Blender and standalone"
+  ],
+  "cpu": {
+    "fixtures": [
+      "scene_cube_surface",
+      "deep_output_driver_transparent_test",
+      "scene_cube_volume",
+      "scene_osl_stripes"
+    ],
+    "exact": true,
+    "checked_channels": [
+      "Combined.R",
+      "Combined.G",
+      "Combined.B",
+      "Combined.A",
+      "Depth.Z",
+      "Normal.X",
+      "Normal.Y",
+      "Normal.Z",
+      "Sample Count.X"
+    ]
+  },
+  "gpu": {
+    "passed": true,
+    "device": "OPTIX",
+    "policy_sha256": "376154687e2b5bbd9369c83fe3b603e331a57d48253e242ba74d27fd4c8235c9",
+    "denoising": false,
+    "ordinary_controls": 5,
+    "seed_controls": 4,
+    "fixtures": {
+      "scene_cube_surface": {
+        "passed": true,
+        "raw_passed": true,
+        "bias_passed": true,
+        "count_passed": true,
+        "statistical_pixels": 0,
+        "calibration": {
+          "renders": [
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_surface\\OPTIX-1-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_surface\\OPTIX-2-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_surface\\OPTIX-3-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_surface\\OPTIX-4-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_surface\\OPTIX-5-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            }
+          ],
+          "fallback_pixels": {
+            "min": 0,
+            "median": 0,
+            "max": 0
+          },
+          "max_ratio": {
+            "ViewLayer.Debug Sample Count.X": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.R": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.G": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.B": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.A": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "requires_seed_controls": false,
+          "ordinary_controls": 5,
+          "minimum_controls": 20,
+          "informational_only": true,
+          "complete": false
+        },
+        "report": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_surface.json",
+        "raw_comparison": {
+          "Combined.A": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Combined.B": {
+            "different_pixels": 9,
+            "max_absolute": 2.9802322387695312e-08,
+            "max_reference_ulp": 3.0
+          },
+          "Combined.G": {
+            "different_pixels": 6,
+            "max_absolute": 2.9802322387695312e-08,
+            "max_reference_ulp": 2.0
+          },
+          "Combined.R": {
+            "different_pixels": 12,
+            "max_absolute": 5.960464477539063e-08,
+            "max_reference_ulp": 2.0
+          },
+          "Depth.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.X": {
+            "different_pixels": 58,
+            "max_absolute": 1.1920928955078125e-07,
+            "max_reference_ulp": 5.0
+          },
+          "Normal.Y": {
+            "different_pixels": 58,
+            "max_absolute": 1.1920928955078125e-07,
+            "max_reference_ulp": 3.0
+          },
+          "Normal.Z": {
+            "different_pixels": 59,
+            "max_absolute": 1.7881393432617188e-07,
+            "max_reference_ulp": 3.0
+          },
+          "Sample Count.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          }
+        }
+      },
+      "deep_output_driver_transparent_test": {
+        "passed": true,
+        "raw_passed": true,
+        "bias_passed": true,
+        "count_passed": true,
+        "statistical_pixels": 0,
+        "calibration": {
+          "renders": [
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\deep_output_driver_transparent_test\\OPTIX-1-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\deep_output_driver_transparent_test\\OPTIX-2-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\deep_output_driver_transparent_test\\OPTIX-3-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\deep_output_driver_transparent_test\\OPTIX-4-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\deep_output_driver_transparent_test\\OPTIX-5-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            }
+          ],
+          "fallback_pixels": {
+            "min": 0,
+            "median": 0,
+            "max": 0
+          },
+          "max_ratio": {
+            "ViewLayer.Debug Sample Count.X": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.R": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.G": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.B": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.A": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "requires_seed_controls": false,
+          "ordinary_controls": 5,
+          "minimum_controls": 20,
+          "informational_only": true,
+          "complete": false
+        },
+        "report": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\deep_output_driver_transparent_test.json",
+        "raw_comparison": {
+          "Combined.A": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Combined.B": {
+            "different_pixels": 34,
+            "max_absolute": 3.725290298461914e-09,
+            "max_reference_ulp": 2.0
+          },
+          "Combined.G": {
+            "different_pixels": 31,
+            "max_absolute": 3.725290298461914e-09,
+            "max_reference_ulp": 2.0
+          },
+          "Combined.R": {
+            "different_pixels": 31,
+            "max_absolute": 3.725290298461914e-09,
+            "max_reference_ulp": 2.0
+          },
+          "Depth.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Y": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Sample Count.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          }
+        }
+      },
+      "scene_cube_volume": {
+        "passed": true,
+        "raw_passed": true,
+        "bias_passed": true,
+        "count_passed": true,
+        "statistical_pixels": 0,
+        "calibration": {
+          "renders": [
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_volume\\OPTIX-1-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_volume\\OPTIX-2-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_volume\\OPTIX-3-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_volume\\OPTIX-4-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_volume\\OPTIX-5-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            }
+          ],
+          "fallback_pixels": {
+            "min": 0,
+            "median": 0,
+            "max": 0
+          },
+          "max_ratio": {
+            "ViewLayer.Debug Sample Count.X": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.R": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.G": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.B": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.A": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "requires_seed_controls": false,
+          "ordinary_controls": 5,
+          "minimum_controls": 20,
+          "informational_only": true,
+          "complete": false
+        },
+        "report": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_cube_volume.json",
+        "raw_comparison": {
+          "Combined.A": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Combined.B": {
+            "different_pixels": 1,
+            "max_absolute": 1.4901161193847656e-08,
+            "max_reference_ulp": 1.0
+          },
+          "Combined.G": {
+            "different_pixels": 1,
+            "max_absolute": 1.4901161193847656e-08,
+            "max_reference_ulp": 1.0
+          },
+          "Combined.R": {
+            "different_pixels": 1,
+            "max_absolute": 1.4901161193847656e-08,
+            "max_reference_ulp": 1.0
+          },
+          "Depth.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Y": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Sample Count.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          }
+        }
+      },
+      "scene_osl_stripes": {
+        "passed": true,
+        "raw_passed": true,
+        "bias_passed": true,
+        "count_passed": true,
+        "statistical_pixels": 0,
+        "calibration": {
+          "renders": [
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_osl_stripes\\OPTIX-1-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_osl_stripes\\OPTIX-2-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_osl_stripes\\OPTIX-3-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_osl_stripes\\OPTIX-4-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            },
+            {
+              "reference": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_osl_stripes\\OPTIX-5-native",
+              "fallback_pixels": 0,
+              "max_ratio": {
+                "ViewLayer.Debug Sample Count.X": 0.0,
+                "ViewLayer.Combined.R": 0.0,
+                "ViewLayer.Combined.G": 0.0,
+                "ViewLayer.Combined.B": 0.0,
+                "ViewLayer.Combined.A": 0.0
+              },
+              "unmatched_population_pixels": 0,
+              "zero_sigma_mismatches": {
+                "ViewLayer.Debug Sample Count.X": 0,
+                "ViewLayer.Combined.R": 0,
+                "ViewLayer.Combined.G": 0,
+                "ViewLayer.Combined.B": 0,
+                "ViewLayer.Combined.A": 0
+              }
+            }
+          ],
+          "fallback_pixels": {
+            "min": 0,
+            "median": 0,
+            "max": 0
+          },
+          "max_ratio": {
+            "ViewLayer.Debug Sample Count.X": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.R": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.G": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.B": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "ViewLayer.Combined.A": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "requires_seed_controls": false,
+          "ordinary_controls": 5,
+          "minimum_controls": 20,
+          "informational_only": true,
+          "complete": false
+        },
+        "report": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013\\policy\\scene_osl_stripes.json",
+        "raw_comparison": {
+          "Combined.A": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Combined.B": {
+            "different_pixels": 67,
+            "max_absolute": 5.960464477539063e-08,
+            "max_reference_ulp": 3.0
+          },
+          "Combined.G": {
+            "different_pixels": 70,
+            "max_absolute": 2.9802322387695312e-08,
+            "max_reference_ulp": 3.0
+          },
+          "Combined.R": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Depth.Z": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Y": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          },
+          "Normal.Z": {
+            "different_pixels": 1,
+            "max_absolute": 5.960464477539063e-08,
+            "max_reference_ulp": 1.0
+          },
+          "Sample Count.X": {
+            "different_pixels": 0,
+            "max_absolute": 0.0,
+            "max_reference_ulp": 0.0
+          }
+        }
+      }
+    }
+  },
+  "controls": {
+    "blocking_edit_cancel_wait": true,
+    "reset_required_after_edit": true,
+    "pause_without_edit_preserves_samples": true,
+    "wait_lifetime_pin": true,
+    "cancel_from_other_thread": true,
+    "callback_reentry_rejected": true,
+    "callback_errors_contained": true
+  },
+  "device_scene_tests": [
+    "CPU",
+    "CUDA",
+    "OPTIX"
+  ],
+  "osl_graph_tests": [
+    "CPU",
+    "OPTIX"
+  ],
+  "wrapper_fixes": [],
+  "harness_fixes": [
+    "Native XML relative include paths retained in copied fixture directories; comma normalization retained from Phase 4.",
+    "Converter explicitly binds the native fallback world shader through the background shader socket.",
+    "OpenEXR writer mutates its channel dict; pass a shallow dict copy and verify every FLOAT survives adapter export unchanged."
+  ],
+  "limitations": [
+    "Windows only; no Linux/macOS or sanitizer run",
+    "Parity fixtures are 47x20, fixed 16 samples, denoising disabled; not a full production regression",
+    "GPU policy adapter maps the legacy deep subject flag to API route; actual_deep=false for all renders; no policy code or threshold changed",
+    "No nonblocking edit path implemented; no claim of stable ABI until Phase 7"
+  ],
+  "root": "D:\\CyclesDeepScratch\\c-api\\phase6-20261013"
+}

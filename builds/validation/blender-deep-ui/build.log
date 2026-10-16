@@ -1,0 +1,26 @@
+[1/9] Generating buildinfo.h_fake, buildinfo.h
+[2/9] Building C object source\creator\CMakeFiles\buildinfoobj.dir\buildinfo.c.obj
+[3/9] Building C object source\creator\CMakeFiles\blender.dir\buildinfo.c.obj
+[4/9] Linking CXX shared library lib\BlendThumb.dll
+[5/9] Building CXX object intern\cycles\blender\CMakeFiles\bf_intern_cycles.dir\session.cpp.obj
+In file included from D:\temp\cycles_deep_blender_ui\blender-clean\intern\cycles\blender\session.cpp:43:
+In file included from D:\temp\cycles_deep_blender_ui\blender-clean\intern\cycles\blender/output_driver.h:7:
+D:\temp\cycles_deep_blender_ui\blender-clean\intern\cycles\session/output_driver.h(93,32): warning: unused parameter 'y' [-Wunused-parameter]
+   93 |     virtual void begin_row(int y) const {}
+      |                                ^
+D:\temp\cycles_deep_blender_ui\blender-clean\intern\cycles\session/output_driver.h(94,30): warning: unused parameter 'y' [-Wunused-parameter]
+   94 |     virtual void end_row(int y) const {}
+      |                              ^
+2 warnings generated.
+[6/9] Building CXX object intern\cycles\blender\CMakeFiles\bf_intern_cycles.dir\sync.cpp.obj
+[7/9] Linking CXX static library lib\bf_intern_cycles.lib
+[8/9] Linking CXX executable bin\blender.exe
+Run: "ninja install" to copy runtime files and scripts to: D:/temp/cycles_deep_blender_ui/install/5.3
+[8/9] Install the project...
+-- Install configuration: "Release"
+-- Installing: D:/temp/cycles_deep_blender_ui/install/./blender.pdb
+-- Installing: D:/temp/cycles_deep_blender_ui/install/./BlendThumb.lib
+-- Installing: D:/temp/cycles_deep_blender_ui/install/./BlendThumb.dll
+-- Installing: D:/temp/cycles_deep_blender_ui/install/5.3/scripts/addons_core/cycles/properties.py
+-- Installing: D:/temp/cycles_deep_blender_ui/install/5.3/scripts/addons_core/cycles/ui.py
+-- Installing: D:/temp/cycles_deep_blender_ui/install/./blender.exe

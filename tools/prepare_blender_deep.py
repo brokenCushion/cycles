@@ -83,7 +83,13 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
         description="Write scalar camera visibility Z/ZBack/A alongside beauty",
     )
     deep_output_path: StringProperty(
-        name="Deep EXR", subtype='FILE_PATH', default="",
+        name="Path Override", subtype='FILE_PATH', default="",
+        options={'ANIMATABLE', 'OUTPUT_PATH', 'PATH_SUPPORTS_BLEND_RELATIVE'},
+        description="Blank uses the beauty output path; Blender frame numbering applies",
+    )
+    deep_write_diagnostics: BoolProperty(
+        name="Write Samples CSV", default=False,
+        description="Write accepted camera samples for validation; can produce very large files",
     )
     deep_max_events: IntProperty(name="Deep Events Per Sample", default=16, min=1, max=8192,
         description="Surface/homogeneous limit: 64; native grids use at least 4096, up to 8192")
@@ -105,31 +111,96 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
     deep_samples: IntProperty(name="Deep Samples", default=0, min=0, max=4096,
         description="First N accepted camera samples; 0 uses all beauty samples")
 ''')
-edit('blender/addon/ui.py', 'class CYCLES_RENDER_PT_film_pixel_filter', """class CYCLES_RENDER_PT_deep(CyclesButtonsPanel, Panel):
-    bl_label = "Deep Visibility"
-    bl_parent_id = "CYCLES_RENDER_PT_film"
-    bl_options = {'DEFAULT_CLOSED'}
+edit('blender/addon/properties.py', 'class CyclesRenderLayerSettings(bpy.types.PropertyGroup):\n', '''class CyclesRenderLayerSettings(bpy.types.PropertyGroup):
+    use_pass_deep: BoolProperty(
+        name="Deep", default=False,
+        description="Write deep camera visibility for this view layer in final renders",
+    )
+''')
+edit('blender/addon/version_update.py', '@persistent\ndef do_versions(self):', '''@persistent
+def migrate_deep(_):
+    for scene in bpy.data.scenes:
+        cscene = scene.cycles
+        if not cscene.use_deep_output:
+            continue
+        layers = [layer for layer in scene.view_layers if layer.use]
+        if len(layers) == 1 and not layers[0].cycles.is_property_set("use_pass_deep"):
+            layers[0].cycles.use_pass_deep = True
+        # Consume the legacy switch once; an explicit new checkbox always wins.
+        cscene.use_deep_output = False
+
+
+@persistent
+def do_versions(self):''')
+edit('blender/addon/__init__.py',
+     '    bpy.app.handlers.version_update.append(version_update.do_versions)',
+     '    bpy.app.handlers.version_update.append(version_update.do_versions)\n'
+     '    bpy.app.handlers.load_post.append(version_update.migrate_deep)')
+edit('blender/addon/__init__.py',
+     '    bpy.app.handlers.version_update.remove(version_update.do_versions)',
+     '    bpy.app.handlers.load_post.remove(version_update.migrate_deep)\n'
+     '    bpy.app.handlers.version_update.remove(version_update.do_versions)')
+edit('blender/addon/ui.py', 'class CYCLES_RENDER_PT_passes_aov', """class CYCLES_RENDER_PT_passes_deep(CyclesButtonsPanel, Panel):
+    bl_label = "Deep"
+    bl_context = "view_layer"
+    bl_parent_id = "CYCLES_RENDER_PT_passes"
 
     def draw_header(self, context):
-        self.layout.prop(context.scene.cycles, "use_deep_output", text="")
+        self.layout.prop(context.view_layer.cycles, "use_pass_deep", text="")
 
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.active = context.view_layer.cycles.use_pass_deep
+        layout.label(text="Shared by all view layers")
         col = layout.column()
-        col.active = context.scene.cycles.use_deep_output
-        for prop in ("deep_output_path", "use_deep_volume", "use_deep_volume_shader_eval",
+        for prop in ("use_deep_volume", "use_deep_volume_shader_eval",
                      "deep_volume_step", "use_deep_ids",
                      "deep_error", "deep_z_tolerance", "deep_samples", "deep_max_events", "deep_memory_mb"):
             col.prop(context.scene.cycles, prop)
+        col.separator()
+        col.label(text="Diagnostics")
+        col.prop(context.scene.cycles, "deep_write_diagnostics")
+        if context.view_layer.cycles.use_pass_deep:
+            layout.label(text="Deep in interactive (F12) renders is experimental;", icon='INFO')
+            layout.label(text="background renders are the qualified path.")
 
 
-class CYCLES_RENDER_PT_film_pixel_filter""")
-edit('blender/addon/ui.py', '    CYCLES_RENDER_PT_film_pixel_filter,',
-     '    CYCLES_RENDER_PT_deep,\n    CYCLES_RENDER_PT_film_pixel_filter,')
+class CYCLES_RENDER_PT_output_deep(CyclesButtonsPanel, Panel):
+    bl_label = "Deep"
+    bl_context = "output"
+    bl_parent_id = "RENDER_PT_output"
+
+    @classmethod
+    def poll(cls, context):
+        return CyclesButtonsPanel.poll(context) and context.view_layer.cycles.use_pass_deep
+
+    def draw(self, context):
+        self.layout.use_property_split = True
+        self.layout.use_property_decorate = False
+        self.layout.prop(context.scene.cycles, "deep_output_path")
+
+
+class CYCLES_RENDER_PT_passes_aov""")
+edit('blender/addon/ui.py', '    CYCLES_RENDER_PT_passes_crypto,',
+     '    CYCLES_RENDER_PT_passes_crypto,\n    CYCLES_RENDER_PT_passes_deep,\n'
+     '    CYCLES_RENDER_PT_output_deep,')
+# Only render() supplies a layer. Creation, viewport and bake callers keep deep off.
+edit('blender/sync.h', '                                          float pixelsize);',
+     '                                          float pixelsize,\n'
+     '                                          blender::ViewLayer *b_view_layer = nullptr);')
+edit('blender/sync.cpp', '                                              float pixelsize)\n',
+     '                                              float pixelsize,\n'
+     '                                              blender::ViewLayer *b_view_layer)\n')
 edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_denoise_params', '''#ifdef WITH_CYCLES_DEEP_OPAQUE
-  params.deep.enabled = background && !(b_engine.flag & blender::RE_ENGINE_PREVIEW) &&
-                        get_boolean(cscene, "use_deep_output");
+  if (b_view_layer && background &&
+      !(b_engine.flag & blender::RE_ENGINE_PREVIEW)) {
+    blender::PointerRNA layer_ptr = RNA_pointer_create_id_subdata(
+        b_scene.id, blender::RNA_ViewLayer, b_view_layer);
+    blender::PointerRNA clayer = RNA_pointer_get(&layer_ptr, "cycles");
+    params.deep.enabled = get_boolean(clayer, "use_pass_deep");
+  }
   if (params.deep.enabled) {
     params.deep.transparent = true;
     params.deep.volume = get_boolean(cscene, "use_deep_volume");
@@ -152,16 +223,18 @@ edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_
 DenoiseParams BlenderSync::get_denoise_params''')
 edit('blender/output_driver.h', '  bool read_render_tile(const Tile &tile) override;\n', '''  bool read_render_tile(const Tile &tile) override;
 #ifdef WITH_CYCLES_DEEP_OPAQUE
-  void set_deep_output(const string &path, const int frame)
+  void set_deep_output(const string &path, const int frame, const bool diagnostics)
   {
     deep_path_ = path;
     deep_frame_ = frame;
+    deep_diagnostics_ = diagnostics;
   }
   bool supports_deep_output() const override { return !deep_path_.empty(); }
   void write_deep_render_tile(const DeepTile &tile) override;
  private:
   string deep_path_;
   int deep_frame_ = 1;
+  bool deep_diagnostics_ = false;
 #endif
 ''')
 edit('blender/output_driver.cpp', '#include "blender/output_driver.h"\n', '''#include "blender/output_driver.h"
@@ -208,14 +281,19 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
     /* Accepted per-camera intervals on a small grid, before pixel mixture
      * reconstruction/reduction. This is diagnostic evidence, not a completed
      * frame marker; the EXR is published independently below. */
-    deep::AtomicOutput diagnostic(path + ".samples.csv");
-    std::ofstream records(diagnostic.temporary());
-    records.exceptions(std::ios::badbit | std::ios::failbit);
-    records << "file_x,file_y,sample,front,back,value,kind,event\\n"
-            << std::setprecision(std::numeric_limits<double>::max_digits10);
+    std::unique_ptr<deep::AtomicOutput> diagnostic;
+    std::ofstream records;
+    if (deep_diagnostics_) {
+      diagnostic = make_unique<deep::AtomicOutput>(path + ".samples.csv");
+      records.exceptions(std::ios::badbit | std::ios::failbit);
+      records.open(diagnostic->temporary());
+      records << "file_x,file_y,sample,front,back,value,kind,event\\n"
+              << std::setprecision(std::numeric_limits<double>::max_digits10);
+    }
     const auto begin_row = [&](const int y) {
       check_cancel();
       tile.begin_row(tile.height - 1 - y);
+      if (!deep_diagnostics_) return;
       for (int gy = 0; gy < 9; ++gy) {
         if (gy * (tile.height - 1) / 8 != y) continue;
       for (int gx = 0; gx < 9; ++gx) {
@@ -237,10 +315,10 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
     };
     const auto end_row = [&](const int y) {
       tile.end_row(tile.height - 1 - y);
-      if (y == tile.height - 1) {
+      if (deep_diagnostics_ && y == tile.height - 1) {
         records.close();
         check_cancel();
-        diagnostic.publish();
+        diagnostic->publish();
       }
     };
     deep::write_volume_exr_pixels(path, image, [&](const int x, const int y) {
@@ -253,14 +331,19 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   }
   /* Small, reproducible diagnostic grid for independent reader validation.
    * This is raw accepted camera data, before pixel reconstruction/FLOAT export. */
-  deep::AtomicOutput records_publication(path + ".samples.csv");
-  std::ofstream records(records_publication.temporary());
-  records.exceptions(std::ios::badbit | std::ios::failbit);
-  records << "file_x,file_y,sample,depth,alpha,event\\n"
-          << std::setprecision(std::numeric_limits<float>::max_digits10);
+  std::unique_ptr<deep::AtomicOutput> records_publication;
+  std::ofstream records;
+  if (deep_diagnostics_) {
+    records_publication = make_unique<deep::AtomicOutput>(path + ".samples.csv");
+    records.exceptions(std::ios::badbit | std::ios::failbit);
+    records.open(records_publication->temporary());
+    records << "file_x,file_y,sample,depth,alpha,event\\n"
+            << std::setprecision(std::numeric_limits<float>::max_digits10);
+  }
   const auto begin_row = [&](const int y) {
     check_cancel();
     tile.begin_row(tile.height - 1 - y);
+    if (!deep_diagnostics_) return;
     if (y % std::max(1, tile.height / 8) && y != tile.height - 1)
       return;
     for (int x = 0; x < tile.width; ++x) {
@@ -280,10 +363,10 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   };
   const auto end_row = [&](const int y) {
     tile.end_row(tile.height - 1 - y);
-    if (y == tile.height - 1) {
+    if (deep_diagnostics_ && y == tile.height - 1) {
       records.close();
       check_cancel();
-      records_publication.publish();
+      records_publication->publish();
     }
   };
   deep::write_deep_exr_rows(path, image, [&](const int y) {
@@ -328,8 +411,13 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
 CCL_NAMESPACE_END''')
 # Only the offline render driver gets a deep destination. Baking is unchanged.
 text = read_text('blender/session.cpp')
-text = text.replace('#include "DNA_screen_types.h"',
-                    '#include "DNA_screen_types.h"\n#include "DNA_layer_types.h"', 1)
+text = text.replace('#include "DNA_screen_types.h"', '''#include "DNA_screen_types.h"
+#include "DNA_layer_types.h"
+#include "BKE_blender_project.hh"
+#include "BKE_image_format.hh"
+#include "BKE_main.hh"
+#include "BLI_fileops.hh"
+#include "BLI_path_utils.hh"''', 1)
 anchor = '  session->set_output_driver(make_unique<BlenderOutputDriver>(b_engine));'
 if text.count(anchor) != 2:
     raise RuntimeError('Unexpected offline/bake driver setup')
@@ -337,27 +425,70 @@ text = text.replace(anchor, '''  auto output_driver = make_unique<BlenderOutputD
 #ifdef WITH_CYCLES_DEEP_OPAQUE
   blender::PointerRNA deep_scene_ptr = RNA_id_pointer_create(&b_scene->id);
   blender::PointerRNA deep_cycles = RNA_pointer_get(&deep_scene_ptr, "cycles");
-  if (background && get_boolean(deep_cycles, "use_deep_output")) {
+  blender::ViewLayer *deep_layer = DEG_get_evaluated_view_layer(b_depsgraph);
+  const auto layer_has_deep = [&](blender::ViewLayer *layer) {
+    blender::PointerRNA ptr = RNA_pointer_create_id_subdata(
+        b_scene->id, blender::RNA_ViewLayer, layer);
+    blender::PointerRNA cycles = RNA_pointer_get(&ptr, "cycles");
+    return get_boolean(cycles, "use_pass_deep");
+  };
+  if (!(b_engine.flag & blender::RE_ENGINE_PREVIEW)) {
+    string names;
     int deep_layers = 0;
-    for (const blender::ViewLayer &layer : b_scene->view_layers)
-      deep_layers += (layer.flag & blender::VIEW_LAYER_RENDER) != 0;
-    if (deep_layers != 1 || (b_scene->r.scemode & blender::R_MULTIVIEW)) {
-      session->progress.set_error("Experimental deep output requires one view layer and mono rendering");
+    for (blender::ViewLayer &layer : b_scene->view_layers) {
+      if (layer_has_deep(&layer)) {
+        if (deep_layers++) names += ", ";
+        names += layer.name;
+      }
+    }
+    if (deep_layers > 1) {
+      session->progress.set_error("Deep requires exactly one enabled layer; enabled on: " + names);
       update_status_progress();
       return;
     }
-    const string path = get_string(deep_cycles, "deep_output_path");
-    if (path.empty()) {
-      session->progress.set_error("Deep EXR output path is empty");
+    if (deep_layers && (b_scene->r.scemode & blender::R_MULTIVIEW)) {
+      session->progress.set_error("Deep output requires mono rendering");
+      update_status_progress();
+      return;
+    }
+  }
+  if (!(b_engine.flag & blender::RE_ENGINE_PREVIEW) && layer_has_deep(deep_layer)) {
+    const string override_path = get_string(deep_cycles, "deep_output_path");
+    char path[FILE_MAX];
+    blender::bke::path_templates::VariableMap variables;
+    blender::BKE_blender_project_read_callback(b_data, [&](const blender::bke::BlenderProject *project) {
+      blender::BKE_add_template_variables_general(variables, &b_scene->id, project);
+    });
+    blender::BKE_add_template_variables_for_render_path(variables, *b_scene);
+    /* Use the same path builder as RenderSettings.frame_path(), including templates,
+     * relative paths, frame padding and the file-extension setting. */
+    const auto errors = blender::BKE_image_path_from_imformat(
+        path, override_path.empty() ? b_render->pic : override_path.c_str(),
+        blender::BKE_main_blendfile_path(b_data), &variables, b_scene->r.cfra,
+        &b_render->im_format, (b_render->scemode & blender::R_EXTENSION) != 0, true, "");
+    if (!errors.is_empty() ||
+        (!string_endswith(path, ".deep.exr") &&
+         !blender::BLI_path_extension_replace(path, sizeof(path), ".deep.exr"))) {
+      session->progress.set_error("Could not resolve Deep output path using Blender frame path rules");
+      update_status_progress();
+      return;
+    }
+    if (!blender::BLI_file_ensure_parent_dir_exists(path)) {
+      session->progress.set_error("Could not create Deep output directory");
       update_status_progress();
       return;
     }
     output_driver->set_deep_output(
-        blender_absolute_path(*b_data, &b_scene->id, path), b_scene->r.cfra);
+        path, b_scene->r.cfra, get_boolean(deep_cycles, "deep_write_diagnostics"));
   }
 #endif
   session->set_output_driver(std::move(output_driver));''', 1)
 stage_text('blender/session.cpp', text)
+edit('blender/session.cpp', '''  /* get buffer parameters */
+  const SessionParams session_params = BlenderSync::get_session_params(
+      b_engine, b_userpref, *b_scene, background, pixelsize);''', '''  /* get buffer parameters */
+  const SessionParams session_params = BlenderSync::get_session_params(
+      b_engine, b_userpref, *b_scene, background, pixelsize, &b_view_layer);''')
 for relative, data in prepared.items():
     manifest['files'][relative] = hashlib.sha256(data).hexdigest()
 if args.check:

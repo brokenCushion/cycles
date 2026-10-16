@@ -1,0 +1,39 @@
+{
+  "background": false,
+  "passed": true,
+  "first_f12_csv_off": {
+    "deep": "repeat/frame_0001.deep.exr",
+    "identity": "cfffb6db76c434adb6cc3556be5061c966ca83bf4a53dbc1ccf39b2933978178",
+    "sha256": "3ed2fc0183e2f78d91a95b9ce3351e2f5be5874d6c0d9a9da5c7b6a173f1f9f3",
+    "csv": false
+  },
+  "second_f12_csv_on": {
+    "deep": "repeat/frame_0001.deep.exr",
+    "identity": "1ff8ddb9d5acf84c2f8464b2b30f41d5f9bc225ff407236069786edefd6bea54",
+    "sha256": "fd92189d56a5d959a535d375d891c9d73ceb69ac2e795c47bfbd9586100d3835",
+    "csv": true
+  },
+  "cancel_existing": {
+    "previous_exr_and_csv_unchanged": true,
+    "no_partial_files": true,
+    "previous_sha256": {
+      "frame_0001.deep.exr": "fd92189d56a5d959a535d375d891c9d73ceb69ac2e795c47bfbd9586100d3835",
+      "frame_0001.deep.exr.samples.csv": "bf7ff41873fa474c9bde1ea8a4b7470df0a24314fe62b1209db7f073347e254d"
+    }
+  },
+  "cancel_fresh": {
+    "no_exr_or_csv": true,
+    "no_partial_files": true
+  },
+  "interactive_animation_frame_2": {
+    "deep": "animation/frame_0002.deep.exr",
+    "identity": "e9ab4178e367348730ee8f6bbd2f111cd5fb2d094a9e9ca5145e5b2d29198107",
+    "sha256": "e3594e50113ff047bd40238ff1a001fac22875e8751191064955042c7ca9f9ba",
+    "csv": false
+  },
+  "counts": {
+    "pre": 5,
+    "complete": 3,
+    "cancel": 2
+  }
+}

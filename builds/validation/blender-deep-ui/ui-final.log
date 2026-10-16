@@ -1,0 +1,36 @@
+00:00.609  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\hashes\shot_0001.png'
+00:00.656  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\hashes\shot_0002.png'
+00:00.719  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\no_hashes\shot_0001.png'
+00:00.781  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\no_hashes\shot_0002.png'
+00:00.828  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\relative\shot_0001.png'
+00:00.891  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\relative\shot_0002.png'
+00:00.938  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\override-beauty\beauty_0001.png'
+00:01.000  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\override-beauty\beauty_0002.png'
+00:01.047  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\override-plain-beauty\beauty_0001.png'
+00:01.109  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\override-plain-beauty\beauty_0002.png'
+00:01.172  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\no-extension\shot_0001'
+00:01.219  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\no-extension\shot_0002'
+00:01.328  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\csv-surface\shot_0001.png'
+00:01.391  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\csv-surface\shot_0002.png'
+C:\Users\jun\Documents\ChatGPT\cycles_deep\tools\test_blender_deep_ui.py:81: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  volume.use_nodes = True
+00:01.453  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\volume-no-csv\shot_0001.png'
+00:01.516  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\volume-no-csv\shot_0002.png'
+00:01.578  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\volume-csv\shot_0001.png'
+00:01.625  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\volume-csv\shot_0002.png'
+00:01.703  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\mixed-layers\shot_0001.exr'
+00:01.766  render           | Saved: 'D:\temp\cycles_deep_blender_ui\verification\ui-final\mixed-layers\shot_0002.exr'
+C:\Users\jun\Documents\ChatGPT\cycles_deep\tools\test_blender_deep_ui.py:167: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  material.use_nodes = True
+Info: Saved as "paths.blend"
+Error: Deep requires exactly one enabled layer; enabled on: DeepLayer, BeautyLayer
+Error: Deep requires exactly one enabled layer; enabled on: BeautyLayer, DeepLayer
+Error: Deep requires exactly one enabled layer; enabled on: BeautyLayer, DeepLayer
+Error: Deep output requires mono rendering
+Error: Deep output requires mono rendering
+Error: Deep output requires mono rendering
+Info: Baking map saved to internal image, save it externally or pack it
+DEEP_UI_TESTS_PASS D:\temp\cycles_deep_blender_ui\verification\ui-final
+Blender 5.3.0 Alpha (hash 749518deb2f0 built 2026-10-16 11:52:55)
+
+Blender quit

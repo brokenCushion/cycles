@@ -1,0 +1,21 @@
+{
+  "implementation_of_f12_support": false,
+  "finding": "The prior released build already supports deep publication for a small interactive offline render.",
+  "evidence": {
+    "background": false,
+    "render_complete": true,
+    "deep_written": true,
+    "csv_written": true
+  },
+  "probe": "Factory cube, CPU, 32x32, 4 samples, normal non-background Blender, bpy.ops.render.render(INVOKE_DEFAULT), the operator invoked by F12.",
+  "architecture": "Cycles background means offline (also F12); BlenderSession.headless reflects bpy.app.background. F12 uses the same BlenderOutputDriver as background final renders. Viewport has background=false; baking has a separate driver setup.",
+  "feasibility": "No separate deep driver appears necessary. Retaining interactive capture in the new layer-based adapter would require revising the requested CLI-only headless guards and warning policy after user approval.",
+  "risks": [
+    "The small existing-build probe does not qualify large scenes, GPU backends, cancellation, repeated renders or animation in the UI.",
+    "Deep export can delay interactive completion; cancellation must preserve the prior final EXR and release capture/spill resources.",
+    "Large diagnostic sidecars should remain opt-in.",
+    "Final render, preview, viewport and baking must remain distinct; the optional null layer keeps the latter callers deep-off.",
+    "Display-driver/context lifetime and repeated/persistent sessions need interactive regression coverage."
+  ],
+  "draft_behavior": "Implements the agreed warning and no deep file for F12, which intentionally restricts functionality observed in the prior build."
+}

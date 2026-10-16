@@ -1,0 +1,23 @@
+{
+  "background": false,
+  "passed": false,
+  "first_f12_csv_off": {
+    "deep": "repeat/frame_0001.deep.exr",
+    "identity": "cfffb6db76c434adb6cc3556be5061c966ca83bf4a53dbc1ccf39b2933978178",
+    "sha256": "3ed2fc0183e2f78d91a95b9ce3351e2f5be5874d6c0d9a9da5c7b6a173f1f9f3",
+    "csv": false
+  },
+  "second_f12_csv_on": {
+    "deep": "repeat/frame_0001.deep.exr",
+    "identity": "1ff8ddb9d5acf84c2f8464b2b30f41d5f9bc225ff407236069786edefd6bea54",
+    "sha256": "fd92189d56a5d959a535d375d891c9d73ceb69ac2e795c47bfbd9586100d3835",
+    "csv": true
+  },
+  "error": "Traceback (most recent call last):\n  File \"C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\test_blender_deep_interactive.py\", line 184, in guarded_step\n    return step()\n  File \"C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\test_blender_deep_interactive.py\", line 133, in step\n    escape()\n    ~~~~~~^^\n  File \"C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\tools\\test_blender_deep_interactive.py\", line 94, in escape\n    assert bpy.app.is_job_running('RENDER'), 'Render finished before cancellation'\n           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^\nAssertionError: Render finished before cancellation\n",
+  "failed_stage": 3,
+  "counts": {
+    "pre": 3,
+    "complete": 2,
+    "cancel": 1
+  }
+}

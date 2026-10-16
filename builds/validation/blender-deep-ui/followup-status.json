@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "blender_pin": "749518deb2f0735a22361a07488b35f7ea5c2fdf",
+  "renderer_sha256": "7499d3a8dd448c469c4f8ef26e38cb37786c5869ed8a1d3f8a10b83bc454cdf5",
+  "overlay_files_verified": 1029,
+  "overlay_manifest_sha256": "6103a005203e445e4f7aba1fff62c6c283e48dc691f54dcf5165e82b2b5c9e97",
+  "core_source_unchanged": true,
+  "python_syntax_passed": [
+    "prepare_blender_deep.py",
+    "render_blender_deep_scene.py",
+    "create_vdb_deep_cases.py",
+    "test_blender_deep_ui.py",
+    "test_blender_deep_migration.py",
+    "test_blender_deep_gui.py",
+    "test_blender_deep_interactive.py"
+  ],
+  "gpu": "NVIDIA GeForce RTX 3080, 610.88",
+  "optix_exr_sha256": {
+    "optix-original": "cc3b98dc07e06fbdc46a3e736bb40d794c68faffd8792a747512d6f4c3b1b615",
+    "optix-before": "cc3b98dc07e06fbdc46a3e736bb40d794c68faffd8792a747512d6f4c3b1b615",
+    "optix-after": "cc3b98dc07e06fbdc46a3e736bb40d794c68faffd8792a747512d6f4c3b1b615"
+  },
+  "optix_exr_bytes": 36129,
+  "interactive_results": "interactive-runtime/results.json",
+  "background_results": "ui-final/results.json",
+  "gui_results": "gui-final/results.json",
+  "source_sha256": {
+    "prepare_blender_deep.py": "e38e442aa3485953ef5510cd0eedffc0c699edc6163e592b5840dd1df11e49fa",
+    "render_blender_deep_scene.py": "2b79195ae708c463d34afc2e6a68f1b9f0fb86487e1e18ef33c2008c6a1dc46f",
+    "create_vdb_deep_cases.py": "edaac3a8ffb18677347cc584bcb3e6aae8510e2a9c45166ac41cf151174a4523",
+    "test_blender_deep_ui.py": "72501df624779df417092ed5c895d99d3abe8ecc6582e412cf2cc9f9ac75ef48",
+    "test_blender_deep_migration.py": "056ec9df32a6d2783e2b2ed48f1e3f8a64bd83e616ec1a64a41e71a73afee4bd",
+    "test_blender_deep_gui.py": "1bdeffa4f7fca79028fee18644dbb2a0e34245aff2c47e959c3297e6b4cfcf42",
+    "test_blender_deep_interactive.py": "66327273b973043aea253dc7c249019d8ab8df537f308a2a65b4e4dd576c9d2b"
+  }
+}

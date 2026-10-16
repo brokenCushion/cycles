@@ -101,9 +101,9 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
         description="Opt in to adaptive extinction evaluation; OSL volumes use it automatically")
     deep_volume_step: FloatProperty(name="Deep Volume Step", default=0, min=0,
         description="World-unit step cap; 0 derives from grid voxels, nongrid volumes require an explicit step")
-    deep_z_tolerance: FloatProperty(name="Deep Surface Depth Tolerance", default=1e-4, min=0,
+    deep_z_tolerance: FloatProperty(name="Deep Surface Depth Tolerance", default=1e-4, min=0, precision=5,
         description="Relative same-object surface depth span; 0 disables; strict forces 0")
-    deep_error: FloatProperty(name="Deep Transmittance Error", default=1e-3, min=0, max=1e-2,
+    deep_error: FloatProperty(name="Deep Transmittance Error", default=1e-3, min=0, max=1e-2, precision=4,
         description="0 selects strict; nonzero must exceed the 1e-6 FLOAT precision floor")
     deep_memory_mb: IntProperty(name="Deep Working Memory MiB", default=512, min=1, max=2147483647)
     use_deep_ids: BoolProperty(name="Deep Object IDs", default=False,
@@ -112,9 +112,13 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
         description="First N accepted camera samples; 0 uses all beauty samples")
 ''')
 edit('blender/addon/properties.py', 'class CyclesRenderLayerSettings(bpy.types.PropertyGroup):\n', '''class CyclesRenderLayerSettings(bpy.types.PropertyGroup):
+    use_pass_deep_color: BoolProperty(
+        name="Deep Color", default=False,
+        description="Not implemented yet",
+    )
     use_pass_deep: BoolProperty(
-        name="Deep", default=False,
-        description="Write deep camera visibility for this view layer in final renders",
+        name="Deep Alpha", default=False,
+        description="Write deep alpha (Z/ZBack/A). Background renders are the qualified path; interactive F12 is experimental.",
     )
 ''')
 edit('blender/addon/version_update.py', '@persistent\ndef do_versions(self):', '''@persistent
@@ -145,26 +149,28 @@ edit('blender/addon/ui.py', 'class CYCLES_RENDER_PT_passes_aov', """class CYCLES
     bl_context = "view_layer"
     bl_parent_id = "CYCLES_RENDER_PT_passes"
 
-    def draw_header(self, context):
-        self.layout.prop(context.view_layer.cycles, "use_pass_deep", text="")
-
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
         layout.use_property_decorate = False
-        layout.active = context.view_layer.cycles.use_pass_deep
-        layout.label(text="Shared by all view layers")
+        cscene = context.scene.cycles
+        clayer = context.view_layer.cycles
+        row = layout.row()
+        row.enabled = False
+        row.prop(clayer, "use_pass_deep_color")
+        layout.prop(clayer, "use_pass_deep")
+        row = layout.row()
+        row.active = clayer.use_pass_deep and cscene.deep_error != 0
+        row.prop(cscene, "use_deep_ids", text="Deep ID")
+        if cscene.deep_error == 0:
+            row.label(text="IDs need a non-zero transmittance error")
+        layout.separator()
         col = layout.column()
+        col.active = clayer.use_pass_deep
         for prop in ("use_deep_volume", "use_deep_volume_shader_eval",
-                     "deep_volume_step", "use_deep_ids",
+                     "deep_volume_step",
                      "deep_error", "deep_z_tolerance", "deep_samples", "deep_max_events", "deep_memory_mb"):
-            col.prop(context.scene.cycles, prop)
-        col.separator()
-        col.label(text="Diagnostics")
-        col.prop(context.scene.cycles, "deep_write_diagnostics")
-        if context.view_layer.cycles.use_pass_deep:
-            layout.label(text="Deep in interactive (F12) renders is experimental;", icon='INFO')
-            layout.label(text="background renders are the qualified path.")
+            col.prop(cscene, prop)
 
 
 class CYCLES_RENDER_PT_output_deep(CyclesButtonsPanel, Panel):

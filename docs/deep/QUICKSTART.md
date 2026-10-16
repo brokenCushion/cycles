@@ -5,42 +5,48 @@ and inspect it in Gaffer. To render your own, use our custom Blender build.
 
 ## 1. Download Blender
 
-Download the Windows x64 ZIP from the [Blender release](https://github.com/brokenCushion/cycles/releases/tag/cycles-deep-blender-2026-10-11).
+Download the Windows x64 ZIP from the [Blender release](https://github.com/brokenCushion/cycles/releases/tag/cycles-deep-blender-2026-10-17).
 Verify it against the release's `SHA256SUMS.txt`, then extract the **whole folder**
 and launch `blender.exe`. Keep its DLLs, Python and kernels beside it.
 The source archive, build pins and license notices accompany the download.
 
-This is the unchanged Blender 5.3 alpha installation used for the accepted
-production runs, with the deep timing fix and **no diagnostic snapshot patch**.
+This Blender 5.3 alpha package includes the View Layer UI update. Its CPU and
+OptiX smoke outputs match the qualified UI-change results byte-for-byte.
 It was qualified on Windows with an RTX 3080. CUDA kernels target `sm_86`;
 other CUDA architectures and other operating systems are not qualified by this
 package. See the [support matrix](SUPPORT.md) before choosing a backend.
 
 ## 2. Find the settings
 
-In a build containing the View Layer UI update, select **Cycles**, then enable
-**View Layer > Passes > Deep**, directly below Cryptomatte. Its settings are
-shared by all view layers. Only one layer can enable Deep; other layers may render
+Set the render engine to **Cycles**: the Deep panel appears only for Cycles.
+In builds containing the second UI revision, open **View Layer > Passes > Deep**,
+directly below Cryptomatte, and enable **Deep Alpha** inside the panel.
+**Deep Color** is a disabled placeholder (not implemented). **Deep ID** requires
+Deep Alpha and a non-zero Deep Transmittance Error; strict (`0`) disables the
+control. The remaining settings are greyed out while Deep Alpha is off and are
+shared by all view layers. Only one layer can enable Deep Alpha; other layers may render
 normally. Deep in interactive (F12) renders is experimental; **background renders
 (`blender -b`) are the qualified path**. F12 uses the same Deep output driver
 and path rules.
 
 **Output > Output > Deep** offers an optional path override. Leave it blank to
 write beside the beauty frame using `.deep.exr`; Blender handles `//`, `####`
-and frame numbers. **Diagnostics > Write Samples CSV** is off by default in
-both background and F12 renders.
-The validation helper below enables CSV explicitly.
+and frame numbers. Diagnostic samples CSV is off by default in both background
+and F12 renders and has no control in the revised panel. Python can enable it with
+`bpy.context.scene.cycles.deep_write_diagnostics = True`.
+The validation helper below does this explicitly.
 The [UI verification report](../../builds/validation/blender-deep-ui/README.md)
 records the small F12 cancellation/repeat/animation checks and remaining limits.
 
-The previously published package linked above predates this UI update and keeps
-its controls under **Render Properties > Film > Deep Visibility**. The helper
-supports that build as well.
+The October 17 package linked above uses the first UI revision: enable Deep in
+the panel header, with the CSV checkbox visible under Diagnostics. The second
+revision described here is pending a new release. The October 11 package uses
+**Render Properties > Film > Deep Visibility**; the helper supports it as well.
 
 - **Deep Samples:** `0` captures all accepted camera samples; `64` takes the first
   64 per pixel, or fewer if adaptive sampling stops earlier. This caps camera
   samples, not depth layers, and does not reduce beauty sampling.
-- **Object IDs:** enable deepID to identify objects through overlapping layers.
+- **Deep ID:** identifies objects through overlapping layers; requires non-strict error.
 - **Error:** `1e-3` controls visibility-curve approximation. It does not bound the
   sampling difference between capped and uncapped output.
 - **Memory:** bounds deep working storage; large captures can spill to disk.
@@ -88,8 +94,8 @@ ordinary FLOAT channel conversion can lose ID precision.
 
 ## Verified download, further checks
 
-The package was extracted into a fresh directory, every bundled runtime file
-was checksum-verified, and background startup registered the deep settings and
-Deep Visibility panel. Packaging did not rebuild Blender or render a new scene.
-See [package verification](evidence/blender-package.json) and
+The October 17 package was built from the merged source and extracted into a fresh
+directory. Every bundled runtime file was checksum-verified; startup registration,
+CPU/OptiX background renders, F12 and legacy migration passed. Both ZIPs passed CRC.
+See its release asset `package-verification.json` and
 [developer verification](DEVELOPMENT.md) for independent checks and core tests.

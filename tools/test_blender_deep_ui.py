@@ -30,6 +30,17 @@ layer = bpy.context.view_layer
 layer.name = 'DeepLayer'
 cscene = scene.cycles
 assert not layer.cycles.use_pass_deep
+assert not layer.cycles.use_pass_deep_color
+color = layer.cycles.bl_rna.properties['use_pass_deep_color']
+assert not color.default and color.description == 'Not implemented yet'
+alpha = layer.cycles.bl_rna.properties['use_pass_deep']
+assert alpha.name == 'Deep Alpha'
+assert alpha.description == ('Write deep alpha (Z/ZBack/A). Background renders are the qualified path; '
+                             'interactive F12 is experimental.')
+assert cscene.bl_rna.properties['deep_error'].precision == 4
+assert cscene.bl_rna.properties['deep_z_tolerance'].precision == 5
+assert abs(cscene.deep_error - 0.001) < 1e-9
+assert abs(cscene.deep_z_tolerance - 0.0001) < 1e-10
 assert not cscene.deep_write_diagnostics
 assert cscene.deep_output_path == ''
 layer.cycles.use_pass_deep = True
@@ -67,6 +78,14 @@ def animation(name, path, override='', extensions=True, diagnostics=False):
 
 
 animation('hashes', str(root / 'hashes' / 'shot_####'))
+# The placeholder must have no render effect, even when enabled through Python.
+layer.cycles.use_pass_deep_color = True
+animation('color_placeholder', str(root / 'color-placeholder' / 'shot_####'))
+for frame in (1, 2):
+    assert (root / 'hashes' / f'shot_{frame:04}.deep.exr').read_bytes() == (
+        root / 'color-placeholder' / f'shot_{frame:04}.deep.exr').read_bytes()
+layer.cycles.use_pass_deep_color = False
+results['color_placeholder_no_effect'] = True
 animation('no_hashes', str(root / 'no_hashes' / 'shot_'))
 animation('relative', '//relative/shot_####')
 animation('override', str(root / 'override-beauty' / 'beauty_####'),
@@ -196,34 +215,47 @@ assert ui.CYCLES_RENDER_PT_output_deep.bl_parent_id == 'RENDER_PT_output'
 
 class Layout:
     def __init__(self, log, parent=None):
-        self.log, self.parent, self.active = log, parent, True
+        self.log, self.parent = log, parent
+        self.active = self.enabled = True
 
     def column(self):
         return Layout(self.log, self)
 
-    def enabled(self):
-        return self.active and (self.parent is None or self.parent.enabled())
+    row = column
+
+    def effective_enabled(self):
+        return self.active and self.enabled and (self.parent is None or self.parent.effective_enabled())
 
     def prop(self, owner, name, **kwargs):
-        self.log.append(('prop', name, self.enabled()))
+        self.log.append(('prop', name, self.effective_enabled(), kwargs.get('text')))
 
     def label(self, text, **kwargs):
-        self.log.append(('label', text, self.enabled()))
+        self.log.append(('label', text, self.effective_enabled()))
 
     def separator(self):
-        pass
+        self.log.append(('separator',))
 
 
-for enabled in (False, True):
-    layer.cycles.use_pass_deep = enabled
-    log = []
-    ui.CYCLES_RENDER_PT_passes_deep.draw(SimpleNamespace(layout=Layout(log)), bpy.context)
-    props = [entry for entry in log if entry[0] == 'prop']
-    assert len(props) == 10 and all(entry[2] == enabled for entry in props), log
-    assert any(entry[1] == 'Shared by all view layers' for entry in log)
-    note = ' '.join(entry[1] for entry in log if entry[0] == 'label')
-    assert ('Deep in interactive (F12) renders is experimental; background renders are the qualified path.' in note) == enabled
-    assert ui.CYCLES_RENDER_PT_output_deep.poll(bpy.context) == enabled
+assert 'draw_header' not in ui.CYCLES_RENDER_PT_passes_deep.__dict__
+settings = ['use_deep_volume', 'use_deep_volume_shader_eval', 'deep_volume_step',
+            'deep_error', 'deep_z_tolerance', 'deep_samples', 'deep_max_events', 'deep_memory_mb']
+for engine in ('CYCLES', 'BLENDER_EEVEE'):
+    scene.render.engine = engine
+    assert ui.CYCLES_RENDER_PT_passes_deep.poll(bpy.context) == (engine == 'CYCLES')
+    for enabled in (False, True):
+        layer.cycles.use_pass_deep = enabled
+        assert ui.CYCLES_RENDER_PT_output_deep.poll(bpy.context) == (engine == 'CYCLES' and enabled)
+        for error in (0, 0.001):
+            cscene.deep_error = error
+            log = []
+            ui.CYCLES_RENDER_PT_passes_deep.draw(SimpleNamespace(layout=Layout(log)), bpy.context)
+            props = [entry for entry in log if entry[0] == 'prop']
+            assert [p[1] for p in props] == ['use_pass_deep_color', 'use_pass_deep', 'use_deep_ids', *settings], log
+            assert [p[2] for p in props] == [False, True, enabled and error != 0, *([enabled] * 8)], log
+            assert props[2][3] == 'Deep ID'
+            assert log.index(('separator',)) > log.index(props[2])
+            labels = [entry[1] for entry in log if entry[0] == 'label']
+            assert labels == (['IDs need a non-zero transmittance error'] if error == 0 else []), log
 results['panel_draw_contract'] = True
 (root / 'results.json').write_text(json.dumps(results, indent=2))
 print('DEEP_UI_TESTS_PASS', root)

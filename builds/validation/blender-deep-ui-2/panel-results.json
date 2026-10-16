@@ -1,0 +1,11 @@
+{
+  "screenshots": [
+    "alpha-off.png",
+    "alpha-on.png",
+    "strict-ids-inactive.png",
+    "alpha-tooltip.png"
+  ],
+  "alpha_tooltip": "Write deep alpha (Z/ZBack/A). Background renders are the qualified path; interactive F12 is experimental.",
+  "color_tooltip": "Not implemented yet",
+  "strict_does_not_reset_ids": true
+}

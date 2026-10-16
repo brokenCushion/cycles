@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "branch": "blender-deep-ui-2",
+  "base_commit": "98ef479432626d13102f1ed289d46a0926b42718",
+  "blender_pin": "749518deb2f0735a22361a07488b35f7ea5c2fdf",
+  "changed_overlay_files_vs_released_build": [
+    "blender/addon/properties.py",
+    "blender/addon/ui.py"
+  ],
+  "renderer_sources_unchanged": true,
+  "clean_adapter_check": true,
+  "incremental_build_install_passed": true,
+  "screenshots_visually_reviewed": true,
+  "tooltip_visually_reviewed": true,
+  "cycles_only_poll": true,
+  "output_poll_follows_deep_alpha": true,
+  "deep_color_no_render_effect": true,
+  "defaults_unchanged": true,
+  "background_exr_byte_identical": true,
+  "migration_passed": true,
+  "validation_helper_csv_passed": true,
+  "scope": "No release packaging, publication, push or PR; no large VDB requalification"
+}

@@ -65,9 +65,17 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
 
 ## Host contract and limits
 
-- Enable `view_layer.cycles.use_pass_deep` in **View Layer > Passes > Deep**,
-  directly below Cryptomatte. The other controls remain on `scene.cycles` and
-  are shared by all view layers; they are greyed out until Deep is enabled.
+- Select **Cycles** as the render engine to show **View Layer > Passes > Deep**,
+  directly below Cryptomatte. In the second UI revision the header has no checkbox:
+  enable **Deep Alpha** (`view_layer.cycles.use_pass_deep`) inside the panel.
+  **Deep Color** (`view_layer.cycles.use_pass_deep_color`) is a disabled, default-off
+  placeholder with no render effect. **Deep ID** draws the existing
+  `scene.cycles.use_deep_ids`; it is inactive while Deep Alpha is off or the
+  transmittance error is strict (`0`), with an explanation for strict mode.
+  The remaining controls stay on `scene.cycles`, shared by all view layers and
+  greyed out until Deep Alpha is enabled. Error and surface depth tolerance show
+  four and five decimal places respectively; defaults remain `0.001` and `0.0001`.
+  This revision is pending release; the October 17 package uses the header checkbox.
   The former Render > Film panel is removed in builds containing this UI change.
 - **Output > Output > Deep** contains `scene.cycles.deep_output_path`, an optional
   override visible when the current layer's Deep pass is enabled. Blank uses
@@ -75,8 +83,8 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
   Overrides use the same Blender relative-path and frame-numbering rules:
   `//renders/shot_####` produces `shot_0001.deep.exr`, then `shot_0002.deep.exr`.
   Without `#`, Blender appends the frame number. Deep data is not a compositor socket.
-- `scene.cycles.deep_write_diagnostics` defaults to off. Enable **Diagnostics >
-  Write Samples CSV** only for validation; the sidecar can be very large.
+- `scene.cycles.deep_write_diagnostics` defaults to off and is hidden from the
+  revised panel. Enable it through Python only for validation; the sidecar can be very large.
   The validation render helper enables it explicitly and normalizes its single-frame
   artifacts to `scene.deep.exr` and `scene.deep.exr.samples.csv` for existing validators.
 - Deep in interactive (F12) renders is experimental; background renders are the

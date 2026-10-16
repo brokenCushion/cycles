@@ -1,0 +1,53 @@
+{
+  "hashes": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\hashes\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\hashes\\shot_0002.deep.exr"
+  ],
+  "color_placeholder": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\color-placeholder\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\color-placeholder\\shot_0002.deep.exr"
+  ],
+  "color_placeholder_no_effect": true,
+  "no_hashes": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\no_hashes\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\no_hashes\\shot_0002.deep.exr"
+  ],
+  "relative": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\relative\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\relative\\shot_0002.deep.exr"
+  ],
+  "override": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\override\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\override\\shot_0002.deep.exr"
+  ],
+  "override_no_hashes": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\override-plain\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\override-plain\\shot_0002.deep.exr"
+  ],
+  "no_extension": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\no-extension\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\no-extension\\shot_0002.deep.exr"
+  ],
+  "csv_surface": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\csv-surface\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\csv-surface\\shot_0002.deep.exr"
+  ],
+  "volume_no_csv": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\volume-no-csv\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\volume-no-csv\\shot_0002.deep.exr"
+  ],
+  "volume_csv": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\volume-csv\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\volume-csv\\shot_0002.deep.exr"
+  ],
+  "volume_csv_identity": true,
+  "two_deep_layers": "Error: Deep requires exactly one enabled layer; enabled on: DeepLayer, BeautyLayer\nError: Deep requires exactly one enabled layer; enabled on: BeautyLayer, DeepLayer\nError: Deep requires exactly one enabled layer; enabled on: BeautyLayer, DeepLayer\n",
+  "mixed_layers": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\mixed-layers\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui2\\background\\mixed-layers\\shot_0002.deep.exr"
+  ],
+  "both_layers_rendered": true,
+  "mono_only": "Error: Deep output requires mono rendering\nError: Deep output requires mono rendering\nError: Deep output requires mono rendering\n",
+  "bake_deep_off": true,
+  "panel_draw_contract": true
+}

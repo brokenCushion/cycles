@@ -18,9 +18,24 @@ package. See the [support matrix](SUPPORT.md) before choosing a backend.
 
 ## 2. Find the settings
 
-Select the **Cycles** render engine, then open **Render Properties > Film >
-Deep Visibility**. The panel configures the feature; exporting a deep EXR
-currently requires **background rendering**, rather than an interactive F12 render.
+In a build containing the View Layer UI update, select **Cycles**, then enable
+**View Layer > Passes > Deep**, directly below Cryptomatte. Its settings are
+shared by all view layers. Only one layer can enable Deep; other layers may render
+normally. Deep in interactive (F12) renders is experimental; **background renders
+(`blender -b`) are the qualified path**. F12 uses the same Deep output driver
+and path rules.
+
+**Output > Output > Deep** offers an optional path override. Leave it blank to
+write beside the beauty frame using `.deep.exr`; Blender handles `//`, `####`
+and frame numbers. **Diagnostics > Write Samples CSV** is off by default in
+both background and F12 renders.
+The validation helper below enables CSV explicitly.
+The [UI verification report](../../builds/validation/blender-deep-ui/README.md)
+records the small F12 cancellation/repeat/animation checks and remaining limits.
+
+The previously published package linked above predates this UI update and keeps
+its controls under **Render Properties > Film > Deep Visibility**. The helper
+supports that build as well.
 
 - **Deep Samples:** `0` captures all accepted camera samples; `64` takes the first
   64 per pixel, or fewer if adaptive sampling stops earlier. This caps camera

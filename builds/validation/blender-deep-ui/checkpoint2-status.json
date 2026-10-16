@@ -1,0 +1,92 @@
+{
+  "checkpoint": 2,
+  "complete": true,
+  "branch": "blender-deep-ui",
+  "build_started": true,
+  "blocker": null,
+  "overlay_check": "passed, 1029 files",
+  "source": "D:\\temp\\cycles_deep_blender_ui\\blender-clean",
+  "patched_runtime_tests": "Passed full path/CSV/layer/mono/bake/panel suite, migration, GUI/viewport/F12, whole-file identity (numeric and strict), and unchanged strict Gaffer validation.",
+  "python_addon_probe": "registration, migration/idempotence and visual panels passed on old executable with generated addon loaded in process only",
+  "baseline_numeric": "D:\\temp\\cycles_deep_blender_ui\\verification\\before",
+  "baseline_numeric_legacy_validator": "failed: legacy surface validator requires Z==ZBack, incompatible with numeric depth bands; validator unchanged",
+  "baseline_strict": "D:\\temp\\cycles_deep_blender_ui\\verification\\before-strict",
+  "f12_existing": {
+    "background": false,
+    "render_complete": true,
+    "deep_written": true,
+    "csv_written": true
+  },
+  "core_source_diff_empty": true,
+  "files": {
+    "tools/prepare_blender_deep.py": "4d8f373d6174eb1b44d84bd9edd3acad187f12c29e3889a52fe1ba36c58b6e15",
+    "tools/render_blender_deep_scene.py": "2b79195ae708c463d34afc2e6a68f1b9f0fb86487e1e18ef33c2008c6a1dc46f",
+    "tools/create_vdb_deep_cases.py": "edaac3a8ffb18677347cc584bcb3e6aae8510e2a9c45166ac41cf151174a4523",
+    "tools/test_blender_deep_ui.py": "0c1794c443ad4d12950433a0ea6620159e31fa7f42c2dec3eba0b723729a7189",
+    "tools/test_blender_deep_migration.py": "056ec9df32a6d2783e2b2ed48f1e3f8a64bd83e616ec1a64a41e71a73afee4bd",
+    "tools/test_blender_deep_gui.py": "744ae9d43df8517b1d568ba78845c30754b796ca6ed7b920c834a3014d20c75d",
+    "docs/deep/BLENDER.md": "5362ad692e392b7342e5a6122b3932e305e2d3dc3987fe9763a8a8c2e3337b2e",
+    "docs/deep/QUICKSTART.md": "387545aed7f618af360f6a86cb471ab790d48274bed9f5226579214e6d64a92e"
+  },
+  "baseline_strict_render_complete": true,
+  "baseline_identities": {
+    "before": {
+      "file_sha256": "fb8147f5aa7795762861186b49a3716b17029907b3cb0755ebc786f61d88058d",
+      "payload_and_deterministic_headers": "1adaca0638be46351053044db6fc2e4aaad168c1cdf2c5b511b230892387a772"
+    },
+    "before-strict": {
+      "file_sha256": "4ab129d6a8ca1a9d1377cef31333e7b6a17ea4422512c059741fb3b700d2191e",
+      "payload_and_deterministic_headers": "8f83d472b60b51948a9e58d30523e2539b55ff8306b359bb74d87324caba15f1"
+    }
+  },
+  "baseline_strict_validation": "passed unchanged src/deep/validate_blender_deep_gaffer.py",
+  "toolchain_access": "User authorized read-only recorded Scratch compiler/SDK/library use; writable destinations guarded under D:/temp/cycles_deep_blender_ui.",
+  "gui_cache_exception": "User authorized the existing Windows GUI shader cache for verification.",
+  "build_passed": true,
+  "test_fixture_correction": "User approved float_buffer=True for the bake image; expected values and tolerance unchanged. The original failure and diagnostic probe are preserved.",
+  "compile_fix": "Qualified std::unique_ptr in new diagnostics gating; clean overlay check passed again.",
+  "gui_visual_review": "Passed: Deep directly under Cryptomatte, disabled body when off, background note on, conditional Output panel, rendered viewport shows Rendering Done, F12 info warning and no deep files.",
+  "binary_sha256": "4e27785d276176bdd41edcacec379b080109433f31343c2f140f965cb3666f96",
+  "identity": {
+    "numeric": {
+      "full_file_sha256": "fb8147f5aa7795762861186b49a3716b17029907b3cb0755ebc786f61d88058d",
+      "full_file_byte_identical": true,
+      "bytes": 82469567,
+      "checker": {
+        "passed": true,
+        "before": "1adaca0638be46351053044db6fc2e4aaad168c1cdf2c5b511b230892387a772",
+        "after": "1adaca0638be46351053044db6fc2e4aaad168c1cdf2c5b511b230892387a772",
+        "changed_deterministic_attributes": [],
+        "changed_run_metadata": []
+      }
+    },
+    "strict": {
+      "full_file_sha256": "4ab129d6a8ca1a9d1377cef31333e7b6a17ea4422512c059741fb3b700d2191e",
+      "full_file_byte_identical": true,
+      "bytes": 244454070,
+      "checker": {
+        "passed": true,
+        "before": "8f83d472b60b51948a9e58d30523e2539b55ff8306b359bb74d87324caba15f1",
+        "after": "8f83d472b60b51948a9e58d30523e2539b55ff8306b359bb74d87324caba15f1",
+        "changed_deterministic_attributes": [],
+        "changed_run_metadata": []
+      }
+    }
+  },
+  "gaffer_validation": {
+    "passed": true,
+    "scope": "native Blender deep visibility, diagnostic camera grid",
+    "resolution": [
+      664,
+      625
+    ],
+    "grid_pixels": 81,
+    "boundary_checks": 21064,
+    "max_curve_error": 3.0177335630376945e-09,
+    "max_slice_error": 0,
+    "displayed_points": 1000000,
+    "source_sha256": "1c41c5a8bb47878a1be5becb7ea72c8dfadf11a95fc34771df2a9eb357537ef4"
+  },
+  "overlay_manifest_verified": 1029,
+  "implementation_commit": "Uncommitted local changes on blender-deep-ui; agreed plan committed as 5b510f900b4acce6c4e314db4bee21d42a111c3c."
+}

@@ -261,6 +261,9 @@ for case in args.cases:
         grid.scale.x = -1
     if hasattr(scene.cycles, 'use_deep_output'):
         scene.cycles.use_deep_output = False
+    for layer in scene.view_layers:
+        if hasattr(layer.cycles, 'use_pass_deep'):
+            layer.cycles.use_pass_deep = False
     path = root / case / 'scene.blend'
     path.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=str(path))

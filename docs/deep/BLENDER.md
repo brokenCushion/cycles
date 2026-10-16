@@ -10,16 +10,18 @@ Run the command examples below from the repository root.
 Pinned Blender: `749518deb2f0735a22361a07488b35f7ea5c2fdf` (5.3 alpha).
 Cycles synchronization point: `97dbe6f57cdf4ede2d2b75ebdda507c8712edb7a`.
 Windows libraries: `60d6e96b917568278d400a4024c98da0fb777338`.
-New source, build, install and render outputs live under `D:/CyclesDeepScratch/`.
+New source, build, install and render outputs live under `D:/temp/cycles_deep_blender_ui/`.
 Use clang-cl, Ninja, CUDA 12.8.0 and OptiX 8.0.0 in an x64 Visual Studio
 developer environment. NVCC still uses its supported MSVC host compiler.
+The existing toolchain under `D:/CyclesDeepScratch/` is read-only. Redirect
+`TEMP`, `TMP`, `CUDA_CACHE_PATH` and `OPTIX_CACHE_PATH` under the new output root.
 
 Use `tools/prepare_blender_deep.py` on a clean pinned Blender checkout. It
 applies the core and host adapter; do not rerun it over an existing dirty overlay.
 
 ```powershell
-cmake -S D:/CyclesDeepScratch/blender/source -B D:/CyclesDeepScratch/blender/build -G Ninja -C tools/blender_deep_build.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_C_FLAGS=-m64 -DCMAKE_CXX_FLAGS=-m64 -DLIBDIR=C:/Users/jun/Documents/ChatGPT/cycles_deep/lib/windows_x64 -DCMAKE_INSTALL_PREFIX=D:/CyclesDeepScratch/blender/install -DOPTIX_ROOT_DIR=D:/CyclesDeepScratch/optix-dev-8.0 -DCYCLES_RUNTIME_OPTIX_ROOT_DIR=D:/CyclesDeepScratch/optix-dev-8.0 -DCYCLES_CUDA_BINARIES_ARCH=sm_86 -DWITH_CYCLES_DEEP_OPAQUE=ON
-cmake --build D:/CyclesDeepScratch/blender/build --target install --parallel 24
+cmake -S D:/temp/cycles_deep_blender_ui/blender-clean -B D:/temp/cycles_deep_blender_ui/build -G Ninja -C tools/blender_deep_build.cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_C_FLAGS=-m64 -DCMAKE_CXX_FLAGS=-m64 -DLIBDIR=C:/Users/jun/Documents/ChatGPT/cycles_deep/lib/windows_x64 -DCMAKE_INSTALL_PREFIX=D:/temp/cycles_deep_blender_ui/install -DOPTIX_ROOT_DIR=D:/CyclesDeepScratch/optix-dev-8.0 -DCYCLES_RUNTIME_OPTIX_ROOT_DIR=D:/CyclesDeepScratch/optix-dev-8.0 -DCYCLES_CUDA_BINARIES_ARCH=sm_86 -DWITH_CYCLES_DEEP_OPAQUE=ON
+cmake --build D:/temp/cycles_deep_blender_ui/build --target install --parallel 24
 ```
 
 Close test Blender processes before installing. The system Blender installation
@@ -27,10 +29,12 @@ is separate and does not include this feature.
 
 ## Render and review
 
+This legacy surface validator expects strict output (`Z == ZBack`).
+
 ```powershell
-& D:/CyclesDeepScratch/blender/install/blender.exe --factory-startup --background --disable-autoexec test-assets/blender/blender-3.5-splash.blend --python-exit-code 1 --python tools/render_blender_deep_scene.py -- --output D:/CyclesDeepScratch/blender/review --samples 4 --percentage 10 --deep
-& builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd env python src/deep/validate_blender_deep_gaffer.py D:/CyclesDeepScratch/blender/review
-& builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd D:/CyclesDeepScratch/blender/review/blender_deep_review.gfr
+& D:/temp/cycles_deep_blender_ui/install/blender.exe --factory-startup --background --disable-autoexec test-assets/blender/blender-3.5-splash.blend --python-exit-code 1 --python tools/render_blender_deep_scene.py -- --output D:/temp/cycles_deep_blender_ui/review --samples 4 --percentage 10 --deep --deep-error strict
+& builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd env python src/deep/validate_blender_deep_gaffer.py D:/temp/cycles_deep_blender_ui/review
+& builds/build-gaffer/gaffer-1.7.2.0-windows/bin/gaffer.cmd D:/temp/cycles_deep_blender_ui/review/blender_deep_review.gfr
 ```
 
 `deep_error` defaults to `1e-3`. Set it to `0` in Blender for strict output;
@@ -61,11 +65,30 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
 
 ## Host contract and limits
 
-- Settings: `use_deep_output`, `use_deep_volume`, `deep_output_path`,
-  `deep_max_events`, `deep_memory_mb`, `deep_error`, `deep_samples`,
-  `use_deep_ids`. Render Properties > Film > Deep Visibility exposes these
-  controls. Deep and IDs are off by default. The panel configures scene settings;
-  deep capture and EXR publication currently require background rendering.
+- Enable `view_layer.cycles.use_pass_deep` in **View Layer > Passes > Deep**,
+  directly below Cryptomatte. The other controls remain on `scene.cycles` and
+  are shared by all view layers; they are greyed out until Deep is enabled.
+  The former Render > Film panel is removed in builds containing this UI change.
+- **Output > Output > Deep** contains `scene.cycles.deep_output_path`, an optional
+  override visible when the current layer's Deep pass is enabled. Blank uses
+  Blender's beauty frame path with the image extension replaced by `.deep.exr`.
+  Overrides use the same Blender relative-path and frame-numbering rules:
+  `//renders/shot_####` produces `shot_0001.deep.exr`, then `shot_0002.deep.exr`.
+  Without `#`, Blender appends the frame number. Deep data is not a compositor socket.
+- `scene.cycles.deep_write_diagnostics` defaults to off. Enable **Diagnostics >
+  Write Samples CSV** only for validation; the sidecar can be very large.
+  The validation render helper enables it explicitly and normalizes its single-frame
+  artifacts to `scene.deep.exr` and `scene.deep.exr.samples.csv` for existing validators.
+- Deep in interactive (F12) renders is experimental; background renders are the
+  qualified path. Both modes use the same Deep output driver, path rules and
+  opt-in CSV setting. Viewport rendering and baking do not enable deep capture.
+  Small CPU cancellation, consecutive-render and animation-frame checks passed;
+  see the [UI verification report](../../builds/validation/blender-deep-ui/README.md)
+  for results, the OptiX byte-identity check and remaining F12 follow-up.
+- Old files with `scene.cycles.use_deep_output` enabled migrate to their single
+  render view layer. Existing settings and non-empty path overrides are preserved;
+  the old switch is consumed once. Helpers retain the old property as a fallback
+  when running older builds.
 - Optional `--deep-ids` / `use_deep_ids` writes per-sample UINT `id` and
   `cycles:deepIDManifest` (hex ID to object name), using Cycles Cryptomatte
   MurmurHash3 seed 0. Different objects retain overlapping samples. Select IDs
@@ -75,7 +98,9 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
   Same-object depth merging and holdouts are qualified within the support matrix.
 - Output: scalar Z/ZBack/A and separate native beauty. No deep RGB or refracted
   light-path reconstruction. Glass uses native camera-alpha semantics.
-- One enabled view layer, mono background render, no automatic tiling.
+- Exactly one view layer may have Deep enabled; other layers render normally.
+  Multiple Deep layers fail with their names. Mono rendering and no automatic
+  tiling remain required.
 - Native OIDN, including GPU denoising in the production landscape, is qualified
   within the support matrix.
 - Deep EXR publication is atomic. The diagnostic CSV is published independently;

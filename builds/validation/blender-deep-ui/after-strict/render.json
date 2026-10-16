@@ -1,0 +1,120 @@
+{
+  "renderer_sha256": "4e27785d276176bdd41edcacec379b080109433f31343c2f140f965cb3666f96",
+  "blender": "5.3.0 Alpha",
+  "build_hash": "749518deb2f0",
+  "source_file": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\test-assets\\blender\\blender-3.5-splash.blend",
+  "camera": "CAM-wide",
+  "camera_type": "ORTHO",
+  "ortho_scale": 3.9542860984802246,
+  "frame": 1,
+  "samples": 128,
+  "threads": 8,
+  "resolution": [
+    664,
+    625
+  ],
+  "percentage": 100,
+  "dof": true,
+  "adaptive": true,
+  "adaptive_threshold": 0.009999999776482582,
+  "adaptive_min_samples": 0,
+  "seed": 0,
+  "use_animated_seed": false,
+  "denoising": true,
+  "denoiser": "OPENIMAGEDENOISE",
+  "denoising_use_gpu": false,
+  "save_render_passes": false,
+  "capture_only": false,
+  "diagnostic_sample_count_pass": false,
+  "kernel_source_override": null,
+  "materials": 175,
+  "objects": 1077,
+  "compositing": false,
+  "deep": true,
+  "device": "CPU",
+  "deep_volume": false,
+  "deep_volume_shader_eval": false,
+  "deep_volume_step": 0,
+  "deep_volume_fixed_step": false,
+  "deep_error": 0.0,
+  "deep_z_tolerance": 0,
+  "deep_samples": 0,
+  "deep_ids": false,
+  "deep_max_events": 16,
+  "deep_memory_mb": 512,
+  "view_layers": [
+    "ViewLayer"
+  ],
+  "pixel_filter": "BLACKMAN_HARRIS",
+  "source_sha256": "1c41c5a8bb47878a1be5becb7ea72c8dfadf11a95fc34771df2a9eb357537ef4",
+  "camera_world_matrix": [
+    [
+      0.6371819376945496,
+      -0.1989787369966507,
+      0.7445849180221558,
+      8.406328201293945
+    ],
+    [
+      0.7707021236419678,
+      0.16974401473999023,
+      -0.6141703724861145,
+      -6.935248851776123
+    ],
+    [
+      -0.004181986209005117,
+      0.9651914238929749,
+      0.2615111470222473,
+      4.93189811706543
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "camera_frame": [
+    [
+      1.9771430492401123,
+      1.8610156774520874,
+      -1.0
+    ],
+    [
+      1.9771430492401123,
+      -1.8610156774520874,
+      -1.0
+    ],
+    [
+      -1.9771430492401123,
+      -1.8610156774520874,
+      -1.0
+    ],
+    [
+      -1.9771430492401123,
+      1.8610156774520874,
+      -1.0
+    ]
+  ],
+  "camera_translation": [
+    8.406328201293945,
+    -6.935248851776123,
+    4.93189811706543
+  ],
+  "camera_rotation_degrees": [
+    74.8401176038789,
+    0.2396108534489958,
+    50.417584358488135
+  ],
+  "camera_scale": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "pixel_aspect": [
+    1.0,
+    1.0
+  ],
+  "seconds": 852.2857444999972,
+  "beauty_exists": true,
+  "deep_bytes": 244454070
+}

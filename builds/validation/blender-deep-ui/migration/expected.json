@@ -1,0 +1,12 @@
+{
+  "deep_output_path": "//legacy/shot_####",
+  "use_deep_volume": true,
+  "use_deep_volume_shader_eval": true,
+  "deep_volume_step": 0.125,
+  "use_deep_ids": true,
+  "deep_error": 0.0020000000949949026,
+  "deep_z_tolerance": 0.00019999999494757503,
+  "deep_samples": 7,
+  "deep_max_events": 8192,
+  "deep_memory_mb": 1024
+}

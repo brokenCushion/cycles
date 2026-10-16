@@ -1,0 +1,14 @@
+{
+  "screenshots": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\gui-runtime\\view-layer-off.png",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\gui-runtime\\view-layer-on.png",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\gui-runtime\\output-on.png",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\gui-runtime\\output-off.png",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\gui-runtime\\render-tab.png",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\gui-runtime\\viewport-rendered.png",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\gui-runtime\\f12-reports.png"
+  ],
+  "viewport_started": true,
+  "f12_completed": true,
+  "f12_no_deep_file": true
+}

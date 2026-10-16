@@ -1,0 +1,120 @@
+{
+  "renderer_sha256": "4e27785d276176bdd41edcacec379b080109433f31343c2f140f965cb3666f96",
+  "blender": "5.3.0 Alpha",
+  "build_hash": "749518deb2f0",
+  "source_file": "D:\\temp\\cycles_deep_blender_ui\\verification\\optix-scene.blend",
+  "camera": "Camera",
+  "camera_type": "PERSP",
+  "ortho_scale": 7.314285755157471,
+  "frame": 1,
+  "samples": 16,
+  "threads": 4,
+  "resolution": [
+    64,
+    64
+  ],
+  "percentage": 100,
+  "dof": false,
+  "adaptive": false,
+  "adaptive_threshold": 0.009999999776482582,
+  "adaptive_min_samples": 0,
+  "seed": 0,
+  "use_animated_seed": false,
+  "denoising": false,
+  "denoiser": "OPENIMAGEDENOISE",
+  "denoising_use_gpu": false,
+  "save_render_passes": false,
+  "capture_only": false,
+  "diagnostic_sample_count_pass": false,
+  "kernel_source_override": null,
+  "materials": 1,
+  "objects": 3,
+  "compositing": false,
+  "deep": true,
+  "device": "OPTIX",
+  "deep_volume": false,
+  "deep_volume_shader_eval": false,
+  "deep_volume_step": 0,
+  "deep_volume_fixed_step": false,
+  "deep_error": 0.0,
+  "deep_z_tolerance": 0,
+  "deep_samples": 0,
+  "deep_ids": false,
+  "deep_max_events": 16,
+  "deep_memory_mb": 512,
+  "view_layers": [
+    "ViewLayer"
+  ],
+  "pixel_filter": "BLACKMAN_HARRIS",
+  "source_sha256": "7818f2c81db17e612305903f7b5f211977dec6e3709397c9cd878c742a65d680",
+  "camera_world_matrix": [
+    [
+      0.6859206557273865,
+      -0.32401347160339355,
+      0.6515582203865051,
+      7.358891487121582
+    ],
+    [
+      0.7276763319969177,
+      0.305420845746994,
+      -0.6141703724861145,
+      -6.925790786743164
+    ],
+    [
+      0.0,
+      0.8953956365585327,
+      0.44527140259742737,
+      4.958309173583984
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "camera_frame": [
+    [
+      0.5,
+      0.5,
+      -1.3888888359069824
+    ],
+    [
+      0.5,
+      -0.5,
+      -1.3888888359069824
+    ],
+    [
+      -0.5,
+      -0.5,
+      -1.3888888359069824
+    ],
+    [
+      -0.5,
+      0.5,
+      -1.3888888359069824
+    ]
+  ],
+  "camera_translation": [
+    7.358891487121582,
+    -6.925790786743164,
+    4.958309173583984
+  ],
+  "camera_rotation_degrees": [
+    63.5592952084158,
+    -0.0,
+    46.691944977583375
+  ],
+  "camera_scale": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "pixel_aspect": [
+    1.0,
+    1.0
+  ],
+  "seconds": 39.97828270000173,
+  "beauty_exists": true,
+  "deep_bytes": 36129
+}

@@ -101,10 +101,19 @@ if args.save_render_passes:
 if args.capture_only or args.diagnostic_sample_count:
     for layer in scene.view_layers:
         layer.cycles.pass_debug_sample_count = True
+layer_deep = hasattr(bpy.context.view_layer.cycles, 'use_pass_deep')
+deep_destination = directory / 'scene.deep.exr'
+if layer_deep:
+    for layer in scene.view_layers:
+        layer.cycles.use_pass_deep = args.deep and layer == bpy.context.view_layer
+    scene.cycles.use_deep_output = False
 if args.deep:
-    if not hasattr(scene.cycles, 'use_deep_output'):
+    if not layer_deep and not hasattr(scene.cycles, 'use_deep_output'):
         raise RuntimeError('This Blender does not include the custom deep adapter')
-    scene.cycles.use_deep_output = True
+    if not layer_deep:
+        scene.cycles.use_deep_output = True
+    if hasattr(scene.cycles, 'deep_write_diagnostics'):
+        scene.cycles.deep_write_diagnostics = True
     scene.cycles.use_deep_volume = args.deep_volume
     if hasattr(scene.cycles, "deep_volume_step"):
         scene.cycles.use_deep_volume_shader_eval = args.deep_volume_shader_eval
@@ -119,6 +128,14 @@ if args.deep:
     elif args.deep_ids:
         raise RuntimeError("This Blender does not include deep IDs")
     scene.cycles.deep_output_path = str(directory / 'scene.deep.exr')
+    if layer_deep:
+        scene.cycles.deep_output_path = str(directory / 'scene_####')
+        beauty_path = scene.render.filepath
+        try:
+            scene.render.filepath = scene.cycles.deep_output_path
+            deep_destination = Path(scene.render.frame_path()).with_suffix('.deep.exr')
+        finally:
+            scene.render.filepath = beauty_path
     scene.cycles.deep_max_events = args.deep_max_events
     scene.cycles.deep_memory_mb = args.deep_memory_mb
 elif hasattr(scene.cycles, 'use_deep_output'):
@@ -180,6 +197,10 @@ start = time.monotonic()
 start_ns = time.time_ns()
 if bpy.ops.render.render(write_still=True) != {'FINISHED'}:
     raise RuntimeError('Render did not finish')
+if args.deep and not args.capture_only and deep_destination != directory / 'scene.deep.exr':
+    # Keep the validation artifact names stable while production paths remain frame-numbered.
+    deep_destination.rename(directory / 'scene.deep.exr')
+    Path(str(deep_destination) + '.samples.csv').rename(directory / 'scene.deep.exr.samples.csv')
 if args.save_render_passes:
     scene.render.image_settings.media_type = 'MULTI_LAYER_IMAGE'
     scene.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'

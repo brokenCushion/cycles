@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "scope": "native Blender deep visibility, diagnostic camera grid",
+  "resolution": [
+    64,
+    64
+  ],
+  "grid_pixels": 81,
+  "boundary_checks": 232,
+  "max_curve_error": 9.986254545513162e-09,
+  "max_slice_error": 0,
+  "displayed_points": 6845,
+  "source_sha256": "7818f2c81db17e612305903f7b5f211977dec6e3709397c9cd878c742a65d680"
+}

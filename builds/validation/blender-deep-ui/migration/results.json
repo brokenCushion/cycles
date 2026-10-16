@@ -1,0 +1,7 @@
+{
+  "legacy_enable_migrated": true,
+  "all_settings_preserved": true,
+  "disabled_layer_unchanged": true,
+  "idempotent": true,
+  "explicit_disable_survives_reload": true
+}

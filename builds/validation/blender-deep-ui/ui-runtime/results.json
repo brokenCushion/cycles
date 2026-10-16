@@ -1,0 +1,48 @@
+{
+  "hashes": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\hashes\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\hashes\\shot_0002.deep.exr"
+  ],
+  "no_hashes": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\no_hashes\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\no_hashes\\shot_0002.deep.exr"
+  ],
+  "relative": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\relative\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\relative\\shot_0002.deep.exr"
+  ],
+  "override": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\override\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\override\\shot_0002.deep.exr"
+  ],
+  "override_no_hashes": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\override-plain\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\override-plain\\shot_0002.deep.exr"
+  ],
+  "no_extension": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\no-extension\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\no-extension\\shot_0002.deep.exr"
+  ],
+  "csv_surface": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\csv-surface\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\csv-surface\\shot_0002.deep.exr"
+  ],
+  "volume_no_csv": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\volume-no-csv\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\volume-no-csv\\shot_0002.deep.exr"
+  ],
+  "volume_csv": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\volume-csv\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\volume-csv\\shot_0002.deep.exr"
+  ],
+  "volume_csv_identity": true,
+  "two_deep_layers": "Error: Deep requires exactly one enabled layer; enabled on: DeepLayer, BeautyLayer\nError: Deep requires exactly one enabled layer; enabled on: BeautyLayer, DeepLayer\nError: Deep requires exactly one enabled layer; enabled on: BeautyLayer, DeepLayer\n",
+  "mixed_layers": [
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\mixed-layers\\shot_0001.deep.exr",
+    "D:\\temp\\cycles_deep_blender_ui\\verification\\ui-runtime\\mixed-layers\\shot_0002.deep.exr"
+  ],
+  "both_layers_rendered": true,
+  "mono_only": "Error: Deep output requires mono rendering\nError: Deep output requires mono rendering\nError: Deep output requires mono rendering\n",
+  "bake_deep_off": true,
+  "panel_draw_contract": true
+}

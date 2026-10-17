@@ -188,3 +188,188 @@ this task.
 
 Nuke DeepRead, DeepRecolor and DeepMerge cannot be tested here and were not
 tested. No Nuke compatibility claim is made.
+
+## Step 1: camera-visibility preflight
+
+2026-10-18. Core preflight fix implemented and tested. **Junkshop remains blocked**
+by a different existing shader guard. This section supersedes the earlier Hair
+BSDF diagnosis for the BG + Robots smoke; the earlier results remain historical.
+
+### Scope and visibility mapping
+
+Only `src/session/deep.cpp` changed in renderer code. A shared helper collects
+geometry referenced by at least one object with `PATH_RAY_VISIBILITY_CAMERA`.
+A camera-visible instance therefore keeps shared geometry in validation.
+The four changed validation loops are:
+
+- Geometry validation in `validate_deep_scene`: skip geometry outside that set,
+  because camera-only capture cannot record it. Mesh/subdivision/motion and
+  material checks remain unchanged for reachable geometry.
+- Object transform/motion/shadow-catcher/caustics validation: skip objects without
+  the camera bit, because those object properties cannot affect captured events.
+- OSL used-shader collection in `validate_deep_osl`: only collect shaders from
+  camera-reachable geometry, retaining the existing analytic-light skip.
+- OSL stable-attribute geometry scan: apply the same set so an invisible user of
+  a shared shader cannot reject an otherwise valid camera-visible user.
+
+The helper's object scan is the only new loop. ID and holdout manifests,
+volume_grid / volume_shader_evaluation detection, volume population bounds and
+material-step metadata loops are unchanged. Keeping the metadata loops unchanged
+preserves existing step selection and headers. No adapter, capture, kernel,
+export, EXR header or material allowlist changes were made.
+
+Code mapping verified in the pinned generated Blender tree:
+
+- `intern/cycles/blender/object.cpp:228`: indirect-only clears
+  `PATH_RAY_VISIBILITY_CAMERA`, except for holdouts; line 286 stores visibility.
+- `source/blender/makesrna/intern/rna_object.cc:2894`: `visible_camera` is the
+  negative `OB_HIDE_CAMERA` flag; `intern/cycles/blender/util.h:726` maps that flag
+  to `PATH_RAY_VISIBILITY_CAMERA`.
+- `source/blender/blenkernel/intern/layer.cc:1087`: excluded collections return
+  before syncing their objects. An object also linked into an included collection
+  can still be present.
+- Holdout alone does not remove camera visibility. Both shared geometry and
+  holdout rejection are covered by the new fixture.
+- `src/kernel/deep/surface_cuda.h:34` and
+  `src/kernel/device/cpu/kernel_arch_impl.h:170` intersect with this exact mask;
+  OptiX `kernel_deep.cu` includes and calls the shared surface implementation.
+
+Other changed files: `tools/test_blender_deep_visibility.py` adds the seven-case
+fixture; `docs/deep/SUPPORT.md` and `docs/deep/BLENDER.md` document the contract;
+this report records verification. The existing multilayer suite and adapter were
+not modified. Untracked user scene/VDB assets are not part of the commit.
+
+### Build and commands
+
+Generated outputs remain under `D:/temp/cycles_deep_multilayer/`; the qualified
+build and `D:/CyclesDeepScratch/` are read-only inputs. The existing
+`build_guarded.py` redirects temporary files, caches and Blender user resources.
+The generated Blender checkout HEAD was verified as
+`749518deb2f0735a22361a07488b35f7ea5c2fdf` before resetting it.
+
+```powershell
+git -C D:/temp/cycles_deep_multilayer/blender-src checkout -- .
+git -C D:/temp/cycles_deep_multilayer/blender-src clean -fd
+python tools/prepare_blender_deep.py --source D:/temp/cycles_deep_multilayer/blender-src --check
+python tools/prepare_blender_deep.py --source D:/temp/cycles_deep_multilayer/blender-src
+python D:/temp/cycles_deep_multilayer/build_guarded.py build
+```
+
+`rebuild_step1.py` retained hashes/timestamps before the reset, then restored
+1,142 unchanged generated-source timestamps after applying the overlay. The
+incremental build recompiled session `deep.cpp` and build information, linked,
+and installed; it did not rebuild the capture kernels. Overlay check:
+`Validated overlay anchors and 1105 files; no source changes written`.
+
+The first install was blocked by an open Blender executable (`Permission denied`).
+After the user closed it, the same guarded build/install succeeded:
+`build: exit=0`. The first log is `verification/step1/build-locked.log`;
+the final log is `verification/build.log`. No process was forcibly closed.
+
+The standalone project used a fresh `deep-reference-step1` directory, Ninja,
+MSVC from the guarded x64 environment, Release and `BUILD_TESTING=ON`:
+
+```text
+cmake -S C:/Users/jun/Documents/ChatGPT/cycles_deep/src/deep -B D:/temp/cycles_deep_multilayer/deep-reference-step1 -G Ninja -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=D:/CyclesDeepScratch/optimization-phase8a/clangcl/ninja/ninja.exe
+cmake --build D:/temp/cycles_deep_multilayer/deep-reference-step1
+ctest --test-dir D:/temp/cycles_deep_multilayer/deep-reference-step1 -C Release --output-on-failure
+```
+
+Actual toolchain commands/log: `verification/step1/ctest.log`.
+`100% tests passed, 0 tests failed out of 3`; test time 8.08 seconds.
+
+```powershell
+python D:/temp/cycles_deep_multilayer/run_step1.py baseline
+python D:/temp/cycles_deep_multilayer/run_step1.py visibility
+python D:/temp/cycles_deep_multilayer/run_step1.py cpu
+python D:/temp/cycles_deep_multilayer/run_step1.py optix
+python D:/temp/cycles_deep_multilayer/run_step1.py ui
+python D:/temp/cycles_deep_multilayer/run_step1.py migration
+python D:/temp/cycles_deep_multilayer/run_step1.py panel
+python D:/temp/cycles_deep_multilayer/run_step1.py production
+python tools/check_markdown_links.py
+```
+
+`run_step1.py` records exact arguments in `verification/step1/*-command.json`.
+All successful tests used the newly installed executable except `baseline`,
+which reran the qualified `D:/temp/cycles_deep_blender_ui/install/blender.exe`.
+
+### Actual test results
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Standalone core CTests | PASS | Capture, reconstruction, analytic density cells: 3/3. |
+| Indirect-only hair in A | PASS | Particle hair and Hair BSDF remain synced; A publishes deep. |
+| Same hair camera-visible in B | PASS (expected rejection) | `Deep: unsupported deep surface node: hair_bsdf`. |
+| Object Camera off / on | PASS | Off publishes; on rejects with the same `hair_bsdf` message. |
+| Shared mesh, invisible and visible users | PASS (expected rejection) | Shared datablock without particle modifiers still rejects `hair_bsdf`. |
+| Holdout hair material | PASS (expected rejection) | Camera-visible holdout rejects `hair_bsdf`. |
+| Excluded hair material | PASS | Excluded collection publishes deep. |
+| New successful EXRs | PASS | Existing `check_deep` validates all three files; `DEEP_VISIBILITY_OPENEXR_PASS 3 files`. |
+| Full CPU multilayer suite | PASS | `DEEP_MULTILAYER_RENDER_PASS CPU 24 files`; `DEEP_MULTILAYER_VALIDATION_PASS CPU 24 files`. Includes isolation, collision, mixed-layer, animation, IDs, holdouts and opacity/depth checks. |
+| Qualified single-layer bytes | PASS | Exact bytes and name against newly rerun qualified baseline; SHA-256 `a18a9745f12023d477b8ad4e51ecd2879f8e77f503ef7f38446a3a5c565c9dc5`. |
+| Previous multilayer CPU bytes | PASS | All 24 whole files match the previous build: `PRIOR_CPU_BYTE_IDENTITY_PASS 24 files`. |
+| OptiX smoke | PASS | `DEEP_MULTILAYER_RENDER_PASS OPTIX 16 files`; `DEEP_MULTILAYER_VALIDATION_PASS OPTIX 16 files`. No GPU byte-identity claim. |
+| UI tests | PASS | `DEEP_UI_TESTS_PASS`; existing path, mixed output, collision and setting-identity checks pass. |
+| Migration | PASS | `DEEP_MIGRATION_TESTS_PASS`; all five saved migration/preservation assertions true. |
+| Panel | PASS | Exit zero; three screenshots visually inspected; strict mode preserves saved IDs. |
+| Junkshop | FAIL / STOPPED | Existing Light Path output guard described below. |
+
+The visibility fixture's initial run omitted a world shader and failed with
+`Deep: surface shader must be connected`. The fixture was corrected by adding
+its world, without changing renderer validation. That initial attempt is retained
+as `verification/step1/visibility-fixture-no-world*`; the final seven-case run is
+`visibility/results.json` (`DEEP_VISIBILITY_TESTS_PASS 7 cases`). CPU prior-build
+identity results are in `prior-cpu-identity.json`. All these paths are relative
+to `verification/step1/` unless explicitly stated otherwise.
+
+### Junkshop result and stop boundary
+
+The source was opened with `--background --disable-autoexec` and never saved.
+BG and Robots deep were enabled; Girl deep was disabled while its flat render
+remained enabled. Beauty and all three File Output directories were redirected
+under `junkshop2/render/v001/`; the deep override was
+`D:/temp/cycles_deep_multilayer/junkshop2/render/v001/{blend_name}_{view_layer}_####`.
+Settings were OptiX, 10%, four samples, requested frames 1-2, volume step 0.01,
+4,096 events and 2,048 MiB. Materials and geometry were untouched.
+
+Frame 1 returned this exact error:
+
+```text
+Deep: unsupported deep surface Light Path output
+```
+
+Read-only scene inspection identified the sole unsupported Light Path socket:
+**layer BG, object `Cristal`, material `Cristal`, collection `Accesories`, node
+`Light Path`, output `Is Reflection Ray` connected to `Math:Value`**. The object
+has camera visibility in BG. The current guard permits Is Camera Ray, Is Shadow
+Ray, Ray Length and Ray Depth, and rejects this output. Inspection evidence:
+`junkshop2/blocker-inspection.json`. No guard was bypassed, material edited,
+second render attempted or frame 2 started.
+
+Blender continued far enough within the single frame-1 render call to publish
+one file before returning the error:
+
+```text
+D:/temp/cycles_deep_multilayer/junkshop2/render/v001/thejunkshopsplashscreen_deep_v001_Robots_0001.deep.exr
+```
+
+It is 116,796 bytes and retained as **unqualified partial-run output**.
+No BG deep, flat beauty or flat File Output EXRs were produced. The expected
+four deep and six compositor EXRs were not achieved. Publication is per file,
+so a failing layer does not imply zero files from the entire render call.
+
+Source SHA-256 before/after the render and after read-only inspection:
+`b050ae097807cb544489ba715fde17862c2c2df437b96b51bffb5e9cf914e851`.
+The failure report records `source_unchanged: true` in `junkshop2/render.json`.
+
+Production OpenEXR qualification, Gaffer review and BG + Robots DeepMerge were
+not run because the required smoke failed and work stopped at the requested
+guard boundary. The review helper was not changed or qualified for two layers.
+Nuke is unavailable and was not tested. Cancellation remains unverified from
+the earlier task and was not rerun. The new visibility fixture exercises SVM;
+OSL filtering compiled successfully but no dedicated OSL visibility fixture was
+run. These fixture results do not establish arbitrary-scene qualification.
+
+Markdown link check: **PASS**, 34 documents, 194 local links, zero broken links;
+41 external links were not checked. Results: `verification/step1/markdown-links.json`.

@@ -7,6 +7,12 @@ deep capture. See the [production evidence](evidence/README.md).
 Qualification covers the named fixtures and production settings; arbitrary
 feature combinations are not implied.
 
+Geometry and object preflight checks apply only to geometry reachable by camera
+rays. Indirect-only and camera-invisible objects may use unsupported geometry or
+surface shaders; shared geometry is still checked if any camera-visible object
+uses it, including holdouts. Global settings, volume detection and manifests are
+unchanged.
+
 | Feature | Qualified scope |
 | --- | --- |
 | Devices | Single CPU/CUDA/OptiX with SVM; CPU/OptiX OSL scalar surfaces and named volume fixtures, background render. CUDA OSL is unsupported. Explicit SVM shader-volume evaluation passes on CPU/CUDA/OptiX. |
@@ -19,7 +25,7 @@ feature combinations are not implied.
 | Holdout | Object flags and native Holdout closure preserve camera opacity; checked holdout manifest subset. Shadow catchers/caustics remain rejected. |
 | Surface depth merging | Same object only, checked relative depth span; numeric default `--deep-z-tolerance 1e-4`, zero disables it, strict forces zero. |
 | Output | FLOAT Z/ZBack/A, positive axial depth in scene units. Deep RGB, subpixel masks and other backends are later work. |
-| Multiple Blender view layers | CPU three-layer byte identity and OptiX fixture/animation checks pass. `{view_layer}` gives separate deep EXRs; collision preflight includes disabled/Single Layer-skipped layers and ignores Windows path case. Single-layer naming is unchanged; publication is per file. Multi-layer cancellation remains unverified; junkshop is blocked by unsupported Hair BSDF. See [results](BLENDER_DEEP_MULTILAYER_RESULTS.md). |
+| Multiple Blender view layers | CPU three-layer byte identity and OptiX fixture/animation checks pass. `{view_layer}` gives separate deep EXRs; collision preflight includes disabled/Single Layer-skipped layers and ignores Windows path case. Single-layer naming is unchanged; publication is per file. Multi-layer cancellation remains unverified; the BG + Robots junkshop smoke is blocked by Cristal's unsupported Light Path output. See [results](BLENDER_DEEP_MULTILAYER_RESULTS.md). |
 
 ## Numerical and storage contract
 

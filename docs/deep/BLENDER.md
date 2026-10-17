@@ -65,6 +65,7 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
 
 ## Host contract and limits
 
+- Geometry preflight follows camera visibility; keep unsupported features such as hair indirect-only in deep layers. Camera-invisible objects are skipped, but camera-visible shared geometry and holdouts remain checked.
 - Select **Cycles** as the render engine to show **View Layer > Passes > Deep**,
   directly below Cryptomatte. In the second UI revision the header has no checkbox:
   enable **Deep Alpha** (`view_layer.cycles.use_pass_deep`) inside the panel.

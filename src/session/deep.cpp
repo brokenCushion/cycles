@@ -442,6 +442,15 @@ static void validate_shader(Scene *scene, Shader *shader,
   }
 }
 
+static std::set<const Geometry *> deep_camera_geometry(const Scene *scene)
+{
+  std::set<const Geometry *> geometry;
+  for (const Object *object : scene->objects)
+    if (object->get_visibility() & PATH_RAY_VISIBILITY_CAMERA)
+      if (const Geometry *used = object->get_geometry()) geometry.insert(used);
+  return geometry;
+}
+
 void validate_deep_scene(Scene *scene, SessionParams &params)
 {
   require_deep(!params.deep.ids || params.deep.error != 0,
@@ -609,7 +618,11 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
   validate_shader(scene, scene->background->get_shader() ? scene->background->get_shader() :
                                                     scene->default_background,
                   true);
+  const auto camera_geometry = deep_camera_geometry(scene);
   for (Geometry *geometry : scene->geometry) {
+    /* Camera-only deep traversal cannot record geometry outside this set. */
+    if (!camera_geometry.count(geometry))
+      continue;
     /* Analytic lights add radiance but do not attenuate camera alpha (see
      * integrator_shade_light_forward). They are not deep visibility surfaces. */
     if (geometry->is_light())
@@ -724,6 +737,8 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
     params.deep.volume_step_max = std::max(params.deep.volume_step_max, step);
   }
   for (Object *object : scene->objects) {
+    if (!(object->get_visibility() & PATH_RAY_VISIBILITY_CAMERA))
+      continue;
     if (volume) {
       const auto &tfm = object->get_tfm();
       const float determinant = dot(make_float3(tfm.x.x, tfm.x.y, tfm.x.z),
@@ -759,9 +774,10 @@ void validate_deep_osl(Scene *scene)
 {
 #ifdef WITH_OSL
   if (scene->params.shadingsystem != SHADINGSYSTEM_OSL) return;
+  const auto camera_geometry = deep_camera_geometry(scene);
   std::set<Shader *> used;
   for (Geometry *geometry : scene->geometry) {
-    if (geometry->is_light()) continue;
+    if (geometry->is_light() || !camera_geometry.count(geometry)) continue;
     if (geometry->get_used_shaders().empty()) used.insert(scene->default_surface);
     for (Node *node : geometry->get_used_shaders()) used.insert(static_cast<Shader *>(node));
   }
@@ -812,6 +828,7 @@ void validate_deep_osl(Scene *scene)
         if (known.count(name)) return true;
         bool present = false;
         for (Geometry *geometry : scene->geometry) {
+          if (!camera_geometry.count(geometry)) continue;
           if (!geometry->is_mesh() && !geometry->is_volume()) continue;
           const auto &shaders = geometry->get_used_shaders();
           if (std::find(shaders.begin(), shaders.end(), shader) == shaders.end()) continue;

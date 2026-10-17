@@ -186,3 +186,30 @@ the requested error bounds representation/fitting/publication; half is the
 4x-finer-step reference. Non-grey/invalid extinction, unsupported shader features
 and bounded traversal/event overflow fail explicitly. The stepping contract is
 recorded in the [validation policy](VALIDATION.md).
+
+## Read-only scene scanner
+
+Run the scanner inside this custom Blender before submitting a render:
+
+```powershell
+& D:/temp/cycles_deep_multilayer/install/blender.exe --background --disable-autoexec scene.blend --python tools/scan_blender_deep_scene.py -- --report D:/temp/cycles_deep_multilayer/scan.json --frame 1
+```
+
+Omit `--frame` to inspect the current frame; use `--layer BG` to restrict geometry
+inspection. Collision checks still include all deep-enabled layers, including
+render-disabled layers. Non-deep layers are listed as skipped. The scanner never
+renders or saves; it restores temporary frame/view-layer evaluation changes.
+Exit codes are 0 (no BLOCK), 2 (BLOCK findings), and 1 (tool error).
+
+**This is a prediction; render-time validation is the authority.** The report
+separates BLOCK, WARN and OK-ignored findings and lists checks that need compiled
+Cycles graphs or session state. Graph simplification can remove a reported node;
+OSL, volume integration and render-only evaluated geometry need renderer checks.
+Path resolution covers standard blend/scene/camera/resolution/FPS/view-layer
+variables and frame/extension rules; unavailable project variables are reported
+explicitly instead of inventing a destination. No BLOCK does not qualify a scene.
+
+`tools/test_scan_blender_deep_scene.py` compares scanner verdicts with tiny CPU
+renders and reports every mismatch, including conservative constant-folding
+false positives. Run it in Blender with `--python-exit-code 1` and a fresh output
+directory after `--`.

@@ -373,3 +373,217 @@ run. These fixture results do not establish arbitrary-scene qualification.
 
 Markdown link check: **PASS**, 34 documents, 194 local links, zero broken links;
 41 external links were not checked. Results: `verification/step1/markdown-links.json`.
+
+## Step 2: scanner and allowlist
+
+2026-10-18. Scanner commit (no changes under `src/`). The scanner is a
+**prediction**, not the render-time authority. It walks each selected layer's
+evaluated depsgraph and instances, uses the instancer's holdout/indirect flags
+and both object/parent camera visibility, follows group interfaces and muted
+bypasses, and separates opacity dependencies from BSDF-only inputs.
+
+Files: `tools/scan_blender_deep_scene.py`, `tools/test_scan_blender_deep_scene.py`,
+`docs/deep/BLENDER.md`, this report. The table at the top of the scanner mirrors
+`validate_shader` / `deep_closure_can_transmit`; settings and geometry mirror
+`validate_deep_scene` and the Blender synchronization code. Volume mode detection
+continues to include invisible synchronized geometry, matching the core.
+
+Verification before allowlist expansion: `run_step2.py drift -final` completed
+68 scanner/render comparisons with **zero false negatives and one documented
+false positive**. `mix_vector-visible` has identical vector A/B inputs and is
+folded by Cycles, so the renderer passes while the scanner conservatively BLOCKs
+`mix_vector`. Five path predictions also matched actual filenames (frame padding,
+no hashes, view layer, blend name, explicit EXR extension). Read-only frame,
+layer, filepath and datablock-count assertions passed. Tests include nested
+material groups, muted/unreachable nodes, collection instances, holdouts, shared
+meshes, Camera off, hair, adaptive subdivision, opacity AO/Bevel and settings.
+
+Key output:
+
+```text
+SCANNER_DRIFT_SUMMARY 68 cases 0 false negatives 1 false positives
+SCANNER_PATHS_PASS 5
+```
+
+Logs and JSON: `D:/temp/cycles_deep_multilayer/verification/step2/drift-final*`.
+Earlier attempts are retained: the first used obsolete feature_set RNA; another
+needed depsgraph initialization after changing layers; the instance fixture needed
+a linked wrapper collection. These were scanner/fixture repairs, not core edits.
+The initial two Mix constant-folding false positives were reduced to one by making
+the Float test inputs distinct. No failed prediction is counted as a pass.
+
+Unchanged junkshop scan command is recorded in `verification/step2/scan-command.json`.
+Process exit **2** means BLOCK. The scanner did not refresh device preferences;
+the current background process reports no configured supported GPU backend.
+The original source SHA-256 remains
+`b050ae097807cb544489ba715fde17862c2c2df437b96b51bffb5e9cf914e851`.
+All BLOCKs and all ignored/WARN entries are in the complete report below.
+
+### Unchanged junkshop, before allowlist expansion
+
+```text
+Deep scene scanner prediction; render-time validation is the authority.
+Source: C:\Users\jun\Desktop\cycles_deep\thejunkshopsplashscreen_deep_v001.blend | frame 1
+Layer Completo: skipped | deep path: -
+Layer Viewport: skipped | deep path: -
+Layer BG: checked | deep path: C:\Users\jun\Desktop\cycles_deep\render\v001\0001.deep.exr
+  BLOCK: requires single CPU, CUDA or OptiX
+  WARN: Device enumeration is empty; scanner does not refresh preferences
+  OK-ignored: Face: indirect-only here
+  OK-ignored: Eyes: indirect-only here
+  OK-ignored: Hat: indirect-only here
+  OK-ignored: Body: indirect-only here
+  OK-ignored: Vest: indirect-only here
+  OK-ignored: Gloves: indirect-only here
+  BLOCK: Cristal / Cristal / Light Path / light_path: unsupported deep surface Light Path output: Is Reflection Ray
+  OK-ignored: MrCatPC: indirect-only here
+  OK-ignored: Cloth Pipes: indirect-only here
+  OK-ignored: Wheel Robot: indirect-only here
+  OK-ignored: Cat Helmet: indirect-only here
+  OK-ignored: Smoke.001: indirect-only here
+  OK-ignored: Area.027: camera-invisible or hidden for render
+  OK-ignored: Rim Light Girl 02: camera-invisible or hidden for render
+  OK-ignored: Area.020: camera-invisible or hidden for render
+  OK-ignored: Area.007: camera-invisible or hidden for render
+  OK-ignored: No Uso.001: camera-invisible or hidden for render
+  OK-ignored: Converstaion Light: camera-invisible or hidden for render
+  OK-ignored: Right Commodore Cat: camera-invisible or hidden for render
+  OK-ignored: PO Box Red: camera-invisible or hidden for render
+  OK-ignored: No Uso 2: camera-invisible or hidden for render
+  OK-ignored: Radio Luz 03: camera-invisible or hidden for render
+  OK-ignored: Radio Luz 02: camera-invisible or hidden for render
+  OK-ignored: RadioLuz: camera-invisible or hidden for render
+  OK-ignored: Rim Light Girl: camera-invisible or hidden for render
+  OK-ignored: Shop Frontal Left: camera-invisible or hidden for render
+  OK-ignored: No Uso: camera-invisible or hidden for render
+  OK-ignored: Bounce Light Left Robot: camera-invisible or hidden for render
+  OK-ignored: Bounce Light Cat Head: camera-invisible or hidden for render
+  OK-ignored: Bounce Enviroment: camera-invisible or hidden for render
+  OK-ignored: Area Red Right: camera-invisible or hidden for render
+  OK-ignored: Background Blue: camera-invisible or hidden for render
+  BLOCK: Deep layers BG, Girl, Robots would all write C:\Users\jun\Desktop\cycles_deep\render\v001\0001.deep.exr; add {view_layer} to Output > Deep > Path Override
+Layer Girl: checked | deep path: C:\Users\jun\Desktop\cycles_deep\render\v001\0001.deep.exr
+  BLOCK: requires single CPU, CUDA or OptiX
+  WARN: Device enumeration is empty; scanner does not refresh preferences
+  OK-ignored: Background Pipes: indirect-only here
+  OK-ignored: Background Pipes Closer: indirect-only here
+  OK-ignored: Background Wall: indirect-only here
+  OK-ignored: Background Cylinders: indirect-only here
+  OK-ignored: Background Cube: indirect-only here
+  OK-ignored: Gears: indirect-only here
+  OK-ignored: Floor Background: indirect-only here
+  OK-ignored: POBox: indirect-only here
+  OK-ignored: Store Wall: indirect-only here
+  OK-ignored: Ceiling: indirect-only here
+  OK-ignored: Furniture: indirect-only here
+  OK-ignored: Table cloth: indirect-only here
+  OK-ignored: Tools: indirect-only here
+  OK-ignored: Ads: indirect-only here
+  OK-ignored: Floor Front: indirect-only here
+  OK-ignored: Front Pipes: indirect-only here
+  OK-ignored: Props: indirect-only here
+  OK-ignored: Stoplight: indirect-only here
+  OK-ignored: Table: indirect-only here
+  OK-ignored: Tickets: indirect-only here
+  BLOCK: Face: particle hair curve geometry is unsupported
+  BLOCK: Face / Hair / Hair BSDF.001 / hair_bsdf: unsupported deep surface node: hair_bsdf
+  BLOCK: Face / Hair / Hair BSDF / hair_bsdf: unsupported deep surface node: hair_bsdf
+  OK-ignored: Old Robots: indirect-only here
+  OK-ignored: RadioNes: indirect-only here
+  OK-ignored: Cristal: indirect-only here
+  OK-ignored: Weigth: indirect-only here
+  OK-ignored: Old Robots.001: indirect-only here
+  OK-ignored: MrCatPC: indirect-only here
+  OK-ignored: Cloth Pipes: indirect-only here
+  OK-ignored: Wheel Robot: indirect-only here
+  OK-ignored: Cat Helmet: indirect-only here
+  OK-ignored: Smoke.001: indirect-only here
+  OK-ignored: Area.027: indirect-only here
+  OK-ignored: Rim Light Girl 02: indirect-only here
+  OK-ignored: Area.020: indirect-only here
+  OK-ignored: Area.007: indirect-only here
+  OK-ignored: No Uso.001: indirect-only here
+  OK-ignored: Converstaion Light: indirect-only here
+  OK-ignored: Right Commodore Cat: indirect-only here
+  OK-ignored: PO Box Red: indirect-only here
+  OK-ignored: No Uso 2: indirect-only here
+  OK-ignored: Radio Luz 03: indirect-only here
+  OK-ignored: Radio Luz 02: indirect-only here
+  OK-ignored: RadioLuz: indirect-only here
+  OK-ignored: Rim Light Girl: indirect-only here
+  OK-ignored: Shop Frontal Left: indirect-only here
+  OK-ignored: No Uso: indirect-only here
+  OK-ignored: Bounce Light Left Robot: indirect-only here
+  OK-ignored: Bounce Light Cat Head: indirect-only here
+  OK-ignored: Bounce Enviroment: indirect-only here
+  OK-ignored: Area Red Right: indirect-only here
+  OK-ignored: Background Blue: indirect-only here
+  OK-ignored: Light Block: indirect-only here
+  BLOCK: Deep layers BG, Girl, Robots would all write C:\Users\jun\Desktop\cycles_deep\render\v001\0001.deep.exr; add {view_layer} to Output > Deep > Path Override
+Layer Robots: checked | deep path: C:\Users\jun\Desktop\cycles_deep\render\v001\0001.deep.exr
+  BLOCK: requires single CPU, CUDA or OptiX
+  WARN: Device enumeration is empty; scanner does not refresh preferences
+  OK-ignored: Background Pipes: indirect-only here
+  OK-ignored: Background Pipes Closer: indirect-only here
+  OK-ignored: Background Wall: indirect-only here
+  OK-ignored: Background Cylinders: indirect-only here
+  OK-ignored: Background Cube: indirect-only here
+  OK-ignored: Gears: indirect-only here
+  OK-ignored: Floor Background: indirect-only here
+  OK-ignored: POBox: indirect-only here
+  OK-ignored: Store Wall: indirect-only here
+  OK-ignored: Ceiling: indirect-only here
+  OK-ignored: Furniture: indirect-only here
+  OK-ignored: Table cloth: indirect-only here
+  OK-ignored: Tools: indirect-only here
+  OK-ignored: Ads: indirect-only here
+  OK-ignored: Floor Front: indirect-only here
+  OK-ignored: Front Pipes: indirect-only here
+  OK-ignored: Props: indirect-only here
+  OK-ignored: Stoplight: indirect-only here
+  OK-ignored: Table: indirect-only here
+  OK-ignored: Tickets: indirect-only here
+  OK-ignored: Face: indirect-only here
+  OK-ignored: Eyes: indirect-only here
+  OK-ignored: Hat: indirect-only here
+  OK-ignored: Body: indirect-only here
+  OK-ignored: Vest: indirect-only here
+  OK-ignored: Gloves: indirect-only here
+  OK-ignored: Old Robots: indirect-only here
+  OK-ignored: RadioNes: indirect-only here
+  OK-ignored: Cristal: indirect-only here
+  OK-ignored: Weigth: indirect-only here
+  OK-ignored: Old Robots.001: indirect-only here
+  BLOCK: Smoke.001 / Smoke: shader-evaluated volume without a grid requires volume step
+  WARN: Smoke.001 / Smoke / Material Output / output: Volume shader requires render-time extinction qualification. SUPPORT.md: | Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
+  OK-ignored: Area.027: indirect-only here
+  OK-ignored: Rim Light Girl 02: indirect-only here
+  OK-ignored: Area.020: indirect-only here
+  OK-ignored: Area.007: indirect-only here
+  OK-ignored: No Uso.001: indirect-only here
+  OK-ignored: Converstaion Light: indirect-only here
+  OK-ignored: Right Commodore Cat: indirect-only here
+  OK-ignored: PO Box Red: indirect-only here
+  OK-ignored: No Uso 2: indirect-only here
+  OK-ignored: Radio Luz 03: indirect-only here
+  OK-ignored: Radio Luz 02: indirect-only here
+  OK-ignored: RadioLuz: indirect-only here
+  OK-ignored: Rim Light Girl: indirect-only here
+  OK-ignored: Shop Frontal Left: indirect-only here
+  OK-ignored: No Uso: indirect-only here
+  OK-ignored: Bounce Light Left Robot: indirect-only here
+  OK-ignored: Bounce Light Cat Head: indirect-only here
+  OK-ignored: Bounce Enviroment: indirect-only here
+  OK-ignored: Area Red Right: indirect-only here
+  OK-ignored: Background Blue: indirect-only here
+  OK-ignored: Light Block: indirect-only here
+  BLOCK: Deep layers BG, Girl, Robots would all write C:\Users\jun\Desktop\cycles_deep\render\v001\0001.deep.exr; add {view_layer} to Output > Deep > Path Override
+Not decidable from RNA:
+  WARN: Cycles optimized/finalized graph, numeric conversions, shader compilation and OSL optimized-group queries are not exposed to Python; constant folding may remove a reported node (documented possible false positive).
+  WARN: RNA depsgraphs use their exposed evaluation mode; render-only modifier/particle differences, Cycles culling, subdivision synchronization, generated procedurals and final shared-geometry assignment require render-time validation.
+  WARN: Compiled volume extinction, grid metadata/interpolation, manifold triangle boundaries, voxel step, closure capacity and NanoVDB build support require Cycles evaluation; volume findings are conservative warnings unless an RNA contradiction proves rejection.
+  WARN: Camera shutter samples, animated FOV and finite rigid motion transforms at all shutter times require temporal Cycles synchronization; animation/deform risks are warned or conservatively blocked.
+  WARN: Device availability, tiling selected by the host, pixel-size overrides, custom pixel jitter, AO bounce overrides, bake state and 30-bit synced object count require session state; render-context restrictions remain authoritative.
+  WARN: Murmur ID collisions and holdout-closure manifests require the final synchronized object names and compiled shader graph.
+BLOCK findings: 11
+```

@@ -137,10 +137,16 @@ try:
     bpy.ops.render.render()
 except RuntimeError as error:
     assert 'DeepLayer' in str(error) and 'BeautyLayer' in str(error), str(error)
+    assert 'would all write' in str(error) and 'add {view_layer}' in str(error), str(error)
     results['two_deep_layers'] = str(error)
 else:
-    raise AssertionError('Two deep layers must fail')
+    raise AssertionError('Colliding deep paths must fail')
 assert not (root / 'rejected').exists()
+cscene.deep_output_path = str(root / 'two-layers' / '{view_layer}_####')
+assert bpy.ops.render.render() == {'FINISHED'}
+assert all((root / 'two-layers' / f'{name}_{scene.frame_current:04}.deep.exr').is_file()
+           for name in (layer.name, other.name))
+results['two_deep_layers_unique_paths'] = True
 other.cycles.use_pass_deep = False
 scene.render.image_settings.media_type = 'MULTI_LAYER_IMAGE'
 scene.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
@@ -257,5 +263,17 @@ for engine in ('CYCLES', 'BLENDER_EEVEE'):
             labels = [entry[1] for entry in log if entry[0] == 'label']
             assert labels == (['IDs need a non-zero transmittance error'] if error == 0 else []), log
 results['panel_draw_contract'] = True
+scene.render.engine = 'CYCLES'
+for enabled in (False, True):
+    other.cycles.use_pass_deep = enabled
+    other.use = False  # The warning must include disabled layers too.
+    for path in ('', '//shot_####', '//{view_layer}_####'):
+        cscene.deep_output_path = path
+        log = []
+        ui.CYCLES_RENDER_PT_output_deep.draw(SimpleNamespace(layout=Layout(log)), bpy.context)
+        labels = [entry[1] for entry in log if entry[0] == 'label']
+        assert bool(labels) == (enabled and '{view_layer}' not in path), log
+assert '{view_layer}' in cscene.bl_rna.properties['deep_output_path'].description
+results['output_collision_warning'] = True
 (root / 'results.json').write_text(json.dumps(results, indent=2))
 print('DEEP_UI_TESTS_PASS', root)

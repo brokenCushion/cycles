@@ -83,6 +83,15 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
   Overrides use the same Blender relative-path and frame-numbering rules:
   `//renders/shot_####` produces `shot_0001.deep.exr`, then `shot_0002.deep.exr`.
   Without `#`, Blender appends the frame number. Deep data is not a compositor socket.
+- For separate deep view layers, put `{view_layer}` in **Deep > Path Override**:
+  `//render/v001/{blend_name}_{view_layer}_####` writes
+  `<blend>_BG_0001.deep.exr`, `<blend>_Girl_0001.deep.exr` and
+  `<blend>_Robots_0001.deep.exr` when those layers have Deep Alpha enabled.
+  Leave the override blank for unchanged single-layer naming. The panel warns
+  when multiple deep layers have no `{view_layer}` in the override.
+  **Use this token only in the Deep override**, not in the ordinary beauty
+  `render.filepath`: Blender's beauty writer does not know this adapter variable.
+  File Output nodes continue writing flat RGBA EXRs independently.
 - `scene.cycles.deep_write_diagnostics` defaults to off and is hidden from the
   revised panel. Enable it through Python only for validation; the sidecar can be very large.
   The validation render helper enables it explicitly and normalizes its single-frame
@@ -106,9 +115,22 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
   Same-object depth merging and holdouts are qualified within the support matrix.
 - Output: scalar Z/ZBack/A and separate native beauty. No deep RGB or refracted
   light-path reconstruction. Glass uses native camera-alpha semantics.
-- Exactly one view layer may have Deep enabled; other layers render normally.
-  Multiple Deep layers fail with their names. Mono rendering and no automatic
-  tiling remain required.
+- Multiple view layers may have Deep enabled if their resolved paths are unique.
+  Before every non-preview render callback, all deep-enabled layers are checked,
+  including disabled layers and layers skipped by Render Single Layer. Windows
+  path comparisons ignore case. A collision fails before rendering with the
+  colliding layer names, destination and a request to add `{view_layer}` to the
+  Deep override. Blank overrides receive no automatic layer suffix (option A1).
+  Each layer publishes independently; there is no multi-file transaction.
+  Other layers render normally.
+  Mono rendering and no automatic tiling remain required.
+  See the [multi-layer verification](BLENDER_DEEP_MULTILAYER_RESULTS.md).
+- Prefer **indirect-only** over holdout to separate objects into deep layers.
+  Indirect-only objects contribute lighting but no camera-visible deep samples;
+  excluded collections contribute neither. Holdout objects retain deep opacity
+  and can double-occlude when merged with their own layer. The holdout manifest
+  marks these objects as a subset of the complete ID manifest; manifests are
+  not filtered to camera-visible objects.
 - Native OIDN, including GPU denoising in the production landscape, is qualified
   within the support matrix.
 - Deep EXR publication is atomic. The diagnostic CSV is published independently;

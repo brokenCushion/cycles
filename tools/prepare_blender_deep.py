@@ -85,7 +85,7 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
     deep_output_path: StringProperty(
         name="Path Override", subtype='FILE_PATH', default="",
         options={'ANIMATABLE', 'OUTPUT_PATH', 'PATH_SUPPORTS_BLEND_RELATIVE'},
-        description="Blank uses the beauty output path; Blender frame numbering applies",
+        description="Blank uses the beauty output path; use {view_layer} in this override for separate deep layers; Blender frame numbering applies",
     )
     deep_write_diagnostics: BoolProperty(
         name="Write Samples CSV", default=False,
@@ -186,6 +186,9 @@ class CYCLES_RENDER_PT_output_deep(CyclesButtonsPanel, Panel):
         self.layout.use_property_split = True
         self.layout.use_property_decorate = False
         self.layout.prop(context.scene.cycles, "deep_output_path")
+        if (sum(layer.cycles.use_pass_deep for layer in context.scene.view_layers) > 1 and
+                "{view_layer}" not in context.scene.cycles.deep_output_path):
+            self.layout.label(text="Add {view_layer} to avoid deep path collisions", icon='ERROR')
 
 
 class CYCLES_RENDER_PT_passes_aov""")
@@ -438,34 +441,14 @@ text = text.replace(anchor, '''  auto output_driver = make_unique<BlenderOutputD
     blender::PointerRNA cycles = RNA_pointer_get(&ptr, "cycles");
     return get_boolean(cycles, "use_pass_deep");
   };
-  if (!(b_engine.flag & blender::RE_ENGINE_PREVIEW)) {
-    string names;
-    int deep_layers = 0;
-    for (blender::ViewLayer &layer : b_scene->view_layers) {
-      if (layer_has_deep(&layer)) {
-        if (deep_layers++) names += ", ";
-        names += layer.name;
-      }
-    }
-    if (deep_layers > 1) {
-      session->progress.set_error("Deep requires exactly one enabled layer; enabled on: " + names);
-      update_status_progress();
-      return;
-    }
-    if (deep_layers && (b_scene->r.scemode & blender::R_MULTIVIEW)) {
-      session->progress.set_error("Deep output requires mono rendering");
-      update_status_progress();
-      return;
-    }
-  }
-  if (!(b_engine.flag & blender::RE_ENGINE_PREVIEW) && layer_has_deep(deep_layer)) {
+  const auto resolve_deep_path = [&](blender::ViewLayer *layer, char *path) -> bool {
     const string override_path = get_string(deep_cycles, "deep_output_path");
-    char path[FILE_MAX];
     blender::bke::path_templates::VariableMap variables;
     blender::BKE_blender_project_read_callback(b_data, [&](const blender::bke::BlenderProject *project) {
       blender::BKE_add_template_variables_general(variables, &b_scene->id, project);
     });
     blender::BKE_add_template_variables_for_render_path(variables, *b_scene);
+    variables.add_string("view_layer", layer->name);
     /* Use the same path builder as RenderSettings.frame_path(), including templates,
      * relative paths, frame padding and the file-extension setting. */
     const auto errors = blender::BKE_image_path_from_imformat(
@@ -474,9 +457,53 @@ text = text.replace(anchor, '''  auto output_driver = make_unique<BlenderOutputD
         &b_render->im_format, (b_render->scemode & blender::R_EXTENSION) != 0, true, "");
     if (!errors.is_empty() ||
         (!string_endswith(path, ".deep.exr") &&
-         !blender::BLI_path_extension_replace(path, sizeof(path), ".deep.exr"))) {
+         !blender::BLI_path_extension_replace(path, FILE_MAX, ".deep.exr"))) {
       session->progress.set_error("Could not resolve Deep output path using Blender frame path rules");
       update_status_progress();
+      return false;
+    }
+    return true;
+  };
+  if (!(b_engine.flag & blender::RE_ENGINE_PREVIEW)) {
+    vector<std::pair<string, string>> destinations;
+    int deep_layers = 0;
+    for (blender::ViewLayer &layer : b_scene->view_layers) {
+      if (layer_has_deep(&layer)) {
+        deep_layers++;
+        char path[FILE_MAX];
+        if (!resolve_deep_path(&layer, path)) {
+          return;
+        }
+        destinations.emplace_back(path, layer.name);
+      }
+    }
+    for (size_t i = 0; i < destinations.size(); i++) {
+      string names = destinations[i].second;
+      bool collision = false;
+      for (size_t j = i + 1; j < destinations.size(); j++) {
+        if (blender::BLI_path_cmp_normalized(destinations[i].first.c_str(),
+                                           destinations[j].first.c_str()) == 0) {
+          names += ", " + destinations[j].second;
+          collision = true;
+        }
+      }
+      if (collision) {
+        session->progress.set_error("Deep layers " + names + " would all write " +
+                                    destinations[i].first +
+                                    "; add {view_layer} to Output > Deep > Path Override");
+        update_status_progress();
+        return;
+      }
+    }
+    if (deep_layers && (b_scene->r.scemode & blender::R_MULTIVIEW)) {
+      session->progress.set_error("Deep output requires mono rendering");
+      update_status_progress();
+      return;
+    }
+  }
+  if (!(b_engine.flag & blender::RE_ENGINE_PREVIEW) && layer_has_deep(deep_layer)) {
+    char path[FILE_MAX];
+    if (!resolve_deep_path(deep_layer, path)) {
       return;
     }
     if (!blender::BLI_file_ensure_parent_dir_exists(path)) {

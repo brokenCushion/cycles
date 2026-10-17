@@ -19,6 +19,7 @@ feature combinations are not implied.
 | Holdout | Object flags and native Holdout closure preserve camera opacity; checked holdout manifest subset. Shadow catchers/caustics remain rejected. |
 | Surface depth merging | Same object only, checked relative depth span; numeric default `--deep-z-tolerance 1e-4`, zero disables it, strict forces zero. |
 | Output | FLOAT Z/ZBack/A, positive axial depth in scene units. Deep RGB, subpixel masks and other backends are later work. |
+| Multiple Blender view layers | CPU three-layer byte identity and OptiX fixture/animation checks pass. `{view_layer}` gives separate deep EXRs; collision preflight includes disabled/Single Layer-skipped layers and ignores Windows path case. Single-layer naming is unchanged; publication is per file. Multi-layer cancellation remains unverified; junkshop is blocked by unsupported Hair BSDF. See [results](BLENDER_DEEP_MULTILAYER_RESULTS.md). |
 
 ## Numerical and storage contract
 

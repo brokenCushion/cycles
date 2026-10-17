@@ -169,6 +169,72 @@ def inspect_material(material, add):
             pending += [(n,o,c,dependent) for n,o,c in upstream(inp,ctx)]
 
 
+# Pinned source/blender/blenkernel/intern/path_templates.cc: general, render, node.
+NATIVE_PATH_VARIABLES = {'project_name', 'project_root', 'blend_name', 'blend_dir',
+    'blend_name_lib', 'blend_dir_lib', 'resolution_x', 'resolution_y', 'fps',
+    'scene_name', 'camera_name', 'node_name'}
+NUMERIC_PATH_VARIABLES = {'resolution_x', 'resolution_y', 'fps'}
+
+
+def template_tokens(text, deep=False):
+    """Mirror next_token/parse_format_specifier; yield literal text or (name, spec)."""
+    i = 0
+    while i < len(text):
+        if text[i:i+2] in ('{{', '}}'):
+            yield text[i]; i += 2
+        elif text[i] == '}':
+            raise ValueError('unescaped closing brace in path template')
+        elif text[i] == '{':
+            end = text.find('}', i+1)
+            if end < 0 or '{' in text[i+1:end]:
+                raise ValueError('unbalanced or nested brace in path template')
+            name, colon, spec = text[i+1:end].partition(':')
+            if colon and not re.fullmatch(r'#+|#*\.#+', spec):
+                raise ValueError('bad path format specifier {'+text[i+1:end]+'}')
+            if name not in NATIVE_PATH_VARIABLES | ({'view_layer'} if deep else set()):
+                reason = 'unknown path variable {'+name+'}'
+                if name == 'view_layer':
+                    reason += '; it is only valid in Output > Deep > Path Override. Use {node_name} and name the node after the layer.'
+                raise ValueError(reason)
+            if colon and name not in NUMERIC_PATH_VARIABLES:
+                raise ValueError('format specifier is not allowed for string/path variable {'+name+'}')
+            yield (name, spec)
+            i = end+1
+        else:
+            yield text[i]; i += 1
+
+
+def inspect_paths(scene):
+    findings = []
+    def check(text, subject, deep=False):
+        try: list(template_tokens(text, deep))
+        except ValueError as error:
+            findings.append(dict(level='BLOCK', rule='path_template', reason=subject+': '+str(error), path=text))
+    check(scene.render.filepath, 'render.filepath')
+    # rna_scene_api.cc exposes validation for this property only, without RNA edits.
+    if not findings:
+        try: scene.render.frame_path()
+        except RuntimeError as error:
+            findings.append(dict(level='BLOCK', rule='path_template', reason='render.filepath: '+str(error)))
+    check(scene.cycles.deep_output_path, 'Output > Deep > Path Override', True)
+    seen = set()
+    def visit(tree):
+        if not tree or tree.as_pointer() in seen: return
+        seen.add(tree.as_pointer())
+        for node in tree.nodes:
+            if node.type == 'OUTPUT_FILE':
+                subject = 'File Output node "'+node.name+'"'
+                check(node.directory, subject)
+                check(node.file_name, subject)
+                # In this pinned version per-item names become path components.
+                if node.format.file_format != 'OPEN_EXR_MULTILAYER':
+                    for item in node.file_output_items:
+                        check(item.name, subject+' item "'+item.name+'"')
+            if node.type == 'GROUP': visit(node.node_tree)
+    visit(scene.compositing_node_group)
+    return findings
+
+
 def resolved_path(scene, layer, frame):
     # BKE_image_path_from_imformat/BLI_path_frame; no temporary RNA writes.
     text = scene.cycles.deep_output_path or scene.render.filepath
@@ -182,11 +248,18 @@ def resolved_path(scene, layer, frame):
         resolution_x=scene.render.resolution_x*scene.render.resolution_percentage//100,
         resolution_y=scene.render.resolution_y*scene.render.resolution_percentage//100,
         fps=scene.render.fps/scene.render.fps_base)
-    def replace(match):
-        key,spec = (match.group(1).split(':',1)+[''])[:2] if ':' in match.group(1) else (match.group(1),'')
+    def replace(token):
+        if isinstance(token, str): return token
+        key,spec = token
         if key not in variables: raise ValueError('unresolved path variable '+key)
-        return format(variables[key],spec)
-    text = re.sub(r'\{([^{}]+)\}',replace,text)
+        value = variables[key]
+        if not spec: return str(value)
+        if '.' in spec:
+            left, right = spec.split('.')
+            return format(value, f'0{len(left)+1+len(right) if left else 0}.{len(right)}f')
+        rounded = math.floor(value+.5) if value >= 0 else math.ceil(value-.5)
+        return format(rounded, f'0{len(spec)}d')
+    text = ''.join(replace(token) for token in template_tokens(text, bool(scene.cycles.deep_output_path)))
     text = bpy.path.abspath(text)
     matches = list(re.finditer(r'#+',text))
     if matches:
@@ -209,6 +282,7 @@ def scan(scene, layer_name=None, frame=None, device=None):
     try:
         if frame is not None and frame != original_frame: scene.frame_set(frame)
         if layer_name and layer_name not in scene.view_layers: raise ValueError('Unknown layer '+layer_name)
+        report['path_findings'] = inspect_paths(scene)
         destinations={}
         for layer in scene.view_layers:
             entry=dict(layer=layer.name,status='checked' if layer.cycles.use_pass_deep and (not layer_name or layer.name==layer_name) else 'skipped',findings=[])
@@ -318,7 +392,7 @@ def scan(scene, layer_name=None, frame=None, device=None):
             aliases=[name for name,p in destinations.items() if os.path.normcase(os.path.normpath(p))==os.path.normcase(os.path.normpath(path))]
             if len(aliases)>1:
                 entry['findings'].append(dict(level='BLOCK',rule='collision',reason=f'Deep layers {", ".join(aliases)} would all write {path}; add {{view_layer}} to Output > Deep > Path Override'))
-        report['blocks']=sum(f['level']=='BLOCK' for l in report['layers'] for f in l['findings'])
+        report['blocks']=len(report['path_findings'])+sum(f['level']=='BLOCK' for l in report['layers'] for f in l['findings'])
         return report
     finally:
         if scene.frame_current!=original_frame or scene.frame_subframe!=subframe: scene.frame_set(original_frame,subframe=subframe)
@@ -327,6 +401,7 @@ def scan(scene, layer_name=None, frame=None, device=None):
 
 def format_report(report):
     lines=[report['header'],f"Source: {report['source']} | frame {report['frame']}"]
+    lines.extend(f"  {item['level']}: {item['reason']}" for item in report.get('path_findings', []))
     for layer in report['layers']:
         lines.append(f"Layer {layer['layer']}: {layer['status']} | deep path: {layer.get('deep_path','-')}")
         for item in layer['findings']:

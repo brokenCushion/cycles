@@ -35,6 +35,8 @@ def add(name, node, x, y):
 
 
 for frame in (1, 2):
+    frame_files = [(f, r) for f, r in settings['files'].items() if r['frame'] == frame]
+    check(frame_files, 'No deep files for frame '+str(frame))
     merge = add(f'Frame{frame}DeepMerge', GafferImage.DeepMerge(), frame * 150, -80)
     flat = add(f'Frame{frame}MergedAlpha', GafferImage.DeepToFlat(), frame * 150, -105)
     flat['in'].setInput(merge['out'])
@@ -51,8 +53,7 @@ for frame in (1, 2):
     camera['apertureOffset'].setValue(imath.V2f((right + left) / 2, (top + bottom) / 2))
     camera['transform']['translate'].setValue(imath.V3f(*info['camera_translation']))
     camera['transform']['rotate'].setValue(imath.V3f(*info['camera_rotation_degrees']))
-    for index, (filename, record) in enumerate((f, r) for f, r in settings['files'].items()
-                                               if r['frame'] == frame):
+    for index, (filename, record) in enumerate(frame_files):
         name = f'{record["layer"]}{frame}'
         x = frame * 150 + index * 35
         reader = add(name + 'Deep', GafferImage.ImageReader(), x, 70)
@@ -112,11 +113,11 @@ for frame in (1, 2):
         reports[filename] = dict(passed=True, resolution=[width, height],
                                  grid_pixels=len(pixels), max_flatten_error=flatten_error,
                                  max_slice_error=slice_error, displayed_points=cloud.numPoints)
-    # DeepMerge must contain the samples from all three layer readers.
+    # DeepMerge must contain the samples from every layer rendered this frame.
     for y in range(0, height, max(1, height // 8)):
         for x in range(0, width, max(1, width // 8)):
             point = imath.V2i(x, y)
-            samples = [sample for i in range(3) for sample in deep_pixel(merge['in'][i], point)]
+            samples = [sample for i in range(len(frame_files)) for sample in deep_pixel(merge['in'][i], point)]
             actual = flat_alpha(script[f'Frame{frame}MergedAlpha']['out'], point)
             check(abs(actual - (1 - flattened_transmittance(samples))) <= tolerance,
                   'DeepMerge alpha mismatch')

@@ -219,3 +219,24 @@ execution backend without changing preferences. If background Blender has no
 enumerated devices, the scanner reports that device availability is undecidable
 as a WARN, rather than falsely blocking the scene. It never refreshes or saves
 user preferences.
+
+`{view_layer}` is valid **only in Output > Deep > Path Override**. Native render
+paths and compositor File Output paths do not define it. For matching flat files,
+name the File Output nodes after the layers (for example `BG`, `Girl`, `Robots`)
+and use `{blend_name}_{node_name}_####` as their file name.
+
+The scanner checks render.filepath, File Output directories/file names/per-item
+paths (including nested compositor groups), and the deep override. Its variable
+table and brace/numeric-format syntax follow the pinned Blender
+`source/blender/blenkernel/intern/path_templates.cc`. Doubled braces escape literal
+braces; numeric formats use `#` or `#*.#+`, not Python's `04d`. String/path variables
+do not accept a format specifier. Multilayer EXR item names are channel names,
+not paths. `render.frame_path()` supplies native validation for render.filepath;
+the pinned RNA/Python bindings expose no general File Output/deep-template
+validator, so those use the source-derived rules without editing RNA.
+
+`tools/test_blender_deep_path_templates.py` provides isolated render-backed path
+fixtures. Pass a fresh output directory and case after `--`; cases include
+`valid`, `view_layer`, `brace`, `deep`, `format`, `string_format`, `directory`,
+`item`, `render`, and `numeric`. Invalid compositor paths can log an error without
+raising from the render operator: check the log and expected output files.

@@ -379,12 +379,23 @@ static void validate_shader(Scene *scene, Shader *shader,
         continue;
       }
       if (type == "light_path") {
+        /* Transparent Depth stays rejected: volume capture does not advance that counter. */
         for (ShaderOutput *socket : node->outputs) {
           require_deep(socket->links.empty() || socket->name() == ustring("Is Camera Ray") ||
                            socket->name() == ustring("Is Shadow Ray") ||
                            socket->name() == ustring("Ray Length") ||
-                           socket->name() == ustring("Ray Depth"),
-                       "unsupported deep surface Light Path output");
+                           socket->name() == ustring("Ray Depth") ||
+                           socket->name() == ustring("Is Diffuse Ray") || /* Camera visibility stays camera. */
+                           socket->name() == ustring("Is Glossy Ray") || /* Transparent continuation retains visibility. */
+                           socket->name() == ustring("Is Singular Ray") || /* Camera/transparent flags are not singular. */
+                           socket->name() == ustring("Is Reflection Ray") || /* No reflective bounce precedes camera hits. */
+                           socket->name() == ustring("Is Transmission Ray") || /* Transparent does not set transmit visibility. */
+                           socket->name() == ustring("Is Volume Scatter Ray") || /* Straight capture has no scattering bounce. */
+                           socket->name() == ustring("Diffuse Depth") || /* Initialized zero; transparency does not increment it. */
+                           socket->name() == ustring("Glossy Depth") || /* Initialized zero; transparency does not increment it. */
+                           socket->name() == ustring("Transmission Depth") || /* Transparent is separate from transmission bounces. */
+                           socket->name() == ustring("Portal Depth"), /* Portal closures remain rejected, hence zero. */
+                       ("unsupported deep surface Light Path output: " + socket->name().string()).c_str());
         }
         continue;
       }
@@ -426,6 +437,28 @@ static void validate_shader(Scene *scene, Shader *shader,
                        type == "hsv" || type == "rgb_curves" || type == "separate_color" ||
                        type == "combine_color" || type == "rgb_to_bw" ||
                        type == "attribute" || type == "wave_texture" || type == "brick_texture" ||
+                       type == "glossy_bsdf" || /* Glossy setup allocates BSDFs only; no transparent extinction. */
+                       type == "metallic_bsdf" || /* Metallic setup allocates BSDFs only; no transparent extinction. */
+                       type == "refraction_bsdf" || /* Refraction redirects a sampled BSDF, but contributes no camera transparency. */
+                       type == "sheen_bsdf" || /* Sheen setup does not set transparent extinction. */
+                       type == "toon_bsdf" || /* Toon setup does not set transparent extinction. */
+                       type == "subsurface_scattering" || /* BSSRDF setup does not set transparent extinction. */
+                       type == "hair_bsdf" || /* Hair BSDF setup is opaque to camera alpha; mesh geometry only. */
+                       type == "principled_hair_bsdf" || /* Hair randomization reads attributes/inputs, not path RNG; zero transparency. */
+                       type == "vector_math" || /* SVM vector arithmetic reads only the input stack. */
+                       type == "map_range" || /* SVM scalar range mapping reads only the input stack. */
+                       type == "separate_xyz" || /* SVM component extraction reads only the input stack. */
+                       type == "combine_xyz" || /* SVM component assembly reads only the input stack. */
+                       type == "mix_float" || /* SVM scalar interpolation reads only the input stack. */
+                       type == "mix_vector" || /* SVM vector interpolation reads only the input stack. */
+                       type == "mix_vector_non_uniform" || /* SVM component-wise interpolation reads only the input stack. */
+                       type == "vector_rotate" || /* SVM rotation uses stack vectors and angles, without tracing or RNG. */
+                       type == "float_curve" || /* SVM uses immutable curve tables and stack inputs. */
+                       type == "vector_curves" || /* SVM uses immutable component curve tables and stack inputs. */
+                       type == "normal" || /* SVM normal/dot outputs use the input stack and stored direction. */
+                       type == "blackbody" || /* SVM uses deterministic temperature/color-space math. */
+                       type == "wavelength" || /* SVM uses deterministic wavelength/color-space math. */
+                       type == "vector_transform" || /* SVM uses initialized object/time and camera transforms from the same hit. */
                        type == "add_closure",
                    ("unsupported deep surface node: " + type).c_str());
       continue;
@@ -638,7 +671,7 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
       continue;
     }
     require_deep(geometry->geometry_type == Geometry::MESH && !geometry->get_use_motion_blur(),
-                 "only static polygon meshes and background lighting are supported");
+                 ("only static polygon meshes and background lighting are supported: " + geometry->name.string()).c_str());
     require_deep(static_cast<Mesh *>(geometry)->get_subdivision_type() == Mesh::SUBDIVISION_NONE,
                  "subdivision is unsupported");
     if (geometry->get_used_shaders().empty())

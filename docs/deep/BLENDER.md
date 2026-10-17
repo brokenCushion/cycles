@@ -213,3 +213,9 @@ explicitly instead of inventing a destination. No BLOCK does not qualify a scene
 renders and reports every mismatch, including conservative constant-folding
 false positives. Run it in Blender with `--python-exit-code 1` and a fresh output
 directory after `--`.
+
+Use `--device CPU`, `--device CUDA` or `--device OPTIX` to check the intended
+execution backend without changing preferences. If background Blender has no
+enumerated devices, the scanner reports that device availability is undecidable
+as a WARN, rather than falsely blocking the scene. It never refreshes or saves
+user preferences.

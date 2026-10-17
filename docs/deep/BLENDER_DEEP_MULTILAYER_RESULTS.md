@@ -587,3 +587,535 @@ Not decidable from RNA:
   WARN: Murmur ID collisions and holdout-closure manifests require the final synchronized object names and compiled shader graph.
 BLOCK findings: 11
 ```
+
+### Allowlist candidate: qualification stopped (not committed)
+
+The scanner commit is `77d385d9b`. The second commit was **not created** because
+its required opacity gate failed. The working tree and test install contain an
+unqualified allowlist candidate; they must not be treated as an accepted build.
+No push or PR was made.
+
+Candidate renderer changes are confined to `src/session/deep.cpp`: the following
+NODE_DEFINE names were checked in `src/scene/shader_nodes.cpp`, and their native
+SVM implementations were read. These are candidate justifications, not a claim
+that the failed qualification passed:
+
+| Candidate Cycles node | SVM justification |
+| --- | --- |
+| glossy_bsdf | Closure setup allocates a BSDF without transparent extinction. |
+| metallic_bsdf | Closure setup allocates a BSDF without transparent extinction. |
+| refraction_bsdf | Sampled refraction contributes no straight camera transparency. |
+| sheen_bsdf | Closure setup does not set transparent extinction. |
+| toon_bsdf | Closure setup does not set transparent extinction. |
+| subsurface_scattering | BSSRDF setup does not set transparent extinction. |
+| hair_bsdf | Mesh hair closure setup contributes zero camera transparency; curves remain rejected. |
+| principled_hair_bsdf | Hair randomization uses attributes/inputs rather than path RNG; no transparent extinction. |
+| vector_math | Stack-only vector arithmetic in svm/math.h. |
+| map_range | Stack-only scalar range mapping in svm/map_range.h. |
+| separate_xyz | Stack component extraction in svm/sepcomb_vector.h. |
+| combine_xyz | Stack component assembly in svm/sepcomb_vector.h. |
+| mix_float | Stack-only scalar interpolation in svm/mix.h. |
+| mix_vector | Stack-only vector interpolation in svm/mix.h. |
+| mix_vector_non_uniform | Stack-only component interpolation in svm/mix.h. |
+| vector_rotate | Stack vectors/angles, no tracing or RNG, in svm/vector_rotate.h. |
+| float_curve | Immutable table lookup plus stack inputs in svm/ramp.h. |
+| vector_curves | Immutable component table lookup plus stack inputs in svm/ramp.h. |
+| normal | Stack normal/dot operations and stored direction in svm/normal.h. |
+| blackbody | Deterministic temperature and color-space arithmetic in svm/blackbody.h. |
+| wavelength | Deterministic wavelength and color-space arithmetic in svm/wavelength.h. |
+| vector_transform | Initialized hit object/time and camera transforms in svm/vector_transform.h. |
+
+The ten candidate Light Path outputs are Is Diffuse Ray, Is Glossy Ray,
+Is Singular Ray, Is Reflection Ray, Is Transmission Ray, Is Volume Scatter Ray,
+Diffuse Depth, Glossy Depth, Transmission Depth and Portal Depth. Native camera
+initialization sets camera visibility, no reflect/singular flag and zero bounce
+counters. Transparent continuation preserves those flags/counters. Portal closures
+remain rejected, and the portal accessor returns zero when its feature is absent.
+The proof uses `svm/light_path.h`, `integrator/path_state.h` and
+`integrator/state_util.h`, plus both deep surface implementations.
+
+**Transparent Depth remains rejected.** Surface-only CPU/CUDA/OptiX paths increment
+transparent_bounce, matching native transparent continuation. However,
+`kernel/deep/volume.h` evaluates surfaces without advancing that counter. A global
+allowlist addition is therefore not proven. Supporting it in all modes would need
+additional work; no kernel change was made. Ray Portal remains excluded because
+it redirects rays. Tier 3/4 nodes and vector_map_range remain outside this expansion.
+`deep_closure_can_transmit` is unchanged. One-line comments accompany each proposed
+entry, and the remaining Light Path diagnostic now names the rejected output.
+
+Candidate non-core files: scanner rule table; visibility regression changes its
+previously rejected mesh Hair BSDF to still-rejected Ray Portal; new
+`tools/test_blender_deep_allowlist.py` generates the requested color-only/opacity
+and rejection fixtures. Documentation changes and this report are also pending.
+No capture/export/adapter changes were made.
+
+The generated overlay was reset at the same pinned HEAD, validated (1,105 files),
+reapplied and incrementally built through `rebuild_step2.py` / `build_guarded.py`.
+1,142 unchanged timestamps were preserved. Build/install exited 0; logs are
+`verification/build.log` and `verification/step2/build-before-expansion.log`.
+
+#### Completed candidate tests and failure
+
+All paths below are relative to `D:/temp/cycles_deep_multilayer/`.
+
+| Test | Actual result |
+| --- | --- |
+| CPU color-only / opaque closure cases | PASS: 32 node/reference deep EXR pairs are whole-file byte-identical. |
+| CPU opacity render cases | 24 rendered, but qualification FAILED at the first alpha comparison; remaining comparisons were not run. |
+| Still-rejected cases | PASS: Ray Portal, opacity AO, opacity Bevel, Transparent Depth and particle hair curves all rejected with expected diagnostics. |
+| CPU multilayer regression | PASS: 24 files rendered and validated, including isolation and qualified single-layer exact bytes. |
+| Prior 16b81d7ef full-output byte comparison | NOT RUN before the stop; do not infer it from single-layer identity. |
+| Visibility regression | PASS with the still-unsupported Ray Portal material in place of now-candidate Hair BSDF. |
+| UI and migration | PASS: both emit their existing PASS markers. |
+| Panel | Script exited 0 and produced three screenshots; this candidate run's screenshots were not visually reviewed before the stop. |
+| Standalone CTests | PASS: 3/3, 7.78 seconds, fresh deep-reference-step2 directory. |
+| Updated scanner drift, OptiX/CUDA candidate smoke | NOT RUN after failure. |
+| Junkshop3 effective-settings scan/render | NOT RUN after failure. |
+| Production EXR/Gaffer/DeepMerge, Nuke | NOT RUN; Nuke unavailable. |
+
+Commands/evidence: `run_step2.py CPU`, `run_regression_step2.py` modes baseline,
+cpu, visibility, ui, migration, panel, and `ctest_step2.py`. The GPU tests were
+not launched. Full commands and logs are in `verification/step2/` and its
+`regression/` subdirectory.
+
+```text
+DEEP_ALLOWLIST_RENDER_PASS CPU 32 opaque 24 opacity 5 rejections
+CPU process exit: 1 (last render was an intentional rejection; results.json completed)
+DEEP_MULTILAYER_RENDER_PASS CPU 24 files
+DEEP_MULTILAYER_VALIDATION_PASS CPU 24 files
+DEEP_VISIBILITY_TESTS_PASS 7 cases
+DEEP_UI_TESTS_PASS
+DEEP_MIGRATION_TESTS_PASS
+100% tests passed, 0 tests failed out of 3
+```
+
+The validator initially expected numbered beauty filenames. Blender's
+`write_still=True` actually wrote literal `beauty_####.exr` and `off_####.exr`.
+That measurement-path bug was repaired without rerendering or changing a gate.
+The corrected validator then failed:
+
+```text
+case: opacity_vector_math
+maximum |flattened deep alpha - beauty alpha|: 0.16430927921169047
+allowed deep_error: 0.0010000000474974513
+```
+
+The fixture uses two overlapping, partially transparent Diffuse/Transparent
+surfaces, 32x32, 16 samples, CPU. Deep alpha ranged 0.672949–0.699683; native beauty
+alpha ranged 0.529745–0.844454. Axis flips do not explain the error. The existing
+transparency qualification uses an independent per-ray opacity oracle for general
+stacks and only compares beauty alpha directly in selected fixtures; its ordinary
+transparent stack uses Emission/Transparent. A stochastic beauty-alpha estimator
+may explain this fixture mismatch, but **that hypothesis has not been qualified**.
+No tolerance was relaxed and no failed render was rerun with altered materials.
+Further investigation requires authorization under [VALIDATION.md](VALIDATION.md):
+“A failed renderer or gate stops work without retry or further investigation
+unless the user explicitly authorizes it.”
+
+The prior junkshop2 run exited **1** with `--python-exit-code 1` and an uncaught
+render exception, despite publishing Robots frame 1. This candidate's final
+intentional render rejection also left process exit 1 even though Python caught
+it. These observations cover those invocations only; no claim is made about every
+farm command or every Blender failure mode. No exit behavior was changed.
+
+## Step 2b: opacity gate investigation
+
+2026-10-18. Explicit authorization: `D:/temp/cycles_deep_codex/04_opacity_gate_investigation.md`.
+This section supersedes the earlier candidate stop status. All investigation
+renders used the **uncommitted candidate**; no renderer code, tolerance, material
+allowlist or gate threshold was changed during the investigation. All diagnostic
+fixtures are 32x32 CPU, with the requested seed/filter/camera settings. Evidence
+is under `D:/temp/cycles_deep_multilayer/verification/step2/gate-investigation/`.
+The render script reuses the candidate test's setup and vector-math construction
+verbatim. Seven diagnostic renders were run once each; no favorable rerun was
+selected. The repeated 16-sample case also serves as the sample-scaling baseline.
+
+### Part A: measured results
+
+1. **Repeatability.** The unchanged deep EXR is whole-file byte-identical:
+   SHA-256 `5c85c46dbf07910b09b3826b6f6f2c16e035c9866320a8a821f981f6495d611d`.
+   Beauty EXR bytes differ, but **every RGBA pixel is exact**. Header differences
+   are Date, RenderTime and the three Cycles synchronization/render/total timing
+   attributes. Details: `beauty-repeat-details.json`.
+2. **Orientation.** `tools/deep_exr.py:read()` directly uses OpenEXR without a
+   flip, just like the flat reader. The adapter converts Blender's internal
+   bottom-up rows to EXR file rows with `tile.height - 1 - y`; its diagnostic CSV
+   uses those same file coordinates. The separate `image_reader()` helper flips
+   for Gaffer-style coordinates, but it is not used by this validator.
+
+| Orientation of beauty | Maximum alpha difference |
+| --- | --- |
+| Unchanged | 0.164309279212 |
+| Vertical flip | 0.166253676367 |
+| Horizontal flip | 0.167577684122 |
+| Both flips | 0.166864387393 |
+
+3. **Controls.** Every control uses the same setup, paths within its own fresh
+   directory, seed and samples. C1 removes the texture and fixes mix factor 0.37;
+   C2 removes vector_math; C3 removes Front. No renderer changes were made.
+
+| Candidate CPU case | Samples | Max deep/beauty alpha difference | Mean absolute difference |
+| --- | --- | --- | --- |
+| Original repeated | 16 | 0.164309279212 | 0.047376570989 |
+| C1: constant 0.37 | 16 | 0.192614857578 | 0.046564620501 |
+| C2: already-allowed Noise/Math | 16 | 0.169891701382 | 0.047289340803 |
+| C3: vector_math, one plane | 16 | 0.056168794632 | 0.013926738262 |
+| Original, more samples | 64 | 0.091150821752 | 0.023930058534 |
+
+4. **Independent raw-camera oracle.** Diagnostic CSVs contain 81 grid pixels,
+   16 camera samples per pixel (1,296 camera chains), and two events per chain.
+   Alpha text is restored to FLOAT before computing
+   `1 - mean_s(prod_events(1-alpha))`. Every expected sample is required; gaps,
+   duplicate/out-of-order events and missing grid points fail validation.
+
+| Candidate CPU case | (a) Oracle vs beauty max | (b) Deep flatten vs oracle max | (c) Old metric on same grid |
+| --- | --- | --- | --- |
+| Original vector_math | 0.160394676047 | 1.581115572e-8 | 0.160394660722 |
+| C2 Noise/Math | 0.147280883858 | 1.692720408e-8 | 0.147280893352 |
+
+The expected exact oracle/beauty equality in the task's diagnostic hypothesis
+**does not hold for these fixtures**. Both already-allowed controls exhibit the
+same discrepancy. Deep flattening itself agrees with the independent camera-ray
+oracle far inside the unchanged 0.001 bound.
+
+5. **Scaling.** Increasing samples 16 to 64 reduces the max discrepancy from
+   0.164309 to 0.091151, and mean absolute discrepancy from 0.047377 to 0.023930
+   (approximately half). This is consistent with sampling variation, not a
+   fixed vector_math-only bias. One pair is not a general convergence proof.
+   Signed mean errors were 0.00169553 and 0.00050014, respectively.
+
+Full numeric results: `diagnosis.json`; per-grid measurements:
+`oracle-original-grid.json` and `oracle-C2-grid.json`. Diagnostic Blender process
+exit was 0. `command.json` records its exact invocation and
+`candidate-identities.json` records executable/source/test hashes.
+
+### Part B: decision and validator repair
+
+**Decision table row 1 applies because C1 and C2 fail the same old metric.**
+It does not depend on pretending oracle/beauty equality passed. The mistake was
+using native stochastic beauty alpha as the deterministic camera-opacity oracle
+for arbitrary Diffuse/Transparent mixtures. The formula used to flatten the
+published deep EXR was correct; no axis change or alternative deep flattening
+formula was needed.
+
+The repaired `tools/test_blender_deep_allowlist.py` follows the established
+`validate_transparency_gaffer.py` contract: compare deep flattening to the raw
+camera-chain mixture, preserve exact CPU deep-on/off RGBA equality, and retain
+the native-beauty alpha discrepancy as informational evidence. It does not change
+`deep_error`, the EXR header bound, renderer, sampling, or materials. Noisy beauty
+alpha is not relabeled as passing the 0.001 bound. The earlier still-image filename
+repair (`beauty_####.exr`, literal hashes) remains in place.
+
+All **24 opacity cases were rerendered once from the start**, because the preserved
+original outputs did not include diagnostic CSVs. All 24 repaired comparisons
+passed, with exact CPU deep-on/off RGBA pixels and maximum grid oracle error
+**2.4213196336830833e-8**, against unchanged `deep_error = 1e-3`.
+The original 32 opaque/color-only byte-identity pairs are preserved, not rerun.
+
+```text
+CANDIDATE_ALL24_DIAGNOSTICS_RENDER_PASS 24
+DEEP_ALLOWLIST_VALIDATION_PASS CPU 24 opacity cases; max error 2.4213196336830833e-08
+```
+
+Evidence: `all24-CPU/validation.json`, `all24-renders.log`, `all24-validation.log`
+and `all24-command.json`. Every case's original beauty-alpha discrepancy is kept
+in its validation record. This is a measurement repair, not a relaxed threshold.
+
+### Part C: remaining qualification
+
+Candidate CPU prior-build comparison: all 24 complete deep EXRs exactly match
+`16b81d7ef`'s saved outputs (`verification/step2/prior-16b81d7ef-identity.json`).
+The qualified single-layer comparison, CPU suite, visibility, UI, migration and
+3/3 standalone CTests passed in the preceding candidate run; their source and
+renderer remain unchanged. The three candidate panel screenshots have now been
+visually reviewed: alpha-off/on and strict IDs behave as expected.
+
+The scanner now accepts `--device CPU|CUDA|OPTIX` as a read-only prediction
+input. Empty device enumeration yields `WARN: undecidable in background`, without
+refreshing, writing or saving preferences. The expanded drift suite checks all
+22 new node types and ten new Light Path outputs both visible and indirect-only,
+in addition to the prior fixtures. **132 cases, zero false negatives and zero
+false positives**. The previous folded vector-Mix false positive disappears
+because that type is now allowed. Read-only device-override and five path tests
+also pass. Logs: `verification/step2/drift-candidate-final*`.
+
+Candidate OptiX and CUDA qualification also passed: each rendered 32 opaque cases,
+24 opacity cases and five expected rejections. GPU byte identity is not claimed.
+Maximum deep/oracle errors were **2.2351807293929937e-8** (OptiX) and
+**2.421320965950713e-8** (CUDA). The 16-file OptiX multilayer regression also passed.
+The final intentional rejection leaves Blender's process exit at 1, while the
+completed results.json and validation exit 0 establish the fixture test result;
+this is not a silent acceptance of an unexpected render failure.
+
+```text
+DEEP_ALLOWLIST_RENDER_PASS OPTIX 32 opaque 24 opacity 5 rejections
+DEEP_ALLOWLIST_VALIDATION_PASS OPTIX 24 opacity cases; max error 2.2351807293929937e-08
+DEEP_ALLOWLIST_RENDER_PASS CUDA 32 opaque 24 opacity 5 rejections
+DEEP_ALLOWLIST_VALIDATION_PASS CUDA 24 opacity cases; max error 2.421320965950713e-08
+DEEP_MULTILAYER_VALIDATION_PASS OPTIX 16 files
+```
+
+The renderer candidate was not changed to obtain these results. The second
+commit includes the unchanged candidate, scanner table/device prediction changes,
+expanded drift test, visibility fixture update, oracle validator repair and docs.
+Junkshop3 is intentionally run after that commit, as Task 04 specifies; its outcome
+is recorded below. These fixtures do not establish arbitrary-scene compatibility.
+
+#### Junkshop3: STOP at compositor output failure
+
+Commit 2 was created before this smoke. Girl deep off, BG + Robots deep on,
+10%, four samples, OptiX, frames 1–2, layer-qualified deep override, volume step
+0.01, 4096 events and 2048 MiB were applied without saving the source.
+Both effective scanner runs had zero BLOCK findings. Full reports:
+
+Frame 1:
+
+```text
+Deep scene scanner prediction; render-time validation is the authority.
+Source: C:\Users\jun\Desktop\cycles_deep\thejunkshopsplashscreen_deep_v001.blend | frame 1
+Layer Completo: skipped | deep path: -
+Layer Viewport: skipped | deep path: -
+Layer BG: checked | deep path: D:\temp\cycles_deep_multilayer\junkshop3\render\v001\thejunkshopsplashscreen_deep_v001_BG_0001.deep.exr
+  OK-ignored: Face: indirect-only here
+  OK-ignored: Eyes: indirect-only here
+  OK-ignored: Hat: indirect-only here
+  OK-ignored: Body: indirect-only here
+  OK-ignored: Vest: indirect-only here
+  OK-ignored: Gloves: indirect-only here
+  OK-ignored: MrCatPC: indirect-only here
+  OK-ignored: Cloth Pipes: indirect-only here
+  OK-ignored: Wheel Robot: indirect-only here
+  OK-ignored: Cat Helmet: indirect-only here
+  OK-ignored: Smoke.001: indirect-only here
+  OK-ignored: Area.027: camera-invisible or hidden for render
+  OK-ignored: Rim Light Girl 02: camera-invisible or hidden for render
+  OK-ignored: Area.020: camera-invisible or hidden for render
+  OK-ignored: Area.007: camera-invisible or hidden for render
+  OK-ignored: No Uso.001: camera-invisible or hidden for render
+  OK-ignored: Converstaion Light: camera-invisible or hidden for render
+  OK-ignored: Right Commodore Cat: camera-invisible or hidden for render
+  OK-ignored: PO Box Red: camera-invisible or hidden for render
+  OK-ignored: No Uso 2: camera-invisible or hidden for render
+  OK-ignored: Radio Luz 03: camera-invisible or hidden for render
+  OK-ignored: Radio Luz 02: camera-invisible or hidden for render
+  OK-ignored: RadioLuz: camera-invisible or hidden for render
+  OK-ignored: Rim Light Girl: camera-invisible or hidden for render
+  OK-ignored: Shop Frontal Left: camera-invisible or hidden for render
+  OK-ignored: No Uso: camera-invisible or hidden for render
+  OK-ignored: Bounce Light Left Robot: camera-invisible or hidden for render
+  OK-ignored: Bounce Light Cat Head: camera-invisible or hidden for render
+  OK-ignored: Bounce Enviroment: camera-invisible or hidden for render
+  OK-ignored: Area Red Right: camera-invisible or hidden for render
+  OK-ignored: Background Blue: camera-invisible or hidden for render
+Layer Girl: skipped | deep path: -
+Layer Robots: checked | deep path: D:\temp\cycles_deep_multilayer\junkshop3\render\v001\thejunkshopsplashscreen_deep_v001_Robots_0001.deep.exr
+  OK-ignored: Background Pipes: indirect-only here
+  OK-ignored: Background Pipes Closer: indirect-only here
+  OK-ignored: Background Wall: indirect-only here
+  OK-ignored: Background Cylinders: indirect-only here
+  OK-ignored: Background Cube: indirect-only here
+  OK-ignored: Gears: indirect-only here
+  OK-ignored: Floor Background: indirect-only here
+  OK-ignored: POBox: indirect-only here
+  OK-ignored: Store Wall: indirect-only here
+  OK-ignored: Ceiling: indirect-only here
+  OK-ignored: Furniture: indirect-only here
+  OK-ignored: Table cloth: indirect-only here
+  OK-ignored: Tools: indirect-only here
+  OK-ignored: Ads: indirect-only here
+  OK-ignored: Floor Front: indirect-only here
+  OK-ignored: Front Pipes: indirect-only here
+  OK-ignored: Props: indirect-only here
+  OK-ignored: Stoplight: indirect-only here
+  OK-ignored: Table: indirect-only here
+  OK-ignored: Tickets: indirect-only here
+  OK-ignored: Face: indirect-only here
+  OK-ignored: Eyes: indirect-only here
+  OK-ignored: Hat: indirect-only here
+  OK-ignored: Body: indirect-only here
+  OK-ignored: Vest: indirect-only here
+  OK-ignored: Gloves: indirect-only here
+  OK-ignored: Old Robots: indirect-only here
+  OK-ignored: RadioNes: indirect-only here
+  OK-ignored: Cristal: indirect-only here
+  OK-ignored: Weigth: indirect-only here
+  OK-ignored: Old Robots.001: indirect-only here
+  WARN: Smoke.001 / Smoke / Material Output / output: Volume shader requires render-time extinction qualification. SUPPORT.md: | Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
+  OK-ignored: Area.027: indirect-only here
+  OK-ignored: Rim Light Girl 02: indirect-only here
+  OK-ignored: Area.020: indirect-only here
+  OK-ignored: Area.007: indirect-only here
+  OK-ignored: No Uso.001: indirect-only here
+  OK-ignored: Converstaion Light: indirect-only here
+  OK-ignored: Right Commodore Cat: indirect-only here
+  OK-ignored: PO Box Red: indirect-only here
+  OK-ignored: No Uso 2: indirect-only here
+  OK-ignored: Radio Luz 03: indirect-only here
+  OK-ignored: Radio Luz 02: indirect-only here
+  OK-ignored: RadioLuz: indirect-only here
+  OK-ignored: Rim Light Girl: indirect-only here
+  OK-ignored: Shop Frontal Left: indirect-only here
+  OK-ignored: No Uso: indirect-only here
+  OK-ignored: Bounce Light Left Robot: indirect-only here
+  OK-ignored: Bounce Light Cat Head: indirect-only here
+  OK-ignored: Bounce Enviroment: indirect-only here
+  OK-ignored: Area Red Right: indirect-only here
+  OK-ignored: Background Blue: indirect-only here
+  OK-ignored: Light Block: indirect-only here
+Not decidable from RNA:
+  WARN: Cycles optimized/finalized graph, numeric conversions, shader compilation and OSL optimized-group queries are not exposed to Python; constant folding may remove a reported node (documented possible false positive).
+  WARN: RNA depsgraphs use their exposed evaluation mode; render-only modifier/particle differences, Cycles culling, subdivision synchronization, generated procedurals and final shared-geometry assignment require render-time validation.
+  WARN: Compiled volume extinction, grid metadata/interpolation, manifold triangle boundaries, voxel step, closure capacity and NanoVDB build support require Cycles evaluation; volume findings are conservative warnings unless an RNA contradiction proves rejection.
+  WARN: Camera shutter samples, animated FOV and finite rigid motion transforms at all shutter times require temporal Cycles synchronization; animation/deform risks are warned or conservatively blocked.
+  WARN: Device availability, tiling selected by the host, pixel-size overrides, custom pixel jitter, AO bounce overrides, bake state and 30-bit synced object count require session state; render-context restrictions remain authoritative.
+  WARN: Murmur ID collisions and holdout-closure manifests require the final synchronized object names and compiled shader graph.
+BLOCK findings: 0
+```
+
+Frame 2:
+
+```text
+Deep scene scanner prediction; render-time validation is the authority.
+Source: C:\Users\jun\Desktop\cycles_deep\thejunkshopsplashscreen_deep_v001.blend | frame 2
+Layer Completo: skipped | deep path: -
+Layer Viewport: skipped | deep path: -
+Layer BG: checked | deep path: D:\temp\cycles_deep_multilayer\junkshop3\render\v001\thejunkshopsplashscreen_deep_v001_BG_0002.deep.exr
+  OK-ignored: Face: indirect-only here
+  OK-ignored: Eyes: indirect-only here
+  OK-ignored: Hat: indirect-only here
+  OK-ignored: Body: indirect-only here
+  OK-ignored: Vest: indirect-only here
+  OK-ignored: Gloves: indirect-only here
+  OK-ignored: MrCatPC: indirect-only here
+  OK-ignored: Cloth Pipes: indirect-only here
+  OK-ignored: Wheel Robot: indirect-only here
+  OK-ignored: Cat Helmet: indirect-only here
+  OK-ignored: Smoke.001: indirect-only here
+  OK-ignored: Area.027: camera-invisible or hidden for render
+  OK-ignored: Rim Light Girl 02: camera-invisible or hidden for render
+  OK-ignored: Area.020: camera-invisible or hidden for render
+  OK-ignored: Area.007: camera-invisible or hidden for render
+  OK-ignored: No Uso.001: camera-invisible or hidden for render
+  OK-ignored: Converstaion Light: camera-invisible or hidden for render
+  OK-ignored: Right Commodore Cat: camera-invisible or hidden for render
+  OK-ignored: PO Box Red: camera-invisible or hidden for render
+  OK-ignored: No Uso 2: camera-invisible or hidden for render
+  OK-ignored: Radio Luz 03: camera-invisible or hidden for render
+  OK-ignored: Radio Luz 02: camera-invisible or hidden for render
+  OK-ignored: RadioLuz: camera-invisible or hidden for render
+  OK-ignored: Rim Light Girl: camera-invisible or hidden for render
+  OK-ignored: Shop Frontal Left: camera-invisible or hidden for render
+  OK-ignored: No Uso: camera-invisible or hidden for render
+  OK-ignored: Bounce Light Left Robot: camera-invisible or hidden for render
+  OK-ignored: Bounce Light Cat Head: camera-invisible or hidden for render
+  OK-ignored: Bounce Enviroment: camera-invisible or hidden for render
+  OK-ignored: Area Red Right: camera-invisible or hidden for render
+  OK-ignored: Background Blue: camera-invisible or hidden for render
+Layer Girl: skipped | deep path: -
+Layer Robots: checked | deep path: D:\temp\cycles_deep_multilayer\junkshop3\render\v001\thejunkshopsplashscreen_deep_v001_Robots_0002.deep.exr
+  OK-ignored: Background Pipes: indirect-only here
+  OK-ignored: Background Pipes Closer: indirect-only here
+  OK-ignored: Background Wall: indirect-only here
+  OK-ignored: Background Cylinders: indirect-only here
+  OK-ignored: Background Cube: indirect-only here
+  OK-ignored: Gears: indirect-only here
+  OK-ignored: Floor Background: indirect-only here
+  OK-ignored: POBox: indirect-only here
+  OK-ignored: Store Wall: indirect-only here
+  OK-ignored: Ceiling: indirect-only here
+  OK-ignored: Furniture: indirect-only here
+  OK-ignored: Table cloth: indirect-only here
+  OK-ignored: Tools: indirect-only here
+  OK-ignored: Ads: indirect-only here
+  OK-ignored: Floor Front: indirect-only here
+  OK-ignored: Front Pipes: indirect-only here
+  OK-ignored: Props: indirect-only here
+  OK-ignored: Stoplight: indirect-only here
+  OK-ignored: Table: indirect-only here
+  OK-ignored: Tickets: indirect-only here
+  OK-ignored: Face: indirect-only here
+  OK-ignored: Eyes: indirect-only here
+  OK-ignored: Hat: indirect-only here
+  OK-ignored: Body: indirect-only here
+  OK-ignored: Vest: indirect-only here
+  OK-ignored: Gloves: indirect-only here
+  OK-ignored: Old Robots: indirect-only here
+  OK-ignored: RadioNes: indirect-only here
+  OK-ignored: Cristal: indirect-only here
+  OK-ignored: Weigth: indirect-only here
+  OK-ignored: Old Robots.001: indirect-only here
+  WARN: Smoke.001 / Smoke / Material Output / output: Volume shader requires render-time extinction qualification. SUPPORT.md: | Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
+  OK-ignored: Area.027: indirect-only here
+  OK-ignored: Rim Light Girl 02: indirect-only here
+  OK-ignored: Area.020: indirect-only here
+  OK-ignored: Area.007: indirect-only here
+  OK-ignored: No Uso.001: indirect-only here
+  OK-ignored: Converstaion Light: indirect-only here
+  OK-ignored: Right Commodore Cat: indirect-only here
+  OK-ignored: PO Box Red: indirect-only here
+  OK-ignored: No Uso 2: indirect-only here
+  OK-ignored: Radio Luz 03: indirect-only here
+  OK-ignored: Radio Luz 02: indirect-only here
+  OK-ignored: RadioLuz: indirect-only here
+  OK-ignored: Rim Light Girl: indirect-only here
+  OK-ignored: Shop Frontal Left: indirect-only here
+  OK-ignored: No Uso: indirect-only here
+  OK-ignored: Bounce Light Left Robot: indirect-only here
+  OK-ignored: Bounce Light Cat Head: indirect-only here
+  OK-ignored: Bounce Enviroment: indirect-only here
+  OK-ignored: Area Red Right: indirect-only here
+  OK-ignored: Background Blue: indirect-only here
+  OK-ignored: Light Block: indirect-only here
+Not decidable from RNA:
+  WARN: Cycles optimized/finalized graph, numeric conversions, shader compilation and OSL optimized-group queries are not exposed to Python; constant folding may remove a reported node (documented possible false positive).
+  WARN: RNA depsgraphs use their exposed evaluation mode; render-only modifier/particle differences, Cycles culling, subdivision synchronization, generated procedurals and final shared-geometry assignment require render-time validation.
+  WARN: Compiled volume extinction, grid metadata/interpolation, manifold triangle boundaries, voxel step, closure capacity and NanoVDB build support require Cycles evaluation; volume findings are conservative warnings unless an RNA contradiction proves rejection.
+  WARN: Camera shutter samples, animated FOV and finite rigid motion transforms at all shutter times require temporal Cycles synchronization; animation/deform risks are warned or conservatively blocked.
+  WARN: Device availability, tiling selected by the host, pixel-size overrides, custom pixel jitter, AO bounce overrides, bake state and 30-bit synced object count require session state; render-context restrictions remain authoritative.
+  WARN: Murmur ID collisions and holdout-closure manifests require the final synchronized object names and compiled shader graph.
+BLOCK findings: 0
+```
+
+Blender reported three instances of:
+
+```text
+ERROR Invalid path template in File Output node. Skipping writing file.
+```
+
+The compositor File Output nodes `bg`, `girl`, and `robots` all retain the source
+filename template `{blend_name}_{view_layer}`; only their output directories were
+redirected. Object/material: not applicable; this is a compositor path blocker
+for flat BG, Girl and Robots outputs, not a deep shader rejection.
+The deep override resolved and BG + Robots frame 1 were published. The error did
+not raise from the frame-1 render operator: the helper advanced to frame 2 before
+the buffered log revealed it. The running process was stopped on observing the
+error. No scene repair, bypass or rerun was attempted.
+
+Exact files present under `junkshop3/render/v001/` at the stop:
+
+- `beauty_0001.exr` — 3061 bytes.
+- `thejunkshopsplashscreen_deep_v001_BG_0001.deep.exr` — 433119 bytes.
+- `thejunkshopsplashscreen_deep_v001_BG_0002.deep.exr` — 433119 bytes.
+- `thejunkshopsplashscreen_deep_v001_Robots_0001.deep.exr` — 116796 bytes.
+
+The smoke is **incomplete and unqualified**. No compositor outputs were written.
+Robots frame 2 and beauty frame 2 are absent. OpenEXR and Gaffer validation,
+including BG + Robots DeepMerge, were skipped because the render did not pass.
+The Gaffer helper remains unchanged. Nuke was unavailable and untested.
+
+Source SHA-256 before and after is identical:
+`b050ae097807cb544489ba715fde17862c2c2df437b96b51bffb5e9cf914e851`.
+The source .blend was never saved. Evidence: `junkshop3/render.json`,
+`junkshop3/scanner-1.json`, `junkshop3/scanner-2.json` and
+`verification/step2/junkshop3-run/production.log` under the output root.
+
+Exit-code finding: the earlier junkshop2 BG failure with Robots publication
+exited **1**, with `--python-exit-code 1` and an uncaught render exception. That
+specific farm invocation detects the partial frame. Junkshop3 instead returned
+**4294967295** after explicit termination; this is not evidence of natural exit
+behavior for compositor failures. Its compositor error did not abort frame 1's
+render call. No exit behavior was changed.
+
+Stopped at the first observed outside-scope blocker. No push or PR. Remaining
+risk: fixture qualification does not establish production-scene compatibility,
+and the deep scanner does not validate compositor templates.

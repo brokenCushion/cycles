@@ -1,4 +1,6 @@
-"""Blender -b --factory-startup --disable-autoexec --python SCRIPT -- FRESH_OUTPUT."""
+"""Ray Portal stays unsupported after mesh Hair BSDF qualification.
+
+Blender -b --factory-startup --disable-autoexec --python SCRIPT -- FRESH_OUTPUT."""
 import json
 from pathlib import Path
 import sys
@@ -43,7 +45,7 @@ material = bpy.data.materials.new('Hair')
 material.use_nodes = True
 nodes = material.node_tree.nodes
 nodes.clear()
-hair = nodes.new('ShaderNodeBsdfHair')
+hair = nodes.new('ShaderNodeBsdfRayPortal')
 output = nodes.new('ShaderNodeOutputMaterial')
 material.node_tree.links.new(hair.outputs[0], output.inputs['Surface'])
 emitter.data.materials.append(material)
@@ -68,11 +70,11 @@ def render(name, layer, reject=False):
     try:
         bpy.ops.render.render()
     except RuntimeError as error:
-        assert reject and 'Deep: unsupported deep surface node: hair_bsdf' in str(error), str(error)
+        assert reject and 'Deep: unsupported deep surface node: ray_portal_bsdf' in str(error), str(error)
         assert not list(directory.glob('*.deep.exr'))
         results[name] = str(error).strip()
     else:
-        assert not reject, 'Camera-visible Hair BSDF unexpectedly accepted'
+        assert not reject, 'Camera-visible Ray Portal BSDF unexpectedly accepted'
         path = directory / f'{layer.name}_0001.deep.exr'
         assert path.is_file() and path.stat().st_size
         results[name] = str(path)

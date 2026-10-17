@@ -38,6 +38,17 @@ def fixture():
 
 def apply_case(case,s,obj,mat,bsdf,out):
     n=mat.node_tree.nodes;link=mat.node_tree.links.new
+    if case.startswith('candidate_'):
+        from test_blender_deep_allowlist import CLOSURES,utility
+        kind=case.removeprefix('candidate_')
+        if kind in CLOSURES:
+            node=n.new('ShaderNode'+CLOSURES[kind]);link(node.outputs[0],out.inputs['Surface'])
+        else:
+            value=utility(kind,mat)
+            transparent=n.new('ShaderNodeBsdfTransparent');mix=n.new('ShaderNodeMixShader')
+            link(transparent.outputs[0],mix.inputs[1]);link(bsdf.outputs[0],mix.inputs[2])
+            link(value,mix.inputs[0]);link(mix.outputs[0],out.inputs['Surface'])
+        return
     if case in {'hair_mesh','particle_hair','holdout_hair','shared_hair'}:
         node=n.new('ShaderNodeBsdfHair');link(node.outputs[0],out.inputs['Surface'])
         if case=='particle_hair':
@@ -114,6 +125,8 @@ def apply_case(case,s,obj,mat,bsdf,out):
 def main():
     root=Path(sys.argv[sys.argv.index('--')+1]);root.mkdir(parents=True,exist_ok=False)
     cases=['diffuse','hair_mesh','particle_hair','holdout_hair','shared_hair','light_reflection','light_transparent_depth','mix_float','mix_vector','ao_opacity','bevel_opacity','ao_color','bevel_color','ray_portal','displacement','muted','unreachable','group','adaptive','shadow_catcher','caustics','volume','panoramic','border','multiview','samples','time_limit','transparent_glass','rolling_shutter','guiding','strict_ids','deform','camera_off','instance']
+    from test_blender_deep_allowlist import CLOSURES,UTILITIES,LIGHT
+    cases += ['candidate_'+name for name in [*CLOSURES,*UTILITIES,*('lp_'+x for x in LIGHT)]]
     results=[]
     for case in cases:
         for indirect in (False,True):
@@ -140,6 +153,19 @@ def main():
     false_positives=[r for r in results if r['mismatch'] and r['scanner_block']]
     print('SCANNER_DRIFT_SUMMARY',len(results),'cases',len(false_negatives),'false negatives',len(false_positives),'false positives',flush=True)
     assert not false_negatives,false_negatives
+    s,obj,mat,bsdf,out=fixture()
+    s.cycles.device='GPU'
+    s.cycles.deep_output_path=str(root/'device-check'/'{view_layer}_####')
+    prefs=bpy.context.preferences.addons['cycles'].preferences
+    before=[(d.id,d.use) for d in prefs.devices]
+    prediction=scan(s,device='CPU')
+    assert not prediction['blocks'],prediction
+    if not prefs.devices:
+        prediction=scan(s)
+        assert not prediction['blocks'],prediction
+        assert any(f['level']=='WARN' and 'undecidable in background' in f['reason'] for l in prediction['layers'] for f in l['findings'])
+    assert before==[(d.id,d.use) for d in prefs.devices]
+    print('SCANNER_DEVICE_OVERRIDE_READ_ONLY_PASS',flush=True)
     paths=[]
     for index,template in enumerate(('shot_####','shot','{view_layer}_####','{blend_name}_{view_layer}_####','shot_####.exr')):
         s,obj,mat,bsdf,out=fixture()

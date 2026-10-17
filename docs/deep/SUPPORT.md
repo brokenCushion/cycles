@@ -25,7 +25,7 @@ unchanged.
 | Holdout | Object flags and native Holdout closure preserve camera opacity; checked holdout manifest subset. Shadow catchers/caustics remain rejected. |
 | Surface depth merging | Same object only, checked relative depth span; numeric default `--deep-z-tolerance 1e-4`, zero disables it, strict forces zero. |
 | Output | FLOAT Z/ZBack/A, positive axial depth in scene units. Deep RGB, subpixel masks and other backends are later work. |
-| Multiple Blender view layers | CPU three-layer byte identity and OptiX fixture/animation checks pass. `{view_layer}` gives separate deep EXRs; collision preflight includes disabled/Single Layer-skipped layers and ignores Windows path case. Single-layer naming is unchanged; publication is per file. Multi-layer cancellation remains unverified; the BG + Robots junkshop smoke is blocked by Cristal's unsupported Light Path output. See [results](BLENDER_DEEP_MULTILAYER_RESULTS.md). |
+| Multiple Blender view layers | CPU three-layer byte identity and OptiX fixture/animation checks pass. `{view_layer}` gives separate deep EXRs; collision preflight includes disabled/Single Layer-skipped layers and ignores Windows path case. Single-layer naming is unchanged; publication is per file. Multi-layer cancellation remains unverified; the prior BG + Robots junkshop smoke failed on Cristal's Light Path output; the Step 2b report records the new smoke status. See [results](BLENDER_DEEP_MULTILAYER_RESULTS.md). |
 
 ## Numerical and storage contract
 
@@ -79,3 +79,34 @@ Verified historical sample ZIPs stream without disk expansion. The approved
 [M8 release record](M8_RELEASE_VALIDATION.md) is retained; other historical
 reports have an [archive index](ARCHIVED_REPORTS.md). Current results are in
 the [production evidence](evidence/README.md).
+
+## Additional qualified SVM surface nodes
+
+The Step 2 fixtures qualify these opaque closures on polygon meshes:
+`glossy_bsdf`, `metallic_bsdf`, `refraction_bsdf`, `sheen_bsdf`, `toon_bsdf`,
+`subsurface_scattering`, `hair_bsdf`, `principled_hair_bsdf`. They do not contribute
+to straight camera transparency. Hair curve geometry remains unsupported.
+
+The additional math/utility nodes are `vector_math`, `map_range`, `separate_xyz`,
+`combine_xyz`, `mix_float`, `mix_vector`, `mix_vector_non_uniform`, `vector_rotate`,
+`float_curve`, `vector_curves`, `normal`, `blackbody`, `wavelength`, and
+`vector_transform`. Numeric conversions and opacity dependency checks still apply.
+
+Additional surface Light Path outputs: Is Diffuse Ray, Is Glossy Ray, Is Singular
+Ray, Is Reflection Ray, Is Transmission Ray, Is Volume Scatter Ray, Diffuse Depth,
+Glossy Depth, Transmission Depth and Portal Depth. These retain camera-path
+values after transparent continuation. Existing Is Camera Ray, Is Shadow Ray,
+Ray Length and Ray Depth support is unchanged.
+
+Transparent Depth remains rejected: the volume capture path does not advance its
+counter. Ray Portal remains rejected because it redirects rays. AO/Bevel remain
+allowed only outside opacity dependencies. Tier 3/4 nodes, vector_map_range,
+curve/point-cloud geometry, adaptive subdivision, deforming motion and shadow
+catchers remain outside this expansion.
+
+CPU tests cover 32 color-only/closure byte-identity pairs and all 24 new
+opacity-driving utility/Light Path cases against the raw camera-chain oracle,
+with exact CPU deep-on/off RGBA. CUDA and OptiX run the same 24 oracle fixtures
+and rejection checks. This does not promise deterministic equality to noisy
+beauty alpha for arbitrary shader mixtures. See the
+[investigation and qualification results](BLENDER_DEEP_MULTILAYER_RESULTS.md#step-2b-opacity-gate-investigation).

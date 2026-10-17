@@ -10,7 +10,7 @@ import traceback
 
 import bpy
 
-# validate_shader(): Blender IDs -> exact NODE_DEFINE names, allowed at 16b81d7ef.
+# validate_shader(): Blender IDs -> exact NODE_DEFINE names, qualified by Step 2.
 NODE_RULES = {
     'BsdfDiffuse': 'diffuse_bsdf', 'BsdfPrincipled': 'principled_bsdf',
     'BsdfGlass': 'glass_bsdf', 'BsdfTranslucent': 'translucent_bsdf',
@@ -25,13 +25,8 @@ NODE_RULES = {
     'HueSaturation': 'hsv', 'RGBCurve': 'rgb_curves', 'SeparateColor': 'separate_color',
     'CombineColor': 'combine_color', 'RGBToBW': 'rgb_to_bw', 'Attribute': 'attribute',
     'TexWave': 'wave_texture', 'TexBrick': 'brick_texture',
-}
-# validate_shader() special cases; deep_closure_can_transmit() controls opacity edges.
-LIGHT_PATH_OUTPUTS = {'Is Camera Ray', 'Is Shadow Ray', 'Ray Length', 'Ray Depth'}
-SPECIAL_NODES = {'LightPath': 'light_path', 'AmbientOcclusion': 'ambient_occlusion', 'Bevel': 'bevel'}
-REJECTED_NODES = {
     'BsdfHair': 'hair_bsdf', 'BsdfHairPrincipled': 'principled_hair_bsdf',
-    'BsdfRayPortal': 'ray_portal_bsdf', 'BsdfGlossy': 'glossy_bsdf',
+    'BsdfGlossy': 'glossy_bsdf',
     'BsdfAnisotropic': 'glossy_bsdf', 'BsdfMetallic': 'metallic_bsdf',
     'BsdfRefraction': 'refraction_bsdf', 'BsdfSheen': 'sheen_bsdf',
     'BsdfToon': 'toon_bsdf', 'SubsurfaceScattering': 'subsurface_scattering',
@@ -39,6 +34,15 @@ REJECTED_NODES = {
     'CombineXYZ': 'combine_xyz', 'VectorRotate': 'vector_rotate', 'FloatCurve': 'float_curve',
     'VectorCurve': 'vector_curves', 'Normal': 'normal', 'Blackbody': 'blackbody',
     'Wavelength': 'wavelength', 'VectorTransform': 'vector_transform',
+
+}
+# validate_shader() special cases; deep_closure_can_transmit() controls opacity edges.
+LIGHT_PATH_OUTPUTS = {'Is Camera Ray', 'Is Shadow Ray', 'Ray Length', 'Ray Depth',
+    'Is Diffuse Ray','Is Glossy Ray','Is Singular Ray','Is Reflection Ray','Is Transmission Ray',
+    'Is Volume Scatter Ray','Diffuse Depth','Glossy Depth','Transmission Depth','Portal Depth'}
+SPECIAL_NODES = {'LightPath': 'light_path', 'AmbientOcclusion': 'ambient_occlusion', 'Bevel': 'bevel'}
+REJECTED_NODES = {
+    'BsdfRayPortal': 'ray_portal_bsdf',
     'TexVoronoi':'voronoi_texture','TexMagic':'magic_texture','TexWhiteNoise':'white_noise_texture',
     'TexGabor':'gabor_texture','UVMap':'uv_map','VertexColor':'vertex_color','ObjectInfo':'object_info',
     'Tangent':'tangent','LayerWeight':'layer_weight','CameraData':'camera','ParticleInfo':'particle_info',
@@ -153,7 +157,7 @@ def inspect_material(material, add):
         elif kind == 'light_path':
             if out.name not in LIGHT_PATH_OUTPUTS:
                 add('BLOCK','light_path','unsupported deep surface Light Path output: '+out.name,**fields)
-        elif kind not in set(NODE_RULES.values()):
+        elif kind not in set(NODE_RULES.values()) | {'mix_float','mix_vector','mix_vector_non_uniform'}:
             add('BLOCK','node','unsupported deep surface node: '+kind,**fields)
         for inp in node.inputs:
             if not inp.enabled or not inp.is_linked: continue
@@ -196,12 +200,12 @@ def resolved_path(scene, layer, frame):
     return os.path.normpath(text)
 
 
-def scan(scene, layer_name=None, frame=None):
+def scan(scene, layer_name=None, frame=None, device=None):
     original_frame, subframe = scene.frame_current,scene.frame_subframe
     window = bpy.context.window
     original_layer = window.view_layer if window else None
     report = dict(header='Deep scene scanner prediction; render-time validation is the authority.',
-                  source=bpy.data.filepath,frame=original_frame if frame is None else frame,layers=[],undecidable=UNDECIDABLE)
+                  source=bpy.data.filepath,frame=original_frame if frame is None else frame,device_override=device,layers=[],undecidable=UNDECIDABLE)
     try:
         if frame is not None and frame != original_frame: scene.frame_set(frame)
         if layer_name and layer_name not in scene.view_layers: raise ValueError('Unknown layer '+layer_name)
@@ -235,12 +239,15 @@ def scan(scene, layer_name=None, frame=None):
                 if scene.render.motion_blur_shutter<=0: add('BLOCK','shutter','motion blur requires positive shutter duration')
                 add('WARN','shutter_curve','Uniform shutter curve and all shutter-time rigid transforms require render-time confirmation')
             prefs=bpy.context.preferences.addons['cycles'].preferences
-            backend='CPU' if scene.cycles.device=='CPU' else prefs.compute_device_type
-            if backend not in {'CPU','CUDA','OPTIX'}: add('BLOCK','device','requires single CPU, CUDA or OptiX')
+            backend=device or ('CPU' if scene.cycles.device=='CPU' else prefs.compute_device_type)
             if backend!='CPU':
-                enabled=[d for d in prefs.devices if d.use and d.type in {backend,'CPU'}]
-                if len(enabled)>1: add('BLOCK','devices','more than one enabled Cycles device: '+', '.join(d.name for d in enabled))
-                if not enabled: add('WARN','devices','Device enumeration is empty; scanner does not refresh preferences')
+                if not prefs.devices:
+                    add('WARN','devices','undecidable in background: device enumeration is empty; preferences unchanged')
+                else:
+                    if backend not in {'CUDA','OPTIX'}: add('BLOCK','device','requires single CPU, CUDA or OptiX')
+                    enabled=[d for d in prefs.devices if d.use and d.type in {backend,'CPU'}]
+                    if len(enabled)>1: add('BLOCK','devices','more than one enabled Cycles device: '+', '.join(d.name for d in enabled))
+                    if not enabled: add('WARN','devices','No enumerated device selected for '+backend+'; preferences unchanged')
             if backend=='CUDA' and scene.cycles.shading_system: add('BLOCK','osl_cuda','CUDA deep requires native SVM; GPU OSL requires OptiX')
             if scene.cycles.shading_system: add('WARN','osl','OSL optimized groups cannot be checked from RNA')
             if window: window.view_layer=layer
@@ -336,8 +343,9 @@ def main():
     parser.add_argument('--report',type=Path)
     parser.add_argument('--layer')
     parser.add_argument('--frame',type=int)
+    parser.add_argument('--device',choices=('CPU','CUDA','OPTIX'),help='Predict against the specified execution backend without changing preferences')
     args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
-    report=scan(bpy.context.scene,args.layer,args.frame)
+    report=scan(bpy.context.scene,args.layer,args.frame,args.device)
     print(format_report(report),flush=True)
     if args.report:
         args.report.parent.mkdir(parents=True,exist_ok=True)

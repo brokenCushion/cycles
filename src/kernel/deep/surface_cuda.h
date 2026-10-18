@@ -5,6 +5,17 @@
 #include "kernel/deep/types.h"
 #include "kernel/deep/volume.h"
 
+ccl_device bool deep_diagnostic_hit(ccl_global KernelDeepHit *hits,
+                                     const int stride, const KernelDeepHit hit)
+{
+  if (!hits)
+    return true;
+  if (hits[0].stage + 1 >= int(DEEP_DIAGNOSTIC_RECORDS))
+    return false;
+  hits[++hits[0].stage * stride] = hit;
+  return true;
+}
+
 /* Called only immediately after camera initialization, before beauty work.
  * The allowlist excludes AOVs, ray tracing and other side-effecting shaders. */
 ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
@@ -12,6 +23,7 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
                                               ccl_global KernelDeepEvent *events,
                                               const int event_stride,
                                               const int max_events,
+                                              ccl_global KernelDeepHit *hits,
                                               ccl_private KernelDeepWriteState *write = nullptr)
 {
   if (INTEGRATOR_STATE(state, path, queued_kernel) != DEVICE_KERNEL_INTEGRATOR_INTERSECT_CLOSEST ||
@@ -43,9 +55,17 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
     ShaderData &sd = *AS_SHADER_DATA(&storage);
     shader_setup_from_ray(kg, &sd, &ray, &isect);
     const bool backfacing = (sd.runtime_flag & SR_BACKFACING) != 0;
+    const KernelDeepHit raw{0, isect.type, isect.prim, PRIMITIVE_UNPACK_SEGMENT(isect.type),
+        isect.object, isect.u, isect.v, isect.t, backfacing ? -1.0f : 1.0f, 0, 0};
+    if (!deep_diagnostic_hit(hits, event_stride, raw))
+      return {DEEP_FAILED, unsigned(count), DEEP_ERROR_DIAGNOSTIC_CAPACITY};
     if (!max_events) {
       deep_write_event(events, nullptr, 0,
           {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1, backfacing ? -1.0f : 1.0f}, nullptr, write);
+      KernelDeepHit accepted = raw;
+      accepted.stage = 1; accepted.depth = depth; accepted.alpha = 1;
+      if (!deep_diagnostic_hit(hits, event_stride, accepted))
+        return {DEEP_FAILED, 1, DEEP_ERROR_DIAGNOSTIC_CAPACITY};
       return {DEEP_COMPLETE, 1, DEEP_ERROR_NONE};
     }
     if (count && deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing))
@@ -77,6 +97,10 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_EXTINCTION};
     deep_write_event(events, nullptr, count * event_stride,
         {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1 - transparency.x, backfacing ? -1.0f : 1.0f}, nullptr, write);
+    KernelDeepHit accepted = raw;
+    accepted.stage = 1; accepted.depth = depth; accepted.alpha = 1 - transparency.x;
+    if (!deep_diagnostic_hit(hits, event_stride, accepted))
+      return {DEEP_FAILED, unsigned(count), DEEP_ERROR_DIAGNOSTIC_CAPACITY};
     ++count;
     if (transparency.x == 0)
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
@@ -108,7 +132,8 @@ ccl_device void deep_surface_kernel(const int index,
                              const ccl_global KernelDeepRange *ranges,
                              const int tile_count,
                              const int media_count,
-                             const int sample_limit)
+                             const int sample_limit,
+                             ccl_global KernelDeepHit *hits)
 {
   if (index >= count)
     return;
@@ -125,6 +150,8 @@ ccl_device void deep_surface_kernel(const int index,
   const ccl_global KernelWorkTile *tile = &tiles[selected_tile];
   const int state = tile->path_index_offset + work;
   ccl_global KernelDeepRecord *record = &records[index];
+  if (hits)
+    hits[index].stage = 0;
   uint x, y, scheduled;
   get_work_pixel(tile, work, &x, &y, &scheduled);
   record->x = x;
@@ -183,7 +210,8 @@ ccl_device void deep_surface_kernel(const int index,
           lane_density, eps_ray, &write, ranges || !events ? 1 : event_stride, media_count);
   }
   else {
-    record->result = deep_surface_cuda(nullptr, state, lane_events, event_stride, max_events, &write);
+    record->result = deep_surface_cuda(nullptr, state, lane_events, event_stride, max_events,
+                                      hits ? hits + index : nullptr, &write);
   }
   record->payload_counts = write.events | (write.companions << 16);
   record->population |= write.shader_evaluations << 16;
@@ -213,11 +241,12 @@ ccl_gpu_kernel(GPU_KERNEL_BLOCK_NUM_THREADS, GPU_KERNEL_MAX_REGISTERS)
                              const ccl_global KernelDeepRange *ranges,
                              const int tile_count,
                              const int media_count,
-                             const int sample_limit)
+                             const int sample_limit,
+                             ccl_global KernelDeepHit *hits)
 {
   deep_surface_kernel(ccl_gpu_global_id_x(), tiles, tile_index, offset, count,
       max_events, event_stride, render_buffer, records, events, media, density,
-      eps_ray, ranges, tile_count, media_count, sample_limit);
+      eps_ray, ranges, tile_count, media_count, sample_limit, hits);
 }
 ccl_gpu_kernel_postfix
 #endif

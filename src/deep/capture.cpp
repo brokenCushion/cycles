@@ -914,6 +914,8 @@ const char *Capture::error_message() const
       switch (failure_.load()) {
         case DEEP_ERROR_CAPACITY:
           return "deep traversal limit exceeded";
+        case DEEP_ERROR_DIAGNOSTIC_CAPACITY:
+          return "deep raw-hit diagnostic capacity exceeded (no diagnostic truncation permitted)";
         case DEEP_ERROR_EVENT_CAPACITY:
           return "deep camera sample event capacity exceeded";
         case DEEP_ERROR_GRID_STEPS:

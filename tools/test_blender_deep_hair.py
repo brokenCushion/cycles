@@ -263,6 +263,36 @@ def flat_identity(before, after, layers):
                                 OpenEXR.File(str(after), separate_channels=True).header(), layers)
 
 
+def gpu_diagnostics_flat(root):
+    from itertools import combinations
+    import numpy as np
+    import OpenEXR
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src/deep'))
+    from cuda_beauty_gate import validate_cuda_beauty
+    controls = [root / f'off{i}' for i in range(5)]
+    result = dict(beauty_policy={}, flat_headers={}, informational_spread={})
+    for label in ('diagnostics-off', 'on'):
+        policy = validate_cuda_beauty(root / label, controls, reader_backend='openexr')
+        result['beauty_policy'][label] = policy['passed']
+        assert policy['passed'], root / label / 'cuda_beauty_validation.json'
+    for filename in ('beauty.exr', 'render-passes.exr'):
+        paths = [p / filename for p in [*controls, root / 'diagnostics-off', root / 'on']]
+        channels = [float_channels(p) for p in paths]
+        assert all(c.keys() == channels[0].keys() for c in channels), filename
+        def difference(a, b):
+            return max(float(np.max(np.abs(a[k].pixels.astype(np.float64) -
+                                           b[k].pixels.astype(np.float64)))) for k in a)
+        result['informational_spread'][filename] = dict(
+            diagnostics_on_off=difference(channels[5], channels[6]),
+            ordinary_off_pairs=max(difference(a, b) for a, b in combinations(channels[:5], 2)))
+        # Task 17: GPU pixels use the existing beauty policy; headers stay exact.
+        result['flat_headers'][filename] = flat_header_identity(
+            OpenEXR.File(str(paths[5]), separate_channels=True).header(),
+            OpenEXR.File(str(paths[6]), separate_channels=True).header(), ['Visible'])
+    (root / 'gpu-diagnostics-flat.json').write_text(json.dumps(result, indent=2))
+    return result
+
+
 def render_hair(root):
     import bpy
     from scan_blender_deep_scene import scan

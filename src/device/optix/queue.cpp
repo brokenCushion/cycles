@@ -255,7 +255,8 @@ bool OptiXDeviceQueue::enqueue_deep(const int work_size, const DeviceKernelArgum
     offsetof(KernelDeepParamsOptiX, events), offsetof(KernelDeepParamsOptiX, media),
     offsetof(KernelDeepParamsOptiX, density), offsetof(KernelDeepParamsOptiX, eps_ray),
     offsetof(KernelDeepParamsOptiX, ranges), offsetof(KernelDeepParamsOptiX, tile_count),
-    offsetof(KernelDeepParamsOptiX, media_count), offsetof(KernelDeepParamsOptiX, sample_limit)};
+    offsetof(KernelDeepParamsOptiX, media_count), offsetof(KernelDeepParamsOptiX, sample_limit),
+    offsetof(KernelDeepParamsOptiX, hits)};
   const DeviceKernelArguments::Type types[] = {
     DeviceKernelArguments::POINTER, DeviceKernelArguments::INT32,
     DeviceKernelArguments::INT32, DeviceKernelArguments::INT32,
@@ -264,8 +265,8 @@ bool OptiXDeviceQueue::enqueue_deep(const int work_size, const DeviceKernelArgum
     DeviceKernelArguments::POINTER, DeviceKernelArguments::POINTER,
     DeviceKernelArguments::POINTER, DeviceKernelArguments::FLOAT32,
     DeviceKernelArguments::POINTER, DeviceKernelArguments::INT32,
-    DeviceKernelArguments::INT32, DeviceKernelArguments::INT32};
-  if (args.count != 16) {
+    DeviceKernelArguments::INT32, DeviceKernelArguments::INT32, DeviceKernelArguments::POINTER};
+  if (args.count != 17) {
     device->set_error("Invalid OptiX deep argument count");
     return false;
   }

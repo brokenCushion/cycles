@@ -22,6 +22,6 @@ extern "C" __global__ void __raygen__kernel_optix_deep_surface()
   deep_surface_kernel(optixGetLaunchIndex().x, p.tiles, p.tile_index, p.offset,
       p.count, p.max_events, p.event_stride, p.render_buffer, p.records,
       p.events, p.media, p.density, p.eps_ray, p.ranges, p.tile_count,
-      p.media_count, p.sample_limit);
+      p.media_count, p.sample_limit, p.hits);
 }
 #endif

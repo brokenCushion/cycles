@@ -2861,3 +2861,126 @@ rejections are documented in SUPPORT.md and BLENDER.md; M0/M1 results are record
 in the hair plan. Part D/E and Nuke have not run at this point.
 
 Final Part C Markdown check passed: 35 documents, 200 local links, zero broken; 41 external links unchecked. All Part C gates are complete. No push or PR.
+
+Part C commit: b2ead8e39 (feat(deep): qualify CPU static Ribbon hair). Part D began by reapplying the preserved GPU diagnostics patch after git apply --check passed. Hair remains CPU-only while GPU diagnostics qualify. The guarded incremental rebuild is logged in task16/build-D-driver.log and verification/build.log.
+
+#### Part D: GPU diagnostics build and first failed gate (STOP)
+
+The saved GPU diagnostics patch was reapplied without changing it. The guarded
+reset/check/overlay/incremental build passed all 55 build/install steps, including
+the long OptiX deep-OSL compilation. No compile repair was needed. The installed
+GPU-diagnostics candidate executable SHA-256 is
+`a6ec55e06b28ebbaa16825053a91129956606c7927bcc19050ac4439a54447e7`.
+GPU hair admission has not been implemented; preflight/scanner still restrict
+hair to CPU. The patch file itself remains preserved.
+
+`audit_D_sources.py` passed: all four changed shared files are identical outside
+guarded deep code. `run_D_resources.py` passed all 75 common CUDA kernel records
+unchanged. Deep-only resource record: 168 registers, 9,296 local bytes, zero
+shared bytes, maximum/recommended block threads 384; deep-on cubin 22,747,968
+bytes. These are diagnostics-build records, not a completed hair OptiX audit.
+
+`run_D_control.py CUDA` rendered five ordinary deep-OFF controls, one deep-ON
+with diagnostics OFF, and one deep-ON with diagnostics ON. The ordinary controls
+and deep-ON run passed the existing GPU beauty policy via the unchanged control
+validator. Its independent raw/depth/ID checks passed: 1,024 pixels, 4,096 camera
+samples, maximum all-depth error 0, median/p95/maximum events 1/1/1, maximum raw
+hits 1 and zero overflow pixels. The header bound is 0.0010000000474974513.
+Evidence: `task16/D-controls/CUDA.log`, `CUDA-validation.log`,
+`CUDA/validation.json` and the saved beauty-policy report within `CUDA/on/`.
+
+The subsequent diagnostics ON/OFF flat identity gate failed on the first file,
+`beauty.exr`, after the FLOAT/channel checks and before header comparison:
+
+```text
+AssertionError: flat EXR pixels differ
+```
+
+Command: regression-tools Python with `-B` ran
+`D:/temp/cycles_deep_multilayer/validate_D_diagnostics.py CUDA`.
+Evidence: `verification/step4/task16/D-CUDA-diagnostics.log`. This compares the
+same-build diagnostics OFF and ON outputs using the Task 14 flat rule. The GPU
+beauty-policy PASS above remains a separate result; it does not establish exact
+pixel identity for this pair. No claim is made about the cause or size of the
+difference. No metadata exclusions were reached in this failing comparison.
+
+Stopped immediately: this is a real pixel comparison failure, outside the
+standing metadata, test-code repair, rejection-isolation and obsolete-expectation
+extensions. No investigation, repair, gate relaxation or rerender followed.
+Diagnostics ON/OFF saved-pass/header identity, deep byte identity and triangle
+CSV agreement were not reached. OptiX controls, GPU diagnostic qualification,
+GPU hair support and its full SBT/feature/stack audit remain uncompleted. Only a
+read-only source look at the existing OptiX pipeline occurred while building;
+that is not qualification. Part E was not started: no junkshop5 files, updated
+source hash/node-name inspection or BG+Girl+Robots merge. Nuke remains unavailable.
+
+Part C is committed as `b2ead8e39`; there is no Part D commit. Applied GPU
+plumbing and this report remain uncommitted. The installed executable is now an
+**unqualified Part D diagnostics candidate**, not the Part C executable. The GPU
+patch, B1 install/worktree, prior outputs and pre-existing untracked assets remain
+intact. No push or PR, and no source .blend opened or saved.
+
+
+### Task 17: corrected GPU diagnostics gate
+
+Task 17 replaces the inappropriate exact GPU flat-pixel comparison with the
+unchanged calibrated GPU beauty policy. Both diagnostics-OFF and diagnostics-ON
+must independently pass against the same five ordinary deep-OFF controls. The
+hair validator now provides `gpu_diagnostics_flat`: all flat channels remain
+FLOAT; headers compare under Task 14, and ON/OFF and ordinary-OFF-pair pixel
+spreads are informational. CPU identity gates and deep comparator semantics
+are unchanged.
+
+Only validation was rerun on the preserved Task 16 CUDA outputs. Fresh OptiX
+controls were rendered with the same candidate executable. Both backends passed
+both beauty-policy checks, exact non-run flat headers, whole-file deep byte
+identity and strict `compare_deep_identity` identity. Triangle hits/sample CSV
+agreement passed on both, with full camera ledgers and matching legacy grid
+samples/depths/alpha/event order. CSV presence never establishes publication.
+
+| Backend | Flat file | ON/OFF max abs spread | Max ordinary-OFF pair spread | Both beauty policies |
+| --- | --- | --- | --- | --- |
+| CUDA | beauty.exr | 3.725290298461914e-09 | 3.725290298461914e-09 | PASS |
+| CUDA | render-passes.exr | 3.725290298461914e-09 | 3.725290298461914e-09 | PASS |
+| OPTIX | beauty.exr | 3.725290298461914e-09 | 3.725290298461914e-09 | PASS |
+| OPTIX | render-passes.exr | 3.725290298461914e-09 | 3.725290298461914e-09 | PASS |
+
+Excluded metadata below applies to both beauty.exr and render-passes.exr for each
+backend, before = diagnostics OFF, after = diagnostics ON. No allowlist names
+were added.
+
+| Backend | Attribute | Before | After |
+| --- | --- | --- | --- |
+| CUDA | `Date` | `2026/10/18 17:31:28` | `2026/10/18 17:31:28` |
+| CUDA | `RenderTime` | `00:00.27` | `00:00.41` |
+| CUDA | `cycles.Visible.render_time` | `00:00.05` | `00:00.12` |
+| CUDA | `cycles.Visible.synchronization_time` | `00:00.17` | `00:00.23` |
+| CUDA | `cycles.Visible.total_time` | `00:00.22` | `00:00.36` |
+| OPTIX | `Date` | `2026/10/18 17:45:17` | `2026/10/18 17:45:18` |
+| OPTIX | `RenderTime` | `00:00.40` | `00:00.47` |
+| OPTIX | `cycles.Visible.render_time` | `00:00.04` | `00:00.13` |
+| OPTIX | `cycles.Visible.synchronization_time` | `00:00.29` | `00:00.26` |
+| OPTIX | `cycles.Visible.total_time` | `00:00.34` | `00:00.40` |
+
+Standing test-code repair: after the new beauty-policy call wrote
+`cuda_beauty_validation.pixels.csv` in diagnostics-off, the old runner's
+`glob('*.csv')` incorrectly treated that analysis report as renderer diagnostics.
+The runner now checks only `*.deep.exr.hits.csv` and `*.deep.exr.samples.csv`.
+The self-check accepts a policy-report CSV and detects both renderer sidecars.
+This is one wrong-path-filter repair; no render assertion, bound or fixture was
+changed. The preserved CUDA validation then passed, with no rerender.
+Evidence: `task17/CUDA-diagnostics.log`,
+`CUDA-diagnostics-after-filter.log`, `sidecar-filter-selfcheck.json` and
+`D-validation/CUDA/`. OptiX evidence is `task17/D-controls/OPTIX*`,
+`OPTIX-diagnostics.log` and `D-validation/OPTIX/`. The exact policy reports are
+saved in each control directory's `on/` and `diagnostics-off/` folders.
+
+Commands: regression-tools Python with `-B` ran
+`validate_D_diagnostics_task17.py CUDA`; `python -B run_D_control_task17.py OPTIX`
+rendered the fresh controls, then regression-tools Python ran the OptiX validator.
+All runners and artifacts remain under `D:/temp/cycles_deep_multilayer/`.
+The Task 16 guarded build, source isolation and 75-common-kernel resource audit
+remain applicable. No rebuild or renderer change was made for the gate correction.
+GPU diagnostics are qualified on CUDA and OptiX and ready for their separate
+commit. GPU Ribbon admission, its compiled OptiX audit and Part E follow only
+after that commit. No push or PR.

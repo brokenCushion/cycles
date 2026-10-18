@@ -16,8 +16,9 @@ struct KernelDeepParamsOptiX {
   float eps_ray;
   const KernelDeepRange *ranges;
   int tile_count, media_count, sample_limit;
+  KernelDeepHit *hits;
 };
-static_assert(sizeof(KernelDeepParamsOptiX) == 104, "OptiX deep launch ABI must match host/device");
+static_assert(sizeof(KernelDeepParamsOptiX) == 112, "OptiX deep launch ABI must match host/device");
 
 /* Deep's private SBT replaces the native volume slot; trace offsets are 4 bits. */
 constexpr int DEEP_OPTIX_ALL_HIT_OFFSET = 3;

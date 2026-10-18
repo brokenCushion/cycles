@@ -177,6 +177,7 @@ class PathTraceWorkGPU : public PathTraceWork {
   /* Bounded lane metadata and configured-capacity event planes, allocated lazily. */
   device_vector<KernelDeepRecord> deep_records_;
   device_vector<KernelDeepEvent> deep_events_;
+  device_vector<KernelDeepHit> deep_hits_;
   device_vector<KernelDeepMedium> deep_media_;
   device_vector<KernelDeepDensity> deep_density_;
   struct DeepBatch {

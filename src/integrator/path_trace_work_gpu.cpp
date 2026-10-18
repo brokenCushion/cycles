@@ -105,6 +105,7 @@ PathTraceWorkGPU::PathTraceWorkGPU(Device *device,
 #ifdef WITH_CYCLES_DEEP_OPAQUE
       deep_records_(device, "deep records", MEM_READ_WRITE),
       deep_events_(device, "deep events", MEM_READ_WRITE),
+      deep_hits_(device, "deep hit diagnostics", MEM_READ_WRITE),
       deep_media_(device, "deep media", MEM_READ_WRITE),
       deep_density_(device, "deep density", MEM_READ_WRITE),
 #endif
@@ -1043,6 +1044,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
   }
   /* These belong to the strict plane path and must not consume a second budget. */
   deep_events_.free();
+  deep_hits_.free();
   deep_density_.free();
   deep_media_.free();
   deep_records_.alloc(batch_size);
@@ -1175,7 +1177,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
     const device_ptr media = deep_batches_[0]->media.device_pointer;
     const DeviceKernelArguments count_args(&tiles, &flat_tile, &first, &count, &capacity,
         &stride, &render_buffer, &records, &no_events, &media, &density, &eps_ray,
-        &no_ranges, &num_tiles, &media_count, &sample_limit);
+        &no_ranges, &num_tiles, &media_count, &sample_limit, &no_events);
     const double count_start = time_dt();
     if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, count_args)) {
       fail();
@@ -1250,7 +1252,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
       buffer.queue->copy_to_device(buffer.ranges);
       const DeviceKernelArguments output_args(&tiles, &flat_tile, &first, &buffer.count,
           &capacity, &stride, &render_buffer, &out_records, &out_events, &out_media,
-          &out_density, &eps_ray, &ranges, &num_tiles, &media_count, &sample_limit);
+          &out_density, &eps_ray, &ranges, &num_tiles, &media_count, &sample_limit, &no_events);
       buffer.pending = true;
       if (!buffer.queue->enqueue(DEVICE_KERNEL_DEEP_SURFACE, buffer.count, output_args)) {
         fail();
@@ -1313,6 +1315,10 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
    * been consumed. No kernel-thread allocation or extra synchronization. */
   deep_records_.alloc(initial_batch);
   deep_events_.alloc(event_slots);
+  if (capture->diagnostics())
+    deep_hits_.alloc(size_t(initial_batch) * DEEP_DIAGNOSTIC_RECORDS);
+  else
+    deep_hits_.free();
   if (capture->volume_grid())
     deep_density_.alloc(event_slots);
   else
@@ -1328,6 +1334,8 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
     queue_->zero_to_device(deep_records_);
   if (!deep_events_.device_pointer)
     queue_->zero_to_device(deep_events_);
+  if (capture->diagnostics() && !deep_hits_.device_pointer)
+    queue_->zero_to_device(deep_hits_);
   if (capture->volume() && !deep_media_.device_pointer)
     queue_->zero_to_device(deep_media_);
   if (capture->volume_grid() && !deep_density_.device_pointer)
@@ -1338,6 +1346,7 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
   }
   const device_ptr records = deep_records_.device_pointer;
   const device_ptr events = deep_events_.device_pointer;
+  const device_ptr hits = deep_hits_.device_pointer;
   const device_ptr media = deep_media_.device_pointer;
   const device_ptr density = deep_density_.device_pointer;
   vector<KernelDeepEvent> sample_events(event_capacity);
@@ -1385,7 +1394,8 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
                                            &no_ranges,
                                            &num_tiles,
                                            &media_count,
-                                           &sample_limit);
+                                           &sample_limit,
+                                           &hits);
           const double readback_start = time_dt();
           if (!queue_->enqueue(DEVICE_KERNEL_DEEP_SURFACE, count, args)) {
             capture->fail();
@@ -1396,8 +1406,12 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
           queue_->copy_from_device(deep_records_);
           if (!capture->volume_grid())
             queue_->copy_from_device(deep_events_);
+          if (capture->diagnostics())
+            queue_->copy_from_device(deep_hits_);
           ++deep_batch_count_;
           deep_readback_bytes_ += deep_records_.memory_size();
+          if (capture->diagnostics())
+            deep_readback_bytes_ += deep_hits_.memory_size();
           ++deep_sync_count_;
           if (!queue_->synchronize()) {
             capture->fail();
@@ -1448,6 +1462,19 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
             if (complete[begin + i])
               continue;
             const KernelDeepRecord &record = deep_records_[i];
+            if (capture->diagnostics() && record.result.status != DEEP_SKIPPED) {
+              const int rows = deep_hits_[i].stage;
+              if (rows < 0 || rows >= int(DEEP_DIAGNOSTIC_RECORDS)) {
+                capture->fail(DEEP_ERROR_DIAGNOSTIC_CAPACITY);
+                device_->set_error(capture->error_message());
+                return;
+              }
+              for (int row = 1; row <= rows; ++row)
+                capture->diagnostic_hit(record.x, record.y, record.sample,
+                                        deep_hits_[size_t(row) * batch_size + i]);
+              if (record.result.status != DEEP_COMPLETE)
+                capture->record_sample(record.x, record.y, record.sample, record.result, nullptr);
+            }
             if (capture->volume_grid() && capacity < event_capacity &&
                 record.result.status == DEEP_FAILED &&
                 (record.result.error == DEEP_ERROR_EVENT_CAPACITY ||

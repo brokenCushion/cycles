@@ -1,9 +1,10 @@
 # Blender Deep: hair and curves investigation
 
-Status: **M0 and CPU M1 qualified; M2 pending** (2026-10-18). Task 16 updated the
-obsolete allowlist expectation. All CPU hair, rejection, regression, source/resource,
-consumer and holdout checks passed; Markdown validation and the Part C commit
-complete the milestone below. GPU diagnostics and hair remain deferred to Part D.
+Status: **M0 and CPU M1 qualified; GPU diagnostics qualified; GPU hair pending**
+(2026-10-18). Part C is `b2ead8e39`. Task 17's corrected GPU diagnostics gate
+passed on CUDA and OptiX, including both beauty-policy checks, exact non-run
+headers, deep byte identity and triangle ledgers. GPU hair admission, compiled
+OptiX hair audit and Part E remain pending.
 See the [Step 4 report](../deep/BLENDER_DEEP_MULTILAYER_RESULTS.md). The original
 investigation/proposal below is retained as historical context.
 

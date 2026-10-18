@@ -23,6 +23,7 @@ enum KernelDeepError : unsigned int {
   DEEP_ERROR_GRID_STEPS,
   DEEP_ERROR_BOUNDARY_CAPACITY,
   DEEP_ERROR_MEDIA_CAPACITY,
+  DEEP_ERROR_DIAGNOSTIC_CAPACITY,
 };
 enum KernelDeepEventKind : unsigned int { DEEP_SURFACE = 0, DEEP_VOLUME, DEEP_VOLUME_CUBIC };
 constexpr unsigned int DEEP_MAX_EVENTS = 64;
@@ -37,6 +38,9 @@ struct KernelDeepHit {
   float u, v, t, facing, depth, alpha;
 };
 static_assert(sizeof(KernelDeepHit) == 44, "Deep diagnostic hit layout");
+/* One counter, raw/accepted pairs at capacity, and the extra overflow hit.
+ * Additional duplicate-boundary diagnostics fail explicitly rather than truncate. */
+constexpr unsigned int DEEP_DIAGNOSTIC_RECORDS = 2 * DEEP_MAX_EVENTS + 2;
 #ifndef __KERNEL_GPU__
 struct KernelDeepTrace {
   void *context;

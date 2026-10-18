@@ -757,6 +757,14 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
     throw std::invalid_argument("Deep render requires a single-device full frame without crop");
   }
   size_t capture_bytes = settings.memory_bytes;
+  if (!settings.volume && !output_driver_->deep_diagnostics_path().empty() &&
+      device_->info.type != DEVICE_CPU) {
+    const size_t staging = 2 * size_t(PathTraceWorkGPU::deep_surface_batch_size) *
+                           DEEP_DIAGNOSTIC_RECORDS * sizeof(KernelDeepHit);
+    if (capture_bytes <= staging)
+      throw std::invalid_argument("Deep hit diagnostics exceed memory budget");
+    capture_bytes -= staging;
+  }
   const int event_capacity = settings.volume_grid ?
                                  max(int(DEEP_DEFAULT_VOLUME_EVENTS), settings.max_events) :
                                  settings.max_events;

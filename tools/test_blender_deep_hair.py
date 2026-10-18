@@ -84,6 +84,7 @@ def fixture(name):
     scene.cycles.samples = 4
     scene.render.image_settings.file_format = 'OPEN_EXR'
     scene.render.image_settings.color_depth = '32'
+    scene.render.image_settings.exr_codec = 'ZIP'
     layer = scene.view_layers[0]
     layer.cycles.deep_volume_mode = 'OFF'
     layer.cycles.deep_z_tolerance_mode = 'CUSTOM'; layer.cycles.deep_z_tolerance = 0
@@ -189,13 +190,24 @@ def control(root, device='CPU'):
         layer.cycles.use_pass_deep = label == 'on'
         scene.cycles.deep_output_path = str(directory / 'control_####')
         scene.render.filepath = str(directory / 'beauty.exr')
+        scene.render.image_settings.color_depth = '32'
+        scene.render.image_settings.exr_codec = 'ZIP'
         bpy.ops.render.render(write_still=True)
         scene.render.image_settings.media_type = 'MULTI_LAYER_IMAGE'
+        scene.render.image_settings.color_depth = '32'
+        scene.render.image_settings.exr_codec = 'ZIP'
         scene.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
+        scene.render.image_settings.color_depth = '32'
+        scene.render.image_settings.exr_codec = 'ZIP'
         scene.render.image_settings.use_exr_interleave = True
+        scene.render.image_settings.color_depth = '32'
+        scene.render.image_settings.exr_codec = 'ZIP'
         bpy.data.images['Render Result'].save_render(str(directory / 'render-passes.exr'), scene=scene)
+        # IMAGE selects PNG temporarily; restore EXR before setting its FLOAT depth.
         scene.render.image_settings.media_type = 'IMAGE'
         scene.render.image_settings.file_format = 'OPEN_EXR'
+        scene.render.image_settings.color_depth = '32'
+        scene.render.image_settings.exr_codec = 'ZIP'
         settings = dict(renderer_sha256=digest, source_sha256=source, source_kind='procedural fixture script',
                         device=device, deep=label == 'on', samples=4, resolution=[32, 32], percentage=100,
                         frame=scene.frame_current, adaptive=False, adaptive_threshold=scene.cycles.adaptive_threshold,
@@ -211,17 +223,28 @@ def control(root, device='CPU'):
     print('HAIR_DIAGNOSTIC_CONTROL_RENDERED', flush=True)
 
 
-def validate_control(root):
+def float_channels(path):
+    import numpy as np
     import OpenEXR
+    channels = OpenEXR.File(str(path), separate_channels=True).channels()
+    bad = sorted(k for k, c in channels.items() if c.pixels.dtype != np.float32)
+    assert not bad, f'export precision mismatch: {path}: non-FLOAT channels {bad}'
+    return channels
+
+
+def validate_control(root):
     import numpy as np
     from validate_blender_deep_hair import validate
     result = validate(root / 'on/control_0001.deep.exr', 32, 32, 4)
     assert result['maximum_events'] == 1 and result['maximum_raw_hits'] >= 1, result
     device = json.loads((root / 'results.json').read_text())['device']
+    for label in [*(f'off{i}' for i in range(1 if device == 'CPU' else 5)), 'on']:
+        for filename in ('beauty.exr', 'render-passes.exr'):
+            float_channels(root / label / filename)
     if device == 'CPU':
         for filename in ('beauty.exr', 'render-passes.exr'):
-            before = OpenEXR.File(str(root / 'on' / filename), separate_channels=True).channels()
-            after = OpenEXR.File(str(root / 'off0' / filename), separate_channels=True).channels()
+            before = float_channels(root / 'on' / filename)
+            after = float_channels(root / 'off0' / filename)
             assert before.keys() == after.keys()
             assert all(np.array_equal(before[k].pixels, after[k].pixels) for k in before)
         result['cpu_beauty_exact'] = True

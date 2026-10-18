@@ -1829,3 +1829,355 @@ cases rendered with scanner agreement. This includes chain_8/16/17 at the final
 43-case manifest and `HAIR_BASELINE_PASS 43` establish the baseline outcome.
 B1 commits only the three fixture/oracle/material files and this report.
 GPU diagnostics are deferred to Part D. No hair support is qualified yet.
+
+
+B1 commit: `d0d72fb25` (fixtures/oracle/material and report only).
+
+B2 candidate compile repair: explicit `int(work_tile.x)` and `int(work_tile.y)`
+in the new `TraceContext` aggregate in `path_trace_work_cpu.cpp`, as authorized
+by task 09. No other repair has been made. Guarded build command:
+`python D:/temp/cycles_deep_multilayer/rebuild_B2.py`.
+CPU-only source audit: `python D:/temp/cycles_deep_multilayer/audit_B_sources.py`
+passed all seven shared-file comparisons outside guarded deep code.
+Standalone candidate command `python D:/temp/cycles_deep_multilayer/ctest_B2.py`
+configured and rebuilt in `deep-reference-task09-B2`; all three standalone
+reference/capture/density-cell CTests passed (9.27 seconds). EXR-enabled tests
+are not part of that standalone configuration.
+
+
+#### Task 09 B2 candidate results and STOP
+
+The guarded overlay reset/check/apply and incremental build/install **passed**.
+The only compile repair was the two authorized coordinate casts above. The
+installed executable is now the **uncommitted B2 candidate**, not Part A.
+Build log and executable SHA-256 are preserved under
+`D:/temp/cycles_deep_multilayer/verification/step4/task09-B2/` as `build.log`
+and `candidate-install.json`.
+
+Commands, in order after the build (all runner paths below the permitted root):
+
+- `python run_B2_suite.py cpu`: pass, 24 deep files byte-identical to
+  `verification/step4/A2/cpu`; qualified single-layer identity also passed.
+- `python run_B2_suite.py visibility`: pass, seven visibility cases;
+  all three successful deep files byte-identical to the Step 2 reference.
+- `python run_B2_suite.py drift`: pass, 132 cases, zero false negatives and
+  zero false positives, read-only device override and five path checks passed.
+- `python run_B2_suite.py allowlist-off`: pass, 32 opaque cases (including
+  repeat outputs), 24 opacity cases and five expected rejections; all 88 deep
+  files byte-identical to `verification/step2/nodes-CPU`. The runner uses the
+  existing fixture source with only its diagnostics switch set off; no cases
+  or references were changed. No hit CSV appeared in the off identity suites.
+- `python run_B2_suite.py allowlist-on`: pass, the same render cases and
+  rejections; existing 24 opacity oracle/beauty validations passed, maximum
+  transmittance error `2.4213196336830833e-08`.
+- `python run_B2_control.py CPU`: render passed; **validation failed**.
+
+The triangle control rendered ordinary deep-off (`off0`), deep enabled with
+ diagnostics off (`diagnostics-off`), and deep enabled with diagnostics on
+(`on`). The existing control validator failed its exact deep-on versus
+ordinary deep-off pixel comparison:
+
+```text
+File "tools/test_blender_deep_hair.py", line 226, in validate_control
+    assert all(np.array_equal(before[k].pixels, after[k].pixels) for k in before)
+AssertionError
+```
+
+Evidence: `controls/CPU-validation.log`, `controls/CPU.log`,
+`controls/CPU-command.json`, and the three preserved render directories under
+`verification/step4/task09-B2`. The assertion does not identify which image or
+channel differs. No root-cause claim is made, and no follow-up measurement,
+rerender, bound change or repair was attempted after this first failed gate.
+The earlier all-pixel raw/depth/ID validator returned before this assertion,
+but the combined control validation did not pass and published no histogram.
+
+**STOP.** B2 has no commit. Its CPU/shared diagnostics and adapter candidate
+remain in the working tree. B1 is committed as `d0d72fb25`. GPU plumbing remains
+in the saved patch for Part D; no GPU diagnostics were reapplied. No push or PR.
+
+Not run after the failure: the separate diagnostics-on versus diagnostics-off
+beauty/deep identity comparison, `.hits.csv`/`.samples.csv` event agreement,
+CUDA resource check, further Markdown validation, and all Parts C–E. There is
+no qualified hair event histogram, overflow result, OptiX hair audit, Gaffer
+hair review or junkshop5 output/merge. Nuke remains unavailable. The source
+junkshop file and existing untracked test assets were not changed.
+
+
+### Step 4c: CPU control beauty investigation
+
+Task 10 authorized diagnosis only. **Root cause: the B1 control changes its EXR
+color precision between renders. This is a control-export bug, not evidence of
+a B2 beauty regression.** The first render is FLOAT; subsequent renders are
+HALF for color channels. Deep enablement happened to follow the same order.
+No renderer or fixture fix, gate change, bound change or reference replacement
+was made. B2 remains an uncommitted, unqualified candidate.
+
+#### Separate B1 reproduction and preserved B2 evidence
+
+Built committed Cycles `d0d72fb25ff11974ea8aa517eeb6022117afc21c` over pinned
+Blender `749518deb2f0735a22361a07488b35f7ea5c2fdf` using fresh detached worktrees
+`repo-B1` and `blender-src-B1`, separate `build-B1` and `install-B1`, all under
+`D:/temp/cycles_deep_multilayer/`. The same guarded environment, compiler and
+build configuration were used. Overlay check/application, configure, full build
+and install passed. The original B2 overlay and installation were not replaced.
+B1 executable SHA-256:
+`74a787d492299129f32ecfc21f36ad7d45de0ab9f04bdf2436466291fdf1c2ef`.
+B2 executable SHA-256:
+`d1054bad46d7b35993c6ec6114b7c2c922f47aeb7a5853507082f4bdbb2f7353`.
+
+Evidence root: `D:/temp/cycles_deep_multilayer/verification/step4/task10/`.
+`B1-configure.log`, `B1-build.log`, `build-identities.json`,
+`B2-preserved-channels.json`, each experiment's `channel-comparison.json` and
+`settings-trace.json`, and `trigger-matrix.json` retain the measurements.
+Original Task 09 EXRs were only read. The new B1 baseline uses the committed
+control function with read-only setting snapshots; it changes no render setting.
+
+| Comparison | Beauty RGB, each channel | Saved Combined RGB, each channel | Denoising Albedo RGB, each channel | Other channel values |
+| --- | --- | --- | --- | --- |
+| B1 original control: off0 vs on | 1024 differing pixels; max 8.545815944671631e-6 | Same | 1024 differing pixels; max 1.9532442092895508e-4 | Identical, including A |
+| B2 preserved: off0 vs on | 1024 differing pixels; max 8.545815944671631e-6 | Same | 1024 differing pixels; max 1.9532442092895508e-4 | Identical, including A |
+| B2 preserved: on vs diagnostics-off | Exact | Exact | Exact | Exact |
+| B1 diagnostic: 32-bit export for both renders | Exact | Exact | Exact | Exact |
+| B2 candidate diagnostic: 32-bit export for both renders | Exact | Exact | Exact | Exact |
+
+The two 32-bit experiments compare four beauty channels and all 22 saved-pass
+channels with unchanged `numpy.array_equal` semantics: every maximum difference
+is zero. They are diagnostic experiments, not promotion of the failed B2 gate.
+B1 reproduces the original mismatch exactly, so task 10 step 2 applies; no B2
+hunk bisection was necessary.
+
+#### Fixture differences, listed before the variant runs
+
+Both controls derive from `test_scan_blender_deep_scene.fixture` and already use
+the same plain Diffuse material, World Background, plane, 32x32 orthographic
+camera, transparent film, four CPU threads, and disabled denoising/adaptive
+sampling/compositing/sequencer. Ribbon is also the factory curve-shape default.
+The hair control removes its strand object before rendering.
+
+Compared with the allowlist setup (`tools/test_blender_deep_allowlist.py:129`),
+the control uses 4 versus 16 samples, seed 0 versus 123, BLACKMAN_HARRIS/1.5 versus
+BOX/1 filtering, enabled Denoising Data and Sample Count, enabled deep IDs,
+128 versus 8 transparent bounces, explicit per-layer surface/zero-tolerance/64-event
+overrides versus equivalent scene settings, initially enabled diagnostics, and
+unused groom/material datablocks. Crucially, it exports multilayer passes and
+switches media/file formats after every render; the allowlist does not do that.
+The allowlist rebuilds its fixture for each case and enables diagnostics for its
+opacity cases. `fixture-differences.json` records this comparison before the
+variant runs.
+
+Each row below changes only the named setting or export operation from the B1
+control, except the explicitly listed export-order experiments. Material/world
+rows are repeat controls: their settings were already identical. Each invocation
+contains two small renders and has a 300-second timeout. All renders completed.
+
+| B1 experiment | Beauty exact? | Saved passes exact? | Maximum saved-pass difference |
+| --- | --- | --- | --- |
+| Original control, 4 samples | No | No | 1.9532442092895508e-4 |
+| Omit saved-pass export and its format switches | Yes | Not exported | N/A |
+| Disable Denoising Data only | No | No | 8.545815944671631e-6 |
+| Disable diagnostic Sample Count only | No | No | 1.9532442092895508e-4 |
+| 16 samples | No | No | 1.9544363021850586e-4 |
+| Plain Diffuse (already the control material) | No | No | 1.9532442092895508e-4 |
+| Allowlist world (already the control world) | No | No | 1.9532442092895508e-4 |
+| Seed 123 | No | No | 1.9532442092895508e-4 |
+| BOX filter, width 1 | No | No | 1.9532442092895508e-4 |
+| Disable deep IDs | No | No | 1.9532442092895508e-4 |
+| Transparent bounce limit 8 | No | No | 1.9532442092895508e-4 |
+| Scene defaults for layer overrides | No | No | 1.9532442092895508e-4 |
+| Disable deep diagnostics | No | No | 1.9532442092895508e-4 |
+| Remove unused groom collection/data/material | No | No | 1.9532442092895508e-4 |
+| Omit save_render call, retain format switches | No | Not exported | N/A |
+| Keep deep OFF for both renders | No | No | 1.9532442092895508e-4 |
+| Reverse order: deep ON first, OFF second | No | No | 1.9532442092895508e-4 |
+| Set export color_depth=32 before each render | Yes | Yes | 0 |
+
+Every non-exact beauty row has maximum RGB difference
+`8.545815944671631e-6`; alpha remains exact. Disabling denoising-data storage
+removes those passes but does not remove the Combined/beauty mismatch. Omitting
+only `save_render` also does not remove it: the format assignments are sufficient.
+Both deep-off-twice and reversed-order experiments establish that the difference
+tracks render order rather than the deep switch. Holding just export bit depth
+at 32 removes the difference with both Denoising Data and Sample Count enabled.
+
+#### Mechanism and source references
+
+The runtime trace is:
+
+```text
+first render:                       IMAGE / OPEN_EXR / 32
+switch to MULTI_LAYER_IMAGE:         MULTI_LAYER_IMAGE / OPEN_EXR_MULTILAYER / 32
+save render-passes.exr:              FLOAT color channels
+set media_type = IMAGE:              IMAGE / PNG / 16
+set file_format = OPEN_EXR:          IMAGE / OPEN_EXR / 16
+second render and saved passes:      HALF color channels
+```
+
+The control sets 32-bit depth once in `tools/test_blender_deep_hair.py:86`.
+Its pass-export sequence at lines 193-198 restores media type and file format
+but never restores bit depth. The triggering assignment is line 197.
+Upstream references below are relative to `blender-src-B1`, at the pinned Blender
+commit above:
+
+1. `source/blender/makesrna/intern/rna_scene.cc:1500` forwards the RNA media-type
+   assignment to `BKE_image_format_media_type_set`.
+2. `source/blender/blenkernel/intern/image_format.cc:91` implements that setter;
+   line 100 selects PNG when switching a multilayer image to IMAGE.
+3. `image_format.cc:151` validates the current depth against the new format.
+   PNG supports only 8/16-bit (`image_format.cc:408`); the first valid choice is
+   16-bit (`image_format.cc:434`). Selecting OpenEXR afterward keeps 16 because
+   EXR permits both 16 and 32 (`image_format.cc:400`).
+4. `source/blender/blenkernel/intern/image_save.cc:954` selects HALF only for
+   color passes when the format depth is 16; non-color passes stay FLOAT.
+   This explains why Combined and Denoising Albedo differ, while Sample Count,
+   normals, depth and other data passes retain their values.
+
+The saved values show the quantization directly: beauty
+`0.03999999910593033` becomes `0.040008544921875`, and albedo
+`0.800000011920929` becomes `0.7998046875`. Every affected preserved color value
+matches the corresponding FLOAT value rounded to HALF. This rounding check is
+diagnostic evidence only; it does not alter or relax the exact beauty gate.
+No RNG/sample-offset, shader-state, kernel-feature or denoising computation change
+is required to explain this failure. Equal-precision B1 and B2 renders are exact.
+
+#### Qualified production exposure and proposed repair
+
+The Task 09 allowlist passes are consistent with this diagnosis: their paired
+beauty saves do not switch through multilayer/IMAGE formats between renders.
+The qualified junkshop4 launcher
+`D:/temp/cycles_deep_multilayer/production4.py:103` renders frames without this
+save-render/format-switch sequence; its File Output nodes are separate settings.
+It does not use the triggering sequence between frames.
+
+The general production helper has the same restoration sequence at
+`tools/render_blender_deep_scene.py:205`, but sets 32-bit depth at line 96 and
+performs only one render (line 197). Its beauty and pass files are already saved
+before the depth-changing restoration at line 212. The regression launcher
+starts a separate Blender process per invocation (`tools/run_deep_regression.py:137`).
+Thus the inspected qualified production paths are not exposed to a later render
+with that changed precision. Reusing that helper's restoration sequence in a
+multi-render session would expose the same latent issue. No production scene
+was rerendered and no claim is made about unrelated scripts or GPU hair support.
+
+Proposed fix, **not implemented**: explicitly preserve/restore the intended
+32-bit color depth after the control's media/file-format restoration, or set it
+before every control render. Keep all current equality checks. Add a precision
+assertion or record actual saved channel types so unequal export precision
+cannot masquerade as a beauty comparison. This is a low-risk fixture-only
+repair; later control artifacts will intentionally become FLOAT, so the failed
+gate must be rerun into a fresh directory. Preserve the historical outputs and
+references. The same control function is intended for future GPU tests, so its
+multi-render loop needs the repair before Part D qualification. Do not disable
+Denoising Data or accept HALF-rounded equality as a workaround.
+
+#### Reproduction and final state
+
+Commands used include B1 `prepare_blender_deep.py --source .../blender-src-B1
+--check` and application, then `python build_B1_investigation.py configure` and
+`build`; `python run_task10.py baseline`; `python run_task10_matrix.py`; and
+`python run_task10.py export_depth32 B2`. Diagnostic helpers live under the
+permitted output root, not in repository source. Each experiment was measured
+with `D:/CyclesDeepScratch/regression-tools/Scripts/python.exe measure_task10.py
+EXPERIMENT_DIRECTORY`. Full command arrays and render logs are retained.
+`settings-trace.json` is authoritative for variant settings; the original
+control's fixed metadata fields are retained and explicitly marked as such in
+`experiment.json`.
+
+Before/after hashes confirm all 12 recorded B2 candidate/adapter files, GPU patch
+and installed executable entries are unchanged (`preserved-before.json` and
+`preserved-after.json`). The B1 source worktree remains clean. Only this report
+was changed in the main repository during Task 10. No fix, commit, push or PR.
+Stopped after diagnosis/report: no B2 hunk bisection, reference promotion,
+remaining B2 qualification or Parts C-E. The new equal-precision diagnostic
+results do not by themselves complete B2.
+
+Report validation: Markdown link check passed (35 documents, 199 local links, zero broken; 41 external links not checked).
+
+
+### Task 11: control export repair candidate — STOP at guard self-check
+
+Task 11 authorized the export measurement repair. The **uncommitted candidate**
+in `tools/test_blender_deep_hair.py` explicitly selects 32-bit color and lossless
+ZIP after EXR format switches and immediately before `write_still`/`save_render`.
+The IMAGE restoration temporarily selects PNG, which cannot accept 32-bit depth;
+that pair restores OPEN_EXR first, then immediately sets 32-bit/ZIP. The draft
+validator reads compared EXR headers and intends to reject non-FLOAT channels
+with `export precision mismatch` before comparing beauty. This guard has not
+passed validation (failure below).
+
+Format-assignment audit covered all 13 Python files matching `media_type` or
+`file_format` under `tools/`; the same search found no setters under `src/deep/`:
+
+| File checked | Audit finding/action |
+| --- | --- |
+| `tools/test_blender_deep_hair.py` | Repeated render/export roundtrip changes precision; candidate repair and header guard added. |
+| `tools/test_blender_deep_ui.py` | Switches PNG to multilayer EXR between test renders; explicit 32-bit/ZIP and a FLOAT channel-header assertion added for those EXRs. |
+| `tools/render_blender_deep_scene.py` | One render, explicitly 32-bit; restoration happens after both outputs. No later render and no affected written output; unchanged. |
+| `tools/test_blender_deep_allowlist.py` | Fresh setup selects EXR/32 before renders, with no inter-render format roundtrip; unchanged. |
+| `tools/test_blender_deep_multilayer.py` | Sets EXR/32 during setup; no inter-render format switch; unchanged. |
+| `tools/test_blender_deep_layer_overrides.py` | Configures format before render; no paired flat-beauty precision comparison or inter-render switch; unchanged. |
+| `tools/test_blender_deep_path_templates.py` | Node-format changes occur before the single render per process; path tests, no inter-render beauty comparison; unchanged. |
+| `tools/test_scan_blender_deep_scene.py` | Fresh scene per path fixture; no sequential export roundtrip; unchanged. |
+| `tools/scan_blender_deep_scene.py` | Reads format for scanner decisions; no format setter; unchanged. |
+| `tools/create_vdb_deep_scene.py` | Initial EXR/32 scene configuration; unchanged. |
+| `tools/create_osl_deep_cases.py` | Writes a texture image, not sequential render results; unchanged. |
+| `tools/create_osl_volume_cases.py` | Writes a texture image, not sequential render results; unchanged. |
+| `tools/blender_beauty_preview.py` | Intentionally writes an 8-bit PNG preview; unchanged. |
+
+Only the hair control and the UI mixed-layer flat EXRs have affected written
+outputs. The UI suite was rerun into a fresh directory with
+`python D:/temp/cycles_deep_multilayer/run_task11_suite.py ui` and **passed**,
+including the new FLOAT checks. Evidence:
+`D:/temp/cycles_deep_multilayer/verification/step4/task11/ui.log` and `ui/`.
+Existing outputs and references were retained.
+
+#### First failed gate: new precision-guard self-check
+
+A small check called `float_channels` first on the preserved, known-FLOAT
+`verification/step4/task09-B2/controls/CPU/off0/beauty.exr`, intending next to
+confirm rejection of the preserved HALF file. The first call failed:
+
+```text
+File "tools/test_blender_deep_hair.py", line 229, in float_channels
+    assert all(channel.type() == OpenEXR.FLOAT for channel in image.header()['channels'])
+IndexError: invalid axis: 1 (ndim = 1)
+```
+
+OpenEXR raised this exception when the new guard called `type()` on a channel
+from the header. The negative HALF check was never reached. Failure details are
+preserved in `verification/step4/task11/precision-guard-failure.log`. This is a
+failure in the new validation code, not a newly observed renderer difference.
+Stopped immediately: no API investigation, correction or retry after this gate.
+
+No fixture-repair commit and no B2 commit were made. The draft export repair,
+UI test change and this report remain uncommitted. The existing B2 renderer and
+adapter candidate, GPU patch, original measurement outputs and references remain
+intact. `install-B1` and `repo-B1` are retained. No push or PR.
+
+Not run: the repaired control rerender, diagnostics-on/off byte identity,
+`.hits.csv`/`.samples.csv` agreement, Markdown link check, or Parts C-E.
+Previously passed Task 09 suites were not rerun except the affected UI suite.
+There is no new hair qualification, event histogram, OptiX audit, Gaffer review
+or junkshop5 result. The newly edited junkshop source was not opened or saved;
+its new hash and saved node names remain to be recorded in Part E. Nuke remains
+unavailable. B2 is still unqualified, and the new precision guard itself requires
+repair before continuation.
+
+
+### Task 12: dtype guard repair and continuation
+
+Replaced the new guard's failing header-channel `type()` API call with the
+user-authorized pixel-dtype check. It retains separate channels and rejects any
+channel whose dtype is not float32 with `export precision mismatch`. No bounds,
+references, cases or assertions were relaxed. Before: known-FLOAT input raised
+`IndexError` inside the new validator. After: both preserved `off0/beauty.exr`
+and `off0/render-passes.exr` are accepted; both preserved `on/beauty.exr` and
+`on/render-passes.exr` are rejected with the required precision message.
+Evidence: `verification/step4/task12/precision-guard-selfcheck.json` under the
+permitted output root. The UI test's already-passed struct-based FLOAT guard is
+retained unchanged. Its Task 11 successful rerun remains valid.
+
+This repair uses task 12 section 1; the standing test-code repair rule is now
+accepted for subsequent new-test bugs, once per bug with good/bad self-checks.
+Real-render comparison failures still stop. The standalone fixture-repair commit
+contains only the hair control, UI test and accumulated report. The Task 11 audit
+list and affected-output scope above still apply.

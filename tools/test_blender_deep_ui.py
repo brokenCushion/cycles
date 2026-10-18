@@ -157,7 +157,11 @@ assert all((root / 'two-layers' / f'{name}_{scene.frame_current:04}.deep.exr').i
 results['two_deep_layers_unique_paths'] = True
 other.cycles.use_pass_deep = False
 scene.render.image_settings.media_type = 'MULTI_LAYER_IMAGE'
+scene.render.image_settings.color_depth = '32'
+scene.render.image_settings.exr_codec = 'ZIP'
 scene.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
+scene.render.image_settings.color_depth = '32'
+scene.render.image_settings.exr_codec = 'ZIP'
 scene.render.image_settings.use_exr_interleave = True
 animation('mixed_layers', str(root / 'mixed-layers' / 'shot_####'))
 for frame in (1, 2):
@@ -179,6 +183,11 @@ for frame in (1, 2):
             size = struct.unpack('<I', stream.read(4))[0]
             attributes[name] = stream.read(size)
         channels = attributes[b'channels']
+        offset = 0
+        while channels[offset] != 0:
+            end = channels.index(b'\0', offset)
+            assert struct.unpack_from('<i', channels, end + 1)[0] == 2, 'export precision mismatch'
+            offset = end + 17
         assert b'DeepLayer.Combined.R\0' in channels, channels
         assert b'BeautyLayer.Combined.R\0' in channels, channels
 results['both_layers_rendered'] = True

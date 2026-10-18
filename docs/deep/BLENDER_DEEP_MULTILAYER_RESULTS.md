@@ -1708,3 +1708,124 @@ Files for commit A: adapter overlay, scanner, layer-override fixture, UI/panel/
 migration tests, BLENDER.md and this report. No core renderer or beauty source
 changes. No event histogram or OptiX hair audit applies to Part A. Hair support,
 Parts B–E and junkshop5 remain pending at this commit. No push or PR.
+
+### Part B candidate: fixture baseline and diagnostic plumbing
+
+The user explicitly authorized diagnostics-only capture/kernel plumbing in B.
+Curve admission remains unchanged while the fixtures and instruments are built.
+`test_blender_deep_hair.py` defines 43 Ribbon cases: single/multiple segments,
+world/plane and constant-opacity controls, dense/folded/adjacent/interleaved
+strands, objects/instances/shared geometry, visibility and holdout, occlusion,
+changed static frames, grazing/tip/inside starts, legacy reflection/transmission,
+Chiang/Huang, the standalone six-node junkshop graph, and 8/16/17/32/64/65-event
+chains. No junkshop asset is linked or saved.
+
+Baseline command: `python D:/temp/cycles_deep_multilayer/run_B_baseline.py`.
+Preserved final baseline: `verification/step4/B4/baseline/results.json` and
+`baseline.log`. **43/43 passed**: 40 visible-hair cases rejected with the existing
+static-polygon-mesh message and no deep publication; indirect, excluded and
+camera-off cases rendered with matching scanner predictions. Blender exit 1
+reflects the intentional preflight rejections; the completed 43-case manifest
+and `HAIR_BASELINE_PASS 43` record the test result. Earlier setup attempts in
+`B/` and `B1/` used incorrect RNA property/enum names, corrected before those
+fixtures reached render; `B2/` preserves the preceding 41-case baseline.
+`B3/` preserves the initial 43-case run. B4 additionally uses exact material
+inputs/components from the read-only six-node extraction in `B-extract.log`;
+source SHA-256 remained
+`b050ae097807cb544489ba715fde17862c2c2df437b96b51bffb5e9cf914e851`
+before/after. Fixture data is in `tools/test_blender_deep_hair_material.json`.
+
+The candidate `.hits.csv` side channel separates raw intersections, accepted
+opacity events and terminal sample status, retaining native type, primitive,
+segment, u/v, t, facing, object and object ID. It records all accepted camera
+samples, including misses, only when diagnostics are enabled. It is explicitly
+diagnostic evidence, never an EXR completion marker. GPU staging is budgeted
+separately and bounded to 129 rows per camera sample (64 raw/accepted pairs and
+one overflow hit); excess duplicate-boundary diagnostics fail explicitly rather
+than truncate. Ordinary capture/event/spill/EXR layouts are unchanged.
+
+The new independent validator checks every pixel and the cuts immediately before
+and after every raw/exported depth, plus native-ID ownership and event histograms.
+Its synthetic self-check passes. The source audit of ten changed shared files
+passes: bytes outside guarded deep code are unchanged (`B-source-identity.json`).
+The oracle self-test command was `python tools/validate_blender_deep_hair.py`;
+the source audit was `python D:/temp/cycles_deep_multilayer/audit_B_sources.py`.
+The Markdown check passed: 35 documents, 199 local links, zero broken links;
+41 external links were not checked.
+
+#### STOP: Part B build failed
+
+`python D:/temp/cycles_deep_multilayer/rebuild_B.py` completed overlay reset,
+anchor check and application (1,105 overlay files; 1,133 unchanged timestamps
+restored), but the incremental build exited 1. Preserved log:
+`D:/temp/cycles_deep_multilayer/verification/step4/B-build-failed.log`.
+The compiler reports two narrowing errors at
+`src/integrator/path_trace_work_cpu.cpp:186`: `work_tile.x` and `work_tile.y`
+are unsigned, while the new diagnostic `TraceContext` aggregate stores `int`.
+
+```text
+error: non-constant-expression cannot be narrowed from type 'uint'
+(aka 'unsigned int') to 'int' in initializer list [-Wc++11-narrowing]
+} context{capture, work_tile.x, work_tile.y, uint32_t(state->path.sample)};
+2 errors generated.
+ninja: build stopped: subcommand failed.
+```
+
+Stopped on this first failed build gate. No compiler repair, retry, follow-up
+renderer investigation or further qualification was performed. No Part B
+executable was linked/installed. The build used the initial CPU diagnostics
+snapshot; the later GPU diagnostic plumbing and object-ID CSV extension in the
+working tree were not built. The final 16-event settings for chain_8/16/17 were
+also added after the B4 rejection baseline and remain unqualified.
+
+Part A is committed as `2bc14c94e`. Part B remains **uncommitted and unqualified**.
+Its candidate files are the two hair test/validator scripts and material JSON;
+capture implementation/header; CPU kernel declaration, registration type and
+implementation; CPU/GPU path-trace host code and GPU header; diagnostic types,
+CUDA surface instrumentation, private OptiX launch ABI/queue/wrapper;
+OutputDriver interface; Blender adapter; and this report. Curve admission and
+the source junkshop file are unchanged. Existing untracked test assets were
+preserved. No push or PR.
+
+Prepared but not run: `run_B_control.py CPU|CUDA|OPTIX` and `run_B_resources.py`.
+The former includes all-pixel raw/depth/ID checks, exact CPU beauty and saved
+passes, and the existing GPU beauty policy with five independent deep-off
+controls per backend. None of those candidate checks has passed a render yet.
+There is therefore no qualified event histogram, overflow count, GPU resource
+result, OptiX hair audit, Gaffer hair review, or junkshop5 file/merge result.
+Parts C–E were not started. Nuke remains unavailable and unverified.
+
+
+### Task 09: restore B1/B2 boundaries
+
+GPU diagnostics were preserved in
+`D:/temp/cycles_deep_multilayer/patches/partB-gpu-diagnostics.patch`.
+Both reverse application (before removal) and forward application (after removal)
+passed `git apply --check`. Moved hunks:
+
+- `src/device/optix/queue.cpp`: private launch argument count, offsets and hit pointer.
+- `src/integrator/path_trace_work_gpu.cpp`: hit buffer construction/allocation/free,
+  launch arguments, readback, diagnostic emission and memory accounting.
+- `src/integrator/path_trace_work_gpu.h`: hit buffer member.
+- `src/kernel/deep/optix.h`: private diagnostic pointer and launch ABI size.
+- `src/kernel/deep/surface_cuda.h`: bounded diagnostic writer, raw/accepted hit
+  instrumentation, dispatch pointer and counter initialization.
+- `src/kernel/device/optix/kernel_deep.cu`: diagnostic launch pointer forwarding.
+- `src/kernel/deep/types.h`: diagnostic-capacity error and GPU record limit only.
+- `src/integrator/path_trace.cpp`: GPU diagnostic staging budget only.
+- `src/deep/capture.cpp`: GPU diagnostic-capacity error text only.
+
+No GPU-only hunks existed in `capture.h` or `output_driver.h`. Shared hit types,
+CPU tracing, capture CSV writing and adapter opt-in remain candidate changes.
+No references to the removed GPU-only symbols remain in `src/`.
+
+B1 candidate baseline command: `python D:/temp/cycles_deep_multilayer/run_B_baseline.py`.
+Evidence: `verification/step4/task09-B1/baseline.log` and `baseline/results.json`
+under the permitted output root. All **43/43** final fixtures passed on the
+unchanged Part A installation: **40** visible-hair cases rejected with the
+existing static-polygon-mesh message and no final deep file; **3** invisible
+cases rendered with scanner agreement. This includes chain_8/16/17 at the final
+16-event setting. Blender exits 1 after expected preflight rejections; the full
+43-case manifest and `HAIR_BASELINE_PASS 43` establish the baseline outcome.
+B1 commits only the three fixture/oracle/material files and this report.
+GPU diagnostics are deferred to Part D. No hair support is qualified yet.

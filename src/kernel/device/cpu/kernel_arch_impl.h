@@ -139,7 +139,8 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
                                             const int max_events,
                                             const bool volume,
                                             KernelDeepDensity *density,
-                                            const double eps_ray, unsigned int *evaluations)
+                                            const double eps_ray, unsigned int *evaluations,
+                                            const KernelDeepTrace *trace)
 {
 #  ifdef KERNEL_STUB
   STUB_ASSERT(KERNEL_ARCH, deep_surface);
@@ -177,6 +178,10 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
     ShaderData sd{};
     shader_setup_from_ray(kg, &sd, &ray, &isect);
     const bool backfacing = (sd.runtime_flag & SR_BACKFACING) != 0;
+    if (trace)
+      trace->write(trace->context, {0, isect.type, isect.prim,
+          PRIMITIVE_UNPACK_SEGMENT(isect.type), isect.object, isect.u, isect.v, isect.t,
+          backfacing ? -1.0f : 1.0f, 0, 0});
     if (count && deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing)) {
       ray.tmin = intersection_t_offset(isect.t);
       ray.self.object = isect.object;
@@ -202,6 +207,10 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
     if (!isfinite(depth) || depth <= 0)
       return {DEEP_FAILED, 0, DEEP_ERROR_DEPTH};
     events[count] = {deep_event_pack(DEEP_SURFACE, isect.object), depth, depth, 1.0f - transparency.x, backfacing ? -1.0f : 1.0f};
+    if (trace)
+      trace->write(trace->context, {1, isect.type, isect.prim,
+          PRIMITIVE_UNPACK_SEGMENT(isect.type), isect.object, isect.u, isect.v, isect.t,
+          backfacing ? -1.0f : 1.0f, depth, 1.0f - transparency.x});
     ++count;
     if (transparency.x == 0)
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};

@@ -97,6 +97,7 @@ class OutputDriver {
   };
 
   virtual bool supports_deep_output() const { return false; }
+  virtual string deep_diagnostics_path() const { return {}; }
   /* Called after all workers finish and completeness is verified. Throw to report
    * host delivery failure through Session::progress. No callback on cancellation. */
   virtual void write_deep_render_tile(const DeepTile & /* tile */)

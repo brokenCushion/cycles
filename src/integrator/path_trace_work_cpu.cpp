@@ -179,6 +179,16 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
 #ifdef WITH_CYCLES_DEEP_OPAQUE
     if (deep::Capture *capture = deep_capture_;
         capture && state->path.sample < capture->samples()) {
+      struct TraceContext {
+        deep::Capture *capture;
+        int x, y;
+        uint32_t sample;
+      } context{capture, int(work_tile.x), int(work_tile.y), uint32_t(state->path.sample)};
+      const KernelDeepTrace trace{&context, [](void *opaque, const KernelDeepHit &hit) {
+        const auto &c = *static_cast<TraceContext *>(opaque);
+        c.capture->diagnostic_hit(c.x, c.y, c.sample, hit);
+      }};
+      const KernelDeepTrace *trace_ptr = capture->diagnostics() ? &trace : nullptr;
       if (has_bake || (state->path.queued_kernel != DEVICE_KERNEL_INTEGRATOR_INTERSECT_CLOSEST &&
                       !(capture->volume() && state->path.queued_kernel ==
                           DEVICE_KERNEL_INTEGRATOR_INTERSECT_VOLUME_STACK)) ||
@@ -200,7 +210,7 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
         const KernelDeepResult result = kernels_.deep_surface(
             kernel_globals, state, events, capture->max_events(), capture->volume(), density,
             capture->volume_grid() ? (.5 * deep::error_budget(capture->error()).density) *
-                                        (capture->error() > 0) : 0, &evaluations);
+                                        (capture->error() > 0) : 0, &evaluations, trace_ptr);
         capture->shader_evaluations.fetch_add(evaluations, std::memory_order_relaxed);
         capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, events, density);
         /* Opt-in diagnostic oracle: selected actual accepted CPU camera rays.
@@ -249,7 +259,7 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
         KernelDeepEvent event;
         unsigned evaluations = 0;
         const KernelDeepResult result = kernels_.deep_surface(
-            kernel_globals, state, &event, 1, false, nullptr, 0, &evaluations);
+            kernel_globals, state, &event, 1, false, nullptr, 0, &evaluations, trace_ptr);
         capture->record_sample(work_tile.x, work_tile.y, state->path.sample, result, &event);
       }
     }

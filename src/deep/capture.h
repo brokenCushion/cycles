@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <fstream>
 #include <mutex>
 #include <memory>
 #include <vector>
@@ -39,6 +40,9 @@ class Capture {
           int sample_limit = 0,
           bool ids = false);
   ~Capture();
+  void open_diagnostics(const std::string &path);
+  bool diagnostics() const { return diagnostics_.is_open(); }
+  void diagnostic_hit(int x, int y, uint32_t sample, const KernelDeepHit &hit);
   void record(int x, int y, uint32_t sample, float depth, int object = -1);
   /* Only complete records count as accepted camera samples. */
   void record_sample(int x,
@@ -129,6 +133,7 @@ class Capture {
   void end_export_row(int y) const;
 
  private:
+  std::ofstream diagnostics_;
   bool ids_ = false;
   float error_setting_ = 0;
   size_t volume_row_sample_limit_ = 0;

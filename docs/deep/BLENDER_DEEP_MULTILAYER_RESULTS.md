@@ -2181,3 +2181,88 @@ accepted for subsequent new-test bugs, once per bug with good/bad self-checks.
 Real-render comparison failures still stop. The standalone fixture-repair commit
 contains only the hair control, UI test and accumulated report. The Task 11 audit
 list and affected-output scope above still apply.
+
+#### Task 12 gate results and STOP
+
+The standalone fixture repair is committed as `241a7e381`,
+`fix(test): keep FLOAT EXR precision across control format switches`.
+The commit message records the Task 10 evidence. No additional test-code bugs
+were repaired under the section 2 standing rule during this continuation.
+
+The repaired `run_B2_control.py CPU` passed on the existing B2 candidate build.
+All-pixel raw-hit, depth and ID validation passed, as did exact CPU beauty and
+saved-pass channel comparisons between deep ON and ordinary deep OFF. Compared
+files passed the FLOAT guard. The result contains 1,024 pixels and 4,096 camera
+samples, maximum all-depth error 0, median/p95/maximum accepted events 1/1/1,
+maximum raw hits 1, and zero overflow pixels. Evidence is under
+`D:/temp/cycles_deep_multilayer/verification/step4/task12/controls/`, including
+`CPU.log`, `CPU-validation.log` and `CPU/validation.json`.
+
+The next gate, diagnostics ON versus OFF, **failed**. Both beauty files passed
+the FLOAT guard, channel-name agreement and exact pixel-array comparison, but
+the required whole-file byte comparison failed:
+
+```text
+AssertionError: ('diagnostics on/off file bytes differ', 'beauty.exr')
+```
+
+Evidence:
+`D:/temp/cycles_deep_multilayer/verification/step4/task12/diagnostics-validation.log`.
+This is a failing assertion on real render output and is explicitly excluded
+from Task 12's standing test-code repair rule. Stopped without diagnosing the
+file difference, changing the gate or retrying. Its cause remains undetermined.
+
+Not reached: diagnostics ON/OFF saved-pass and deep-EXR identity, triangle
+`.hits.csv`/`.samples.csv` agreement, Markdown link check, or Parts C-E. Previously
+passed Task 09 suites were not rerun. No B2 commit was made; the B2 candidate
+remains uncommitted and unqualified. The GPU patch remains preserved at
+`D:/temp/cycles_deep_multilayer/patches/partB-gpu-diagnostics.patch`.
+This final report addition is uncommitted. Existing work, measurement artifacts
+and references are retained; `install-B1` and `repo-B1` are kept. No push or PR.
+The junkshop source was not opened or saved, so its new hash and saved node names
+remain for Part E. No new hair qualification, OptiX audit, Gaffer review or
+junkshop5 result is available; Nuke remains unavailable.
+
+### Task 13: corrected flat identity and B2 qualification
+
+Task 13 authorizes exact flat-EXR channel names, FLOAT types, pixels and headers,
+except explicitly named render timings for the exact layer `Visible`. The hair
+validator now provides `flat_identity` / `flat_header_identity`; no deep comparator
+metadata was changed. Every other header attribute remains mandatory, including
+Date, channel sampling and compression. Synthetic self-checks accepted timing-only
+changes and rejected changed Date, an unlisted layer timing, a changed data window,
+changed pixels and HALF channels. No repair under the standing test-code rule was
+needed.
+
+Only validation was rerun on preserved Task 12 outputs. Both `beauty.exr` and
+`render-passes.exr` passed. Each excluded attribute is listed below; values are
+identical between the two file pairs (before = diagnostics OFF, after = ON):
+
+| Attribute | Before, both files | After, both files |
+| --- | --- | --- |
+| `RenderTime` | `00:00.05` | `00:00.15` |
+| `cycles.Visible.render_time` | `00:00.04` | `00:00.14` |
+| `cycles.Visible.total_time` | `00:00.05` | `00:00.14` |
+| `cycles.Visible.synchronization_time` | `00:00.00` | `00:00.00` |
+
+The deep EXR passed whole-file byte equality and `compare_deep_identity.compare`.
+Diagnostics OFF produced no CSV. Triangle ledger agreement passed for 25 files:
+one control (4,096 camera samples, 324 sampled-grid entries, 316 accepted grid
+hits) and 24 allowlist fixtures (16,384 camera samples, 1,296 grid entries and
+2,592 accepted grid hits each). All raw ledgers cover every camera sample; the
+legacy `.samples.csv` grid agrees in event order, depth, alpha and accepted count.
+CSV presence was never treated as publication: the final EXR must also exist.
+The previously passed Task 12 CPU control and Task 09 regression/source-audit/
+CTest evidence remain applicable; no renderer rebuild or rerender was performed.
+
+Commands: regression-tools Python with `-B` ran
+`D:/temp/cycles_deep_multilayer/selfcheck_flat_task13.py` and
+`D:/temp/cycles_deep_multilayer/validate_B2_diagnostics_task13.py`.
+Evidence: `D:/temp/cycles_deep_multilayer/verification/step4/task13/`, including
+`flat-gate-selfcheck.json`, `flat-excluded-timing.json`, `deep-identity.json`,
+`diagnostics-agreement.json` and `diagnostics-validation.log`.
+
+Markdown link check passed: 35 documents, 199 local links, zero broken links;
+41 external links are not checked by this tool. B2 is ready for its CPU-only
+commit, including the corrected flat gate. GPU diagnostics remain deferred to
+Part D in the preserved patch. B1 install/worktree are retained. No push or PR.

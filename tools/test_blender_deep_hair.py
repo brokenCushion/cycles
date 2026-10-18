@@ -232,6 +232,37 @@ def float_channels(path):
     return channels
 
 
+def flat_header_identity(before, after, layers):
+    import numpy as np
+    # Task 13 and VALIDATION.md exclude run timing, never data-describing headers.
+    timing = {'RenderTime'} | {f'cycles.{layer}.{field}' for layer in layers
+                              for field in ('render_time', 'total_time', 'synchronization_time')}
+    assert before.keys() == after.keys(), 'flat EXR header attributes differ'
+    excluded = {}
+    for name in before:
+        a, b = before[name], after[name]
+        if name in timing:
+            assert isinstance(a, str) and isinstance(b, str), name
+            excluded[name] = dict(before=a, after=b)
+        elif name == 'channels':
+            fields = lambda channels: [(c.name, c.xSampling, c.ySampling, c.pLinear)
+                                       for c in channels]
+            assert fields(a) == fields(b), 'flat EXR channel descriptors differ'
+        else:
+            assert type(a) is type(b) and np.array_equal(a, b), ('flat EXR header differs', name)
+    return excluded
+
+
+def flat_identity(before, after, layers):
+    import numpy as np
+    import OpenEXR
+    a, b = float_channels(before), float_channels(after)
+    assert a.keys() == b.keys(), 'flat EXR channels differ'
+    assert all(np.array_equal(a[k].pixels, b[k].pixels) for k in a), 'flat EXR pixels differ'
+    return flat_header_identity(OpenEXR.File(str(before), separate_channels=True).header(),
+                                OpenEXR.File(str(after), separate_channels=True).header(), layers)
+
+
 def validate_control(root):
     import numpy as np
     from validate_blender_deep_hair import validate

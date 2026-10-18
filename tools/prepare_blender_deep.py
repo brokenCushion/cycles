@@ -280,6 +280,8 @@ edit('blender/output_driver.h', '  bool read_render_tile(const Tile &tile) overr
     deep_diagnostics_ = diagnostics;
   }
   bool supports_deep_output() const override { return !deep_path_.empty(); }
+  string deep_diagnostics_path() const override
+  { return deep_diagnostics_ ? deep_path_ + ".hits.csv" : string(); }
   void write_deep_render_tile(const DeepTile &tile) override;
  private:
   string deep_path_;

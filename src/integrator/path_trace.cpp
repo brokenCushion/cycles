@@ -784,6 +784,7 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
       true, adaptive, settings.volume, settings.volume_grid, TaskScheduler::max_concurrency(),
       settings.volume_shader_evaluation ? settings.error / 2 : settings.error,
       settings.samples ? capture_samples : 0, settings.ids);
+  deep_capture_->open_diagnostics(output_driver_->deep_diagnostics_path());
   if (settings.volume_shader_evaluation) {
     deep_capture_->volume_shader_error = settings.error;
     deep_capture_->volume_shader_adaptive = !settings.volume_shader_fixed_step;

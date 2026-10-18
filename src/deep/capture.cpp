@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstring>
 #include <iterator>
+#include <iomanip>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -161,6 +162,36 @@ Capture::Capture(const int width,
     density_.resize(count * capacity_);
 }
 Capture::~Capture() = default;
+
+void Capture::open_diagnostics(const std::string &path)
+{
+  if (path.empty() || volume_)
+    return;
+  diagnostics_.open(path);
+  diagnostics_ << "file_x,file_y,sample,stage,type,primitive,segment,object,u,v,t,facing,depth,alpha,object_id\n"
+               << std::setprecision(std::numeric_limits<float>::max_digits10);
+  if (!diagnostics_)
+    throw std::runtime_error("Cannot open deep hit diagnostics");
+}
+
+void Capture::diagnostic_hit(const int x, const int y, const uint32_t sample,
+                             const KernelDeepHit &hit)
+{
+  if (!diagnostics())
+    return;
+  std::lock_guard<std::mutex> lock(mutex_);
+  diagnostics_ << x << ',' << height_ - 1 - y << ',' << sample << ',' << hit.stage
+               << ',' << hit.type << ',' << hit.primitive << ',' << hit.segment << ',' << hit.object
+               << ',' << hit.u << ',' << hit.v << ',' << hit.t << ',' << hit.facing
+               << ',' << hit.depth << ',' << hit.alpha << ','
+               << (ids_ && hit.object >= 0 && size_t(hit.object) < object_manifest.size() ?
+                       object_manifest[hit.object].first : 0) << '\n';
+  /* Terminal records survive a failed traversal; this is not an EXR completion marker. */
+  if (hit.stage >= 2)
+    diagnostics_.flush();
+  if (!diagnostics_)
+    set_error(IO_ERROR);
+}
 Capture::SpillStatistics Capture::spill_statistics() const
 {
   SpillStatistics result;
@@ -450,6 +481,9 @@ void Capture::record_sample(const int x,
                             const KernelDeepEvent *events,
                             const KernelDeepDensity *density)
 {
+  if (diagnostics())
+    diagnostic_hit(x, y, sample, {2, int(result.status), int(result.count), int(result.error),
+                                  -1, 0, 0, 0, 0, 0, 0});
   if (exporting_) {
     fail();
     return;

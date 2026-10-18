@@ -30,6 +30,20 @@ constexpr unsigned int DEEP_DEFAULT_VOLUME_EVENTS = 4096;
 constexpr unsigned int DEEP_MAX_VOLUME_EVENTS = 8192;
 constexpr unsigned int DEEP_MAX_MEDIA = 64;
 
+/* Diagnostic side channel, never part of the event/spill or EXR layout.
+ * Raw intersections and accepted events are separate to expose deduplication. */
+struct KernelDeepHit {
+  int stage, type, primitive, segment, object;
+  float u, v, t, facing, depth, alpha;
+};
+static_assert(sizeof(KernelDeepHit) == 44, "Deep diagnostic hit layout");
+#ifndef __KERNEL_GPU__
+struct KernelDeepTrace {
+  void *context;
+  void (*write)(void *, const KernelDeepHit &);
+};
+#endif
+
 /* A visited convex medium has one entry/exit pair. Negative start means exited.
  * GPU storage is allocated per batch by the host, never per kernel thread. */
 struct KernelDeepMedium {

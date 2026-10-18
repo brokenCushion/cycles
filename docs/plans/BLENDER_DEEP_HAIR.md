@@ -1,10 +1,13 @@
 # Blender Deep: hair and curves investigation
 
-Status: **M0 and CPU M1 qualified; GPU diagnostics qualified; GPU hair pending**
-(2026-10-18). Part C is `b2ead8e39`. Task 17's corrected GPU diagnostics gate
-passed on CUDA and OptiX, including both beauty-policy checks, exact non-run
-headers, deep byte identity and triangle ledgers. GPU hair admission, compiled
-OptiX hair audit and Part E remain pending.
+Status: **M0, CPU M1 and CUDA/OptiX M2 qualified; Part E pending** (2026-10-18).
+Task 20's preserved `a1da1a20e605...` executable passed source/overlay, option,
+kernel/data provenance and the mandatory install hash guard. Both GPUs pass all
+43 fixture stages, full 20+4 calibration, native-hit controls, volume rejection
+and Gaffer checks. All 246 cross-backend alpha comparisons pass (max 1.49e-8),
+without a waiver. The four prior CUDA flags retain Task 18 snapshot resolutions;
+no new flag required diagnostics. Published static Ribbon scope now includes
+CPU/CUDA/OptiX, surface mode, tolerance zero. Part E has not run yet.
 See the [Step 4 report](../deep/BLENDER_DEEP_MULTILAYER_RESULTS.md). The original
 investigation/proposal below is retained as historical context.
 

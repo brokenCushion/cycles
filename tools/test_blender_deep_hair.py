@@ -293,15 +293,22 @@ def gpu_diagnostics_flat(root):
     return result
 
 
-def render_hair(root):
+def render_hair(root, device='CPU'):
     import bpy
     from scan_blender_deep_scene import scan
     name, mode = root.parent.name, root.name
-    assert name in cases() and mode in ('on', 'off', 'repeat', 'strict', 'strict-repeat')
+    assert name in cases() and mode in ('on', 'off', 'off0', 'off1', 'off2', 'off3', 'off4',
+                                      'repeat', 'strict', 'strict-repeat')
     root.mkdir(parents=True, exist_ok=False)
     scene = fixture(name)
+    if device != 'CPU':
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        prefs.compute_device_type = device; prefs.refresh_devices()
+        selected = next(d.id for d in prefs.devices if d.type == device)
+        for d in prefs.devices: d.use = d.id == selected and d.type == device
+        scene.cycles.device = 'GPU'
     layer = scene.view_layers[0]
-    layer.cycles.use_pass_deep = mode != 'off'
+    layer.cycles.use_pass_deep = not mode.startswith('off')
     layer.cycles.denoising_store_passes = True
     layer.cycles.pass_debug_sample_count = True
     if mode.startswith('strict'):
@@ -319,7 +326,7 @@ def render_hair(root):
         bpy.ops.render.render(write_still=True)
     except RuntimeError as exc:
         error = str(exc)
-    overflow = name in ('chain_17', 'chain_65') and mode != 'off'
+    overflow = name in ('chain_17', 'chain_65') and not mode.startswith('off')
     files = list(root.glob('*.deep.exr'))
     (root / 'render-result.json').write_text(json.dumps(dict(error=error, overflow=overflow,
                                                            files=[str(p) for p in files]), indent=2))
@@ -327,7 +334,7 @@ def render_hair(root):
         assert error and 'deep traversal limit exceeded' in error and not files, (error, files)
         return
     assert error is None, error
-    assert len(files) == (mode != 'off'), files
+    assert len(files) == (not mode.startswith('off')), files
     scene.render.image_settings.media_type = 'MULTI_LAYER_IMAGE'
     scene.render.image_settings.color_depth = '32'
     scene.render.image_settings.exr_codec = 'ZIP'
@@ -336,6 +343,22 @@ def render_hair(root):
     scene.render.image_settings.exr_codec = 'ZIP'
     scene.render.image_settings.use_exr_interleave = True
     bpy.data.images['Render Result'].save_render(str(root / 'render-passes.exr'), scene=scene)
+    import hashlib
+    settings = dict(renderer_sha256=hashlib.sha256(Path(bpy.app.binary_path).read_bytes()).hexdigest(),
+                    source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                    source_kind='procedural fixture script', device=device,
+                    deep=not mode.startswith('off'), samples=4, resolution=[32, 32], percentage=100,
+                    frame=scene.frame_current, adaptive=False,
+                    adaptive_threshold=scene.cycles.adaptive_threshold,
+                    adaptive_min_samples=scene.cycles.adaptive_min_samples,
+                    seed=scene.cycles.seed, use_animated_seed=scene.cycles.use_animated_seed,
+                    denoising=False, denoiser=scene.cycles.denoiser,
+                    denoising_use_gpu=scene.cycles.denoising_use_gpu,
+                    pixel_filter=scene.cycles.pixel_filter_type, threads=4, save_render_passes=True,
+                    diagnostic_sample_count_pass=True,
+                    camera_world_matrix=[list(row) for row in scene.camera.matrix_world],
+                    camera_frame=[list(v) for v in scene.camera.data.view_frame(scene=scene)])
+    (root / 'render.json').write_text(json.dumps(settings, indent=2))
 
 
 def rejection_isolation(report, name, target=None):
@@ -352,7 +375,7 @@ def rejection_isolation(report, name, target=None):
     return blocks[0]
 
 
-def reject_hair(root):
+def reject_hair(root, device='CPU', volume_only=False):
     import bpy
     from scan_blender_deep_scene import scan
     root.mkdir(parents=True, exist_ok=False)
@@ -361,7 +384,14 @@ def reject_hair(root):
                           ('volume', 'Deep Volume off'), ('tolerance', 'Depth Tolerance 0'),
                           ('motion', 'hair motion is unsupported'), ('osl', 'OSL on hair'),
                           ('hair_info', 'Hair Info'), ('pointcloud', 'point clouds')]:
+        if volume_only and name != 'volume': continue
         scene = fixture('single_1_plane')
+        if device != 'CPU':
+            prefs = bpy.context.preferences.addons['cycles'].preferences
+            prefs.compute_device_type = device; prefs.refresh_devices()
+            selected = next(d.id for d in prefs.devices if d.type == device)
+            for d in prefs.devices: d.use = d.id == selected and d.type == device
+            scene.cycles.device = 'GPU'
         layer = scene.view_layers[0]
         if name in ('THICK', 'THICK_LINEAR'): scene.cycles_curves.shape = name
         elif name == 'volume':
@@ -430,6 +460,10 @@ if __name__ == '__main__':
     assert len(args) == 2, args
     {'--baseline': baseline, '--control': control, '--validate-control': validate_control,
      '--hair': render_hair,
+     '--hair-CUDA': lambda root: render_hair(root, 'CUDA'),
+     '--hair-OPTIX': lambda root: render_hair(root, 'OPTIX'),
      '--reject-hair': reject_hair,
+     '--reject-volume-CUDA': lambda root: reject_hair(root, 'CUDA', True),
+     '--reject-volume-OPTIX': lambda root: reject_hair(root, 'OPTIX', True),
      '--control-CUDA': lambda root: control(root, 'CUDA'),
      '--control-OPTIX': lambda root: control(root, 'OPTIX')}[args[1]](Path(args[0]))

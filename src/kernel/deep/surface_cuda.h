@@ -45,7 +45,8 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
     isect.prim = PRIM_NONE;
     if (!scene_intersect(kg, &ray, PATH_RAY_VISIBILITY_CAMERA, &isect))
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
-    if (isect.type != PRIMITIVE_TRIANGLE)
+    if (isect.type != PRIMITIVE_TRIANGLE &&
+        (isect.type & PRIMITIVE_ALL) != PRIMITIVE_CURVE_RIBBON)
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_PRIMITIVE};
     const float depth = deep_camera_depth(
         kernel_data.cam, kernel_data_array(camera_motion), ray.time, ray.P + ray.D * isect.t);
@@ -68,7 +69,8 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
         return {DEEP_FAILED, 1, DEEP_ERROR_DIAGNOSTIC_CAPACITY};
       return {DEEP_COMPLETE, 1, DEEP_ERROR_NONE};
     }
-    if (count && deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing))
+    if (count && previous.type == PRIMITIVE_TRIANGLE && isect.type == PRIMITIVE_TRIANGLE &&
+        deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing))
     {
       ray.tmin = intersection_t_offset(isect.t);
       ray.self.object = isect.object;

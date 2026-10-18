@@ -375,7 +375,6 @@ def scan(scene, layer_name=None, frame=None, device=None):
                     if scene.cycles_curves.shape!='RIBBONS': add('BLOCK','hair_shape','deep hair requires Ribbon shape; THICK and THICK_LINEAR are unsupported',**fields)
                     if scene.render.use_motion_blur: add('BLOCK','hair_motion','deep hair requires static geometry and camera; hair motion is unsupported',**fields)
                     if scene.cycles.shading_system: add('BLOCK','hair_osl','OSL on hair is unsupported by deep capture',**fields)
-                    if backend!='CPU': add('BLOCK','hair_device','deep Ribbon hair currently requires CPU',**fields)
                 if obj.modifiers and obj.modifiers[-1].type=='SUBSURF' and obj.modifiers[-1].show_render and obj.modifiers[-1].use_adaptive_subdivision: add('BLOCK','subdivision','subdivision is unsupported',**fields)
                 if obj.is_shadow_catcher or parent.is_shadow_catcher or getattr(obj.cycles,'is_caustics_caster',False) or getattr(obj.cycles,'is_caustics_receiver',False): add('BLOCK','object_flags','shadow catcher and caustics are unsupported',**fields)
                 if scene.render.use_motion_blur and getattr(obj.cycles,'use_motion_blur',True) and getattr(obj.cycles,'use_deform_motion',True):

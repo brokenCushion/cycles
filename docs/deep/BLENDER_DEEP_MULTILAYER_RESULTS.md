@@ -2984,3 +2984,944 @@ remain applicable. No rebuild or renderer change was made for the gate correctio
 GPU diagnostics are qualified on CUDA and OptiX and ready for their separate
 commit. GPU Ribbon admission, its compiled OptiX audit and Part E follow only
 after that commit. No push or PR.
+
+
+GPU diagnostics commit: `9665a3771` (`feat(deep): GPU raw-hit diagnostics`).
+The pre-commit Markdown check passed: 35 documents, 200 local links, zero broken
+links; 41 external links unchecked.
+
+#### GPU Ribbon candidate, build and audits
+
+Candidate renderer changes are limited to `src/kernel/deep/surface_cuda.h` and
+`src/session/deep.cpp`: accept packed static Ribbon primitives alongside
+triangles, restrict the triangle boundary helper to two triangles, and remove
+the temporary CPU-only backend guard. The scanner mirrors candidate admission.
+Native tmin/self continuation, beauty traversal/intersectors/shaders, volume
+capture and existing unsupported shape/motion/OSL/Hair Info/point rules remain
+unchanged. The GPU admission is an uncommitted candidate, not a support promotion.
+
+The hair fixture supports CUDA/OptiX selection, five ordinary deep-OFF controls,
+beauty-policy metadata and backend-specific volume rejection checks. The runner
+uses the existing all-pixel/known-hit/depth/ID oracles and strict/numeric repeats;
+GPU beauty always uses the existing policy. It compares flat headers separately
+under Task 14. The volume rejection checks were prepared but not reached.
+
+The guarded overlay reset/check/apply/incremental build passed all 34 targets,
+including CUDA, OptiX and the long deep-OSL compilation. No compile repair.
+Installed GPU-hair candidate SHA-256:
+`a1da1a20e605bfae5bc4aa886e46b4666ab522280b2783f5aedb4a9d158711d9`.
+Source isolation passed: no changed shared beauty code outside the established
+deep-only files. Resource audit passed all 75 common CUDA records unchanged.
+Deep-only record: 168 registers, 9,296 local bytes, zero shared bytes,
+maximum/recommended block size 384; deep-on cubin 22,751,168 bytes.
+
+OptiX source inspection before the render gate found the existing path:
+`KERNEL_FEATURE_HAIR_RIBBON` selects CUSTOM primitive flags; closest/shadow Ribbon
+hit groups register `__intersection__curve_ribbon`; Ribbon instances use the
+`PG_HITD_CURVE_RIBBON - PG_HITD` SBT offset (16). The deep pipeline adds the
+existing hit/miss groups, copies all non-null SBT headers, and replaces only the
+triangle-volume slot at offset 3. Its continuation stack combines deep raygen
+and maximum hit/any-hit requirements; launch diagnostics already log resource
+values. No missing program was identified and none was added. Runtime compiled
+hair-feature/SBT/stack qualification was not reached on OptiX and is not claimed.
+
+Commands: `rebuild_D_hair_task17.py`, `audit_GPU_hair_task17.py`,
+`resources_GPU_hair_task17.py`, and regression-tools Python `-B` with
+`run_GPU_hair_task17.py CUDA single_1_world`, followed by the remaining CUDA
+fixtures in their original order. Every render has a 300-second timeout. Evidence
+is under `D:/temp/cycles_deep_multilayer/verification/step4/task17/`.
+
+#### CUDA partial hair results
+
+`single_1_world` completed all scheduled checks: numeric ON/repeat and
+strict/repeat raw oracles, 64 analytic interior camera samples per render,
+finite/sorted EXR validation, numeric ID ownership, deep repeat identity,
+GPU beauty policy against all five ordinary controls, and exact non-run flat
+headers. Each deep run has 1,024 pixels / 4,096 camera samples, maximum all-depth
+error 1.4901161193847656e-08, median/p95/maximum events 0/1/1, maximum raw hits 1,
+and zero overflow pixels. Numeric bound is 0.0010000000474974513; strict is 1e-06.
+
+The next case, `single_1_plane`, passed its initial numeric raw/depth/ID/known-hit
+checks, five ordinary controls, initial ON beauty policy and flat headers. Its
+numeric repeat also passed the raw oracle and strict deep-identity comparison
+against ON. Both deep runs have maximum all-depth error 1.4901161193847656e-08,
+64 known-hit samples, median/p95/maximum events 1/1/1, maximum raw hits 1 and zero
+overflow pixels.
+
+Excluded metadata for the completed hair flat comparisons is below, target
+render -> off0. Each row applies to both beauty.exr and render-passes.exr unless
+the Files column specifies otherwise. No allowlist names were added.
+
+| Case | Target | Files | Attribute | Target value | off0 value |
+| --- | --- | --- | --- | --- | --- |
+| `single_1_world` | on | beauty.exr, render-passes.exr | `Date` | `2026/10/18 18:09:58` | `2026/10/18 18:09:59` |
+| `single_1_world` | on | beauty.exr, render-passes.exr | `RenderTime` | `00:00.33` | `00:00.22` |
+| `single_1_world` | on | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.08` | `00:00.00` |
+| `single_1_world` | on | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.19` | `00:00.17` |
+| `single_1_world` | on | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.28` | `00:00.17` |
+| `single_1_world` | repeat | beauty.exr, render-passes.exr | `Date` | `2026/10/18 18:10:09` | `2026/10/18 18:09:59` |
+| `single_1_world` | repeat | beauty.exr, render-passes.exr | `RenderTime` | `00:00.31` | `00:00.22` |
+| `single_1_world` | repeat | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.08` | `00:00.00` |
+| `single_1_world` | repeat | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.17` | `00:00.17` |
+| `single_1_world` | repeat | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.26` | `00:00.17` |
+| `single_1_world` | strict | beauty.exr, render-passes.exr | `Date` | `2026/10/18 18:10:11` | `2026/10/18 18:09:59` |
+| `single_1_world` | strict | beauty.exr, render-passes.exr | `RenderTime` | `00:00.38` | `00:00.22` |
+| `single_1_world` | strict | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.10` | `00:00.00` |
+| `single_1_world` | strict | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.21` | `00:00.17` |
+| `single_1_world` | strict | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.31` | `00:00.17` |
+| `single_1_world` | strict-repeat | beauty.exr, render-passes.exr | `Date` | `2026/10/18 18:10:15` | `2026/10/18 18:09:59` |
+| `single_1_world` | strict-repeat | beauty.exr, render-passes.exr | `RenderTime` | `00:01.05` | `00:00.22` |
+| `single_1_world` | strict-repeat | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.33` | `00:00.00` |
+| `single_1_world` | strict-repeat | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.61` | `00:00.17` |
+| `single_1_world` | strict-repeat | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.95` | `00:00.17` |
+| `single_1_plane` | on | beauty.exr, render-passes.exr | `Date` | `2026/10/18 18:10:37` | `2026/10/18 18:10:39` |
+| `single_1_plane` | on | beauty.exr, render-passes.exr | `RenderTime` | `00:00.42` | `00:00.22` |
+| `single_1_plane` | on | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `single_1_plane` | on | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.23` | `00:00.17` |
+| `single_1_plane` | on | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.36` | `00:00.17` |
+
+#### First failed gate: CUDA plane repeat GPU beauty policy
+
+The `single_1_plane/repeat` beauty-policy assertion returned FAIL. Its saved
+report flags one statistical fallback pixel, file coordinate `(17, 9)`, sample
+count 4. Ordinary-control leave-one-out fallback counts are min/median/max 0/0/0,
+so the existing allowed fallback count is 0; `statistical_count_passed` is false.
+The separate sample-count mismatch gate passed (zero unmatched populations),
+image-wide bias passed, and unexplained denoised outlier count is zero.
+
+Fallback calibration is also incomplete: the report records five ordinary
+controls versus a minimum of 20 for statistical fallback, missing four
+seed-varied controls, `informational_only: true`, and `complete: false`.
+Per-channel fallback comparisons therefore report missing calibration rather
+than measured bound violations. No claim is made that a measured per-channel
+limit was exceeded or that this proves a deep-to-beauty leak. The observed
+fallback-count failure remains a failed gate under the unchanged policy.
+
+Evidence:
+`task17/hair/CUDA/single_1_plane/repeat/cuda_beauty_validation.json` and its
+`.pixels.csv`, `hair-CUDA-remaining.log`, plus per-render validation/identity
+JSON. `hair/CUDA/first-case-results.json` preserves the completed world case;
+`hair/CUDA/results.json` preserves plane progress before the failing policy.
+
+Stopped at that first real render gate failure. No pixel investigation,
+calibration/control additions, snapshot diagnostic, renderer repair, policy
+change or retry followed. The plane strict runs and later CUDA fixtures were
+not rendered. OptiX hair tests and runtime audit, grazing/tip native controls,
+GPU volume-rejection tests, cross-backend alpha comparison, GPU consumer review,
+GPU hair commit and Part E were not reached. No junkshop5 files, new source hash,
+saved node-name inspection or three-layer merge; Nuke remains unavailable.
+
+HEAD is `9665a3771`, the qualified GPU diagnostics commit. GPU hair renderer,
+scanner and test changes and this report remain uncommitted. The installed
+executable is the unqualified GPU-hair candidate. The original GPU patch, B1
+install/worktree, prior outputs and untracked assets remain preserved. No push
+or PR; no source .blend was opened or saved. The final Markdown check after the
+GPU-hair candidate/report was not run because the gate failed.
+
+
+### Task 18: complete GPU calibration and bounded snapshot resolution
+
+Completed CUDA single_1_plane calibration first, as authorized. The five existing
+ordinary controls matched the target executable, fixture-source hash and every
+beauty-policy setting. Added exactly 15 compatible ordinary controls (20 total)
+and four deep-OFF controls with fixed seeds 101, 202, 303 and 404, in one Blender
+process. Every new control records executable/source identity, camera, sampling,
+backend and settings. All ordinary controls enter the pool; none were selected
+or removed for their results. The target fixture script and renderer were not
+changed for calibration.
+
+With full calibration, original ON passed without fallback. The preserved repeat
+still had one fallback pixel (17,9), versus ordinary leave-one-out min/median/max
+0/0/0. Bias and the separate sample-count mismatch gate passed. All channels at
+the fallback pixel met their absolute step-2 bounds; the fallback-count condition
+still required step 4. Original informational reports and the fully calibrated
+unresolved report are preserved separately.
+
+| Channel at (17,9) | Signed difference | Ratio | Absolute limit | Channel passes |
+| --- | --- | --- | --- | --- |
+| `Visible.Debug Sample Count.X` | 0 | 0 | 4.76837158203125e-07 | True |
+| `Visible.Denoising Albedo.R` | 0 | 0 | 4.76837158203125e-07 | True |
+| `Visible.Denoising Albedo.G` | 0 | 0 | 4.76837158203125e-07 | True |
+| `Visible.Denoising Albedo.B` | 0 | 0 | 4.76837158203125e-07 | True |
+| `Visible.Denoising Depth.Z` | 0 | 0 | 1.9073486328125e-06 | True |
+| `Visible.Denoising Normal.X` | 0 | 0 | 4.76837158203125e-07 | True |
+| `Visible.Denoising Normal.Y` | 1.77635683940025e-15 | 9.926962279806434e-08 | 4.76837158203125e-07 | True |
+| `Visible.Denoising Normal.Z` | -5.960464477539062e-08 | 1.452111063296408e-06 | 4.76837158203125e-07 | True |
+| `Visible.Combined.R` | 0 | 0 | 1.490116119384766e-08 | True |
+| `Visible.Combined.G` | 0 | 0 | 1.490116119384766e-08 | True |
+| `Visible.Combined.B` | 0 | 0 | 1.490116119384766e-08 | True |
+| `Visible.Combined.A` | 0 | 0 | 4.76837158203125e-07 | True |
+
+Applied only the existing six-file snapshot experiment from `9a017f055` to the
+managed Blender overlay, outside the deep repository. Patch check passed. The
+161-target diagnostic build passed and installed separately in
+`D:/temp/cycles_deep_multilayer/install-snapshot-task18/`. The ordinary install
+was never replaced. All six overlay files were restored after installation;
+every recorded ordinary executable/kernel hash and the deep repository's
+uncommitted diff remained unchanged through the build. Diagnostic patch SHA-256:
+`f36f32eec30e36057eb0c76be07dcb8cfcb420a0b75c5241cb14c6ab967738df`. Diagnostic executable SHA-256:
+`45dcec6299e4e8982991355b2643be8231fa86a10d5188221e284ba5a7eac99b`. Target executable remains
+`a1da1a20e605bfae5bc4aa886e46b4666ab522280b2783f5aedb4a9d158711d9`. The shared build cache now contains diagnostic
+objects; restored source timestamps require a normal rebuild before any future
+ordinary installation from that cache. Existing ordinary renders continue to use
+the preserved ordinary install.
+
+Rendered three independent OFF and three independent ON diagnostic runs, with
+factory scene reset between renders. They are excluded from the ordinary pool.
+At (17,9), all six runs were **bit-identical across all 12 checked channels**,
+accepted sample count 4. The unchanged snapshot reproduced-state rule passed,
+resolving the repeat's beauty flag. Calibrated original failure remains recorded;
+resolution does not substitute for the target's already-passed deep-alpha oracle.
+
+The plane strict and strict-repeat modes were then completed with the same
+20-control/four-seed calibration. Strict-repeat flagged (17,15); the same six
+compatible diagnostic runs resolved it by the unchanged four-ULP, exact-count
+rule. At this second pixel, agreement passed but **bit identity did not**.
+Every diagnostic ON matched at least one complete OFF state across all channels.
+The numerical bound and count policy were not changed.
+
+Target numeric capture: error 0.0010000000474974513, requested deep samples 0
+(all four), IDs ON, diagnostics ON, effective Volume OFF, tolerance 0, events 64,
+memory 512 MiB. Strict targets use error 0 and IDs OFF. The diagnostic ON runs
+use the numeric capture options above. Original Task 17 metadata omitted the
+three deep-option fields; target EXR headers and the immutable fixture settings
+are recorded in `plane-policy/resolution-summary.json`, separately from the
+policy's null legacy metadata fields. New target/diagnostic render metadata
+records the actual requested options explicitly. Matching beauty/camera/sampling
+settings and the diagnostic executable hash were verified by the policy.
+
+Initial new-control fixture/render/export time: 21.563812 seconds;
+six diagnostic renders: 8.035674 seconds.
+Diagnostic build/install time: 1352.831 seconds, reported separately
+from render time. Remaining fixtures and final total render time follow below.
+
+Evidence under `verification/step4/task18/`: `plane-control-plan.json`, its
+`-rendered.json`, control command/log/time JSON, `plane-policy/on.json`,
+`repeat.json`, `repeat-resolved.json`, `resolution-summary.json`, and
+`snapshot/snapshot-build.json`, `preservation.json`, `six-render-records.json`.
+Full per-mode plane policy reports are under `policy/CUDA/single_1_plane/`;
+all channel ratios/limits and the six diagnostic channel vectors remain saved.
+Commands used `run_plane_controls_task18.py`, `validate_plane_calibration_task18.py`,
+`build_snapshot_task18.py`, `run_snapshot_plane_task18.py`,
+`resolve_plane_snapshot_task18.py`, and `full_hair_task18.py CUDA single_1_plane`.
+All generated files/caches are under `D:/temp/cycles_deep_multilayer/` and scratch
+runtime dependencies were read-only. No source .blend has been opened or saved.
+
+#### Task 18 stop report: incomplete OptiX artifacts after interruption
+
+**STOP: calibration artifact integrity is unresolved.** The OptiX process/session
+was no longer available while preparing the next transmission-constant fixture.
+No exit code or renderer error was recovered. Inspection found 39 persistent
+NUL-filled JSON files, confined to the transmission-opaque/constant run artifacts.
+An OpenEXR read audit then stopped at:
+`calibration/OPTIX/transmission_constant/ordinary08/transmission_constant/off0/beauty.exr`.
+The reader reported "Unable to open ... for read". That control also lacks
+`render.json`. This is invalid/incomplete artifact data, not evidence of a
+numerical beauty-policy regression. Its cause has not been established.
+
+The audit read 79 preceding EXRs successfully and stopped on the 80th. Corrupt
+files were preserved; no outputs or references were replaced, and no further
+renders or qualification gates ran after this unresolved artifact. Evidence:
+`interruption-json-audit.json`, `interruption-exr-audit.json`, `OPTIX-full.log`,
+and the interrupted fixture's `controls.log`, all under the Task 18 root.
+
+CUDA completed all 43 cases: 41 positive fixtures in ON, repeat, strict and
+strict-repeat modes (164 mode results), plus the expected 17/65-chain capacity
+rejections without a final deep publication. Known hits, all-pixel raw/depth/ID
+oracles, valid EXRs, same-backend repeat identity, flat-header identity and fully
+calibrated beauty passed in those completed results. OptiX's durable progress and
+policy reports record 29 positive fixtures passing their four modes (116 results),
+through `transmission_opaque`. Some supporting run-state, identity and summary
+JSON files for that last fixture are among the damaged files; this is explicitly
+retained as incomplete phase evidence, not a completed OptiX qualification.
+
+The next fixture, `transmission_constant`, has no completed calibration pool.
+Seven ordinary controls retain readable metadata and EXRs; ordinary07's metadata
+is NUL-filled, and ordinary08 has the unreadable EXR. No seed controls were
+completed for this fixture. The remaining 14 OptiX cases, including this fixture,
+are incomplete. Nothing was selected or excluded based on favorable pixel values.
+
+Each completed fixture/backend used all 20 compatible ordinary controls and
+exactly four controls with distinct fixed seeds 101/202/303/404. CUDA therefore
+used 820 ordinary + 164 seed controls; the 29 completed OptiX fixtures used
+580 + 116. Ten CUDA ordinary controls predate Task 18; all 1,670 newly completed
+control invocations are included in the timing below. Executable/source/camera/
+sampling/settings checks are recorded per control and in the policy reports.
+Fixture source SHA-256 remained
+`17dc9f4ca9ade8680e09be3d04aa1bd1940781a7e4d87b741f1d8e445fdbb549`;
+ordinary executable SHA-256 remained the `a1da1a20...` value recorded above.
+
+The following table uses the original durable calibrated policy reports, plus
+any separately saved snapshot resolution. It does not repair corrupt summary
+files or rerun a comparison. O/R/S/SR means ON/repeat/strict/strict-repeat;
+event statistics and maximum all-depth error are from each completed ON result.
+All completed rows used 20 ordinary / 4 seed controls and passed their recorded
+mode gates. Complete per-pixel/channel ratios, absolute limits, floors, bias and
+count results remain in `policy/{backend}/{fixture}/*-calibrated.json`; snapshot
+results are separate `*-resolved.json` files.
+
+| Backend / fixture | Ordinary fallback min/median/max | Deep fallback O/R/S/SR | Events median/p95/max | Max all-depth error |
+| --- | --- | --- | --- | --- |
+| CUDA `single_1_plane` | 0/0/0 | 0/1/0/1 | 1/1/1 | 1.49011612e-08 |
+| CUDA `single_1_world` | 0/0/0 | 0/0/0/0 | 0/1/1 | 1.49011612e-08 |
+| CUDA `single_4_world` | 0/0/0 | 0/0/0/0 | 0/1/1 | 1.49011612e-08 |
+| CUDA `single_4_plane` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `single_1_constant_world` | 0/0/1 | 0/0/0/0 | 0/1/1 | 1.55874003e-09 |
+| CUDA `single_4_constant_world` | 0/0/0 | 0/0/0/0 | 0/1/1 | 1.55874003e-09 |
+| CUDA `dense` | 0/1/3 | 2/2/1/2 | 9/15/16 | 6.33239339e-09 |
+| CUDA `fold` | 0/0/0 | 1/0/0/0 | 1/2/2 | 1.7491012e-09 |
+| CUDA `adjacent` | 0/0/0 | 0/0/0/0 | 1/1/2 | 1.55874003e-09 |
+| CUDA `interleaved` | 0/0/1 | 0/0/0/0 | 1/1/4 | 4.09612322e-09 |
+| CUDA `two_objects` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `instance` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `junkshop` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `indirect` | 0/0/0 | 0/0/0/0 | 1/1/1 | 0 |
+| CUDA `excluded` | 0/0/0 | 0/0/0/0 | 1/1/1 | 0 |
+| CUDA `camera_off` | 0/0/0 | 0/0/0/0 | 1/1/1 | 0 |
+| CUDA `shared` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `holdout` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `occluded` | 0/0/0 | 0/0/0/0 | 1/1/1 | 0 |
+| CUDA `occluding` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `frame1` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `frame2` | 0/0/0 | 0/0/1/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `grazing` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `tip` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `inside` | 0/0/0 | 0/0/0/0 | 0/0/0 | 0 |
+| CUDA `legacy_opaque` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `legacy_constant` | 0/0/0 | 0/0/0/0 | 1/1/2 | 1.55874003e-09 |
+| CUDA `legacy_varying` | 0/0/0 | 0/0/0/0 | 1/1/2 | 2.98023224e-08 |
+| CUDA `transmission_opaque` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `transmission_constant` | 0/0/0 | 0/0/0/0 | 1/1/2 | 1.55874003e-09 |
+| CUDA `transmission_varying` | 0/0/0 | 0/0/0/0 | 1/1/2 | 2.98023224e-08 |
+| CUDA `chiang_opaque` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `chiang_constant` | 0/0/0 | 0/0/0/0 | 1/1/2 | 1.55874003e-09 |
+| CUDA `chiang_varying` | 0/0/0 | 0/0/0/0 | 1/1/2 | 2.98023224e-08 |
+| CUDA `huang_opaque` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| CUDA `huang_constant` | 0/0/0 | 0/0/0/0 | 1/1/2 | 1.55874003e-09 |
+| CUDA `huang_varying` | 0/0/0 | 0/0/0/0 | 1/1/2 | 2.98023224e-08 |
+| CUDA `chain_8` | 0/0/0 | 0/0/0/0 | 0/0/8 | 5.21878252e-09 |
+| CUDA `chain_16` | 0/0/1 | 0/0/0/0 | 0/0/16 | 4.53736304e-09 |
+| CUDA `chain_32` | 0/0/0 | 0/0/0/0 | 0/0/32 | 5.44637646e-09 |
+| CUDA `chain_64` | 0/0/0 | 0/0/0/0 | 0/0/64 | 4.65561689e-09 |
+| OPTIX `single_1_world` | 0/0/0 | 0/0/0/0 | 0/1/1 | 0 |
+| OPTIX `single_1_plane` | 0/0/0 | 0/0/0/0 | 1/1/1 | 0 |
+| OPTIX `single_4_world` | 0/0/0 | 0/0/0/0 | 0/1/1 | 1.49011612e-08 |
+| OPTIX `single_4_plane` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `single_1_constant_world` | 0/0/0 | 0/0/0/0 | 0/1/1 | 1.55874003e-09 |
+| OPTIX `single_4_constant_world` | 0/0/0 | 0/0/0/0 | 0/1/1 | 1.55874003e-09 |
+| OPTIX `dense` | 0/1/5 | 3/2/1/2 | 9/14/16 | 6.33239339e-09 |
+| OPTIX `fold` | 0/0/0 | 0/0/0/0 | 1/2/2 | 1.7491012e-09 |
+| OPTIX `adjacent` | 0/0/0 | 0/0/0/0 | 1/1/2 | 1.55874003e-09 |
+| OPTIX `interleaved` | 0/0/0 | 0/0/0/0 | 1/1/4 | 4.09612322e-09 |
+| OPTIX `two_objects` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `instance` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `junkshop` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `indirect` | 0/0/0 | 0/0/0/0 | 1/1/1 | 0 |
+| OPTIX `excluded` | 0/0/0 | 0/0/0/0 | 1/1/1 | 0 |
+| OPTIX `camera_off` | 0/0/0 | 0/0/0/0 | 1/1/1 | 0 |
+| OPTIX `shared` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `holdout` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `occluded` | 0/0/0 | 0/0/0/0 | 1/1/1 | 0 |
+| OPTIX `occluding` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `frame1` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `frame2` | 0/0/1 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `grazing` | 0/0/0 | 0/0/0/0 | 1/1/1 | 7.4505806e-09 |
+| OPTIX `tip` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `inside` | 0/0/0 | 0/0/0/0 | 0/0/0 | 0 |
+| OPTIX `legacy_opaque` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+| OPTIX `legacy_constant` | 0/0/0 | 0/0/0/0 | 1/1/2 | 1.55874003e-09 |
+| OPTIX `legacy_varying` | 0/0/0 | 0/0/0/0 | 1/1/2 | 2.98023224e-08 |
+| OPTIX `transmission_opaque` | 0/0/0 | 0/0/0/0 | 1/1/1 | 1.49011612e-08 |
+
+CUDA `chain_16` and `chain_64` reached exactly 16 and 64 events. Their next-hit
+cases rejected explicitly. No overflow pixels occurred in positive published
+outputs. Dense-groom maximum events were 16 on each GPU; CPU's earlier 19 is an
+informational backend difference until the required cross-backend alpha gate runs.
+
+All four still-flagged CUDA pixel occurrences resolved with the existing six-render
+majorant-snapshot procedure. These were three independent fixture groups, each
+with three OFF and three ON runs; the plane group serves both plane pixels.
+The following distinguishes agreement from bit identity explicitly:
+
+| Fixture / mode | Pixel | Ordinary min/median/max; deep fallback | Six-run agreement / exact counts | Bit-identical |
+| --- | --- | --- | --- | --- |
+| `single_1_plane/repeat` | (17, 9) | 0/0/0; 1 | Pass / 4 accepted samples | True |
+| `single_1_plane/strict-repeat` | (17, 15) | 0/0/0; 1 | Pass / 4 accepted samples | False |
+| `fold/on` | (13, 16) | 0/0/0; 1 | Pass / 4 accepted samples | True |
+| `frame2/strict` | (19, 22) | 0/0/0; 1 | Pass / 4 accepted samples | True |
+
+No OptiX flag required snapshot resolution before the interruption. Snapshot
+vectors, diagnostic options and all six run paths are saved in the resolved
+reports. Original failed calibrated reports were retained. No bias, separate
+sample-count mismatch or absolute-channel bound was waived; no policy constant,
+ULP floor, minimum-control or count rule changed. Snapshot renders remain outside
+the ordinary pools and the six-file diagnostic patch remains outside this branch.
+
+Recorded complete calibration fixture/render/export time was **2099.423150 s**:
+CUDA 1209.127672 s; OptiX 890.295478 s.
+Seven additional interrupted-batch invocations retain logged durations totaling
+8.929075 s, giving a recorded lower bound of
+**2108.352226 s
+(35 min 8.352 s)** spent on Task 18 calibration. The exact full total is unavailable:
+ordinary07/08 timing records did not survive. This is not an estimate that silently
+counts the missing durations as zero. The 18 separate snapshot render invocations
+took 24.326045 s; diagnostic build/install took 1352.830896 s. Reused
+Task 17 controls, target qualification renders and idle/interruption time are not
+charged as new calibration invocations. Full recorded totals/paths are in
+`report-calibration-at-stop.json`.
+
+Partial OptiX audit findings, recorded before STOP: installed ordinary
+`kernel_optix.ptx.zst` (564,410 decompressed bytes, SHA-256
+`c0d2c5db36a3f3f049f1c07622ffec7efe625938bd8df09334f73d4b736e9d8c`)
+and `kernel_optix_deep.ptx.zst` (10,066,866 bytes, SHA-256
+`61d8f202c59c1f118de17b59694bb713bca0ae442837b22001526cdd62e358c3`)
+both contain `__intersection__curve_ribbon`. Runtime logs report Hair enabled
+and native OptiX rendering. Source selects CUSTOM for Ribbon, uses the existing
+closest/shadow Ribbon groups at offsets 16/17 (volume/local 18/19 ignored), copies
+24 hit records into the deep SBT, and replaces only triangle volume slot 3.
+Closest surface tracing uses ray offset 0. Stack sizing includes all linked
+closest-hit and intersection+anyhit requirements. Observed first-strand and
+instance logs report raygen/continuation 6464 bytes, anyhit/direct-callable 0,
+launch parameters 5296 bytes. No additional programs were added. Evidence:
+`optix-compiled-symbols.json`, `launches/OPTIX/single_1_world/on.log`,
+`launches/OPTIX/instance/on.log`; Task 17's 75 unchanged common CUDA resources
+and source audit remain applicable to the unchanged ordinary executable.
+The final all-case audit was not run and is not claimed complete.
+
+Standing-rule reporting: the new runner initially assumed frame 0001 and raised
+FileNotFoundError on the already-rendered frame-2 EXR. It was repaired once to
+require exactly one published deep EXR. Its self-check accepted frame-1/frame-2
+files and rejected zero/multiple files (`frame-path-selfcheck/results.json`).
+Validation resumed on preserved frame-2 data; no renderer change, bound, case or
+reference changed. The report-only generator later hit UnicodeDecodeError from
+the Windows default encoding before writing. Explicit UTF-8 fixed that API use;
+the actual report decoded successfully and invalid UTF-8 was rejected in its
+self-check (`report-encoding-selfcheck.json`). No render artifact changed. An interim summary command later raised JSONDecodeError.
+Its initial concurrent-write explanation was superseded by the persistent NUL
+findings above. This is not being repaired as a test-code bug: damaged artifacts
+were not rewritten or regenerated. The successful report aggregation reads only
+surviving original policy/progress records, with the loss stated explicitly.
+
+Commands include `full_hair_task18.py CUDA` (resumed in the recorded fixture
+order after the frame-path repair), `full_hair_task18.py OPTIX`,
+`inspect_optix_ptx_task18.cjs`, and the read-only artifact/report commands recorded
+in the conversation. Plans, exact Blender commands, hashes, elapsed-time records
+and stdout are under `verification/step4/task18/`. The later standalone GPU
+Gaffer/native/rejection/cross-backend runners and junkshop5 launch scripts were
+prepared under the allowed output root but **not executed**.
+
+M2 remains unqualified. Native grazing/tip controls, GPU volume-mode rejection,
+GPU Gaffer consumer checks, final OptiX audit, cross-backend alpha and Part E did
+not run; no native-backend waiver was attempted. Consequently there is no GPU
+hair commit, junkshop5 output list or BG+Girl+Robots merge result. Published scope
+stays CPU-only. Existing CPU qualification and GPU diagnostics commit are retained.
+No Nuke test, push, PR, source .blend open or source .blend save occurred.
+The GPU-hair candidate, prior patch, untracked assets and all damaged evidence
+remain intact. HEAD is still `9665a3771`; no commit was made for this stopped part.
+The ordinary install is the unqualified GPU-hair candidate; the separate snapshot
+install is diagnostic-only. Rebuild ordinary objects before any future ordinary
+installation from the shared diagnostic build cache.
+
+Report checks: `python -B tools/check_markdown_links.py` passed (35 documents,
+200 local links, no broken links; 41 external links were not checked).
+`git diff --check` passed. Evidence: `task18/markdown-final.json`.
+
+### Task 19: crash recovery
+
+Task 19 identifies the Task 18 interruption as a Windows MEMORY_MANAGEMENT
+bugcheck **0x1A**, not a renderer/validation result: event 6008 records unexpected
+shutdown at 19:12:55 on 2026-10-18; events 41/1001 record the reboot/bugcheck at
+19:42, with `C:/WINDOWS/Minidump/101826-10375-01.dmp`. These are the verified
+findings supplied in the task file; no additional hardware diagnosis or minidump
+inspection was performed. The user is investigating hardware separately.
+
+**STOP at the clean-executable identity gate.** A fresh ordinary build completed
+all **8174 steps**, with no renderer/adapter compilation failure.
+Its executable hash differs from Task 18. Task 19 explicitly requires stopping
+before rebuilding any pool when the executable changes. No qualification render,
+new control pool, installation, GPU-hair commit or Part E run followed this gate.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Preserved `install/blender.exe` | `a1da1a20e605bfae5bc4aa886e46b4666ab522280b2783f5aedb4a9d158711d9` |
+| Fresh `build-task19-clean2/bin/blender.exe` | `fdf12139581daa4240d2e4f5047680b53c5c9a80c7cbb339703f406b3da96d38` |
+
+The original installed executable remains byte-identical and was not replaced.
+The fresh directory reused no objects from the shared diagnostic build cache.
+All 376 modified/untracked overlay source files and the
+set of changed files remained unchanged through the build. The Blender base is
+`749518deb2f0735a22361a07488b35f7ea5c2fdf`; the GPU-hair candidate source/tool
+blobs match the Task 18 snapshot's recorded patch, and the six restored source
+files match the ordinary-source backups. Original configuration **values** all
+match; only cache types for `CMAKE_MAKE_PROGRAM`, `CUDA_TOOLKIT_ROOT_DIR` and
+`LIBDIR` changed from UNINITIALIZED to STRING when loaded into the fresh cache.
+Their values did not change. No policy, source feature or compiler option was
+changed to obtain an identity result.
+
+There is a concrete build-metadata difference: ordinary build time
+**06:46:59 UTC**, clean build time **11:02:13 UTC**, both
+2026-10-18. The same Blender buildinfo generator embeds these values in the
+executable (`build_files/cmake/buildinfo.cmake:179-183`). Thus identical code and
+option values do not establish byte identity. This records an observed contributor
+to the hash change, not proof that timestamps are its only differing bytes.
+The fresh build directory also differs. Configure/build wall time was approximately
+2407.515 s; no rendering is included.
+
+Evidence: `D:/temp/cycles_deep_multilayer/verification/step4/task19/`
+`clean-build-provenance.json`, `clean-build-result.json`, `clean-configure.log`,
+`clean-build.log`, the exact configure/build command JSON, cache initializer,
+and `ordinary-before-version.txt`. The new executable was not deployed: the
+build's own final message requires install/runtime staging. A report-only
+`--version` probe on the unstaged build-tree binary raised WinError 14001;
+version/build-time reporting was repaired to read generated `buildinfo.h`, with
+known-good/invalid-header self-checks. The successful build and SHA measurements
+were retained; no install or render was attempted to work around the hash gate.
+
+#### Atomic runner writes and immediate EXR reads
+
+The active qualification entry points now install a shared test-only I/O adapter
+under the allowed output root: same-directory temporary file, flush, `os.fsync`,
+close, then `os.replace`. It covers their JSON, CSV and log-summary writes,
+including imported validators' `Path.open`/`write_text` writes. Captured process
+logs remain temporary while running and are published only after completion.
+The Node PTX inspector now emits JSON to stdout; its Python wrapper publishes
+that JSON atomically. Runner sources/backups and hashes are recorded in
+`runner-repair-manifest.json`; the numerical validators and the frozen Blender
+fixture source were not edited. Fixture SHA-256 remains
+`17dc9f4ca9ade8680e09be3d04aa1bd1940781a7e4d87b741f1d8e445fdbb549`.
+
+Six real child-process mid-write crash checks passed: JSON/CSV/log, each with an
+old final file or no final file. Exit 77 during the write left the old final bytes
+or no final file, never a partially published final file. Normal replacement also
+passed. Evidence: `atomic-selfcheck.json` and its retained test inputs/temporaries.
+
+Blender's native EXR writes are unchanged. After each render/export, the runner
+opens every EXR and reads every channel payload in every part before accepting
+that render. Failure records `render_failed: true` atomically and stops the run.
+The self-check accepted a preserved deep EXR, rejected a truncated EXR and
+recorded it as a failed render; a synthetic two-part EXR confirmed both parts'
+channels are read. Evidence: `exr-reader-selfcheck.json`,
+`multipart-reader-selfcheck.json`, `verify_exr_task19.py` and
+`verify_after_render_task19.py`. No GPU renderer was used for these reader tests.
+
+Resume checkpoints are written only for fully verified fixture-stage results.
+Existing incomplete fixture directories are blocked, so partial pools cannot
+silently resume. A prior active GPU-run record blocks automatic retry and reports
+a possible repeated hardware/driver interruption. The clean-build identity guard
+also rejects rendering until the executable gate passes. Good-idle and bad-hash/
+interrupted-run guard self-checks passed (`restart-selfcheck.json`). These guards
+were prepared and checked without launching the remaining GPU work.
+
+Standing test-code repairs were limited to the new runner/report code:
+
+- The first source check compared raw CRLF/LF bytes and rejected equivalent
+  exported source. Universal-newline UTF-8 comparison accepts equivalent line
+  endings and rejects changed code (`source-check-selfcheck.json`). No source
+  file was repaired or altered.
+- The first fresh configuration could not find Ninja because the cache loader
+  omitted UNINITIALIZED entries. It now preserves the three original values;
+  valid Ninja entries and invalid cache text were self-checked. The original
+  Ninja version was checked. Failed configuration evidence is retained in
+  `configure-before-cache-type-repair.log` and its result JSON. A second,
+  genuinely fresh directory was configured and built; no partial cache was reused.
+- The unstaged-binary version probe and its reporting repair are described above
+  (`version-probe-selfcheck.json`). Runner preparation also normalizes line endings
+  before writing adapters and syntax-checks them. No render comparison, bound,
+  reference, seed, fixture or assertion was removed or relaxed.
+
+#### Full read-only audit and quarantine
+
+The audit completed **before** moving any Task 18 input. It covered both backends,
+all Task 18 artifacts of the requested types, and referenced Task 17 fixture data:
+**14,166 files** — 8,699 JSON,
+4,250 EXR, 857 CSV and
+360 logs. JSON was parsed; EXRs were opened and channel
+payloads read, and text was also checked for NULs. Read-only audit time was
+35.695 s. A supplemental all-parts payload check confirmed all
+4,246 readable EXRs have one part and every channel was read.
+
+**46 findings** are individually listed with exact paths/errors in `damaged.json`
+and `damaged.csv`: 39 NUL-damaged JSON, three NUL-damaged policy CSVs, two truncated
+OptiX EXRs, and two deliberately invalid earlier frame-path self-check EXRs.
+Thus **44 are crash-damaged**; the other two are known negative-test artifacts.
+The latter were still quarantined, not relabeled as valid outputs. There was no
+actual CUDA fixture damage. Complete records are in `audit.json` and
+`all-exr-parts.json`; no damaged input was repaired in place.
+
+Quarantine root:
+`D:/temp/cycles_deep_multilayer/verification/step4/task18/quarantine-crash-2026-10-18/`.
+All 267 files (4,617,827 bytes) in these 12 units were moved while
+retaining their paths relative to Task 18. Absolute source/destination scope was
+checked before native PowerShell moves; every moved file's SHA-256 was checked
+again at its destination. No files were deleted. This includes the entire partial
+constant pool, the affected opaque fixture/supporting data, damaged negative-test
+files and old aggregate results. The original aggregate OptiX progress was
+quarantined; a new atomic progress file contains only the 28 retained fixtures.
+
+| Quarantined relative path | Files |
+| --- | --- |
+| `calibration/OPTIX/transmission_opaque` | 126 |
+| `calibration/OPTIX/transmission_constant` | 48 |
+| `hair/OPTIX/transmission_opaque` | 38 |
+| `hair/OPTIX/transmission_constant` | 9 |
+| `launches/OPTIX/transmission_opaque` | 20 |
+| `launches/OPTIX/transmission_constant` | 5 |
+| `policy/OPTIX/transmission_opaque` | 16 |
+| `frame-path-selfcheck/ambiguous/a.deep.exr` | 1 |
+| `frame-path-selfcheck/ambiguous/b.deep.exr` | 1 |
+| `OPTIX-hair-progress.json` | 1 |
+| `report-calibration-at-stop.json` | 1 |
+| `calibration-summary.json` | 1 |
+
+The complete **per-file** quarantine list, original/new paths, lengths and hashes
+is `task19/quarantine-plan.json`; the checked move result is
+`task19/quarantine-result.json`. These are under
+`D:/temp/cycles_deep_multilayer/verification/step4/`. All 46 audit findings are
+covered. The quarantine is retained intact.
+
+#### Kept fixtures, required reruns and remaining work
+
+CUDA retains all **43** fixture-stage results: 41 positive fixtures, four modes
+each, plus the two expected capacity rejections. OptiX retains **28** intact
+fixtures, four modes each. Every one of the **276** retained beauty-policy
+evaluations was recomputed from preserved data and reproduced the original report
+in full, excluding only the new output CSV path. This took 193.378 s.
+The four CUDA snapshot-resolved pixel occurrences reproduce too, including the
+previous distinction between bit identity and agreement. Input controls were not
+rerendered, dropped or selected. All policy constants and the existing 20-control/
+four-seed rules remain unchanged. Separate new reports are under `task19/policy/`;
+`kept-fixtures.json` lists every kept case and original/new report, and
+`policy-reevaluation-progress.json` records each comparison.
+
+**No affected fixture has yet been rerendered**, because the clean executable
+failed identity first. `transmission_opaque` must rerun all four target modes and
+policy evaluation; its complete 20 ordinary/four-seed controls remain preserved
+in quarantine, audited, and would be rechecked before reuse only with the matching
+executable. `transmission_constant` must receive a fresh 20 ordinary + seeds
+101/202/303/404 pool; none of its partial controls can be reused. Along with the
+remaining unrun cases, this leaves 15 OptiX fixtures to execute (the originally
+remaining 14 plus damaged opaque). Exact planned order is derived from the named
+fixture list, never from favorable results.
+
+Task 19 added **zero calibration renders** and **zero target GPU renders**.
+Task 18's recorded calibration lower bound of 2108.352226 s remains historical;
+its unknown interrupted timing is not invented or counted as zero. No new pool
+was rebuilt and no executable identities were mixed. The fresh binary differs
+from the old controls' executable, so it was not installed or used to render.
+
+The final all-case OptiX audit, native grazing/tip controls, GPU volume rejection,
+GPU Gaffer checks, cross-backend flattened-alpha gate, GPU-hair commit and
+junkshop5/Part E are **unrun**. The GPU dense-groom event maximum 16 versus CPU 19
+remains informational; no cross-backend waiver was invoked. There are no new
+junkshop5 files, Girl event histograms or BG+Girl+Robots merge results to claim.
+Nuke was not run. The source junkshop .blend was not opened or saved.
+
+Published support remains CPU-only. The GPU-hair candidate, untracked assets,
+original GPU patch and diagnostic install are preserved. No commit, push or PR;
+HEAD remains `9665a3771`, branch `blender-deep-multilayer`. The original ordinary
+install still has hash `a1da1a20...`; the fresh artifact is in
+`D:/temp/cycles_deep_multilayer/build-task19-clean2/`. The original shared build
+cache was not used or cleared and still contains the earlier diagnostic objects;
+it must not be treated as the new ordinary build directory.
+
+Task 19 final report checks: the repository Markdown link checker passed;
+`git diff --check` passed. Outputs are preserved as `task19/markdown-final.json`
+and `task19/git-diff-check.log`. These checks did not run rendering or qualification.
+
+#### Task 20: qualification executable decision and replacement checks
+
+The user replaced Task 19's reproducible-executable hash gate. Qualification
+continues with the preserved ordinary executable
+`a1da1a20e605bfae5bc4aa886e46b4666ab522280b2783f5aedb4a9d158711d9`.
+The clean build is never installed or used for controls. The pre-diagnostic
+ordinary binary predates the snapshot build; the shared cache cannot change it.
+
+Source identity passed: all 1,105 generated overlay entries reproduce the
+recorded `deep-overlay.json` (SHA-256 `ad41b3655e215c5631086e5358593586f125d4892f6f32c51b9986c757836d35`),
+and all actual overlay files match. Both modified compiled source blobs match
+Task 18's pre-diagnostic candidate patch; every other tracked `src/` file remains
+at HEAD `9665a3771`, with no untracked source. All 308 recorded cache options match.
+Task 19's runner/atomic changes live outside the Blender source in
+`D:/temp/cycles_deep_multilayer/`; none are compiled into Blender.
+
+The initial in-memory checker decoded pristine baseline comments as UTF-8, while
+the original generator used Windows cp1252. This test-code error changed only
+five Intel trademark comment lines. Reproducing the original decoding made the
+manifest exact; no source was edited. Known-good and changed-source checks are
+recorded in `task20/identity-checker-selfcheck.json`.
+
+Kernel/data provenance passed: all 13 installed GPU kernels match clean output
+SHA-256 values exactly (12 OptiX PTX archives and one CUDA cubin archive).
+All 452 Cycles package files are mapped to clean-build installation inputs.
+The only 103 differences are OSL `.oso` files: replacing the clean build directory
+with the old directory in their `# options` comment makes every byte equal.
+No executable shader instruction differs. Full filenames, both hashes and reasons
+are in `task20/kernel-data-identity.json`. All 305 shared Blender data files also
+match exactly (`task20/shared-data-identity.json`). The supplementary data map
+initially missed 49 locale outputs because their CMake rule renames the source
+basename to `blender.mo`; honoring RENAME fixed this runner path bug, with
+known-good/missing-basename self-checks in `task20/install-map-selfcheck.json`.
+
+The executable comparison is informational, as authorized. Both files are
+113,864,192 bytes. PE timestamps are 2026-10-18 07:08:39 UTC (ordinary) and
+11:41:35 UTC (clean). Debug GUIDs are `48062d64-b392-fcae-4c4c-44205044422e`
+and `861a1b5a-e48e-39fc-4c4c-44205044422e`; PDB paths embed their build directories.
+The date string is identical; the time changes from 06:46:59 to 11:02:13 at
+file offset 106642091. Differences also occur outside these metadata regions:
+8,932,302 bytes in 1,165,837 contiguous ranges. Section counts are `.text`
+210,370, `.rdata` 8,485,341, `.data` 4,127, `.pdata` 231,850 and `.reloc` 607;
+`.tls` and `.rsrc` are identical. These differences are **not** claimed to be
+explained solely by timestamps. Every differing range and its per-file SHA-256
+is recorded in `task20/exe-differing-ranges.csv`; PE fields, section counts and
+build strings are in `task20/executable-differences.json`. Task 20 explicitly
+permits continuing because this clean executable is never used.
+
+The install guard accepts the recorded binary and rejects a known-bad file.
+Parent runners check before launching Blender; batched fixture and production
+runners check before each render. The replacement gate is
+`task20/identity-gate.json`. The repeated-crash marker and atomic output writes
+remain active. Affected OptiX fixtures are being rerun; final results follow
+below. No GPU-hair commit is made until its gates pass.
+
+The 13 compressed GPU kernels were also decompressed and compared with every
+corresponding clean raw PTX/cubin output: all match exactly
+(`task20/raw-kernel-identity.json`). No installed fatbin or other GPU archive is
+omitted. After this evidence was recorded, automatic approval review rejected
+native PowerShell removal of `build-task19-clean2` as "blocked by policy".
+The directory is retained; no alternate removal was attempted. It remains
+uninstalled and unused for qualification (`task20/clean-build-cleanup.json`).
+
+##### Task 20: Part D qualification completed
+
+Both CUDA and OptiX pass all 43 fixture stages: 41 positive fixtures in all four
+modes (`on`, `repeat`, `strict`, `strict-repeat`) and the two expected capacity
+rejections. All 328 positive mode results pass the independent raw oracle,
+all-depth cuts, known-strand checks where applicable, valid sorted EXR output,
+ID ownership and calibrated GPU beauty policy. All 164 numeric/strict repeat
+comparisons pass. Every positive output reports zero overflow pixels. The
+17-at-16 and 65-at-64 cases fail explicitly without any final Deep EXR; their
+failed output cannot provide a published overflow-pixel histogram.
+
+The 28 intact OptiX fixtures and all 43 CUDA fixture stages were retained from
+the Task 19 audit/policy reproduction. `transmission_opaque` was rerun in all four
+modes; its complete, audited quarantined controls were rechecked against source,
+executable and every required setting. `transmission_constant` used a wholly
+fresh pool. All 14 originally remaining OptiX fixtures completed; there was no
+reuse of the interrupted partial pool. Task 20 rendered 54 fixture targets
+(including two expected overflow attempts), 288 fresh calibration controls and
+four native-hit controls. There was no repeated system/GPU crash or damaged EXR.
+
+Every positive fixture/backend uses 20 compatible ordinary controls and the four
+fixed seed controls 101/202/303/404. No bounds, floors, count rules, references,
+fixture script or renderer source were changed during recovery. Per-control
+settings and hashes remain in each `render.json`. All channel ratios, absolute
+limits, ULP floors, fallback pixels, bias/count checks and denoised explanations
+are retained in `task18/policy/{backend}/{fixture}/`. The table below gives the
+ordinary leave-one-out fallback min/median/max and deep fallback counts in mode
+order on/repeat/strict/strict-repeat. Each row has 20+4 controls and all four
+modes passed. Machine-readable rows are in `task20/calibration-results.{json,csv}`.
+
+| Backend | Fixture | Ordinary min/median/max | Deep counts |
+| --- | --- | --- | --- |
+| CUDA | single_1_plane | 0/0/0 | 0/1/0/1 |
+| CUDA | single_1_world | 0/0/0 | 0/0/0/0 |
+| CUDA | single_4_world | 0/0/0 | 0/0/0/0 |
+| CUDA | single_4_plane | 0/0/0 | 0/0/0/0 |
+| CUDA | single_1_constant_world | 0/0/1 | 0/0/0/0 |
+| CUDA | single_4_constant_world | 0/0/0 | 0/0/0/0 |
+| CUDA | dense | 0/1/3 | 2/2/1/2 |
+| CUDA | fold | 0/0/0 | 1/0/0/0 |
+| CUDA | adjacent | 0/0/0 | 0/0/0/0 |
+| CUDA | interleaved | 0/0/1 | 0/0/0/0 |
+| CUDA | two_objects | 0/0/0 | 0/0/0/0 |
+| CUDA | instance | 0/0/0 | 0/0/0/0 |
+| CUDA | junkshop | 0/0/0 | 0/0/0/0 |
+| CUDA | indirect | 0/0/0 | 0/0/0/0 |
+| CUDA | excluded | 0/0/0 | 0/0/0/0 |
+| CUDA | camera_off | 0/0/0 | 0/0/0/0 |
+| CUDA | shared | 0/0/0 | 0/0/0/0 |
+| CUDA | holdout | 0/0/0 | 0/0/0/0 |
+| CUDA | occluded | 0/0/0 | 0/0/0/0 |
+| CUDA | occluding | 0/0/0 | 0/0/0/0 |
+| CUDA | frame1 | 0/0/0 | 0/0/0/0 |
+| CUDA | frame2 | 0/0/0 | 0/0/1/0 |
+| CUDA | grazing | 0/0/0 | 0/0/0/0 |
+| CUDA | tip | 0/0/0 | 0/0/0/0 |
+| CUDA | inside | 0/0/0 | 0/0/0/0 |
+| CUDA | legacy_opaque | 0/0/0 | 0/0/0/0 |
+| CUDA | legacy_constant | 0/0/0 | 0/0/0/0 |
+| CUDA | legacy_varying | 0/0/0 | 0/0/0/0 |
+| CUDA | transmission_opaque | 0/0/0 | 0/0/0/0 |
+| CUDA | transmission_constant | 0/0/0 | 0/0/0/0 |
+| CUDA | transmission_varying | 0/0/0 | 0/0/0/0 |
+| CUDA | chiang_opaque | 0/0/0 | 0/0/0/0 |
+| CUDA | chiang_constant | 0/0/0 | 0/0/0/0 |
+| CUDA | chiang_varying | 0/0/0 | 0/0/0/0 |
+| CUDA | huang_opaque | 0/0/0 | 0/0/0/0 |
+| CUDA | huang_constant | 0/0/0 | 0/0/0/0 |
+| CUDA | huang_varying | 0/0/0 | 0/0/0/0 |
+| CUDA | chain_8 | 0/0/0 | 0/0/0/0 |
+| CUDA | chain_16 | 0/0/1 | 0/0/0/0 |
+| CUDA | chain_32 | 0/0/0 | 0/0/0/0 |
+| CUDA | chain_64 | 0/0/0 | 0/0/0/0 |
+| OPTIX | single_1_world | 0/0/0 | 0/0/0/0 |
+| OPTIX | single_1_plane | 0/0/0 | 0/0/0/0 |
+| OPTIX | single_4_world | 0/0/0 | 0/0/0/0 |
+| OPTIX | single_4_plane | 0/0/0 | 0/0/0/0 |
+| OPTIX | single_1_constant_world | 0/0/0 | 0/0/0/0 |
+| OPTIX | single_4_constant_world | 0/0/0 | 0/0/0/0 |
+| OPTIX | dense | 0/1/5 | 3/2/1/2 |
+| OPTIX | fold | 0/0/0 | 0/0/0/0 |
+| OPTIX | adjacent | 0/0/0 | 0/0/0/0 |
+| OPTIX | interleaved | 0/0/0 | 0/0/0/0 |
+| OPTIX | two_objects | 0/0/0 | 0/0/0/0 |
+| OPTIX | instance | 0/0/0 | 0/0/0/0 |
+| OPTIX | junkshop | 0/0/0 | 0/0/0/0 |
+| OPTIX | indirect | 0/0/0 | 0/0/0/0 |
+| OPTIX | excluded | 0/0/0 | 0/0/0/0 |
+| OPTIX | camera_off | 0/0/0 | 0/0/0/0 |
+| OPTIX | shared | 0/0/0 | 0/0/0/0 |
+| OPTIX | holdout | 0/0/0 | 0/0/0/0 |
+| OPTIX | occluded | 0/0/0 | 0/0/0/0 |
+| OPTIX | occluding | 0/0/0 | 0/0/0/0 |
+| OPTIX | frame1 | 0/0/0 | 0/0/0/0 |
+| OPTIX | frame2 | 0/0/1 | 0/0/0/0 |
+| OPTIX | grazing | 0/0/0 | 0/0/0/0 |
+| OPTIX | tip | 0/0/0 | 0/0/0/0 |
+| OPTIX | inside | 0/0/0 | 0/0/0/0 |
+| OPTIX | legacy_opaque | 0/0/0 | 0/0/0/0 |
+| OPTIX | legacy_constant | 0/0/0 | 0/0/0/0 |
+| OPTIX | legacy_varying | 0/0/0 | 0/0/0/0 |
+| OPTIX | transmission_opaque | 0/0/0 | 0/0/0/0 |
+| OPTIX | transmission_constant | 0/0/0 | 0/0/0/0 |
+| OPTIX | transmission_varying | 0/0/0 | 0/0/0/0 |
+| OPTIX | chiang_opaque | 0/0/0 | 0/0/0/0 |
+| OPTIX | chiang_constant | 0/0/0 | 0/0/0/0 |
+| OPTIX | chiang_varying | 0/0/0 | 0/0/0/0 |
+| OPTIX | huang_opaque | 0/0/0 | 0/0/0/0 |
+| OPTIX | huang_constant | 0/0/0 | 0/0/0/0 |
+| OPTIX | huang_varying | 0/0/0 | 0/0/0/0 |
+| OPTIX | chain_8 | 0/0/1 | 0/0/0/0 |
+| OPTIX | chain_16 | 0/0/0 | 0/0/0/0 |
+| OPTIX | chain_32 | 0/0/0 | 0/0/0/0 |
+| OPTIX | chain_64 | 0/0/1 | 0/0/0/0 |
+
+The four original CUDA flags remain resolved by the preserved Task 18 six-render
+majorant-snapshot evidence: `single_1_plane/repeat` (17,9), bit-identical;
+`single_1_plane/strict-repeat` (17,15), agreement within the unchanged four-ULP
+rule, **not** bit-identical; `fold/on` (13,16) and `frame2/strict` (19,22), both
+bit-identical. Each compares all 12 raw channels with equal counts against one
+unchanged diagnostic deep-off state. The diagnostic executable remains
+`45dcec6299e4e8982991355b2643be8231fa86a10d5188221e284ba5a7eac99b`;
+the separate diagnostic patch remains out of this branch and the ordinary pool.
+The original flagged channels/ratios/limits and target/diagnostic options remain
+in their calibrated/resolved reports and the preceding Task 18 record. No new
+Task 20 flag or diagnostic render was needed. Original flags are not erased.
+
+Event histograms below are median/p95/max per camera sample, numeric `on` mode;
+all positive cases also pass strict mode. Dense GPU maximum 16 versus CPU 19 is
+informational. No cross-backend event-count or depth equality was imposed.
+
+| Fixture | CUDA median/p95/max | OptiX median/p95/max |
+| --- | --- | --- |
+| single_1_plane | 1/1/1 | 1/1/1 |
+| single_1_world | 0/1/1 | 0/1/1 |
+| single_4_world | 0/1/1 | 0/1/1 |
+| single_4_plane | 1/1/1 | 1/1/1 |
+| single_1_constant_world | 0/1/1 | 0/1/1 |
+| single_4_constant_world | 0/1/1 | 0/1/1 |
+| dense | 9/15/16 | 9/14/16 |
+| fold | 1/2/2 | 1/2/2 |
+| adjacent | 1/1/2 | 1/1/2 |
+| interleaved | 1/1/4 | 1/1/4 |
+| two_objects | 1/1/1 | 1/1/1 |
+| instance | 1/1/1 | 1/1/1 |
+| junkshop | 1/1/1 | 1/1/1 |
+| indirect | 1/1/1 | 1/1/1 |
+| excluded | 1/1/1 | 1/1/1 |
+| camera_off | 1/1/1 | 1/1/1 |
+| shared | 1/1/1 | 1/1/1 |
+| holdout | 1/1/1 | 1/1/1 |
+| occluded | 1/1/1 | 1/1/1 |
+| occluding | 1/1/1 | 1/1/1 |
+| frame1 | 1/1/1 | 1/1/1 |
+| frame2 | 1/1/1 | 1/1/1 |
+| grazing | 1/1/1 | 1/1/1 |
+| tip | 1/1/1 | 1/1/1 |
+| inside | 0/0/0 | 0/0/0 |
+| legacy_opaque | 1/1/1 | 1/1/1 |
+| legacy_constant | 1/1/2 | 1/1/2 |
+| legacy_varying | 1/1/2 | 1/1/2 |
+| transmission_opaque | 1/1/1 | 1/1/1 |
+| transmission_constant | 1/1/2 | 1/1/2 |
+| transmission_varying | 1/1/2 | 1/1/2 |
+| chiang_opaque | 1/1/1 | 1/1/1 |
+| chiang_constant | 1/1/2 | 1/1/2 |
+| chiang_varying | 1/1/2 | 1/1/2 |
+| huang_opaque | 1/1/1 | 1/1/1 |
+| huang_constant | 1/1/2 | 1/1/2 |
+| huang_varying | 1/1/2 | 1/1/2 |
+| chain_8 | 0/0/8 | 0/0/8 |
+| chain_16 | 0/0/16 | 0/0/16 |
+| chain_17 | Explicit overflow; no final EXR | Explicit overflow; no final EXR |
+| chain_32 | 0/0/32 | 0/0/32 |
+| chain_64 | 0/0/64 | 0/0/64 |
+| chain_65 | Explicit overflow; no final EXR | Explicit overflow; no final EXR |
+
+Maximum all-depth oracle error across all GPU modes: 2.98023223877e-08.
+
+The OptiX audit passes all 41 positive fixtures: 36 contain raw Ribbon hits.
+Both compiled ordinary/deep PTX modules include `__intersection__curve_ribbon`.
+Existing closest/shadow/volume/local Ribbon SBT offsets are 16/17/18/19 of 24 hit
+groups, with CUSTOM primitive flags. No program was added. Runtime records are
+raygen stack 6464, any-hit stack 0, continuation stack 6464, callable stack 0 and
+queue launch bytes 5296. The source stack formula includes linked closest-hit,
+intersection/any-hit and deep any-hit requirements. Holdout/ID manifests passed
+for both GPUs. The preceding Task 17 audit's 75 common beauty kernel resource
+records remain unchanged; Task 20 made no compiled-source edit. Source identity
+was additionally rechecked against all 376 modified/untracked Blender source
+files from Task 19 provenance. The original overlay manifest was written at
+06:46:50 UTC, before the ordinary build's 06:46:59 build-info timestamp.
+
+Native grazing/tip controls pass on both GPUs, checking all 1,024 pixels and
+4,096 camera samples per fixture. Grazing: 122 Ribbon hits, 3,937 plane hits and
+37 misses. Tip: 119 Ribbon hits, 3,940 plane hits and 37 misses. Maximum depth
+difference is 3.5762786865234375e-7 on each backend/fixture, within the existing
+four-FLOAT-ULP comparison. These deep-off controls disable denoising-follow-
+reflections so the native pass records the first camera-surface depth; they are
+excluded from every beauty pool.
+
+A new-validator bug initially caused IndexError by indexing a nonexistent hit
+on legitimate finite-plane misses. Under Task 12, one validation-only repair
+and retry retained **all** samples: hits require one event and first native t;
+misses require no event and the native background FLT_MAX overwrite, normalized
+by four. `src/kernel/film/denoising_passes.h:291` specifies that sentinel. The
+four-ULP bound is unchanged. Known-hit/miss cases pass; a missing raw hit for a
+published event and a wrong finite miss depth reject. Self-check and original
+failure are preserved in `task20/native-validator-repair-selfcheck.json` and
+`task20/rest-results-before-native-repair.json`. No control was rerendered.
+
+GPU volume-mode hair rejection passes on CUDA and OptiX, with scanner isolation,
+clear Deep Volume off errors and no final Deep EXR. Gaffer DeepToFlat, DeepSlice
+and DeepMerge pass all 164 positive mode files per GPU, including saved review
+scenes under `task18/gaffer/{CUDA,OPTIX}/`. Cross-backend flattened-alpha passes
+all 246 comparisons (41 cases x two modes x CPU/CUDA/OptiX pairs), maximum
+1.49011611938e-08, below 1e-4.
+No native-backend waiver was needed. Full results: `task18/optix-audit.json`,
+`holdout-manifests.json`, `native-hit/`, `rejections/`, `gaffer/` and
+`cross-backend.json`; commands, times and the repaired validation retry are
+recorded in `task20/rest-results.json` and per-stage logs.
+
+Task 20 calibration render invocation time is 397.411425 seconds
+for 288 new controls. Including Task 18's recorded lower bound, total calibration
+time is at least 2505.763651 seconds; the interrupted
+Task 18 invocation's unrecorded duration remains unknown. No time is invented
+for it. Fixture/review/verification wall time is separate. Timings and counts
+are in `task20/render-time.json`; the OptiX recovery driver took 1144.907683
+seconds including validation and integrity reads.
+
+Qualified scope is promoted to CPU/CUDA/OptiX static SVM Ribbon, surface mode,
+tolerance zero; hair motion, other shapes, OSL/Hair Info, point clouds and hair
+in volume mode stay rejected. Part C's CPU regression proof and earlier
+qualified diagnostics remain retained. No Nuke claim. Part E follows the GPU
+hair commit; its result will be recorded separately.

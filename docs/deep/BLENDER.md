@@ -256,12 +256,12 @@ The event limit is never clamped: surface mode rejects more than 64 events. Use
 Events Per Sample > Custom > 64 for a surface layer when the scene uses 4096
 volume events. Error, samples, IDs and memory remain scene-level.
 
-For CPU static Ribbon hair, set Volume Off, tolerance Custom 0, and events Custom 64
+For CPU, CUDA or OptiX static Ribbon hair, set Volume Off, tolerance Custom 0, and events Custom 64
 on the hair view layer. Use SVM and disable motion blur. Hair BSDF and Principled
 Hair (Chiang/Huang) are covered by the named fixtures, including scalar transparent
 mixes. IDs remain object-level; native continuation does not promise every segment
 or a closed hair interior. THICK/THICK_LINEAR, Hair Info, OSL on hair and point
-clouds remain unsupported. GPU hair is not yet qualified.
+clouds remain unsupported.
 
 Hair and volume capture cannot share one deep layer: put the hair layer in surface
 mode and leave separate volume layers on Volume On/Scene. The hair-layer event

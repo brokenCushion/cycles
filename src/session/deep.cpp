@@ -685,8 +685,6 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                    "deep hair requires static geometry and camera; hair motion is unsupported");
       require_deep(scene->params.shadingsystem == SHADINGSYSTEM_SVM,
                    "OSL on hair is unsupported by deep capture");
-      require_deep(params.device.type == DEVICE_CPU,
-                   "deep Ribbon hair currently requires CPU");
     }
     else {
       require_deep(geometry->geometry_type == Geometry::MESH && !geometry->get_use_motion_blur(),

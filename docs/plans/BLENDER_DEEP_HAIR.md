@@ -1,13 +1,15 @@
 # Blender Deep: hair and curves investigation
 
-Status: **M0, CPU M1 and CUDA/OptiX M2 qualified; Part E pending** (2026-10-18).
-Task 20's preserved `a1da1a20e605...` executable passed source/overlay, option,
-kernel/data provenance and the mandatory install hash guard. Both GPUs pass all
-43 fixture stages, full 20+4 calibration, native-hit controls, volume rejection
-and Gaffer checks. All 246 cross-backend alpha comparisons pass (max 1.49e-8),
-without a waiver. The four prior CUDA flags retain Task 18 snapshot resolutions;
-no new flag required diagnostics. Published static Ribbon scope now includes
-CPU/CUDA/OptiX, surface mode, tolerance zero. Part E has not run yet.
+Status: **M0, CPU M1, CUDA/OptiX M2 and Part E complete** (2026-10-19).
+GPU hair commit `4f4dffd63` qualifies static SVM Ribbon, surface mode, tolerance
+zero on CPU/CUDA/OptiX, using preserved executable `a1da1a20e605...`. Both GPUs
+pass 43 fixture stages, full 20+4 calibration, native controls, volume rejection
+and Gaffer; all 246 cross-backend alpha comparisons pass (max 1.49e-8, no waiver).
+Junkshop5 produced six deep/six flat files at 10%, four samples, frames 1-2;
+scanner, OpenEXR and three-layer Gaffer merge checks pass, with hair retained in
+front of BG. Girl has 477 Ribbon events per frame, no overflow and oracle error
+7.45e-9. BG/Robots match junkshop4 encoded deep identity; the source is unsaved
+and hash-identical. M3-M5 remain out of scope; Nuke was not tested.
 See the [Step 4 report](../deep/BLENDER_DEEP_MULTILAYER_RESULTS.md). The original
 investigation/proposal below is retained as historical context.
 

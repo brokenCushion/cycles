@@ -3925,3 +3925,101 @@ tolerance zero; hair motion, other shapes, OSL/Hair Info, point clouds and hair
 in volume mode stay rejected. Part C's CPU regression proof and earlier
 qualified diagnostics remain retained. No Nuke claim. Part E follows the GPU
 hair commit; its result will be recorded separately.
+
+##### Task 20: Part E junkshop5 completed
+
+GPU hair was committed after every Part D gate passed as
+`4f4dffd63173ff8169097248ab108ef0495abe83` (`feat(deep): qualify GPU Ribbon hair`).
+Its message records qualification executable SHA-256
+`a1da1a20e605bfae5bc4aa886e46b4666ab522280b2783f5aedb4a9d158711d9`.
+The compiled source blobs remain exactly those proved before qualification;
+Task 20's repairs affect only external runners/validators. No push or PR.
+
+Junkshop5 completed at 10%, four samples, frames 1-2, OptiX, resolution 200x100.
+All three layers have Deep Alpha on. Girl is surface-only with Volume OFF,
+tolerance CUSTOM 0 and events CUSTOM 64. BG/Robots retain SCENE volume mode,
+scene volume on, shader evaluation on, step .01, 4096 events and 2048 MiB.
+Both effective scanner runs report zero BLOCK findings. All outputs were
+redirected under `D:/temp/cycles_deep_multilayer/junkshop5/` with the
+`{view_layer}` deep template and fixed File Output template.
+
+Source file `C:/Users/jun/Desktop/cycles_deep/thejunkshopsplashscreen_deep_v001.blend`
+SHA-256 before and after:
+`b83b37c58b2e39c0d64a8d906daf7f72d8c9142a7cf53e912ab582f85e5c22aa`.
+The saved File Output nodes are **bg, girl, robots**, each already using
+`{blend_name}_{node_name}_####`; the authorized name correction to **BG, Girl,
+Robots** was therefore applied in memory. The file was never saved.
+Production process wall time was 66.740344 seconds, separate from calibration.
+
+There are exactly six Deep EXRs and six flat EXRs, all channels readable
+immediately after rendering. File list, relative to
+`D:/temp/cycles_deep_multilayer/junkshop5/render/v001/`:
+
+| File | Bytes |
+| --- | --- |
+| thejunkshopsplashscreen_deep_v001_BG_0001.deep.exr | 433119 |
+| thejunkshopsplashscreen_deep_v001_BG_0001.exr | 240687 |
+| thejunkshopsplashscreen_deep_v001_BG_0002.deep.exr | 433119 |
+| thejunkshopsplashscreen_deep_v001_BG_0002.exr | 240698 |
+| thejunkshopsplashscreen_deep_v001_Girl_0001.deep.exr | 27283 |
+| thejunkshopsplashscreen_deep_v001_Girl_0001.exr | 17056 |
+| thejunkshopsplashscreen_deep_v001_Girl_0002.deep.exr | 27283 |
+| thejunkshopsplashscreen_deep_v001_Girl_0002.exr | 17057 |
+| thejunkshopsplashscreen_deep_v001_Robots_0001.deep.exr | 116796 |
+| thejunkshopsplashscreen_deep_v001_Robots_0001.exr | 46244 |
+| thejunkshopsplashscreen_deep_v001_Robots_0002.deep.exr | 116796 |
+| thejunkshopsplashscreen_deep_v001_Robots_0002.exr | 46246 |
+
+All six pass OpenEXR structural/finite/sorted checks and resolution agreement.
+Gaffer reader, DeepToFlat, DeepSlice, point-cloud and BG+Girl+Robots DeepMerge
+checks pass on both frames; each file uses 72 grid pixels and five depth cuts.
+The saved graph was reloaded and its three merge inputs checked explicitly.
+The maximum reader flattening error is 1.19803684973e-07
+and maximum slice error is 7.45058059692e-09, within the published bounds.
+The review is `junkshop5/blender_deep_multilayer_review.gfr`.
+
+The initial Task 19 `runpy` wrapper omitted the repository tools directory,
+so importing `compare_deep_ids` failed before reading output. Under Task 12,
+adding the same tools path that direct script invocation supplies repaired this
+new runner-path bug. The known-good module import succeeds; a known-bad module
+and the incorrect runner-directory module path reject. Gaffer passed on its one
+validation-only retry. No image/reference/threshold change or rerender occurred.
+The failed launch, retry and self-check remain in
+`task20/junkshop5-gaffer.log`, `junkshop5-gaffer-retry.log` and
+`review-wrapper-repair-selfcheck.json`.
+
+BG and Robots, each frame, also pass the encoded Deep EXR identity comparator
+against junkshop4 and have **zero** maximum flattened-alpha difference. They
+contain respectively 77,434 and 15,492 deep samples per frame, unchanged from
+junkshop4. These are reported cross-build/source-file comparisons; same-build
+repeat identity is not newly asserted across builds. Full deterministic/run
+attribute details are in `junkshop5/junkshop4-comparison.json`. No Part E GPU
+beauty pixel comparison was requested or performed, so no smoke beauty-policy
+qualification is claimed; Part D already qualified both GPU backends.
+
+Girl's independent all-pixel/all-depth raw oracle, ID ownership and terminal
+checks pass on both frames: 20,000 pixels / 80,000 camera samples per frame,
+median/p95/max accepted events **0/0/1**, raw maximum 1, **zero** overflow pixels,
+477 Ribbon events and maximum all-depth error **7.450580596923828e-9**. The EXR
+contains 3,340 deep samples per frame. The histogram includes misses.
+
+A retained Ribbon event is demonstrated in the reloaded Gaffer merge on both
+frames: file pixel (118,45), Gaffer pixel (118,54), Z=ZBack=9.855746269226074,
+encoded alpha .25, ahead of nearest BG depth 12.629141807556152. It remains at
+merged sample index 4 of 6. The raw Ribbon event's object manifest name is
+`Face` (object ID 2899238735); this is object ownership, **not** a strand ID.
+The graph inputs are exactly BG/Girl/Robots for each frame.
+`girl-oracle-histogram.json`, `hair-front-proof.json` and `gaffer-hair-front.json`
+record the event population, raw provenance and actual merged sample.
+
+Part E is complete. M0-M2 static SVM Ribbon scope is qualified on CPU/CUDA/OptiX;
+M3 mixed hair/volume, other shapes, Hair Info, OSL on hair, hair motion and point
+clouds remain outside scope. No full-resolution render or Nuke test was run.
+All untracked source assets remain preserved. The installed qualification
+executable is unchanged. The clean-build directory remains unused because its
+removal was blocked by automatic approval review; that cleanup limitation is
+recorded above. Stop here after Part E, with no further gate or production run.
+
+Final report checks: Markdown checker passed (35 documents, 200 local links,
+zero broken; 41 external links not fetched) and `git diff --check` passed.
+The Part E report is committed separately after the GPU-hair qualification commit.

@@ -39,6 +39,14 @@ assert alpha.description == ('Write deep alpha (Z/ZBack/A). Background renders a
                              'interactive F12 is experimental.')
 assert cscene.bl_rna.properties['deep_error'].precision == 4
 assert cscene.bl_rna.properties['deep_z_tolerance'].precision == 5
+assert layer.cycles.deep_volume_mode == 'SCENE'
+assert layer.cycles.deep_z_tolerance_mode == 'SCENE'
+assert layer.cycles.deep_max_events_mode == 'SCENE'
+for limit in ('hard_min', 'hard_max'):
+    assert getattr(layer.cycles.bl_rna.properties['deep_max_events'],limit) == getattr(cscene.bl_rna.properties['deep_max_events'],limit)
+assert layer.cycles.bl_rna.properties['deep_z_tolerance'].precision == 5
+assert layer.cycles.bl_rna.properties['deep_z_tolerance'].hard_min == cscene.bl_rna.properties['deep_z_tolerance'].hard_min
+assert layer.cycles.bl_rna.properties['deep_z_tolerance'].hard_max == cscene.bl_rna.properties['deep_z_tolerance'].hard_max
 assert abs(cscene.deep_error - 0.001) < 1e-9
 assert abs(cscene.deep_z_tolerance - 0.0001) < 1e-10
 assert not cscene.deep_write_diagnostics
@@ -243,7 +251,7 @@ class Layout:
 
 
 assert 'draw_header' not in ui.CYCLES_RENDER_PT_passes_deep.__dict__
-settings = ['use_deep_volume', 'use_deep_volume_shader_eval', 'deep_volume_step',
+settings = ['deep_volume_mode', 'deep_z_tolerance_mode', 'deep_max_events_mode', 'use_deep_volume', 'use_deep_volume_shader_eval', 'deep_volume_step',
             'deep_error', 'deep_z_tolerance', 'deep_samples', 'deep_max_events', 'deep_memory_mb']
 for engine in ('CYCLES', 'BLENDER_EEVEE'):
     scene.render.engine = engine
@@ -257,12 +265,27 @@ for engine in ('CYCLES', 'BLENDER_EEVEE'):
             ui.CYCLES_RENDER_PT_passes_deep.draw(SimpleNamespace(layout=Layout(log)), bpy.context)
             props = [entry for entry in log if entry[0] == 'prop']
             assert [p[1] for p in props] == ['use_pass_deep_color', 'use_pass_deep', 'use_deep_ids', *settings], log
-            assert [p[2] for p in props] == [False, True, enabled and error != 0, *([enabled] * 8)], log
+            assert [p[2] for p in props] == [False, True, enabled and error != 0, *[enabled and (cscene.use_deep_volume or name not in ('use_deep_volume_shader_eval','deep_volume_step')) for name in settings]], log
             assert props[2][3] == 'Deep ID'
             assert log.index(('separator',)) > log.index(props[2])
             labels = [entry[1] for entry in log if entry[0] == 'label']
             assert labels == (['IDs need a non-zero transmittance error'] if error == 0 else []), log
 results['panel_draw_contract'] = True
+for enabled in (False, True):
+    layer.cycles.use_pass_deep = enabled
+    layer.cycles.deep_volume_mode = 'OFF'
+    layer.cycles.deep_z_tolerance_mode = 'CUSTOM'
+    layer.cycles.deep_z_tolerance = 0
+    layer.cycles.deep_max_events_mode = 'CUSTOM'
+    layer.cycles.deep_max_events = 64
+    log = []
+    ui.CYCLES_RENDER_PT_passes_deep.draw(SimpleNamespace(layout=Layout(log)), bpy.context)
+    assert ('label', 'Effective Volume: Off', enabled) in log
+    assert all(not p[2] for p in log if p[0]=='prop' and p[1] in ('use_deep_volume_shader_eval','deep_volume_step'))
+    assert all(p[2] == enabled for p in log if p[0] == 'prop' and p[1] in ('deep_volume_mode', 'deep_z_tolerance_mode', 'deep_z_tolerance'))
+layer.cycles.deep_volume_mode = layer.cycles.deep_z_tolerance_mode = 'SCENE'
+layer.cycles.deep_max_events_mode = 'SCENE'
+results['panel_layer_overrides'] = True
 scene.render.engine = 'CYCLES'
 for enabled in (False, True):
     other.cycles.use_pass_deep = enabled

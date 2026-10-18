@@ -1601,3 +1601,110 @@ interoperability, not procedural-volume accuracy against a finer-step reference.
 The source scene still contains its original invalid flat templates because all
 corrections were launch-only; future launches must apply the same overrides or
 the user must save corrected node settings. Stopped after this report.
+
+## Step 4: Ribbon hair (M0–M2) and per-layer overrides
+
+### Part A candidate: STOP at first new validation gate (2026-10-18)
+
+Started at `427d5185e` on `blender-deep-multilayer`. Part A is incomplete and
+uncommitted. Parts B–E were not started. No push or PR; no junkshop source save.
+
+Candidate files changed:
+
+- `tools/prepare_blender_deep.py`: layer Volume SCENE/ON/OFF and tolerance
+  SCENE/CUSTOM properties, session resolution and inactive/effective-value UI.
+- `tools/scan_blender_deep_scene.py`: effective per-layer settings and older-build
+  property fallback, retaining shader-evaluation and event-capacity guards.
+- `tools/test_blender_deep_layer_overrides.py`: two-layer surface/volume fixture,
+  scanner agreement, fallback and EXR-header/interval assertions.
+- `tools/test_blender_deep_ui.py`, `tools/test_blender_deep_panel.py`,
+  `tools/test_blender_deep_migration.py`: extended assertions/screenshots/defaults,
+  not run after the failed gate.
+
+Commands used the guarded environment and output root
+`D:/temp/cycles_deep_multilayer/`:
+
+1. `run_A_before.py cpu`: unchanged installed build rendered 24 CPU multilayer
+   files, exit 0. The copied runner initially looked for the qualified single-layer
+   reference under the new A-before directory and raised FileNotFoundError.
+   This was a measurement-path error, not an identity mismatch. Per VALIDATION.md's
+   parser/import/report repair exception, only preserved-output analysis was rerun:
+   `tools/test_blender_deep_multilayer.py verification/step4/A-before/cpu --validate
+   --reference verification/step2/regression/baseline`. All 24 files and qualified
+   single-layer byte identity passed. No reference was replaced and no render repeated.
+2. `rebuild_A.py`: verified pinned Blender HEAD, reset only the authorized generated
+   overlay, ran overlay `--check`, applied it and built/installed incrementally
+   through `build_guarded.py build`. Exit 0; 1140 unchanged source timestamps
+   preserved. Log: `verification/build.log`.
+3. `run_A.py overrides`: candidate two-layer render exit 0;
+   `DEEP_LAYER_OVERRIDES_RENDER_PASS`. The fixture's effective-settings/scanner
+   assertions completed. Both `Surface_0001.deep.exr` and `Volume_0001.deep.exr`
+   were published under `verification/step4/A/overrides/`.
+4. Preserved-output validator exited **1**, at this gate:
+
+```text
+File tools/test_blender_deep_layer_overrides.py, line 20
+assert header['cycles:deepScope'] == 'analytic_volume_reference'
+AssertionError
+```
+
+Evidence: `verification/step4/A/overrides-command.json`, `overrides.log`,
+`overrides-validation.log`, and `overrides/scanner.json`. Surface checks and
+Volume numeric/depth-tolerance checks preceding that assertion did not raise;
+the complete fixture is nevertheless **failed/unqualified**. No repair, rerun,
+reference change, threshold change or further failure investigation was performed.
+This report does not classify the failure as a renderer bug or a validator bug.
+
+The installed executable now contains the **unqualified Part A adapter candidate**.
+No core renderer or beauty code was changed. The working-tree candidate is retained
+for review; no Part A commit was made because that part did not pass its gates.
+
+A separate scope conflict was identified by reading the existing guards before
+rendering: Part E retains 4096 scene-level events and the prior shader volume
+evaluation setting, while Girl is requested in surface mode. Existing guards
+require a surface event limit at most 64 and volume on for shader volume evaluation.
+Neither guard nor scene-level setting was silently changed. Part E was not run.
+
+Skipped after STOP: candidate CPU regression/identity, UI, visual panel, migration
+and full scanner drift gates; all Part B baselines/diagnostics, Part C CPU hair,
+Part D GPU beauty/cross-backend gates and OptiX audit, Part E junkshop5, event
+histograms, Gaffer and Nuke. No hair support is claimed. The earlier hair plan
+milestones remain unimplemented. No SUPPORT.md qualification row was added.
+
+### Task 08: Part A repair and qualification
+
+The authorized validator repair changes only the expected native Blender volume
+scope: `analytic_volume_reference` belonged to the standalone writer, while the
+preserved non-shader-evaluated Blender fixture uses `native_scalar_extinction`.
+The preserved outputs were validated once without rerendering; all later
+assertions passed (`DEEP_LAYER_OVERRIDES_PASS`). New fixture manifests identify
+shader evaluation so validation expects `shader_evaluated_scalar_extinction`
+only when applicable. No renderer result, bound or reference was changed.
+
+Implemented 2a/2b in the adapter and scanner: effective Volume Off passes shader
+evaluation false and volume step zero; their UI controls are inactive. Layer
+Events Per Sample defaults to Scene or uses an explicit Custom value, with the
+same 1–8192 RNA limits as the scene. Existing core event guards are unchanged.
+The scanner reports effective values and suggests the layer override on overflow.
+Older-build scanner resolution falls back when layer properties are absent.
+
+Commands: `rebuild_A2.py` (authorized reset/check/apply/incremental install), then
+`run_A2.py overrides`, `cpu`, `ui`, `migration`, `panel`, `drift`, all under
+`D:/temp/cycles_deep_multilayer/`. Build exit 0. Qualification outputs and logs:
+`verification/step4/A2/`; preserved repair outputs: `verification/step4/A/overrides/`.
+
+| Gate | Result |
+| --- | --- |
+| Two-layer overrides | PASS: 32×32; Surface Volume Off / 64 events / tolerance 0; Volume Scene On / 4096 events / shader evaluation / scene tolerance. |
+| Headers and interval behavior | PASS: Surface has no volume method or positive tolerance header; Volume has shader_evaluated_scalar_extinction, shader-eval-adaptive, step 0.01, tolerance ~0.0001, and nonzero-depth intervals. Surface/Volume published 484/548 samples. |
+| Negative surface Scene events=4096 | PASS: scanner BLOCK; renderer says invalid deep traversal limit; no negative deep file published. The intentional last rejection leaves Blender exit 1; completed fixture manifest plus validator exit 0 establishes the expected result. |
+| CPU multilayer | PASS: all 24 outputs valid and whole-file byte-identical to preserved pre-Part-A outputs; qualified single-layer bytes identical too. `cpu-full-identity.json`. |
+| UI | PASS: properties/defaults/limits, effective controls, paths, bake and draw assertions. |
+| Migration | PASS: previous saved settings unchanged and all three new modes default to Scene, including reload. |
+| Panel | PASS: three screenshots inspected: alpha-off overrides inactive; alpha-on Custom values visible; Volume Off disables shader evaluation/step; strict IDs inactive and effective tolerance 0 shown. |
+| Scanner drift | PASS: 132 cases, zero false negatives and false positives; device read-only assertion and five path cases pass. Override positive/negative predictions are tested separately by the two-layer fixture. |
+
+Files for commit A: adapter overlay, scanner, layer-override fixture, UI/panel/
+migration tests, BLENDER.md and this report. No core renderer or beauty source
+changes. No event histogram or OptiX hair audit applies to Part A. Hair support,
+Parts B–E and junkshop5 remain pending at this commit. No push or PR.

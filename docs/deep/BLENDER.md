@@ -240,3 +240,22 @@ fixtures. Pass a fresh output directory and case after `--`; cases include
 `valid`, `view_layer`, `brace`, `deep`, `format`, `string_format`, `directory`,
 `item`, `render`, and `numeric`. Invalid compositor paths can log an error without
 raising from the render operator: check the log and expected output files.
+
+## Per-layer deep settings
+
+View Layer > Passes > Deep provides Volume (Scene/On/Off), Surface Depth
+Tolerance (Scene/Custom), and Events Per Sample (Scene/Custom). Existing files
+use Scene defaults. Custom values apply only to the current deep layer; strict
+mode still forces effective depth tolerance to zero. Controls are inactive when
+Deep Alpha is off.
+
+When effective Volume is Off, Volume Shader Evaluation and Volume Step are not
+applicable: the adapter passes false and zero, the scanner uses the same rule,
+and the panel greys out both controls. When Volume is On they retain scene values.
+The event limit is never clamped: surface mode rejects more than 64 events. Use
+Events Per Sample > Custom > 64 for a surface layer when the scene uses 4096
+volume events. Error, samples, IDs and memory remain scene-level.
+
+The planned hair-layer setup is Volume Off, tolerance Custom 0, events Custom 64.
+These overrides are qualified independently; they do not yet enable hair capture.
+Hair in a volume-enabled layer remains unsupported.

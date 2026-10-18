@@ -41,6 +41,10 @@ else:
 
     def check_settings():
         assert {name: getattr(bpy.context.scene.cycles, name) for name in settings} == expected
+        for layer in bpy.context.scene.view_layers:
+            assert layer.cycles.deep_volume_mode == 'SCENE'
+            assert layer.cycles.deep_z_tolerance_mode == 'SCENE'
+            assert layer.cycles.deep_max_events_mode == 'SCENE'
 
     assert scene.view_layers['LegacyRenderLayer'].cycles.use_pass_deep
     assert not scene.view_layers['DisabledLayer'].cycles.use_pass_deep

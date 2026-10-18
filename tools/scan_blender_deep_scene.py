@@ -48,6 +48,15 @@ REJECTED_NODES = {
     'Tangent':'tangent','LayerWeight':'layer_weight','CameraData':'camera','ParticleInfo':'particle_info',
     'Wireframe':'wireframe','Script':'script',
 }
+def effective_deep_settings(scene, layer):
+    """Match adapter overrides; older builds have only scene properties."""
+    volume_mode = getattr(layer.cycles, 'deep_volume_mode', 'SCENE')
+    tolerance_mode = getattr(layer.cycles, 'deep_z_tolerance_mode', 'SCENE')
+    volume = scene.cycles.use_deep_volume if volume_mode == 'SCENE' else volume_mode == 'ON'
+    tolerance = layer.cycles.deep_z_tolerance if tolerance_mode == 'CUSTOM' else scene.cycles.deep_z_tolerance
+    return volume, tolerance
+
+
 # validate_deep_scene(): settings which RNA exposes without changing scene data.
 SETTING_RULES = [
     ('samples', lambda s,l: not 1 <= (l.samples or s.cycles.samples) <= 4096, 'requires 1..4096 samples'),
@@ -62,11 +71,10 @@ SETTING_RULES = [
     ('filter', lambda s,l: s.cycles.pixel_filter_type not in {'BOX','GAUSSIAN','BLACKMAN_HARRIS'} or not math.isfinite(s.cycles.filter_width) or s.cycles.filter_width <= 0, 'invalid camera filter'),
     ('strict_ids', lambda s,l: s.cycles.use_deep_ids and s.cycles.deep_error == 0, 'deep IDs require numeric error'),
     ('error', lambda s,l: s.cycles.deep_error != 0 and not 1e-6 < s.cycles.deep_error <= .010000001, 'invalid deep error'),
-    ('depth_tolerance', lambda s,l: not math.isfinite(s.cycles.deep_z_tolerance) or s.cycles.deep_z_tolerance < 0, 'invalid surface depth tolerance'),
+    ('depth_tolerance', lambda s,l: not math.isfinite(effective_deep_settings(s,l)[1]) or effective_deep_settings(s,l)[1] < 0, 'invalid surface depth tolerance'),
     ('deep_samples', lambda s,l: s.cycles.deep_samples < 0, 'invalid deep sample limit'),
     ('memory', lambda s,l: s.cycles.deep_memory_mb <= 0, 'working memory must be positive'),
-    ('volume_step', lambda s,l: not math.isfinite(s.cycles.deep_volume_step) or s.cycles.deep_volume_step < 0, 'invalid volume step'),
-    ('volume_mode', lambda s,l: s.cycles.use_deep_volume_shader_eval and not s.cycles.use_deep_volume, 'shader volume evaluation requires volume visibility'),
+    ('volume_step', lambda s,l: effective_deep_settings(s,l)[0] and (not math.isfinite(s.cycles.deep_volume_step) or s.cycles.deep_volume_step < 0), 'invalid volume step'),
 ]
 SUPPORT_VOLUME = '| Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |'
 UNDECIDABLE = [
@@ -300,7 +308,13 @@ def scan(scene, layer_name=None, frame=None, device=None):
                 if predicate(scene,layer): add('BLOCK',rule,reason)
             if scene.render.engine != 'CYCLES': add('BLOCK','engine','Cycles engine required')
             camera=scene.camera
-            volume=scene.cycles.use_deep_volume
+            volume,tolerance=effective_deep_settings(scene,layer)
+            shader_eval=volume and scene.cycles.use_deep_volume_shader_eval
+            events=layer.cycles.deep_max_events if getattr(layer.cycles,'deep_max_events_mode','SCENE')=='CUSTOM' else scene.cycles.deep_max_events
+            entry['effective_volume']=volume
+            entry['effective_shader_eval']=shader_eval
+            entry['effective_events']=events
+            entry['effective_z_tolerance']=0 if scene.cycles.deep_error == 0 else tolerance
             if not camera: add('BLOCK','camera','No active camera')
             else:
                 data=camera.data
@@ -343,7 +357,7 @@ def scan(scene, layer_name=None, frame=None, device=None):
                     mat=layer.material_override or slot.material
                     output=mat.node_tree.get_output_node('CYCLES') if mat and mat.node_tree else None
                     if output and output.inputs['Volume'].is_linked:
-                        has_eval |= scene.cycles.use_deep_volume_shader_eval or scene.cycles.shading_system
+                        has_eval |= volume and (shader_eval or scene.cycles.shading_system)
                 if obj.type not in {'MESH','CURVE','CURVES','SURFACE','FONT','META','VOLUME','POINTCLOUD','LIGHT'}: continue
                 holdout=parent_original.holdout_get(view_layer=layer) or parent.is_holdout
                 indirect=not holdout and parent_original.indirect_only_get(view_layer=layer)
@@ -372,9 +386,9 @@ def scan(scene, layer_name=None, frame=None, device=None):
                 for material in materials:
                     output=material.node_tree.get_output_node('CYCLES') if material.node_tree else None
                     if output and output.inputs['Volume'].is_linked:
-                        has_eval |= scene.cycles.use_deep_volume_shader_eval or scene.cycles.shading_system
+                        has_eval |= volume and (shader_eval or scene.cycles.shading_system)
                         if not volume: add('BLOCK','volume_disabled','volume shaders are unsupported without volume visibility',material=material.name,**fields)
-                        elif (scene.cycles.use_deep_volume_shader_eval or scene.cycles.shading_system) and obj.type!='VOLUME' and scene.cycles.deep_volume_step<=0: add('BLOCK','volume_step','shader-evaluated volume without a grid requires volume step',material=material.name,**fields)
+                        elif (shader_eval or scene.cycles.shading_system) and obj.type!='VOLUME' and scene.cycles.deep_volume_step<=0: add('BLOCK','volume_step','shader-evaluated volume without a grid requires volume step',material=material.name,**fields)
                     inspect_material(material,lambda level,rule,reason,**kw:add(level,rule,reason,**fields,**kw))
             for obj in scene.objects:
                 if obj.name not in observed and obj.type in {'MESH','CURVES','VOLUME','POINTCLOUD'}: add('OK-ignored','excluded','excluded, hidden, or not present in this layer depsgraph',object=obj.name)
@@ -384,7 +398,7 @@ def scan(scene, layer_name=None, frame=None, device=None):
                     if world_out.inputs['Volume'].is_linked: add('BLOCK','world_volume','volume and displacement shaders are unsupported in the world')
                     if any(n.type!='BACKGROUND' for n,o,c in upstream(world_out.inputs['Surface'])): add('BLOCK','world_surface','deep world requires a background surface closure')
             max_events=8192 if volume and (has_grid or has_eval) else 64
-            if not 1<=scene.cycles.deep_max_events<=max_events: add('BLOCK','events',f'invalid deep traversal limit (maximum {max_events})')
+            if not 1<=events<=max_events: add('BLOCK','events',f'invalid deep traversal limit (maximum {max_events}); use View Layer > Deep > Events Per Sample: Custom')
             if volume and has_eval and scene.cycles.deep_error<=2e-6: add('BLOCK','volume_error','shader-evaluated volumes require numeric error greater than 2e-6')
         for entry in report['layers']:
             path=destinations.get(entry['layer'])

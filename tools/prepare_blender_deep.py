@@ -112,6 +112,19 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
         description="First N accepted camera samples; 0 uses all beauty samples")
 ''')
 edit('blender/addon/properties.py', 'class CyclesRenderLayerSettings(bpy.types.PropertyGroup):\n', '''class CyclesRenderLayerSettings(bpy.types.PropertyGroup):
+    deep_volume_mode: EnumProperty(name="Volume", default='SCENE',
+        items=(('SCENE', "Scene", "Use scene Deep Volume"),
+               ('ON', "On", "Enable Deep Volume for this layer"),
+               ('OFF', "Off", "Disable Deep Volume for this layer")))
+    deep_z_tolerance_mode: EnumProperty(name="Surface Depth Tolerance", default='SCENE',
+        items=(('SCENE', "Scene", "Use scene surface depth tolerance"),
+               ('CUSTOM', "Custom", "Use this layer's surface depth tolerance")))
+    deep_z_tolerance: FloatProperty(name="Layer Surface Depth Tolerance", default=1e-4,
+        min=0, precision=5, description="Relative same-object surface depth span; 0 disables; strict forces 0")
+    deep_max_events_mode: EnumProperty(name="Events Per Sample", default='SCENE',
+        items=(('SCENE', "Scene", "Use scene event limit"),
+               ('CUSTOM', "Custom", "Use this layer's event limit")))
+    deep_max_events: IntProperty(name="Layer Events Per Sample", default=16, min=1, max=8192)
     use_pass_deep_color: BoolProperty(
         name="Deep Color", default=False,
         description="Not implemented yet",
@@ -167,10 +180,24 @@ edit('blender/addon/ui.py', 'class CYCLES_RENDER_PT_passes_aov', """class CYCLES
         layout.separator()
         col = layout.column()
         col.active = clayer.use_pass_deep
+        col.prop(clayer, "deep_volume_mode")
+        if clayer.deep_volume_mode != 'SCENE':
+            col.label(text="Effective Volume: " + ("On" if clayer.deep_volume_mode == 'ON' else "Off"))
+        col.prop(clayer, "deep_z_tolerance_mode")
+        if clayer.deep_z_tolerance_mode == 'CUSTOM':
+            col.prop(clayer, "deep_z_tolerance")
+            if cscene.deep_error == 0:
+                col.label(text="Effective Surface Depth Tolerance: 0 (Strict)")
+        col.prop(clayer, "deep_max_events_mode")
+        if clayer.deep_max_events_mode == 'CUSTOM':
+            col.prop(clayer, "deep_max_events")
+        volume = cscene.use_deep_volume if clayer.deep_volume_mode == 'SCENE' else clayer.deep_volume_mode == 'ON'
         for prop in ("use_deep_volume", "use_deep_volume_shader_eval",
                      "deep_volume_step",
                      "deep_error", "deep_z_tolerance", "deep_samples", "deep_max_events", "deep_memory_mb"):
-            col.prop(cscene, prop)
+            row = col.row()
+            row.active = volume or prop not in {'use_deep_volume_shader_eval', 'deep_volume_step'}
+            row.prop(cscene, prop)
 
 
 class CYCLES_RENDER_PT_output_deep(CyclesButtonsPanel, Panel):
@@ -217,9 +244,23 @@ edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_
     params.deep.volume_step = get_float(cscene, "deep_volume_step");
     params.deep.error = get_float(cscene, "deep_error");
     params.deep.z_tolerance = get_float(cscene, "deep_z_tolerance");
+    blender::PointerRNA layer_ptr = RNA_pointer_create_id_subdata(
+        b_scene.id, blender::RNA_ViewLayer, b_view_layer);
+    blender::PointerRNA clayer = RNA_pointer_get(&layer_ptr, "cycles");
+    const int volume_mode = get_enum(clayer, "deep_volume_mode");
+    if (volume_mode != 0)
+      params.deep.volume = volume_mode == 1;
+    if (!params.deep.volume) {
+      params.deep.volume_shader_eval = false;
+      params.deep.volume_step = 0;
+    }
+    if (get_enum(clayer, "deep_z_tolerance_mode") == 1)
+      params.deep.z_tolerance = get_float(clayer, "deep_z_tolerance");
     params.deep.samples = get_int(cscene, "deep_samples");
     params.deep.ids = get_boolean(cscene, "use_deep_ids");
     params.deep.max_events = get_int(cscene, "deep_max_events");
+    if (get_enum(clayer, "deep_max_events_mode") == 1)
+      params.deep.max_events = get_int(clayer, "deep_max_events");
     params.deep.memory_bytes = size_t(get_int(cscene, "deep_memory_mb")) * 1024 * 1024;
     /* Deep publication covers a complete frame. Native automatic tiling is not
      * part of that contract yet; capture storage itself can spill to disk. */

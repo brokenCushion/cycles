@@ -22,6 +22,11 @@ scene.cycles.deep_error = 0.001
 scene.cycles.use_deep_ids = True
 layer = bpy.context.view_layer
 layer.cycles.use_pass_deep = False
+layer.cycles.deep_volume_mode = 'OFF'
+layer.cycles.deep_z_tolerance_mode = 'CUSTOM'
+layer.cycles.deep_z_tolerance = 0
+layer.cycles.deep_max_events_mode = 'CUSTOM'
+layer.cycles.deep_max_events = 64
 assert not layer.cycles.use_pass_deep_color
 bpy.context.preferences.view.show_splash = False
 bpy.context.preferences.view.show_tooltips = True

@@ -1,6 +1,12 @@
 # Blender Deep: hair and curves investigation
 
-Status: **proposal only; not implemented or qualified** (2026-10-18).
+Status: **M0 and CPU M1 qualified; M2 pending** (2026-10-18). Task 16 updated the
+obsolete allowlist expectation. All CPU hair, rejection, regression, source/resource,
+consumer and holdout checks passed; Markdown validation and the Part C commit
+complete the milestone below. GPU diagnostics and hair remain deferred to Part D.
+See the [Step 4 report](../deep/BLENDER_DEEP_MULTILAYER_RESULTS.md). The original
+investigation/proposal below is retained as historical context.
+
 Investigated repository `643d2ec0d`, branch `blender-deep-multilayer`, and pinned
 Blender `749518deb2f0735a22361a07488b35f7ea5c2fdf`.
 Only this document is committed. The user decides implementation scope.

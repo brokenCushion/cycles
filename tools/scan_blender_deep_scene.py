@@ -46,7 +46,7 @@ REJECTED_NODES = {
     'TexVoronoi':'voronoi_texture','TexMagic':'magic_texture','TexWhiteNoise':'white_noise_texture',
     'TexGabor':'gabor_texture','UVMap':'uv_map','VertexColor':'vertex_color','ObjectInfo':'object_info',
     'Tangent':'tangent','LayerWeight':'layer_weight','CameraData':'camera','ParticleInfo':'particle_info',
-    'Wireframe':'wireframe','Script':'script',
+    'Wireframe':'wireframe','Script':'script','HairInfo':'hair_info',
 }
 def effective_deep_settings(scene, layer):
     """Match adapter overrides; older builds have only scene properties."""
@@ -368,8 +368,14 @@ def scan(scene, layer_name=None, frame=None, device=None):
                     continue
                 fields=dict(object=original.name,instance_parent=parent_original.name if instance.is_instance else None)
                 if obj.type=='LIGHT': continue
-                if obj.type in {'CURVES','POINTCLOUD'}: add('BLOCK','geometry','only static polygon meshes and background lighting are supported: '+obj.type,**fields)
-                if any(ps.settings.type=='HAIR' for ps in obj.particle_systems): add('BLOCK','particle_hair','particle hair curve geometry is unsupported',**fields)
+                if obj.type=='POINTCLOUD': add('BLOCK','geometry','point clouds are unsupported by deep capture',**fields)
+                if obj.type=='CURVES' or any(ps.settings.type=='HAIR' for ps in obj.particle_systems):
+                    if volume: add('BLOCK','hair_volume','hair requires Deep Volume off for this layer (View Layer > Deep > Volume: Off)',**fields)
+                    if entry['effective_z_tolerance']!=0: add('BLOCK','hair_tolerance','hair requires Surface Depth Tolerance 0 for this layer',**fields)
+                    if scene.cycles_curves.shape!='RIBBONS': add('BLOCK','hair_shape','deep hair requires Ribbon shape; THICK and THICK_LINEAR are unsupported',**fields)
+                    if scene.render.use_motion_blur: add('BLOCK','hair_motion','deep hair requires static geometry and camera; hair motion is unsupported',**fields)
+                    if scene.cycles.shading_system: add('BLOCK','hair_osl','OSL on hair is unsupported by deep capture',**fields)
+                    if backend!='CPU': add('BLOCK','hair_device','deep Ribbon hair currently requires CPU',**fields)
                 if obj.modifiers and obj.modifiers[-1].type=='SUBSURF' and obj.modifiers[-1].show_render and obj.modifiers[-1].use_adaptive_subdivision: add('BLOCK','subdivision','subdivision is unsupported',**fields)
                 if obj.is_shadow_catcher or parent.is_shadow_catcher or getattr(obj.cycles,'is_caustics_caster',False) or getattr(obj.cycles,'is_caustics_receiver',False): add('BLOCK','object_flags','shadow catcher and caustics are unsupported',**fields)
                 if scene.render.use_motion_blur and getattr(obj.cycles,'use_motion_blur',True) and getattr(obj.cycles,'use_deform_motion',True):

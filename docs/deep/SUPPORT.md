@@ -18,6 +18,7 @@ unchanged.
 | Devices | Single CPU/CUDA/OptiX with SVM; CPU/OptiX OSL scalar surfaces and named volume fixtures, background render. CUDA OSL is unsupported. Explicit SVM shader-volume evaluation passes on CPU/CUDA/OptiX. |
 | Shading | Native SVM scalar camera opacity/extinction; OSL constant/texture/noise/camera-query surfaces and Script/native-node materials, within preflight. Shader volumes cover constant, textured and grid-reading extinction with stated adaptive stepping error. OSL trace/@ao/@bevel, unsafe ray/path/unknown queries, dynamic textures and unprovable closure capacity fail explicitly. Runtime rejects coloured/invalid extinction and cache misses. |
 | Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
+| Hair | CPU only: static SVM Ribbon surfaces, effective Deep Volume OFF and depth tolerance 0. Native transparent continuation, object-level IDs and holdouts; capacities 16/64 checked. CUDA/OptiX hair, THICK/THICK_LINEAR, hair motion, OSL on hair, Hair Info, hair in volume mode and point clouds remain rejected. |
 | Camera | Surface-only perspective/orthographic, DOF and rigid motion; volumes require static mono perspective without DOF/motion. |
 | Samples | Fixed/native adaptive accepted populations; `--deep-samples 0` uses all, positive N retains the first N without changing beauty. |
 | Denoising | Native OIDN, including GPU OIDN in supplied landscape fixtures; deep remains separate from beauty. |
@@ -85,7 +86,7 @@ the [production evidence](evidence/README.md).
 The Step 2 fixtures qualify these opaque closures on polygon meshes:
 `glossy_bsdf`, `metallic_bsdf`, `refraction_bsdf`, `sheen_bsdf`, `toon_bsdf`,
 `subsurface_scattering`, `hair_bsdf`, `principled_hair_bsdf`. They do not contribute
-to straight camera transparency. Hair curve geometry remains unsupported.
+to straight camera transparency. Static CPU Ribbon geometry is qualified only within the hair row above.
 
 The additional math/utility nodes are `vector_math`, `map_range`, `separate_xyz`,
 `combine_xyz`, `mix_float`, `mix_vector`, `mix_vector_non_uniform`, `vector_rotate`,
@@ -101,7 +102,7 @@ Ray Length and Ray Depth support is unchanged.
 Transparent Depth remains rejected: the volume capture path does not advance its
 counter. Ray Portal remains rejected because it redirects rays. AO/Bevel remain
 allowed only outside opacity dependencies. Tier 3/4 nodes, vector_map_range,
-curve/point-cloud geometry, adaptive subdivision, deforming motion and shadow
+curve geometry outside the CPU Ribbon scope, point-cloud geometry, adaptive subdivision, deforming motion and shadow
 catchers remain outside this expansion.
 
 CPU tests cover 32 color-only/closure byte-identity pairs and all 24 new

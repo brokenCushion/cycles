@@ -26,6 +26,17 @@ LIGHT = ['Is Diffuse Ray','Is Glossy Ray','Is Singular Ray','Is Reflection Ray',
          'Transmission Depth','Portal Depth']
 
 
+def validate_hair(root):
+    from test_blender_deep_hair import flat_identity
+    report = json.loads((root / 'results.json').read_text())
+    checks = {}
+    for case in report.get('positive_hair', []):
+        checks[case] = flat_identity(root / case / 'beauty_####.exr',
+                                     root / case / 'off_####.exr', ['Visible'])
+    (root / 'hair-flat-identity.json').write_text(json.dumps(checks, indent=2))
+    print('ALLOWLIST_HAIR_FLAT_PASS', len(checks), flush=True)
+
+
 def validate(root):
     import numpy as np
     import OpenEXR
@@ -73,6 +84,7 @@ def validate(root):
             assert all(np.array_equal(before[k].pixels,after[k].pixels) for k in before),case
         assert all(sum(a is not None and len(a)>=2 for a in row)==len(row) for row in values),case
         checks[case]=dict(maximum_oracle_error=error,deep_error=checked['deep_error'],grid_pixels=len(pixels),native_beauty_alpha_difference=beauty_error,oracle_beauty_difference=max(oracle_beauty),cpu_beauty_exact=report['device']=='CPU')
+    validate_hair(root)
     report['validation']=checks
     (root/'validation.json').write_text(json.dumps(report,indent=2))
     print('DEEP_ALLOWLIST_VALIDATION_PASS',report['device'],len(checks),'opacity cases; max error',max(v['maximum_oracle_error'] for v in checks.values()),flush=True)
@@ -125,7 +137,7 @@ def render_suite(root,device):
     from test_scan_blender_deep_scene import fixture,apply_case
     from scan_blender_deep_scene import scan
     root.mkdir(parents=True,exist_ok=False)
-    report=dict(candidate=True,device=device,opaque=[],opacity=[],rejections={})
+    report=dict(candidate=True,device=device,opaque=[],opacity=[],positive_hair=[],rejections={})
 
     def setup():
         s,obj,mat,bsdf,out=fixture()
@@ -186,16 +198,29 @@ def render_suite(root,device):
             s.render.filepath=str(root/case/'off_####');bpy.ops.render.render(write_still=True)
         report['opacity'].append(case)
         print('ALLOWLIST_OPACITY_RENDER_PASS',device,kind,flush=True)
-    for case in ('ray_portal','ao_opacity','bevel_opacity','light_transparent_depth','particle_hair'):
-        s,obj,mat,bsdf,out=setup();apply_case(case,s,obj,mat,bsdf,out)
+    if device == 'CPU':
+        s,obj,mat,bsdf,out=setup();apply_case('particle_hair',s,obj,mat,bsdf,out)
+        draw(s,'particle_hair',write=True)
+        s.view_layers[0].cycles.use_pass_deep=False
+        s.render.filepath=str(root/'particle_hair'/'off_####')
+        bpy.ops.render.render(write_still=True)
+        report['positive_hair'].append('particle_hair')
+    for case in ('ray_portal','ao_opacity','bevel_opacity','light_transparent_depth','particle_hair_tolerance'):
+        s,obj,mat,bsdf,out=setup()
+        apply_case('particle_hair' if case=='particle_hair_tolerance' else case,s,obj,mat,bsdf,out)
+        if case=='particle_hair_tolerance': s.cycles.deep_z_tolerance=1e-4
         s.cycles.deep_output_path=str(root/case/'node_####')
         prediction=scan(s);assert prediction['blocks'],case
+        if case=='particle_hair_tolerance':
+            from test_blender_deep_hair import rejection_isolation
+            report['hair_rejection_isolation']=rejection_isolation(prediction,'tolerance',obj.name)
         try:bpy.ops.render.render()
         except RuntimeError as exc:
-            expected={'ray_portal':'ray_portal_bsdf','ao_opacity':'ambient occlusion','bevel_opacity':'bevel','light_transparent_depth':'Transparent Depth','particle_hair':'static polygon meshes'}[case]
+            expected={'ray_portal':'ray_portal_bsdf','ao_opacity':'ambient occlusion','bevel_opacity':'bevel','light_transparent_depth':'Transparent Depth','particle_hair_tolerance':'hair requires Surface Depth Tolerance 0 for this layer'}[case]
             assert expected in str(exc),(case,str(exc))
             report['rejections'][case]=str(exc)
         else:raise AssertionError('Rejection did not happen: '+case)
+        assert not list((root/case).glob('*.deep.exr')),case
         print('ALLOWLIST_REJECTION_PASS',device,case,flush=True)
     (root/'results.json').write_text(json.dumps(report,indent=2))
     print('DEEP_ALLOWLIST_RENDER_PASS',device,len(report['opaque']),'opaque',len(report['opacity']),'opacity',len(report['rejections']),'rejections',flush=True)
@@ -204,5 +229,6 @@ def render_suite(root,device):
 if __name__=='__main__':
     args=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else sys.argv[1:]
     root=Path(args[0])
-    if '--validate' in args:validate(root)
+    if '--validate-hair' in args:validate_hair(root)
+    elif '--validate' in args:validate(root)
     else:render_suite(root,args[1] if len(args)>1 else 'CPU')

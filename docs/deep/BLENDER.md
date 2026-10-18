@@ -65,7 +65,7 @@ DOF points are camera-depth projections, not exact lens-ray hit positions.
 
 ## Host contract and limits
 
-- Geometry preflight follows camera visibility; keep unsupported features such as hair indirect-only in deep layers. Camera-invisible objects are skipped, but camera-visible shared geometry and holdouts remain checked.
+- Geometry preflight follows camera visibility; keep geometry outside the qualified scope indirect-only in deep layers. Camera-invisible objects are skipped, but camera-visible shared geometry and holdouts remain checked.
 - Select **Cycles** as the render engine to show **View Layer > Passes > Deep**,
   directly below Cryptomatte. In the second UI revision the header has no checkbox:
   enable **Deep Alpha** (`view_layer.cycles.use_pass_deep`) inside the panel.
@@ -256,6 +256,13 @@ The event limit is never clamped: surface mode rejects more than 64 events. Use
 Events Per Sample > Custom > 64 for a surface layer when the scene uses 4096
 volume events. Error, samples, IDs and memory remain scene-level.
 
-The planned hair-layer setup is Volume Off, tolerance Custom 0, events Custom 64.
-These overrides are qualified independently; they do not yet enable hair capture.
-Hair in a volume-enabled layer remains unsupported.
+For CPU static Ribbon hair, set Volume Off, tolerance Custom 0, and events Custom 64
+on the hair view layer. Use SVM and disable motion blur. Hair BSDF and Principled
+Hair (Chiang/Huang) are covered by the named fixtures, including scalar transparent
+mixes. IDs remain object-level; native continuation does not promise every segment
+or a closed hair interior. THICK/THICK_LINEAR, Hair Info, OSL on hair and point
+clouds remain unsupported. GPU hair is not yet qualified.
+
+Hair and volume capture cannot share one deep layer: put the hair layer in surface
+mode and leave separate volume layers on Volume On/Scene. The hair-layer event
+override must remain at or below the surface limit of 64; overflow fails explicitly.

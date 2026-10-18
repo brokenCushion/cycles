@@ -2266,3 +2266,598 @@ Markdown link check passed: 35 documents, 199 local links, zero broken links;
 41 external links are not checked by this tool. B2 is ready for its CPU-only
 commit, including the corrected flat gate. GPU diagnostics remain deferred to
 Part D in the preserved patch. B1 install/worktree are retained. No push or PR.
+
+B2 commit: `fce1fc258` (`feat(deep): add CPU-only raw-hit diagnostics`).
+
+#### Part C candidate: CPU static Ribbon
+
+Candidate files: `src/session/deep.cpp`,
+`src/kernel/device/cpu/kernel_arch_impl.h`, `tools/scan_blender_deep_scene.py`
+and `tools/test_blender_deep_hair.py`. Preflight admits CPU static Ribbon only,
+with effective volume OFF and depth tolerance zero. Other shapes, hair motion,
+OSL on hair, Hair Info and point clouds reject; GPU hair remains blocked until
+Part D. Mesh-only casts remain in the mesh branch; volume capture is unchanged.
+The deep CPU surface loop accepts the packed static Ribbon primitive, and calls
+the triangle boundary helper only for two triangles. Native continuation and
+shader setup are unchanged. Scanner rules mirror those restrictions.
+
+The new hair runner reuses the existing fixtures and oracles, with FLOAT beauty
+and saved passes, numeric and strict repeats, and expected capacity failures.
+Each render is bounded to 300 seconds. This is an uncommitted candidate, not a
+new supported scope; qualification results follow below.
+
+#### Part C build and first failed gate (STOP)
+
+Guarded overlay reset/check/apply and incremental build passed, via
+`python -B D:/temp/cycles_deep_multilayer/rebuild_C.py` (11 build/install steps).
+Pinned Blender source remains `749518deb2f0735a22361a07488b35f7ea5c2fdf`.
+Installed candidate executable SHA-256:
+`5e220d0042556e8b09fe956e73faf5f5745e7a2724fa32ae407a1f5235799f6f`.
+Build evidence: `verification/step4/task13/build-C-driver.log` and
+`verification/build.log` under the permitted output root.
+
+Regression-tools Python with `-B` ran `run_C_hair.py single_1_world`, then the
+remaining fixture list in its original order. Each subprocess uses factory
+startup, background mode, auto-execution disabled and Python exit code 1.
+The first case passed all scheduled checks: numeric ON/repeat and strict/repeat
+raw oracle, known-hit checks (64 interior camera samples each), all-depth cuts,
+finite/sorted EXR validation, numeric object-ID ownership, and strict comparator
+repeat identity. CPU beauty and saved-pass FLOAT pixels and headers matched
+between deep ON and OFF under the Task 13 timing rule.
+
+All four world-case deep runs: 1,024 pixels, 4,096 camera samples, maximum
+all-depth error `1.4901161193847656e-08`, median/p95/maximum events `0/1/1`,
+maximum raw hits 1, zero overflow pixels. Numeric header bound is
+`0.0010000000474974513`; strict header bound is `1e-06`.
+Excluded timing values for **both** world-case flat file pairs, before = deep ON,
+after = ordinary deep OFF:
+
+| Attribute | Before, both files | After, both files |
+| --- | --- | --- |
+| `RenderTime` | `00:00.07` | `00:00.00` |
+| `cycles.Visible.render_time` | `00:00.06` | `00:00.00` |
+| `cycles.Visible.total_time` | `00:00.07` | `00:00.00` |
+| `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+
+The next case, `single_1_plane`, passed its numeric ON deep oracle and 64
+known-hit samples. Its 1,024 pixels / 4,096 samples had maximum all-depth error
+`1.4901161193847656e-08`, median/p95/maximum events `1/1/1`, maximum raw hits 1,
+and zero overflow pixels. The ordinary deep-OFF render completed. Beauty FLOAT
+channels and pixels matched, but the subsequent exact-header gate failed:
+
+```text
+AssertionError: ('flat EXR header differs', 'Date')
+```
+
+`Date` is not in Task 13's explicitly authorized flat timing allowlist. This is
+an assertion on real output, not a new-test API/runner bug, so the standing repair
+rule does not apply. Stopped immediately without inspecting the differing Date
+values, broadening the allowlist, retrying or rendering additional fixtures.
+The plane saved-pass comparison and repeats were not reached.
+
+Evidence: `verification/step4/task13/C-first-gate.log`,
+`C-remaining-gates.log`, `C/first-case-results.json`, and per-render logs, scanner
+reports, validation JSON and EXRs below `C/`. All paths are under
+`D:/temp/cycles_deep_multilayer/`. The second runner's `C/results.json` contains
+only its progress; the completed first case is preserved separately.
+
+No Part C commit: its source, scanner, fixture and report changes remain
+uncommitted. No compile repair or standing-rule test repair was needed. B2 is
+committed and qualified; the installed executable is now the **unqualified Part C
+candidate**. The GPU patch is retained and has not been reapplied. Existing
+untracked assets and earlier evidence remain intact; no push or PR.
+
+Not reached: the rest of the hair fixtures, capacity 16/64 gates, unsupported-case
+render/scanner drift qualification, holdout qualification, Gaffer review, full
+Part C CPU regression/source/resource audit, visibility/UI/panel/migration suite,
+CTests and post-Part-C Markdown check. Parts D/E were not started: no OptiX audit,
+GPU qualification, junkshop5 files, new source hash/node-name inspection or
+three-layer merge. The junkshop source was not opened or saved. Nuke is unavailable.
+
+
+### Task 14: flat run metadata, CPU fixture results and STOP
+
+Task 14's exact flat-EXR allowlist is implemented in `flat_header_identity`:
+Date, RenderTime, Memory, PeakMemory, Hostname, and the exact supplied layer's
+render_time, total_time and synchronization_time attributes. Optional attributes
+are excluded only when present. All other attributes remain compared, including
+Time, Frame, File, Camera, Scene, Software, layer sample count, image/channel
+layout and compression. Deep identity is unchanged. No name was added under the
+standing metadata extension. No renderer changes or rebuild were made this turn.
+
+Self-checks accepted all eight listed run-metadata names for one layer, and
+rejected Time, Frame, sample count, an unlisted layer's timing, data-window,
+pixel and HALF-channel differences. The preserved `single_1_plane` ON/OFF beauty
+and saved passes were revalidated first and passed without rerendering. Its
+remaining repeat/strict renders then passed. Remaining fixtures followed the
+original order. The candidate executable remains the Task 13 build, SHA-256
+`5e220d0042556e8b09fe956e73faf5f5745e7a2724fa32ae407a1f5235799f6f`.
+
+Commands used regression-tools Python with `-B` for `selfcheck_flat_task14.py`,
+the preserved-file validation, `resume_C_plane_task14.py single_1_plane`, and
+`run_C_hair_task14.py` in the original remaining fixture order. The rejection
+suite used `python -B D:/temp/cycles_deep_multilayer/run_C_rejections_task14.py`.
+All runners and evidence are under `D:/temp/cycles_deep_multilayer/`; Task 14
+summaries are in `verification/step4/task14/`. Existing evidence was retained.
+
+#### Test-code repairs under the standing rule
+
+1. Before the capacity cases, source inspection found that the new overflow test
+   searched for `capacity`, but `DEEP_ERROR_CAPACITY` reports
+   `deep traversal limit exceeded`. The assertion now requires that exact
+   diagnostic and no final EXR. Self-check accepted that error with no publication,
+   and rejected a different error, missing error, and a partial final EXR.
+   Evidence: `capacity-message-selfcheck.json`. No limit or fixture changed.
+2. The expected 17-event rejection was caught by the test, but Blender returned 1.
+   The new external runner had unconditionally required exit 0. It now permits
+   exit 1 only for the designated overflow case/mode with the exact capacity
+   diagnostic, recorded overflow and no recorded or actual final deep EXR. The
+   preserved result passed; wrong error, partial publication, wrong case and a
+   crash exit all failed the self-check (`overflow-runner-selfcheck.json`). No
+   rerender of the 17-event case was needed. Continuation resumed at chain_32.
+
+#### Positive and capacity gates
+
+All 43 original fixtures completed: 41 non-overflow cases passed their scheduled
+CPU deep ON/OFF beauty and saved-pass identity, FLOAT guard, all-pixel raw/depth
+oracle, valid/sorted EXRs, numeric object-ID ownership and strict/numeric repeat
+identity. Single-strand analytic checks each covered 64 interior camera samples.
+The 16- and 64-event chains passed exactly at their configured limits. The
+17- and 65-event chains failed explicitly with `deep traversal limit exceeded`
+and no final deep EXR. No complete-output histogram is claimed for those failures.
+The successful cases each have 1,024 pixels and 4,096 camera samples. Their ON
+histograms and maximum all-depth error are below; complete per-mode values are
+preserved in `all-fixture-results.json` and per-render `validation.json` files.
+
+| Fixture | Median events | p95 | Max events | Max raw hits | Overflow pixels | Maximum all-depth error |
+| --- | --- | --- | --- | --- | --- | --- |
+| `single_1_world` | 0 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `single_1_plane` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `single_4_world` | 0 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `single_4_plane` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `single_1_constant_world` | 0 | 1 | 1 | 1 | 0 | 1.87998983048e-09 |
+| `single_4_constant_world` | 0 | 1 | 1 | 1 | 0 | 1.87998983048e-09 |
+| `dense` | 9 | 15 | 19 | 19 | 0 | 9.73727154463e-09 |
+| `fold` | 1 | 2 | 2 | 2 | 0 | 1.74910119721e-09 |
+| `adjacent` | 1 | 1 | 2 | 2 | 0 | 1.87998983048e-09 |
+| `interleaved` | 1 | 1 | 4 | 4 | 0 | 4.09612321839e-09 |
+| `two_objects` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `instance` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `junkshop` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `indirect` | 1 | 1 | 1 | 1 | 0 | 0 |
+| `excluded` | 1 | 1 | 1 | 1 | 0 | 0 |
+| `camera_off` | 1 | 1 | 1 | 1 | 0 | 0 |
+| `shared` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `holdout` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `occluded` | 1 | 1 | 1 | 1 | 0 | 0 |
+| `occluding` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `frame1` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `frame2` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `grazing` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `tip` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `inside` | 0 | 0 | 0 | 0 | 0 | 0 |
+| `legacy_opaque` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `legacy_constant` | 1 | 1 | 2 | 2 | 0 | 1.55874002594e-09 |
+| `legacy_varying` | 1 | 1 | 2 | 2 | 0 | 1.76624386228e-08 |
+| `transmission_opaque` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `transmission_constant` | 1 | 1 | 2 | 2 | 0 | 1.55874002594e-09 |
+| `transmission_varying` | 1 | 1 | 2 | 2 | 0 | 1.76624386228e-08 |
+| `chiang_opaque` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `chiang_constant` | 1 | 1 | 2 | 2 | 0 | 1.55874002594e-09 |
+| `chiang_varying` | 1 | 1 | 2 | 2 | 0 | 1.76624386228e-08 |
+| `huang_opaque` | 1 | 1 | 1 | 1 | 0 | 1.49011611938e-08 |
+| `huang_constant` | 1 | 1 | 2 | 2 | 0 | 1.55874002594e-09 |
+| `huang_varying` | 1 | 1 | 2 | 2 | 0 | 1.76624386228e-08 |
+| `chain_8` | 0 | 0 | 8 | 8 | 0 | 5.44637634992e-09 |
+| `chain_16` | 0 | 0 | 16 | 16 | 0 | 5.50974960101e-09 |
+| `chain_32` | 0 | 0 | 32 | 32 | 0 | 5.70208347206e-09 |
+| `chain_64` | 0 | 0 | 64 | 64 | 0 | 4.43047043497e-09 |
+
+#### Excluded metadata values
+
+Every excluded attribute from this turn's passed flat comparisons is recorded
+below. Values are **deep ON -> ordinary deep OFF**. Both flat files share the
+listed values unless the Files column says otherwise. The already-completed
+`single_1_world` comparison remains recorded under Task 13; it was not rerun.
+No Memory, PeakMemory or Hostname attribute occurred in these comparisons.
+
+| Fixture | Files | Attribute | ON | OFF |
+| --- | --- | --- | --- | --- |
+| `single_1_plane` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 15:10:01` | `2026/10/18 15:10:02` |
+| `single_1_plane` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `single_1_plane` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `single_1_plane` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `single_1_plane` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `single_4_world` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:09:34` | `2026/10/18 16:09:34` |
+| `single_4_world` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.07` | `00:00.00` |
+| `single_4_world` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.06` | `00:00.00` |
+| `single_4_world` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `single_4_world` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.07` | `00:00.00` |
+| `single_4_plane` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:09:37` | `2026/10/18 16:09:38` |
+| `single_4_plane` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `single_4_plane` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `single_4_plane` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `single_4_plane` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `single_1_constant_world` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:09:41` | `2026/10/18 16:09:42` |
+| `single_1_constant_world` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.07` | `00:00.00` |
+| `single_1_constant_world` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.06` | `00:00.00` |
+| `single_1_constant_world` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `single_1_constant_world` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.07` | `00:00.00` |
+| `single_4_constant_world` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:09:45` | `2026/10/18 16:09:46` |
+| `single_4_constant_world` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.07` | `00:00.00` |
+| `single_4_constant_world` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.06` | `00:00.00` |
+| `single_4_constant_world` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `single_4_constant_world` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.07` | `00:00.00` |
+| `dense` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:09:49` | `2026/10/18 16:09:51` |
+| `dense` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.52` | `00:00.01` |
+| `dense` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.51` | `00:00.01` |
+| `dense` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `dense` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.52` | `00:00.01` |
+| `fold` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:09:57` | `2026/10/18 16:09:58` |
+| `fold` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.16` | `00:00.00` |
+| `fold` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.14` | `00:00.00` |
+| `fold` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `fold` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.16` | `00:00.00` |
+| `adjacent` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:02` | `2026/10/18 16:10:02` |
+| `adjacent` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `adjacent` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `adjacent` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `adjacent` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `interleaved` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:06` | `2026/10/18 16:10:07` |
+| `interleaved` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.16` | `00:00.00` |
+| `interleaved` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.15` | `00:00.00` |
+| `interleaved` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `interleaved` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.16` | `00:00.00` |
+| `two_objects` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:10` | `2026/10/18 16:10:11` |
+| `two_objects` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.15` | `00:00.00` |
+| `two_objects` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `two_objects` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `two_objects` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `instance` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:15` | `2026/10/18 16:10:15` |
+| `instance` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `instance` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `instance` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `instance` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `junkshop` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:19` | `2026/10/18 16:10:20` |
+| `junkshop` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.16` | `00:00.00` |
+| `junkshop` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.15` | `00:00.00` |
+| `junkshop` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `junkshop` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.16` | `00:00.00` |
+| `indirect` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:23` | `2026/10/18 16:10:24` |
+| `indirect` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.15` | `00:00.00` |
+| `indirect` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `indirect` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `indirect` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.15` | `00:00.00` |
+| `excluded` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:28` | `2026/10/18 16:10:28` |
+| `excluded` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.15` | `00:00.00` |
+| `excluded` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.14` | `00:00.00` |
+| `excluded` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `excluded` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.15` | `00:00.00` |
+| `camera_off` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:32` | `2026/10/18 16:10:33` |
+| `camera_off` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `camera_off` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.12` | `00:00.00` |
+| `camera_off` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `camera_off` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `shared` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:36` | `2026/10/18 16:10:37` |
+| `shared` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `shared` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `shared` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `shared` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `holdout` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:41` | `2026/10/18 16:10:42` |
+| `holdout` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.15` | `00:00.00` |
+| `holdout` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `holdout` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `holdout` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `occluded` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:45` | `2026/10/18 16:10:46` |
+| `occluded` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `occluded` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `occluded` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `occluded` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `occluding` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:49` | `2026/10/18 16:10:50` |
+| `occluding` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `occluding` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `occluding` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `occluding` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `frame1` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:54` | `2026/10/18 16:10:54` |
+| `frame1` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `frame1` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `frame1` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `frame1` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `frame2` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:10:58` | `2026/10/18 16:10:59` |
+| `frame2` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.16` | `00:00.00` |
+| `frame2` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.15` | `00:00.00` |
+| `frame2` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `frame2` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.16` | `00:00.00` |
+| `grazing` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:03` | `2026/10/18 16:11:03` |
+| `grazing` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.15` | `00:00.00` |
+| `grazing` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.14` | `00:00.00` |
+| `grazing` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `grazing` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.15` | `00:00.00` |
+| `tip` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:07` | `2026/10/18 16:11:08` |
+| `tip` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `tip` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `tip` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `tip` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `inside` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:11` | `2026/10/18 16:11:12` |
+| `inside` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.06` | `00:00.00` |
+| `inside` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.05` | `00:00.00` |
+| `inside` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `inside` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.06` | `00:00.00` |
+| `legacy_opaque` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:15` | `2026/10/18 16:11:16` |
+| `legacy_opaque` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `legacy_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.12` | `00:00.00` |
+| `legacy_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `legacy_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `legacy_constant` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:20` | `2026/10/18 16:11:21` |
+| `legacy_constant` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.15` | `00:00.00` |
+| `legacy_constant` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.14` | `00:00.00` |
+| `legacy_constant` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `legacy_constant` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.15` | `00:00.00` |
+| `legacy_varying` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:25` | `2026/10/18 16:11:26` |
+| `legacy_varying` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.25` | `00:00.00` |
+| `legacy_varying` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.23` | `00:00.00` |
+| `legacy_varying` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `legacy_varying` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.25` | `00:00.00` |
+| `transmission_opaque` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:31` | `2026/10/18 16:11:32` |
+| `transmission_opaque` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.21` | `00:00.00` |
+| `transmission_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.19` | `00:00.00` |
+| `transmission_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `transmission_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.20` | `00:00.00` |
+| `transmission_constant` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:36` | `2026/10/18 16:11:36` |
+| `transmission_constant` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.16` | `00:00.00` |
+| `transmission_constant` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.15` | `00:00.00` |
+| `transmission_constant` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `transmission_constant` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.16` | `00:00.00` |
+| `transmission_varying` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:40` | `2026/10/18 16:11:41` |
+| `transmission_varying` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.17` | `00:00.00` |
+| `transmission_varying` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.15` | `00:00.00` |
+| `transmission_varying` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `transmission_varying` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.16` | `00:00.00` |
+| `chiang_opaque` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:45` | `2026/10/18 16:11:46` |
+| `chiang_opaque` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.20` | `00:00.00` |
+| `chiang_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.18` | `00:00.00` |
+| `chiang_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `chiang_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.19` | `00:00.00` |
+| `chiang_constant` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:50` | `2026/10/18 16:11:51` |
+| `chiang_constant` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.15` | `00:00.00` |
+| `chiang_constant` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.14` | `00:00.00` |
+| `chiang_constant` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `chiang_constant` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.15` | `00:00.00` |
+| `chiang_varying` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:55` | `2026/10/18 16:11:55` |
+| `chiang_varying` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.15` | `00:00.00` |
+| `chiang_varying` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.14` | `00:00.00` |
+| `chiang_varying` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `chiang_varying` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.15` | `00:00.00` |
+| `huang_opaque` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:11:59` | `2026/10/18 16:12:00` |
+| `huang_opaque` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.15` | `00:00.00` |
+| `huang_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `huang_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `huang_opaque` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `huang_constant` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:12:04` | `2026/10/18 16:12:04` |
+| `huang_constant` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.16` | `00:00.00` |
+| `huang_constant` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.14` | `00:00.00` |
+| `huang_constant` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `huang_constant` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.15` | `00:00.00` |
+| `huang_varying` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:12:08` | `2026/10/18 16:12:09` |
+| `huang_varying` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.14` | `00:00.00` |
+| `huang_varying` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.13` | `00:00.00` |
+| `huang_varying` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `huang_varying` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+| `chain_8` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:12:13` | `2026/10/18 16:12:13` |
+| `chain_8` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.11` | `00:00.00` |
+| `chain_8` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.09` | `00:00.00` |
+| `chain_8` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `chain_8` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.11` | `00:00.00` |
+| `chain_16` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:12:16` | `2026/10/18 16:12:17` |
+| `chain_16` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.11` | `00:00.00` |
+| `chain_16` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.10` | `00:00.00` |
+| `chain_16` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `chain_16` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.11` | `00:00.00` |
+| `chain_32` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:12:55` | `2026/10/18 16:12:56` |
+| `chain_32` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.17` | `00:00.00` |
+| `chain_32` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.16` | `00:00.00` |
+| `chain_32` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `chain_32` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.17` | `00:00.00` |
+| `chain_64` | beauty.exr, render-passes.exr | `Date` | `2026/10/18 16:13:00` | `2026/10/18 16:13:01` |
+| `chain_64` | beauty.exr, render-passes.exr | `RenderTime` | `00:00.25` | `00:00.00` |
+| `chain_64` | beauty.exr, render-passes.exr | `cycles.Visible.render_time` | `00:00.24` | `00:00.00` |
+| `chain_64` | beauty.exr, render-passes.exr | `cycles.Visible.synchronization_time` | `00:00.01` | `00:00.00` |
+| `chain_64` | beauty.exr, render-passes.exr | `cycles.Visible.total_time` | `00:00.25` | `00:00.00` |
+
+#### First real failed gate: motion rejection diagnostic
+
+The new rejection suite passed THICK, THICK_LINEAR, hair-volume and positive
+hair-tolerance rejection checks, including scanner BLOCK predictions and no
+final EXR. Its next case (`motion`) failed the required diagnostic assertion:
+
+```text
+Expected: hair motion is unsupported
+Actual: Error: Deep: only static polygon meshes and background lighting are supported: Plane
+```
+
+The scanner reported `hair_motion`; the renderer rejected with the mesh message.
+No final deep EXR was produced. This is a comparison against actual renderer
+output, not a wrong API/path or a run-metadata discrepancy. Stopped immediately;
+no diagnosis, assertion relaxation, fixture changes or renderer fixes followed.
+Evidence: `verification/step4/task14/rejections/baseline.log` and
+`rejections/cases/results.json`. Later OSL/Hair Info/point-cloud rejection cases
+were not reached. The new rejection test remains in the uncommitted candidate.
+
+No Part C commit; HEAD remains `fce1fc258`. Part C source/scanner/tests and report
+remain uncommitted, and the installed executable remains unqualified for hair.
+The GPU patch was kept and not reapplied. No push or PR. No source .blend was
+opened or saved. B1 install/worktree and existing untracked assets remain intact.
+
+Not reached: remaining rejection checks, full CPU regression and source/resource
+audit, visibility/UI/panel/migration/scanner-drift suites, standalone CTests,
+Gaffer DeepToFlat/DeepSlice/DeepMerge, further holdout-manifest checks and the
+final Markdown check. Parts D/E were not started: no GPU diagnostics/hair
+qualification, OptiX SBT/stack audit, junkshop5 files or three-layer merge, or
+new junkshop source hash/saved-node-name inspection. Nuke remains unavailable.
+
+### Task 15: isolated rejection fixtures and remaining CPU gates
+
+Applied the authorized fixture fix in `tools/test_blender_deep_hair.py`: the
+motion case disables Cycles deformation motion on every non-hair mesh, retaining
+hair motion settings. The original Task 14 message was
+`Deep: only static polygon meshes and background lighting are supported: Plane`.
+No renderer guard changed. No further isolation under the standing extension was
+needed, and the optional combined mesh/hair-motion case was not added.
+
+Every rejection case now calls `rejection_isolation` before rendering. It requires
+exactly one scanner BLOCK for the expected rule and target object; Hair Info also
+requires the exact node type. Failure is labeled `rejection fixture not isolated`.
+Scanner JSON is saved before the assertion. Synthetic self-check accepted one
+correct target BLOCK and rejected zero blocks, two blocks, the wrong object and
+the wrong feature. Evidence: `verification/step4/task15/isolation-selfcheck.json`.
+
+The entire rejection suite was rerun from THICK. All eight cases passed the
+isolation self-check, returned their required renderer diagnostic and published
+no deep EXR:
+
+| Case | Sole BLOCK rule | Target | Required renderer diagnostic (passed) |
+| --- | --- | --- | --- |
+| THICK | hair_shape | Strands | Ribbon shape required |
+| THICK_LINEAR | hair_shape | Strands | Ribbon shape required |
+| volume | hair_volume | Strands | Deep Volume off required |
+| tolerance | hair_tolerance | Strands | Surface Depth Tolerance 0 required |
+| motion | hair_motion | Strands | hair motion is unsupported |
+| osl | hair_osl | Strands | OSL on hair is unsupported |
+| hair_info | node, node_type=hair_info | Strands | Hair Info is unsupported |
+| pointcloud | geometry | Points | point clouds are unsupported |
+
+The external launcher accepts Blender's known exit 1 from handled rejections
+only when the final `HAIR_REJECTIONS_PASS 8` marker is present, reusing the
+expected-rejection handling established in Task 14. No test repair/retry or
+metadata-allowlist extension was needed this turn. All exact messages and scanner
+findings are in `task15/rejections/cases/results.json`; the log is
+`task15/rejections/baseline.log` under the Step 4 evidence root.
+
+#### Remaining Part C gates completed
+
+- CPU multilayer validation passed: 24 files, byte-identical to the Part A
+  reference; qualified single-layer reference validation also passed.
+- Source audit passed: the only changed shared source is CPU kernel_arch_impl.h;
+  code outside guarded deep blocks is identical. The established
+  `record_beauty_build.py` deep-host exclusions cover session/deep.cpp.
+- Resource audit passed: all 75 common CUDA kernel records unchanged.
+- Visibility suite passed, with three deep files byte-identical to its reference.
+- UI and migration suites passed.
+- Scanner drift suite passed, including five path cases.
+- Panel test passed. All three screenshots were visually inspected: Alpha OFF
+  disables deep settings; Alpha ON enables overrides while volume-only controls
+  stay disabled for Volume OFF; strict mode leaves the saved ID checkbox set but
+  inactive and displays its explanatory message.
+
+Commands: `run_C_rejections_task15.py`, `run_C_suite_task15.py cpu`,
+`audit_C_sources_task15.py`, `run_C_resources_task15.py`,
+`run_C_suite_task15.py visibility`, `run_C_ui_task15.py ui`,
+`run_C_ui_task15.py migration`, `run_C_suite_task15.py drift`, and
+`run_C_ui_task15.py panel`, each through `python -B` under
+`D:/temp/cycles_deep_multilayer/`. Outputs are in
+`D:/temp/cycles_deep_multilayer/verification/step4/task15/`.
+No renderer build or hair-positive fixture rerender was required; the Task 14
+histograms, beauty/metadata values and repeat-oracle results remain applicable.
+
+#### First failed gate: allowlist regression particle_hair expectation
+
+`run_C_suite_task15.py allowlist-off` stopped in the allowlist test's
+`particle_hair` case before rendering that case:
+
+```text
+prediction=scan(s);assert prediction['blocks'],case
+AssertionError: particle_hair
+```
+
+The scanner returned no BLOCK where that regression expected one. The suite did
+not reach its final PASS marker; its launcher correctly failed. This is a failed
+scanner assertion, not a pre-existing legitimate renderer guard on a non-target
+object, so Task 15's isolation extension does not cover it. Stopped without
+investigation, changing the expectation, dropping the case or retrying.
+Evidence: `task15/allowlist-off.log` (copied test line 194), and
+`run_C_suite_task15.py` launch output. The earlier allowlist render markers are
+partial progress only; the allowlist-off suite and its final identity check are
+not marked passed. The subsequent allowlist-on command was not run.
+
+No Part C commit: HEAD remains `fce1fc258`. The Part C candidate, report changes,
+GPU patch and pre-existing untracked assets remain preserved. The installed
+executable is still the unqualified Part C candidate. No push or PR; no junkshop
+.blend opened or saved. B1 install/worktree are retained.
+
+Not reached: completed allowlist regression, standalone CTests, Gaffer
+DeepToFlat/DeepSlice/DeepMerge, remaining holdout-manifest checks and Markdown
+link check. Parts D/E were not started: no GPU qualification, OptiX audit,
+junkshop5 files, updated source hash/saved node names or three-layer merge.
+Nuke remains unavailable.
+
+
+### Task 16: obsolete hair expectations updated; Part C completion
+
+Changed the current allowlist `particle_hair` expectation from unconditional
+`static polygon meshes` rejection to a CPU positive render with zero scanner
+BLOCKs and exact FLOAT beauty pixels/headers under Task 14. Added
+`particle_hair_tolerance` with the same groom and tolerance 1e-4; it requires
+exactly one `hair_tolerance` BLOCK on Feature, the exact renderer message
+`hair requires Surface Depth Tolerance 0 for this layer`, and no final EXR.
+The shared isolation helper now accepts an explicit target name; prior callers
+retain their existing targets. Non-hair expectations were not weakened.
+
+Searched existing tools and deep tests/validators for hair/curve rejection
+assertions. No other current-build obsolete assertion was found. The scanner
+drift suite compares predictions to rendering without hard-coded hair rejection;
+its Task 15 result remains valid. `baseline()` in the hair fixture intentionally
+records the pre-curve Part A/B1 rejection baseline and remains historical, not a
+current-support gate. Existing explicit unsupported hair cases remain negative.
+No renderer rebuild or additional standing-rule repair was needed.
+
+Both affected allowlist suites were rerun from their start via
+`python -B D:/temp/cycles_deep_multilayer/run_C_suite_task16.py allowlist-off`
+and `allowlist-on`. Both passed 32 opaque cases, 24 opacity cases, the new
+particle-hair positive and five rejections. All 88 pre-existing diagnostics-off
+deep files remain byte-identical to their reference. The one newly added hair
+file is checked separately, with no existing reference removed or replaced.
+Both positive beauty pairs passed; the rejection variant passed isolation and
+its required diagnostic. No already-passed Task 15 suite was rerun.
+
+Excluded flat metadata, ON -> ordinary deep OFF:
+
+| Suite | Attribute | ON | OFF |
+| --- | --- | --- | --- |
+| allowlist-off | `Date` | `2026/10/18 17:07:32` | `2026/10/18 17:07:32` |
+| allowlist-off | `RenderTime` | `00:00.15` | `00:00.00` |
+| allowlist-off | `cycles.Visible.render_time` | `00:00.14` | `00:00.00` |
+| allowlist-off | `cycles.Visible.synchronization_time` | `00:00.00` | `00:00.00` |
+| allowlist-off | `cycles.Visible.total_time` | `00:00.15` | `00:00.00` |
+| allowlist-on | `Date` | `2026/10/18 17:08:05` | `2026/10/18 17:08:05` |
+| allowlist-on | `RenderTime` | `00:00.15` | `00:00.00` |
+| allowlist-on | `cycles.Visible.render_time` | `00:00.14` | `00:00.00` |
+| allowlist-on | `cycles.Visible.synchronization_time` | `00:00.00` | `00:00.00` |
+| allowlist-on | `cycles.Visible.total_time` | `00:00.14` | `00:00.00` |
+
+No additional metadata names were introduced. Allowlist opacity maximum raw-oracle
+error: 2.42131963368e-08.
+
+Standalone CTests passed 3/3 (capture, reference, density_cell), 7.30 seconds.
+This existing standalone configuration does not enable the optional OpenEXR tests;
+OpenEXR outputs are independently checked by the hair/allowlist validators.
+Gaffer 1.7.2.0 passed all 164 preserved numeric/strict hair files (41 cases x four
+outputs), 64 grid pixels each, five depth cuts, and DeepMerge against the first
+strand fixture. Maximum errors: flatten 2.53865757638e-07,
+slice 1.4860508879e-07,
+merge 2.53865757638e-07, each within the source
+file's existing bound. The reusable review is `task16/gaffer/hair_review.gfr`;
+this is computed consumer validation, not a claim of interactive review.
+
+Holdout-manifest checks passed on the preserved holdout and ordinary strand
+fixtures: Strands hash `707e4504` occurs in published IDs in both; only holdout
+marks it in `cycles:deepIDHoldoutManifest`, whose keys are a subset of the ID
+manifest. Evidence: `task16/holdout-manifests.json`. Event histograms, exact CPU
+beauty, repeat identity and all-depth results remain those recorded in Task 14.
+
+Commands also include `ctest_C_task16.py` and `run_gaffer_C_task16.py`, using
+existing scratch dependencies read-only. All artifacts/logs are under
+`D:/temp/cycles_deep_multilayer/verification/step4/task16/`. CPU-only scope and
+rejections are documented in SUPPORT.md and BLENDER.md; M0/M1 results are recorded
+in the hair plan. Part D/E and Nuke have not run at this point.
+
+Final Part C Markdown check passed: 35 documents, 200 local links, zero broken; 41 external links unchecked. All Part C gates are complete. No push or PR.

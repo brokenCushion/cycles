@@ -234,8 +234,8 @@ def float_channels(path):
 
 def flat_header_identity(before, after, layers):
     import numpy as np
-    # Task 13 and VALIDATION.md exclude run timing, never data-describing headers.
-    timing = {'RenderTime'} | {f'cycles.{layer}.{field}' for layer in layers
+    # Task 14 and VALIDATION.md exclude run metadata, never frame/image attributes.
+    timing = {'Date', 'RenderTime', 'Memory', 'PeakMemory', 'Hostname'} | {f'cycles.{layer}.{field}' for layer in layers
                               for field in ('render_time', 'total_time', 'synchronization_time')}
     assert before.keys() == after.keys(), 'flat EXR header attributes differ'
     excluded = {}
@@ -261,6 +261,110 @@ def flat_identity(before, after, layers):
     assert all(np.array_equal(a[k].pixels, b[k].pixels) for k in a), 'flat EXR pixels differ'
     return flat_header_identity(OpenEXR.File(str(before), separate_channels=True).header(),
                                 OpenEXR.File(str(after), separate_channels=True).header(), layers)
+
+
+def render_hair(root):
+    import bpy
+    from scan_blender_deep_scene import scan
+    name, mode = root.parent.name, root.name
+    assert name in cases() and mode in ('on', 'off', 'repeat', 'strict', 'strict-repeat')
+    root.mkdir(parents=True, exist_ok=False)
+    scene = fixture(name)
+    layer = scene.view_layers[0]
+    layer.cycles.use_pass_deep = mode != 'off'
+    layer.cycles.denoising_store_passes = True
+    layer.cycles.pass_debug_sample_count = True
+    if mode.startswith('strict'):
+        scene.cycles.deep_error = 0
+        scene.cycles.use_deep_ids = False
+    scene.cycles.deep_output_path = str(root / 'hair_####')
+    scene.render.filepath = str(root / 'beauty.exr')
+    report = scan(scene)
+    (root / 'scanner.json').write_text(json.dumps(report, indent=2))
+    assert not report['blocks'], report['blocks']
+    scene.render.image_settings.color_depth = '32'
+    scene.render.image_settings.exr_codec = 'ZIP'
+    error = None
+    try:
+        bpy.ops.render.render(write_still=True)
+    except RuntimeError as exc:
+        error = str(exc)
+    overflow = name in ('chain_17', 'chain_65') and mode != 'off'
+    files = list(root.glob('*.deep.exr'))
+    (root / 'render-result.json').write_text(json.dumps(dict(error=error, overflow=overflow,
+                                                           files=[str(p) for p in files]), indent=2))
+    if overflow:
+        assert error and 'deep traversal limit exceeded' in error and not files, (error, files)
+        return
+    assert error is None, error
+    assert len(files) == (mode != 'off'), files
+    scene.render.image_settings.media_type = 'MULTI_LAYER_IMAGE'
+    scene.render.image_settings.color_depth = '32'
+    scene.render.image_settings.exr_codec = 'ZIP'
+    scene.render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
+    scene.render.image_settings.color_depth = '32'
+    scene.render.image_settings.exr_codec = 'ZIP'
+    scene.render.image_settings.use_exr_interleave = True
+    bpy.data.images['Render Result'].save_render(str(root / 'render-passes.exr'), scene=scene)
+
+
+def rejection_isolation(report, name, target=None):
+    rules = dict(THICK='hair_shape', THICK_LINEAR='hair_shape', volume='hair_volume',
+                 tolerance='hair_tolerance', motion='hair_motion', osl='hair_osl',
+                 hair_info='node', pointcloud='geometry')
+    blocks = [finding for layer in report['layers'] for finding in layer['findings']
+              if finding['level'] == 'BLOCK']
+    target = target or ('Points' if name == 'pointcloud' else 'Strands')
+    assert (report['blocks'] == len(blocks) == 1 and blocks[0]['rule'] == rules[name]
+            and blocks[0].get('object') == target
+            and (name != 'hair_info' or blocks[0].get('node_type') == 'hair_info')), (
+                'rejection fixture not isolated', name, blocks)
+    return blocks[0]
+
+
+def reject_hair(root):
+    import bpy
+    from scan_blender_deep_scene import scan
+    root.mkdir(parents=True, exist_ok=False)
+    results = []
+    for name, message in [('THICK', 'Ribbon shape'), ('THICK_LINEAR', 'Ribbon shape'),
+                          ('volume', 'Deep Volume off'), ('tolerance', 'Depth Tolerance 0'),
+                          ('motion', 'hair motion is unsupported'), ('osl', 'OSL on hair'),
+                          ('hair_info', 'Hair Info'), ('pointcloud', 'point clouds')]:
+        scene = fixture('single_1_plane')
+        layer = scene.view_layers[0]
+        if name in ('THICK', 'THICK_LINEAR'): scene.cycles_curves.shape = name
+        elif name == 'volume':
+            layer.cycles.deep_volume_mode = 'ON'
+            scene.camera.data.type = 'PERSP'
+        elif name == 'tolerance': layer.cycles.deep_z_tolerance = .01
+        elif name == 'motion':
+            scene.render.use_motion_blur = True
+            for obj in scene.objects:
+                if obj.type == 'MESH': obj.cycles.use_deform_motion = False
+        elif name == 'osl': scene.cycles.shading_system = True
+        elif name == 'hair_info':
+            mat = bpy.data.objects['Strands'].data.materials[0]
+            node = mat.node_tree.nodes.new('ShaderNodeHairInfo')
+            hair = next(n for n in mat.node_tree.nodes if n.type == 'BSDF_HAIR')
+            mat.node_tree.links.new(node.outputs['Intercept'], hair.inputs['Color'])
+        elif name == 'pointcloud':
+            bpy.data.objects.remove(bpy.data.objects['Strands'], do_unlink=True)
+            data = bpy.data.pointclouds.new('Points')
+            obj = bpy.data.objects.new('Points', data); scene.collection.objects.link(obj)
+        scene.cycles.deep_output_path = str(root / name / 'rejected_####')
+        report = scan(scene)
+        (root / (name + '-scanner.json')).write_text(json.dumps(report, indent=2))
+        isolated = rejection_isolation(report, name)
+        error = None
+        try: bpy.ops.render.render()
+        except RuntimeError as exc: error = str(exc)
+        files = list((root / name).glob('*.deep.exr'))
+        results.append(dict(case=name, error=error, scanner=report, isolation=isolated,
+                            files=[str(p) for p in files]))
+        (root / 'results.json').write_text(json.dumps(results, indent=2))
+        assert error and message in error and not files, results[-1]
+    print('HAIR_REJECTIONS_PASS', len(results), flush=True)
 
 
 def validate_control(root):
@@ -295,5 +399,7 @@ if __name__ == '__main__':
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:]
     assert len(args) == 2, args
     {'--baseline': baseline, '--control': control, '--validate-control': validate_control,
+     '--hair': render_hair,
+     '--reject-hair': reject_hair,
      '--control-CUDA': lambda root: control(root, 'CUDA'),
      '--control-OPTIX': lambda root: control(root, 'OPTIX')}[args[1]](Path(args[0]))

@@ -5,6 +5,7 @@
 #include "scene/bake.h"
 #include "scene/camera.h"
 #include "scene/geometry.h"
+#include "scene/hair.h"
 #include "scene/integrator.h"
 #include "scene/mesh.h"
 #include "scene/object.h"
@@ -358,6 +359,7 @@ static void validate_shader(Scene *scene, Shader *shader,
     if (volume_nodes.contains(node))
       continue;
     const string type = node->type->name.string();
+    require_deep(type != "hair_info", "Hair Info is unsupported by deep capture");
     if ((graph->simplified || graph->finalized) && type == "geometry") {
       if (transparent)
         continue;
@@ -670,10 +672,28 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
         validate_grid_shader(scene, shader);
       continue;
     }
-    require_deep(geometry->geometry_type == Geometry::MESH && !geometry->get_use_motion_blur(),
-                 ("only static polygon meshes and background lighting are supported: " + geometry->name.string()).c_str());
-    require_deep(static_cast<Mesh *>(geometry)->get_subdivision_type() == Mesh::SUBDIVISION_NONE,
-                 "subdivision is unsupported");
+    require_deep(geometry->geometry_type != Geometry::POINTCLOUD,
+                 "point clouds are unsupported by deep capture");
+    if (geometry->geometry_type == Geometry::HAIR) {
+      require_deep(!volume,
+                   "hair requires Deep Volume off for this layer (View Layer > Deep > Volume: Off)");
+      require_deep(params.deep.z_tolerance == 0,
+                   "hair requires Surface Depth Tolerance 0 for this layer");
+      require_deep(static_cast<Hair *>(geometry)->curve_shape == CURVE_RIBBON,
+                   "deep hair requires Ribbon shape; THICK and THICK_LINEAR are unsupported");
+      require_deep(!geometry->get_use_motion_blur() && !integrator->get_motion_blur(),
+                   "deep hair requires static geometry and camera; hair motion is unsupported");
+      require_deep(scene->params.shadingsystem == SHADINGSYSTEM_SVM,
+                   "OSL on hair is unsupported by deep capture");
+      require_deep(params.device.type == DEVICE_CPU,
+                   "deep Ribbon hair currently requires CPU");
+    }
+    else {
+      require_deep(geometry->geometry_type == Geometry::MESH && !geometry->get_use_motion_blur(),
+                   ("only static polygon meshes and background lighting are supported: " + geometry->name.string()).c_str());
+      require_deep(static_cast<Mesh *>(geometry)->get_subdivision_type() == Mesh::SUBDIVISION_NONE,
+                   "subdivision is unsupported");
+    }
     if (geometry->get_used_shaders().empty())
       validate_shader(scene, scene->default_surface, false, transparent);
     for (Node *shader : geometry->get_used_shaders())

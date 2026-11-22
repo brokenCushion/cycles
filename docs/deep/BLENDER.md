@@ -5,6 +5,115 @@ See the [supported scope](SUPPORT.md), [validation policy](VALIDATION.md)
 and accepted [production results](evidence/README.md).
 Run the command examples below from the repository root.
 
+## Production use
+
+**Build to use.** `D:\Projects\cycles_deep-data\blender-deep\blender.exe`
+(Blender 5.3 alpha, deep-enabled). It is a copy of the qualified Ribbon-hair build
+(`blender.exe` SHA-256 `a1da1a20e605...`; the original stays in
+`D:\temp\cycles_deep_multilayer\install` as cited evidence). Stock Blender has no
+deep output. Launch it directly for interactive work; it can share your normal
+Blender preferences.
+
+**Setup per scene.**
+
+1. Render engine Cycles, device CPU, CUDA or OptiX (single device).
+2. For each deep layer, enable **View Layer > Passes > Deep > Deep Alpha**.
+3. With more than one deep layer, set **Output > Output > Deep > Path Override**
+   to something containing `{view_layer}`, e.g. `//render/v001/{blend_name}_{view_layer}_####`.
+4. Layers with hair: set that layer's **Volume** to Off and **Surface Depth
+   Tolerance** to Custom 0; 64 events is enough for typical grooms.
+5. Procedural (non-VDB) smoke needs a positive **Volume Step**. Start at `0.05`.
+   Each ray through smoke needs about 2 x (distance inside the volume / step)
+   events, so a smaller step needs more events. On the layer that sees the smoke,
+   set **Max Events** to Custom and raise it (8192 is the maximum) if the render
+   stops on event capacity.
+6. Run the read-only scanner first (see [Read-only scene scanner](#read-only-scene-scanner));
+   it reports blockers before you spend render time.
+
+**Render in the background** (interactive F12 deep rendering is experimental):
+
+```powershell
+& "D:\Projects\cycles_deep-data\blender-deep\blender.exe" --background "D:\path\shot.blend" --render-frame 1
+```
+
+Use `--render-anim` (or `-s`/`-e` with `-a`) for frame ranges. Each deep layer
+writes one `.deep.exr` per frame next to the flat outputs.
+
+**What will be rejected** (preflight stops the render with one of these messages;
+nothing partial is written):
+
+| Scene feature | Preflight message |
+| --- | --- |
+| Deforming meshes with motion blur | `only static polygon meshes and background lighting are supported` |
+| Any motion blur when hair is present | `deep hair requires static geometry and camera; hair motion is unsupported` |
+| Hair and smoke/volume in the same layer | `hair requires Deep Volume off for this layer` (split into separate view layers) |
+| Thick or Thick Linear hair shape | `deep hair requires Ribbon shape; THICK and THICK_LINEAR are unsupported` |
+| OSL on hair; Hair Info node | `OSL on hair is unsupported by deep capture`; `Hair Info is unsupported by deep capture` |
+| Render-time (adaptive) subdivision | `subdivision is unsupported` (a normal Subdivision modifier is fine) |
+| Point clouds | `point clouds are unsupported by deep capture` |
+| Fisheye, panorama, stereo, animated FOV | `requires mono perspective or surface orthographic camera without animated field of view` |
+| Holdout-style shadow catchers, caustics | `holdout, shadow catcher and caustics are unsupported` |
+| Rolling shutter; non-flat shutter curve | `rolling shutter is unsupported`; `deep motion currently requires a uniform shutter curve` |
+| Multi-GPU, tiling, time limit, >4096 samples | `requires single CPU, CUDA or OptiX background rendering`; `requires 1..4096 maximum samples, full resolution, no time limit or tiling` |
+| Denoiser upscaling | `deep output requires native-resolution denoising without upscaling` |
+
+Camera and rigid object (transform) motion blur on meshes is supported. Animated
+characters render frame by frame with motion blur off; a common approach is to
+render deep without blur and add blur in compositing from motion vectors.
+The full matrix is in [SUPPORT.md](SUPPORT.md).
+
+### Verified production render
+
+On 2026-11-22 the unchanged junkshop scene
+(`thejunkshopsplashscreen_deep_v001.blend`, frame 1) was rendered at full size
+with this build: 2000x1000, 50 samples, OptiX on an RTX 3080 (10 GB). All three
+view layers rendered in one background run in **21 minutes** (1279 s), with peak GPU
+memory **8.7 GB**. Deep files: BG 207 MB, Girl 15 MB, Robots 30 MB.
+
+| Setting | BG | Girl (Ribbon hair) | Robots (smoke) |
+| --- | --- | --- | --- |
+| Deep Volume | Scene (On) | **Off** | Scene (On) |
+| Surface Depth Tolerance | Scene | **Custom 0** | Scene |
+| Max Events | Scene (4096) | **Custom 64** | **Custom 8192** |
+
+Scene settings: shader volume evaluation on, Volume Step `0.05`, deep memory
+8192 MB, deep error `0.001`, deep IDs on. A Volume Step of `0.01` or `0.02`
+overflowed 8192 events on the Robots smoke (see the folded-mesh limit below).
+The smoke density is constant, so `0.05` loses no accuracy there.
+
+Checks against the flat beauty EXRs, over all 2 million pixels per layer:
+
+- **BG:** deep alpha matches beauty alpha to 1.2e-7; Gaffer DeepRecolor reproduces
+  the flat colour exactly.
+- **Girl:** alpha matches to 2.4e-7; DeepRecolor is exact apart from a few hair-edge
+  pixels (at most 0.025).
+- **Merged:** DeepMerge of all three layers flattens to the flat "over" of the three
+  alphas within 2.4e-7, with full coverage.
+- **Robots:** surfaces match. 0.17% of pixels, all inside the smoke, differ (worst
+  0.33) because the beauty's smoke alpha is Monte Carlo noise. The differences
+  are symmetric and the means agree to 1e-6; deep is the noise-free value.
+
+**Cancelling.** Pressing Esc during an interactive F12 render of the same scene
+(25%) while Girl was rendering left only BG's complete `.deep.exr`. No Girl or
+Robots file and no temporary file remained. Each file is written under a
+temporary `.partial-*` name and renamed only when complete, so a half-written deep
+file is never visible under its final name.
+
+### Known limits in production
+
+- **Folded volume meshes.** Deep volume capture pairs mesh entry and exit faces to
+  find where a ray is inside a volume. A mesh that folds over itself (for example a
+  strong Displace modifier on a smoke puff) can leave an interval open, and it
+  then runs to the camera clip end. Those rays fill with many volume events, causing
+  event-capacity failures or very long volume intervals. Normal Cycles beauty is
+  unaffected. Reduce the folds, use a coarser Volume Step, or raise Max Events.
+- **DeepRecolor on volumes.** Recolouring divides the flat colour by the flat
+  alpha. Where the beauty's volume alpha is noisy, the recoloured smoke speckles
+  even though the deep alpha is clean. Render the smoke beauty with more samples or
+  denoise it before recolouring.
+- **Hair edges.** Expect tiny colour differences on strand edges after
+  DeepRecolor (at most 0.025 in the junkshop test).
+
 ## Build
 
 Pinned Blender: `749518deb2f0735a22361a07488b35f7ea5c2fdf` (5.3 alpha).

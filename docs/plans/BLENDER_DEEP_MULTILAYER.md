@@ -4,7 +4,7 @@ Status: **implemented, option A1** (2026-10-18; status updated 2026-11-22).
 CPU/OptiX fixtures, path preflight, UI and migration checks pass. The original
 `hair_bsdf` blocker was resolved by later allowlist and Ribbon hair work; the
 unchanged junkshop scene renders all three layers (junkshop5, Step 4 Part E).
-Only multi-layer cancellation remains unverified (native input was unavailable).
+Multi-layer cancellation was verified manually on 2026-11-22: Esc during Girl left BG published and no Girl, Robots or temporary files. All acceptance checks are now covered.
 The original task made no core changes; later steps did.
 The implementation request narrows section 3.3 to a warning label and excludes
 all optional core work in section 3.4. Qualification results are recorded in

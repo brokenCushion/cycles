@@ -4,7 +4,9 @@
 Status (updated 2026-11-22): **adapter implemented; junkshop renders all three
 layers.** The Hair BSDF blocker below was resolved by Steps 2-4; see the
 [Step 4 conclusion](#step-4-ribbon-hair-m0m2-and-per-layer-overrides) (junkshop5,
-Part E). Only multi-layer cancellation remains unverified. Sections below are a
+Part E). Multi-layer cancellation was verified manually on 2026-11-22 (see
+[Cancellation](#cancellation-2026-11-22)), and a full-size production render is
+recorded in [production use](BLENDER.md#verified-production-render). Sections below are a
 chronological log; earlier STOP and blocker records are superseded by later steps.
 
 ## Change
@@ -161,7 +163,7 @@ source `.blend` SHA-256 was checked after failure and remains unchanged.
 ## Remaining blockers
 
 > Superseded: the shader blocker was resolved in Steps 2-4, and production
-> OpenEXR/Gaffer checks later passed (junkshop4/5). Cancellation is still open.
+> OpenEXR/Gaffer checks later passed (junkshop4/5). Cancellation passed on 2026-11-22.
 
 The shader whitelist at [src/session/deep.cpp](../../src/session/deep.cpp)
 rejects `hair_bsdf`. Supporting the unchanged junkshop scene requires reviewing
@@ -4027,3 +4029,23 @@ recorded above. Stop here after Part E, with no further gate or production run.
 Final report checks: Markdown checker passed (35 documents, 200 local links,
 zero broken; 41 external links not fetched) and `git diff --check` passed.
 The Part E report is committed separately after the GPU-hair qualification commit.
+
+## Cancellation (2026-11-22)
+
+The deep-enabled install (`D:\Projects\cycles_deep-data\blender-deep`, copy of
+the qualified executable) opened the unchanged junkshop scene in the GUI. A
+setup script applied the full-render per-layer settings at 25% (500x250), with
+output under `D:\temp\cycles_deep_phase2\cancel\run\render`; the scene was
+not saved. The user started F12 and pressed Esc once rendering moved on to Girl.
+A folder listing taken every second recorded the result:
+
+- BG's file appeared first as `...BG_0001.deep.exr.partial-*` and became
+  `thejunkshopsplashscreen_deep_v001_BG_0001.deep.exr` (23,961,542 bytes) within
+  one second.
+- After cancellation and exit, that was the only file. No Girl or Robots deep
+  file and no `.partial` file remained.
+- Reading it back in full with OpenImageIO gave a 500x250 deep image with channels
+  A, Z, ZBack and id, samples in all 125,000 pixels, and 3,385,766 samples in total.
+
+The cancelled layer is from the user's report; the Blender log does not name the
+active layer. This closes acceptance check 8.

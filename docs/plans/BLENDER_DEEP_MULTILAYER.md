@@ -1,9 +1,11 @@
 # Blender Deep: multiple view layers (option A1)
 
-Status: **implemented, option A1; acceptance incomplete** (2026-10-18).
-CPU/OptiX fixtures, path preflight, UI and migration checks pass. Native-input
-access blocks cancellation verification; the unchanged junkshop scene fails
-the existing `hair_bsdf` core preflight. No core changes were made.
+Status: **implemented, option A1** (2026-10-18; status updated 2026-11-22).
+CPU/OptiX fixtures, path preflight, UI and migration checks pass. The original
+`hair_bsdf` blocker was resolved by later allowlist and Ribbon hair work; the
+unchanged junkshop scene renders all three layers (junkshop5, Step 4 Part E).
+Only multi-layer cancellation remains unverified (native input was unavailable).
+The original task made no core changes; later steps did.
 The implementation request narrows section 3.3 to a warning label and excludes
 all optional core work in section 3.4. Qualification results are recorded in
 [the implementation report](../deep/BLENDER_DEEP_MULTILAYER_RESULTS.md).

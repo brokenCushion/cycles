@@ -31,3 +31,7 @@ install*/
 
 # OSL compiled examples
 examples/osl/*.oso
+
+# Large downloaded/user-supplied test assets (see test-assets/ASSET_INVENTORY.md)
+/test-assets/blender/
+/test-assets/vdb/

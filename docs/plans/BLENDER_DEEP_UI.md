@@ -1,6 +1,8 @@
 # Plan: move Deep controls into Blender's View Layer and Output tabs
 
-Status: planned, nothing implemented. Written for handoff to a fresh session.
+Status: **implemented and merged** (first revision `98ef47943`, PR #3; second
+revision `825bbf5f1`). Current controls are documented in
+[BLENDER.md](../deep/BLENDER.md). The plan below is kept as historical context.
 Layout decision (2026-10-16): **option B, grouped like Cryptomatte**. All deep
 settings sit under the pass checkbox; only the file path goes in the Output tab.
 

@@ -116,3 +116,19 @@ source/resource proofs. Cross-backend curve identity is not promised.
 For a contribution, report the build/toolchain, affected backends, fixture,
 command, result and retained evidence. Small core-test success does not establish
 GPU beauty isolation or full production qualification.
+
+## 4. Machine-local folders outside the repository
+
+On the main development machine, large tools, references and build outputs live
+next to the repository, not in it. That keeps them safe from `git clean`, keeps
+Git and editor indexing fast, and lets every worktree share them. Recorded
+configurations and evidence use these absolute paths. Do not move them into the
+repository, and do not rewrite paths in historical evidence records.
+
+| Folder | Holds | Used by |
+| --- | --- | --- |
+| `D:\CyclesDeepArchive` | Accepted golden deep references (`deep-references/`) and archived M8/landscape validation outputs (`builds/validation/`). | `golden` in [tools/deep_regression_config.json](../../tools/deep_regression_config.json); [tools/archive_deep_samples.py](../../tools/archive_deep_samples.py). Losing it breaks regression replay. |
+| `D:\CyclesDeepScratch` | OptiX 8.0/9.0 SDKs, `regression-tools`, optimization-phase and C API build roots, and published release/evidence packages. Treat it as read-only: use its toolchain, but write new outputs elsewhere. | Build scripts and CMake caches under `D:\temp`; C API records in [builds/validation/c-api](../../builds/validation/c-api). |
+| `D:\temp\<project>` | Temporary per-task builds, renders and logs (for example `cycles_deep_multilayer`, `cycles_deep_release`, `cycles_c_api`). | New work. Contents can be regenerated, but some reports cite files here as evidence. |
+
+None of these exist on a fresh clone; see section 3 for what full replay needs.

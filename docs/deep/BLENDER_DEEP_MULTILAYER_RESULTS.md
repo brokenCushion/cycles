@@ -1,10 +1,11 @@
 # Blender multi-view-layer deep output verification
 
 2026-10-18. Option A1. Branch `blender-deep-multilayer`.
-Status: **adapter implemented and built; full acceptance incomplete**.
-CPU/OptiX fixtures, UI and migration pass. Cancellation could not be delivered
-through Windows native input. Junkshop fails an existing Hair BSDF core guard.
-The requested all-tests-pass condition has not been met.
+Status (updated 2026-11-22): **adapter implemented; junkshop renders all three
+layers.** The Hair BSDF blocker below was resolved by Steps 2-4; see the
+[Step 4 conclusion](#step-4-ribbon-hair-m0m2-and-per-layer-overrides) (junkshop5,
+Part E). Only multi-layer cancellation remains unverified. Sections below are a
+chronological log; earlier STOP and blocker records are superseded by later steps.
 
 ## Change
 
@@ -158,6 +159,9 @@ and a 2,048 MiB deep memory budget. It did not alter geometry or materials. The
 source `.blend` SHA-256 was checked after failure and remains unchanged.
 
 ## Remaining blockers
+
+> Superseded: the shader blocker was resolved in Steps 2-4, and production
+> OpenEXR/Gaffer checks later passed (junkshop4/5). Cancellation is still open.
 
 The shader whitelist at [src/session/deep.cpp](../../src/session/deep.cpp)
 rejects `hair_bsdf`. Supporting the unchanged junkshop scene requires reviewing

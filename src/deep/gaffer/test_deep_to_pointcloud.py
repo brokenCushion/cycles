@@ -29,8 +29,9 @@ def reject(f,text):
     else: raise AssertionError('Expected failure: '+text)
 
 p=points(); assert p.numPoints==8 and p.arePrimitiveVariablesValid()
-assert p['P'].data[0].equalWithAbsError(imath.V3f(-1,-1,2),1e-6)
-assert p['P'].data[1].equalWithAbsError(imath.V3f(-3,-3,6),1e-6)
+# The bottom-left pixel lies at image-left; facing +Z in a right-handed scene, that is +X.
+assert p['P'].data[0].equalWithAbsError(imath.V3f(1,-1,2),1e-6)
+assert p['P'].data[1].equalWithAbsError(imath.V3f(3,-3,6),1e-6)
 assert p['Cs'].data[0].equalWithAbsError(imath.Color3f(.4,.2,.1),1e-6)
 assert list(p['deepAlpha'].data)==[.5]*8
 s['nearColor']['color'].setValue(imath.Color4f(.4,.2,.1,.5))
@@ -39,7 +40,7 @@ s['nearColor']['color'].setValue(imath.Color4f(.2,.1,.05,.5))
 for name in ('nearColor','farColor'):
     s[name]['format'].setValue(GafferImage.Format(imath.Box2i(imath.V2i(-2,-1),imath.V2i(0,1)),2))
 p=points(); assert p.numPoints==8
-assert p['P'].data[0].equalWithAbsError(imath.V3f(-2,-1,2),1e-6)
+assert p['P'].data[0].equalWithAbsError(imath.V3f(2,-1,2),1e-6)
 for name in ('nearColor','farColor'): s[name]['format'].setValue(GafferImage.Format(2,2,1))
 n['pixelStride'].setValue(2); assert points().numPoints==2
 n['pixelStride'].setValue(1)
@@ -62,10 +63,12 @@ selected=[n._sample_index(i,1000,100) for i in range(100)]
 assert selected==sorted(set(selected)) and selected[0]<10 and selected[-1]>=990
 assert 30<sum(i%2==0 for i in selected)<70
 n['maxPoints'].setValue(20)
-n['forwardAxis'].setValue(-1); assert points()['P'].data[0].z==-2
-n['forwardAxis'].setValue(1)
+n['forwardAxis'].setValue(-1); minus=points()['P'].data[0]; assert minus.z==-2
+n['forwardAxis'].setValue(1); plus=points()['P'].data[0]
+# +Z is a 180 degree turn of the -Z camera about Y, not a mirror.
+assert plus.equalWithAbsError(imath.V3f(-minus.x,minus.y,-minus.z),1e-6)
 n['cameraTransform']['translate'].setValue(imath.V3f(10,20,30))
-assert points()['P'].data[0].equalWithAbsError(imath.V3f(9,19,32),1e-6)
+assert points()['P'].data[0].equalWithAbsError(imath.V3f(11,19,32),1e-6)
 n['cameraTransform']['translate'].setValue(imath.V3f(0))
 n['useImageColor'].setValue(False); n['color'].setValue(imath.Color3f(.8,.3,.2))
 assert points()['Cs'].data[0]==imath.Color3f(.8,.3,.2)

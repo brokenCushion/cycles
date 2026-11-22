@@ -184,7 +184,9 @@ class DeepToPointCloud(Gaffer.ComputeNode):
                 px=frustum.min().x+u*frustum.size().x
                 py=frustum.min().y+v*frustum.size().y
                 if projection=='perspective': px*=z; py*=z
-                positions.append(imath.V3f(px,py,axis*z)*matrix)
+                # +Z forward is the -Z camera turned 180 degrees about Y, so X
+                # flips with Z; flipping Z alone would mirror the scene.
+                positions.append(imath.V3f(-axis*px,py,axis*z)*matrix)
                 colors.append(imath.Color3f(*(float(data[n][i])/a for n in ('R','G','B'))) if 'R' in data else fallback)
                 alphas.append(a); depths.append(z)
                 backs.append(float(data['ZBack'][i]) if 'ZBack' in data else z)

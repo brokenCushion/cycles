@@ -1,6 +1,6 @@
 [
   "-S",
-  "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep",
+  "D:\\Projects\\cycles_deep",
   "-B",
   "@BUILD@",
   "-G",

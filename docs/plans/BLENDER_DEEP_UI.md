@@ -131,7 +131,7 @@ Don't rerun it over a dirty checkout; it refuses.
 ## Preconditions and risks
 
 - **Clean checkout:** the pinned checkout exists at
-  `C:\Users\jun\Documents\ChatGPT\cycles_deep\builds\blender\source` at the right
+  `D:\Projects\cycles_deep\builds\blender\source` at the right
   commit, but it is already patched (about 916 modified files), so the script
   will refuse it. **Don't reset or modify it**: current builds use it.
   - Create a separate clean worktree of the same commit, for example

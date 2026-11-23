@@ -129,7 +129,8 @@ identity, exact ribbon depth under motion and deformation, analytic dolly depth.
 Raw beauty policy: CUDA 13/13; OptiX 12/13, one Denoising Albedo.B pixel (20 ULP)
 in curves_deform. Repeats show deep-off varying symmetrically (655 vs 677 pixels,
 up to 23 ULP) and the deep-on repeat equal to deep-off, the same signature as M-a's
-armature; formal resolution needs the step 4 surface accumulation trace.
+armature; resolved by the step 4 surface accumulation trace (identical
+intersections and contributions in 8+8 renders, deep-off order spread 14 ULP).
 Cross-backend ribbon edges use the native waiver in SUPPORT.md: differences occur
 with motion blur off and match pristine beauty alpha (correlation 0.8-0.98).
 Static Ribbon suite byte-identical to M-a on all backends. The character with Fur

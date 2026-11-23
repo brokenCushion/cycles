@@ -178,6 +178,17 @@ comparisons are informational, never a blocker. Do not revisit this scope.
    passes; deep-off-only order spread reached 11 ULP (Albedo.B) and 4 ULP
    (Combined). Patch and evidence: `D:\temp\cycles_deep_motion\diag_armature`.
 
+   Resolution recorded 2026-11-23, M-b curves_deform OptiX (`on`, pixel (13,17),
+   Denoising Albedo.B 20 ULP): resolved. 16 diagnostic renders (8 deep-on, 8
+   deep-off) gave 187/187 identical camera-chain intersections per render, ribbon
+   transparent-chain continuations included, and identical contribution multisets
+   on all passes; every per-component accumulation chain reproduced the written
+   EXR bit-exactly. Deep-off-only order spread reached 14 ULP (Albedo.B) and 4 ULP
+   (Combined); production repeats reached 23 ULP deep-off Albedo.B image-wide.
+   Reconstruct each float component's atomic chain separately: the G and B adds
+   of one float3 write can land in a different order from R. Patch and evidence:
+   `D:\temp\cycles_deep_motion\diag_curves`.
+
 User's statistical note: under exchangeability, exceeding 31 leave-one-out
 maxima occurs roughly 1/32 per independent measure. Twelve channels plus a
 count give multiple opportunities; albedo R/G/B describe one correlated

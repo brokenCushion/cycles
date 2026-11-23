@@ -224,12 +224,15 @@ def main():
         (ctest/'CTestTestfile.cmake').write_text('\n'.join(lines)+'\n')
         run('ctest',['ctest','--test-dir',ctest,'-C','Release','--output-on-failure'])
         # One beauty-off render per fixture; all CPU modes must match it exactly.
-        rejected={'reject_ao_opacity':'ray-traced ambient occlusion cannot drive deep opacity','reject_dof':'static pinhole camera',
-                  'reject_motion':'static pinhole camera','reject_orthographic':'requires mono perspective','reject_cubic':'require linear interpolation',
+        rejected={'reject_ao_opacity':'ray-traced ambient occlusion cannot drive deep opacity','reject_dof':'pinhole camera without depth of field',
+                  'reject_orthographic':'requires mono perspective','reject_cubic':'require linear interpolation',
                   'reject_color':'requires scalar extinction','reject_nonlinear':'nonlinear products of density','reject_reflection':'unreflected volumes'}
         for device in (('CPU','CUDA','OPTIX') if args.optix else ('CPU','CUDA')):
             cases=json.loads(config['cpu_cases' if device=='CPU' else 'cuda_cases'].read_text())['cases']
             for name,case in cases.items():
+                # Motion blur with Deep Volume is accepted since M-c; that fixture only enabled blur.
+                if name=='reject_motion':
+                    result.setdefault('retired',{})[f'matrix/{device}/{name}']='motion blur with Deep Volume is accepted since M-c';continue
                 base=root/'matrix'/device/name
                 if name.startswith('reject_'):
                     if retained_rejection(previous,result,f'matrix/{device}/{name}',base/'rejection',rejected[name]):continue
@@ -271,7 +274,9 @@ def main():
                 v=verify(d,samples=case['samples'],adaptive=False,ledger=d/'scene.csv')
                 v['max_analytic_error']=boundary_analytic(d,case)
                 if device=='CPU':v['cpu_beauty']=exact_flat(d/'beauty.exr',d/'off.beauty.exr')
-                if device!='OPTIX':identity(label,config['golden']/('boundary-'+device)/(case['name']+'.deep.exr'),d/'scene.deep.exr','strict')
+                # Matched-motion cases (M-c) postdate the recorded golden set: analytic, ledger and
+                # CPU beauty gates only; the 81 strict identity references are unchanged.
+                if device!='OPTIX' and not case.get('motion'):identity(label,config['golden']/('boundary-'+device)/(case['name']+'.deep.exr'),d/'scene.deep.exr','strict')
                 else:v['cuda_alpha']=numerical(label+'-cuda-alpha',lambda:backend_compare(root/'boundary/CUDA'/case['name'],d))
         for name,samples,percentage in [('small',16,2),('performance',4,25)]:
             for mode in ('strict','1e-4','1e-3'):

@@ -486,6 +486,52 @@ static std::set<const Geometry *> deep_camera_geometry(const Scene *scene)
   return geometry;
 }
 
+/* Smallest world-space voxel edge over the shutter. Motion steps decompose to
+ * M(t) = R(t) S(t) with S(t) linearly interpolated (transform_motion_array_interpolate),
+ * so |M(t) w| = |S(t) w| and its minimum over a segment is the distance from the
+ * origin to the segment [S_a w, S_b w]. Rotation and translation do not matter. */
+static float deep_shutter_voxel_edge(const array<Transform> &motion, const ImageMetaData &metadata)
+{
+  vector<DecomposedTransform> decomposed(motion.size());
+  transform_motion_decompose(decomposed.data(), motion.data(), motion.size());
+  const Transform index = metadata.use_transform_3d ? transform_inverse(metadata.transform_3d) :
+                                                      transform_identity();
+  double minimum = std::numeric_limits<double>::infinity();
+  for (size_t i = 0; i + 1 < decomposed.size(); ++i) {
+    Transform scale[2];
+    for (int end = 0; end < 2; ++end) {
+      DecomposedTransform d = decomposed[i + end];
+      d.x = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+      d.y.x = d.y.y = d.y.z = 0.0f;
+      transform_compose(&scale[end], &d);
+    }
+    for (int axis = 0; axis < 3; ++axis) {
+      const float3 w = transform_direction(&index, make_float3(axis == 0, axis == 1, axis == 2));
+      const float3 a = transform_direction(&scale[0], w), b = transform_direction(&scale[1], w);
+      const double ad[3] = {a.x, a.y, a.z}, bd[3] = {b.x, b.y, b.z};
+      double ab = 0, aa = 0, dd = 0;
+      for (int k = 0; k < 3; ++k) {
+        aa += ad[k] * ad[k];
+        ab += ad[k] * (bd[k] - ad[k]);
+        dd += (bd[k] - ad[k]) * (bd[k] - ad[k]);
+      }
+      const double s = dd > 0 ? std::clamp(-ab / dd, 0.0, 1.0) : 0.0;
+      double length = 0;
+      for (int k = 0; k < 3; ++k) {
+        const double v = ad[k] + s * (bd[k] - ad[k]);
+        length += v * v;
+      }
+      minimum = std::min(minimum, std::sqrt(length));
+    }
+  }
+  require_deep(std::isfinite(minimum) && minimum > 0, "invalid deep grid voxel step during the shutter");
+  /* Round down so the stored FLOAT step never exceeds the real minimum. */
+  float edge = float(minimum);
+  if (double(edge) > minimum)
+    edge = nextafterf(edge, 0.0f);
+  return edge;
+}
+
 void validate_deep_scene(Scene *scene, SessionParams &params)
 {
   require_deep(!params.deep.ids || params.deep.error != 0,
@@ -557,14 +603,11 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
     require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA ||
                   params.device.type == DEVICE_OPTIX),
                  "deep volumes require CPU, CUDA or OptiX");
-    /* Volume depth, clipping and the CPU oracle use the static (shutter-centre)
-     * worldtocamera, so a camera moving during the shutter would misplace
-     * volume depth. Keep any motion blur rejected until volume motion (M-c). */
-    require_deep(!scene->integrator->get_motion_blur(),
-                 "deep volumes require a static pinhole camera: disable motion blur (moving cameras "
-                 "and objects are unsupported with Deep Volume)");
+    /* Volume depth, clipping, object-space boundaries, grids and the CPU oracle
+     * use the camera and object transforms interpolated at each ray's time, so
+     * camera and object transform motion are validated below like surfaces. */
     require_deep(scene->camera->get_aperturesize() == 0 && scene->camera->get_nearclip() > 0,
-                 "deep volumes require static pinhole camera and positive near clip");
+                 "deep volumes require a pinhole camera without depth of field and a positive near clip");
   }
   require_deep((params.device.type == DEVICE_CPU || params.device.type == DEVICE_CUDA ||
                   params.device.type == DEVICE_OPTIX) &&
@@ -610,14 +653,15 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
       require_deep(isfinite_safe(weight) && weight == 1.0f,
                    "deep motion currently requires a uniform shutter curve");
   }
-  /* Rigid motion (camera, volumes) keeps unit scale and no shear, and each
+  /* Rigid motion (the camera) keeps unit scale and no shear, and each
    * step keeps the handedness of the static matrix. Blender cameras are
    * reflected (blender_camera_matrix flips Z), so a positive determinant cannot
    * be required. transform_motion_decompose stores a reflection as scale -1 and
    * interpolates it unchanged; ray generation and deep_camera_depth share that
-   * interpolated matrix. Surface and hair objects may use any finite, non-degenerate,
-   * unreflected affine motion: surface depth is taken from the ray-time hit
-   * position, so scale needs no depth change. */
+   * interpolated matrix. Surface, hair and volume objects may use any finite,
+   * non-degenerate, unreflected affine motion: surface depth is taken from the
+   * ray-time hit position, and volumes are traversed in object space with the
+   * ray-time inverse, so scale needs no depth change. */
   const auto validate_motion = [&](const array<Transform> &motion,
                                    const Transform &current,
                                    const bool rigid) {
@@ -650,7 +694,7 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                          std::isfinite(lx * ly * lz) && lx > 0 && ly > 0 && lz > 0 &&
                          std::isfinite(determinant) && determinant > 0 &&
                          determinant > 1e-6f * lx * ly * lz,
-                     "deep surface motion requires finite non-degenerate transforms without "
+                     "deep object motion requires finite non-degenerate transforms without "
                      "reflection");
         continue;
       }
@@ -660,7 +704,7 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                        fabsf(dot(x, z)) < 1e-4f && fabsf(dot(y, z)) < 1e-4f &&
                        std::isfinite(handedness) && handedness != 0 &&
                        (dot(x, cross(y, z)) > 0) == (handedness > 0),
-                   "deep motion requires finite rigid camera/volume transforms without scale, "
+                   "deep motion requires finite rigid camera transforms without scale, "
                    "shear or a handedness change during the shutter");
     }
   };
@@ -696,7 +740,17 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
     if (geometry->is_light())
       continue;
     if (volume && geometry->geometry_type == Geometry::VOLUME) {
-      require_deep(!geometry->get_use_motion_blur() && geometry->get_used_shaders().size() == 1,
+      /* Blender never deforms a grid's boundary (object transform motion only).
+       * Velocity-grid motion advects density during the shutter; deep does not. */
+      bool velocity = false;
+      for (const AttributeStandard standard : {ATTR_STD_VOLUME_VELOCITY, ATTR_STD_VOLUME_VELOCITY_X,
+                                          ATTR_STD_VOLUME_VELOCITY_Y, ATTR_STD_VOLUME_VELOCITY_Z})
+        velocity |= geometry->attributes.find(standard) != nullptr;
+      require_deep(!scene->integrator->get_motion_blur() || !velocity ||
+                       static_cast<Volume *>(geometry)->get_velocity_scale() == 0.0f,
+                   "deep volumes do not support velocity-grid motion blur: set the volume's "
+                   "Velocity Scale to 0 or remove its velocity grid");
+      require_deep(!geometry->has_motion_blur() && geometry->get_used_shaders().size() == 1,
                    "native deep grids require static geometry with one material");
       auto *shader = static_cast<Shader *>(geometry->get_used_shaders()[0]);
       if (shader_evaluated_volume(scene, params.deep, shader))
@@ -739,8 +793,11 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
         has_volume |= static_cast<Shader *>(shader)->graph->output()->input("Volume")->link !=
                       nullptr;
       if (has_volume) {
-        require_deep(!geometry->get_use_motion_blur(),
-                     "deep volume meshes require static geometry; volume motion is unsupported");
+        /* deep_volume_object reads the boundary's static object-space vertices;
+         * object transform motion is supported, deformation is not. */
+        require_deep(!geometry->has_motion_blur(),
+                     "deep volume meshes must not deform during the shutter; object transform motion "
+                     "is supported, deforming volume boundaries are not");
         const Mesh *mesh = static_cast<Mesh *>(geometry);
         require_deep(geometry->get_used_shaders().size() == 1 && mesh->num_triangles() >= 1,
                      "deep volume mesh must have one material and a triangle boundary");
@@ -809,6 +866,8 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                                       len(transform_direction(&voxel, make_float3(0, 0, 1)))});
           require_deep(std::isfinite(edge) && edge > 0, "invalid deep grid voxel step");
           step = std::min(step, edge);
+          if (scene->integrator->get_motion_blur() && object->use_motion())
+            step = std::min(step, deep_shutter_voxel_edge(object->get_motion(), metadata));
         }
       }
       require_deep(step > 0 && step < FLT_MAX && std::isfinite(step),
@@ -842,16 +901,11 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                        (!has_volume || determinant > 0),
                    "deep requires finite nonsingular transforms and unreflected volumes");
     }
-    /* Volumes keep the rigid rule until volume motion (M-c). Hair objects use
-     * the surface rule: ribbon depth is taken from the ray-time hit position. */
-    bool rigid_motion = false;
-    if (Geometry *geometry = object->get_geometry()) {
-      rigid_motion = geometry->geometry_type == Geometry::VOLUME;
-      for (Node *node : geometry->get_used_shaders())
-        rigid_motion |= static_cast<Shader *>(node)->graph->output()->input("Volume")->link !=
-                        nullptr;
-    }
-    validate_motion(object->get_motion(), object->get_tfm(), rigid_motion);
+    /* Every object uses the non-rigid rule. Surface and ribbon depth come from
+     * the ray-time hit position; volumes map each ray into object space with the
+     * ray-time inverse, where boundaries, grids and depth stay affine in the ray
+     * parameter. Scale changes the voxel step; see the shutter minimum above. */
+    validate_motion(object->get_motion(), object->get_tfm(), false);
     /* Blender stores shadow-catcher flags on analytic lights as well. These
      * objects have no surface closure and cannot create deep opacity events. */
     if (object->get_geometry() && object->get_geometry()->is_light())

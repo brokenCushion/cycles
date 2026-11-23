@@ -44,10 +44,11 @@ nothing partial is written):
 
 | Scene feature | Preflight message |
 | --- | --- |
-| Motion blur with Deep Volume on (any moving camera or object) | `deep volumes require a static pinhole camera: disable motion blur (moving cameras and objects are unsupported with Deep Volume)` |
-| Volume with depth of field or zero clip start | `deep volumes require static pinhole camera and positive near clip` |
-| Camera that scales, shears or mirrors during the shutter (e.g. a camera under an animated non-uniformly scaled parent) | `deep motion requires finite rigid camera/volume transforms without scale, shear or a handedness change during the shutter` |
-| Mesh or hair object mirrored (negative scale) or collapsed during the shutter (the scanner only warns) | `deep surface motion requires finite non-degenerate transforms without reflection` |
+| Volume with depth of field or zero clip start | `deep volumes require a pinhole camera without depth of field and a positive near clip` |
+| Camera that scales, shears or mirrors during the shutter (e.g. a camera under an animated non-uniformly scaled parent) | `deep motion requires finite rigid camera transforms without scale, shear or a handedness change during the shutter` |
+| Mesh, hair or volume object mirrored (negative scale) or collapsed during the shutter (the scanner only warns) | `deep object motion requires finite non-degenerate transforms without reflection` |
+| Volume mesh deforming during the shutter (animated shape keys or modifiers) | `deep volume meshes must not deform during the shutter; …` |
+| VDB velocity-grid motion blur (Velocity Scale ≠ 0) | `deep volumes do not support velocity-grid motion blur: set the volume's Velocity Scale to 0 or remove its velocity grid` |
 | Hair and smoke/volume in the same layer | `hair requires Deep Volume off for this layer` (split into separate view layers) |
 | Thick or Thick Linear hair shape | `deep hair requires Ribbon shape; THICK and THICK_LINEAR are unsupported` |
 | OSL on hair; Hair Info node | `OSL on hair is unsupported by deep capture`; `Hair Info is unsupported by deep capture` |
@@ -66,13 +67,19 @@ the shutter like the beauty. Blender's camera matrix is mirrored for Cycles
 (Z flip); deep accepts that and only requires that the camera stays rigid and
 keeps the same handedness for the whole shutter. Ribbon hair moves too
 (transforms, deforming particle and Curves hair); the Ribbon, Deep Volume off
-and depth tolerance 0 rules above still apply. Deep Volume layers still need
-motion blur off (milestone M-c). With strict deep, moving
+and depth tolerance 0 rules above still apply. Deep Volume layers support
+moving cameras and moving, scaled or sheared volumes (milestone M-c); deforming
+volume meshes and VDB velocity blur are rejected, and strict deep can exceed the
+volume reconstruction budget for fast-moving media (use a numeric error). Scaled
+native VDB grids need Volume Space = World: deep does not yet apply Blender's
+Object-space density factor (known issue). With strict deep, moving
 surfaces keep about one deep sample per camera sample, so files grow (161 MB at
 960x540 and 626 MB at 1920x1080, 64 samples, on the character test); see
 [Shrinking motion-blurred deep EXRs](#shrinking-motion-blurred-deep-exrs). The
 scanner evaluates the camera at the same shutter times and reports
-`camera_motion`, `camera_fov` and `volume_camera` exactly as preflight does. The
+`camera_motion` and `camera_fov` exactly as preflight does, samples volume meshes
+at the shutter times (`volume_deform`) and checks velocity grids
+(`volume_velocity`). The
 full matrix is in [SUPPORT.md](SUPPORT.md).
 
 ### Shrinking motion-blurred deep EXRs

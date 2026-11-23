@@ -164,14 +164,30 @@ def apply_case(case,s,obj,mat,bsdf,out):
             key(cam.data,'lens',((0,50),(2,80)))
             if case=='camera_fov_vector':s.view_layers[0].use_pass_vector=True
         if case=='camera_volume_motion':
-            s.cycles.use_deep_volume=True
+            # Deep Volume with a moving camera renders since M-c (volume depth at the ray time).
+            s.cycles.use_deep_volume=True;cam.data.type='PERSP'
             node=n.new('ShaderNodeVolumeScatter');link(node.outputs[0],out.inputs['Volume'])
+    elif case.startswith('volume_') and case!='volume':
+        # M-c: volume transform motion renders; deforming volume boundaries and DOF reject.
+        s.cycles.use_deep_volume=True;s.camera.data.type='PERSP';s.render.use_motion_blur=case!='volume_dof'
+        node=n.new('ShaderNodeVolumeAbsorption');node.inputs['Color'].default_value=(0,0,0,1)
+        link(node.outputs[0],out.inputs['Volume'])
+        if case=='volume_object_motion':
+            for frame,x in ((0,-.3),(2,.3)):obj.location.x=x;obj.keyframe_insert('location',frame=frame)
+            obj.scale=(1,1,1);obj.keyframe_insert('scale',frame=0);obj.scale=(1.3,.8,1);obj.keyframe_insert('scale',frame=2)
+        if case=='volume_deform_motion':
+            # Animated shape key: the boundary deforms during the shutter.
+            obj.shape_key_add(name='Basis');key=obj.shape_key_add(name='Move')
+            for v in key.data:v.co.z+=.3*(v.co.x+2)
+            for frame,value in ((0,0.),(2,1.)):key.value=value;key.keyframe_insert('value',frame=frame)
+        if case=='volume_dof':
+            s.camera.data.dof.use_dof=True;s.camera.data.dof.focus_distance=8;s.camera.data.dof.aperture_fstop=2
     elif case!='diffuse':raise ValueError(case)
 
 
 def main():
     root=Path(sys.argv[sys.argv.index('--')+1]);root.mkdir(parents=True,exist_ok=False)
-    cases=['diffuse','hair_mesh','particle_hair','holdout_hair','shared_hair','light_reflection','light_transparent_depth','mix_float','mix_vector','ao_opacity','bevel_opacity','ao_color','bevel_color','ray_portal','displacement','muted','unreachable','group','adaptive','shadow_catcher','caustics','volume','panoramic','border','multiview','samples','time_limit','transparent_glass','rolling_shutter','guiding','strict_ids','deform','camera_off','instance','camera_motion','camera_motion_deform','camera_motion_reflected','camera_handedness_flip','camera_shear','camera_fov','camera_fov_vector','camera_volume_motion','hair_motion','hair_camera_motion','hair_motion_thick','hair_motion_volume']
+    cases=['diffuse','hair_mesh','particle_hair','holdout_hair','shared_hair','light_reflection','light_transparent_depth','mix_float','mix_vector','ao_opacity','bevel_opacity','ao_color','bevel_color','ray_portal','displacement','muted','unreachable','group','adaptive','shadow_catcher','caustics','volume','panoramic','border','multiview','samples','time_limit','transparent_glass','rolling_shutter','guiding','strict_ids','deform','camera_off','instance','camera_motion','camera_motion_deform','camera_motion_reflected','camera_handedness_flip','camera_shear','camera_fov','camera_fov_vector','camera_volume_motion','hair_motion','hair_camera_motion','hair_motion_thick','hair_motion_volume','volume_object_motion','volume_deform_motion','volume_dof']
     from test_blender_deep_allowlist import CLOSURES,UTILITIES,LIGHT
     cases += ['candidate_'+name for name in [*CLOSURES,*UTILITIES,*('lp_'+x for x in LIGHT)]]
     results=[]
@@ -203,9 +219,9 @@ def main():
     # Camera motion: reflected Blender cameras render; scale/shear/handedness/FOV/volume cases reject.
     for r in results:
         base=r['case'].rsplit('-',1)[0]
-        if base in {'camera_motion','camera_motion_deform','camera_motion_reflected'}:
+        if base in {'camera_motion','camera_motion_deform','camera_motion_reflected'} or r['case']=='camera_volume_motion-visible':
             assert r['render_pass'] and not r['scanner_block'],r
-        if base in {'camera_handedness_flip','camera_shear','camera_fov','camera_volume_motion'}:
+        if base in {'camera_handedness_flip','camera_shear','camera_fov'}:
             assert not r['render_pass'] and r['scanner_block'],r
     print('SCANNER_CAMERA_MOTION_PASS',flush=True)
     # Hair motion (M-b): moving/deforming Ribbon hair and camera motion over hair render; THICK and
@@ -218,6 +234,13 @@ def main():
         if base in {'hair_motion_thick','hair_motion_volume'}:
             assert not r['render_pass'] and r['scanner_block'],r
     print('SCANNER_HAIR_MOTION_PASS',flush=True)
+    # Volume motion (M-c): transform motion (scale included) renders; deforming boundaries and DOF reject.
+    for r in results:
+        base,variant=r['case'].rsplit('-',1)
+        if variant!='visible':continue
+        if base=='volume_object_motion':assert r['render_pass'] and not r['scanner_block'],r
+        if base in {'volume_deform_motion','volume_dof'}:assert not r['render_pass'] and r['scanner_block'],r
+    print('SCANNER_VOLUME_MOTION_PASS',flush=True)
     s,obj,mat,bsdf,out=fixture()
     s.cycles.device='GPU'
     s.cycles.deep_output_path=str(root/'device-check'/'{view_layer}_####')

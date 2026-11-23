@@ -233,7 +233,9 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
           }
           const char *step_text = std::getenv("CYCLES_DEEP_VOLUME_ORACLE_STEP");
           const double step = step_text ? std::stod(step_text) : 0;
-          const float4 z = kernel_globals->data.cam.worldtocamera.z;
+          /* Camera depth row at this ray's shutter time, as the kernel oracle uses. */
+          const float4 z = deep_camera_depth_row(kernel_globals->data.cam,
+                                                 kernel_globals->camera_motion.data, state->ray.time);
           const auto direction = state->ray.D;
           const double dz = double(z.x)*direction.x + double(z.y)*direction.y + double(z.z)*direction.z;
           const double requested = std::ceil((back-front)*double(len(direction))/(step*dz));
@@ -251,6 +253,17 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
           for (int i = 0; i < steps; ++i)
             out << front+(back-front)*i/steps << ',' << front+(back-front)*(i+1)/steps
                 << ',' << sigma[i] << '\n';
+          /* Accepted ray identity for independent time-aware geometry oracles:
+           * shutter time in [0,1], world origin/direction and the depth row used. */
+          std::ofstream ray(string(oracle_dir) + "/" + std::to_string(work_tile.x) + "-" +
+                            std::to_string(work_tile.y) + "-" +
+                            std::to_string(state->path.sample) + ".ray");
+          ray.exceptions(std::ios::badbit | std::ios::failbit);
+          ray << std::setprecision(17) << "{\"time\": " << state->ray.time << ", \"P\": ["
+              << state->ray.P.x << ", " << state->ray.P.y << ", " << state->ray.P.z
+              << "], \"D\": [" << direction.x << ", " << direction.y << ", " << direction.z
+              << "], \"depth_row\": [" << z.x << ", " << z.y << ", " << z.z << ", " << z.w
+              << "], \"front\": " << front << ", \"back\": " << back << "}\n";
         }
       }
       else {

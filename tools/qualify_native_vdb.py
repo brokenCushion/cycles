@@ -37,8 +37,7 @@ report = {'device': device, 'blender_sha256': hashlib.sha256(blender.read_bytes(
 report_path = output / 'report.json'
 expected_errors = {
     'reject_ao_opacity': 'ray-traced ambient occlusion cannot drive deep opacity',
-    'reject_dof': 'static pinhole camera',
-    'reject_motion': 'static pinhole camera',
+    'reject_dof': 'pinhole camera without depth of field',
     'reject_orthographic': 'requires mono perspective',
     'reject_cubic': 'require linear interpolation',
     'reject_color': 'requires scalar extinction',
@@ -55,7 +54,14 @@ def run(command, log):
     return result.returncode
 
 
+# Motion blur with Deep Volume is supported since M-c (volume transform motion);
+# this fixture only enables motion blur on a static scene, so it no longer rejects.
+RETIRED = {'reject_motion': 'motion blur with Deep Volume is accepted since M-c; see the volume motion suite'}
+
 for name, case in manifest['cases'].items():
+    if name in RETIRED:
+        report.setdefault('retired', {})[name] = RETIRED[name]
+        continue
     directory = output / name
     if directory.exists():
         raise RuntimeError('Use fresh output: ' + str(directory))

@@ -892,6 +892,163 @@
       "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-0.9 -0.8 3 0.9 -0.8 3 0.9 0.8 3 -0.9 0.8 3 -0.9 -0.8 7 0.9 -0.8 7 0.9 0.8 7 -0.9 0.8 7\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>"
     },
     {
+      "name": "motion_matched_dolly",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera shuttertime=\"1\" motion=\"1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 -1.5 1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 0.5\" camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" motion_blur=\"true\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><object name=\"m_fog0\" motion=\"1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 -1.5 1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 0.5\"/><state object=\"m_fog0\" shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "motion": true,
+      "motion_note": "Camera and every object share the motion: camera-space geometry is static, so the static analytic gate holds at every shutter time. Static worldtocamera or object inverses would shift depth/boundaries away from the analytic values."
+    },
+    {
+      "name": "motion_matched_rotation",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            6
+          ],
+          0.3
+        ],
+        [
+          [
+            -10,
+            -10,
+            4,
+            10,
+            10,
+            8
+          ],
+          0.2
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera shuttertime=\"1\" motion=\"0.9689124217106447 0 -0.24740395925452294 0 0 1 0 0 0.24740395925452294 0 0.9689124217106447 0 0.9887710779360422 0 0.14943813247359922 0.3 0 1 0 0 -0.14943813247359922 0 0.9887710779360422 0\" camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" motion_blur=\"true\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><object name=\"m_fog0\" motion=\"0.9689124217106447 0 -0.24740395925452294 0 0 1 0 0 0.24740395925452294 0 0.9689124217106447 0 0.9887710779360422 0 0.14943813247359922 0.3 0 1 0 0 -0.14943813247359922 0 0.9887710779360422 0\"/><state object=\"m_fog0\" shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 6 10 -10 6 10 10 6 -10 10 6\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.2\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><object name=\"m_fog1\" motion=\"0.9689124217106447 0 -0.24740395925452294 0 0 1 0 0 0.24740395925452294 0 0.9689124217106447 0 0.9887710779360422 0 0.14943813247359922 0.3 0 1 0 0 -0.14943813247359922 0 0.9887710779360422 0\"/><state object=\"m_fog1\" shader=\"fog1\"><mesh P=\"-10 -10 4 10 -10 4 10 10 4 -10 10 4 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "motion": true,
+      "motion_note": "Camera and every object share the motion: camera-space geometry is static, so the static analytic gate holds at every shutter time. Static worldtocamera or object inverses would shift depth/boundaries away from the analytic values."
+    },
+    {
+      "name": "motion_matched_three_steps",
+      "media": [
+        [
+          [
+            -0.9,
+            -0.8,
+            3,
+            0.9,
+            0.8,
+            7
+          ],
+          0.3
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 16,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera shuttertime=\"1\" motion=\"1.0 0 0.0 -0.4 0 1 0 0 -0.0 0 1.0 -1 0.9950041652780258 0 0.09983341664682815 0 0 1 0 0 -0.09983341664682815 0 0.9950041652780258 0.2 0.9800665778412416 0 -0.19866933079506122 0.5 0 1 0 0 0.19866933079506122 0 0.9800665778412416 1.5\" camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" motion_blur=\"true\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><object name=\"m_fog0\" motion=\"1.0 0 0.0 -0.4 0 1 0 0 -0.0 0 1.0 -1 0.9950041652780258 0 0.09983341664682815 0 0 1 0 0 -0.09983341664682815 0 0.9950041652780258 0.2 0.9800665778412416 0 -0.19866933079506122 0.5 0 1 0 0 0.19866933079506122 0 0.9800665778412416 1.5\"/><state object=\"m_fog0\" shader=\"fog0\"><mesh P=\"-0.9 -0.8 3 0.9 -0.8 3 0.9 0.8 3 -0.9 0.8 3 -0.9 -0.8 7 0.9 -0.8 7 0.9 0.8 7 -0.9 0.8 7\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "motion": true,
+      "motion_note": "Camera and every object share the motion: camera-space geometry is static, so the static analytic gate holds at every shutter time. Static worldtocamera or object inverses would shift depth/boundaries away from the analytic values."
+    },
+    {
+      "name": "motion_matched_surface_in_fog",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            2,
+            10,
+            10,
+            8
+          ],
+          0.3
+        ]
+      ],
+      "surface": 0.4,
+      "near": 0.125,
+      "far": 20,
+      "samples": 4,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera shuttertime=\"1\" motion=\"1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 -1.5 1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 0.5\" camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" motion_blur=\"true\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><object name=\"m_fog0\" motion=\"1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 -1.5 1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 0.5\"/><state object=\"m_fog0\" shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"wall\"><emission name=\"e\" color=\"0.3 0.5 0.7\"/>\n<transparent_bsdf name=\"t\" color=\"1 1 1\"/><mix_closure name=\"m\" fac=\"0.6\"/>\n<connect from=\"e emission\" to=\"m closure1\"/><connect from=\"t bsdf\" to=\"m closure2\"/>\n<connect from=\"m closure\" to=\"output surface\"/></shader>\n<object name=\"m_wall\" motion=\"1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 -1.5 1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 0.5\"/><state object=\"m_wall\" shader=\"wall\"><mesh P=\"-10 -10 5 10 -10 5 10 10 5 -10 10 5\" nverts=\"4\" verts=\"0 1 2 3\"/></state></cycles>",
+      "motion": true,
+      "motion_note": "Camera and every object share the motion: camera-space geometry is static, so the static analytic gate holds at every shutter time. Static worldtocamera or object inverses would shift depth/boundaries away from the analytic values."
+    },
+    {
+      "name": "motion_matched_camera_inside",
+      "media": [
+        [
+          [
+            -10,
+            -10,
+            -2,
+            10,
+            10,
+            6
+          ],
+          0.3
+        ],
+        [
+          [
+            -10,
+            -10,
+            -1,
+            10,
+            10,
+            8
+          ],
+          0.2
+        ]
+      ],
+      "surface": false,
+      "near": 0.125,
+      "far": 20,
+      "samples": 1,
+      "width": 16,
+      "height": 12,
+      "extra": [],
+      "rejection": false,
+      "xml": "<cycles><camera shuttertime=\"1\" motion=\"0.9689124217106447 0 -0.24740395925452294 0 0 1 0 0 0.24740395925452294 0 0.9689124217106447 0 0.9887710779360422 0 0.14943813247359922 0.3 0 1 0 0 -0.14943813247359922 0 0.9887710779360422 0\" camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" motion_blur=\"true\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><object name=\"m_fog0\" motion=\"0.9689124217106447 0 -0.24740395925452294 0 0 1 0 0 0.24740395925452294 0 0.9689124217106447 0 0.9887710779360422 0 0.14943813247359922 0.3 0 1 0 0 -0.14943813247359922 0 0.9887710779360422 0\"/><state object=\"m_fog0\" shader=\"fog0\"><mesh P=\"-10 -10 -2 10 -10 -2 10 10 -2 -10 10 -2 -10 -10 6 10 -10 6 10 10 6 -10 10 6\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state><shader name=\"fog1\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.2\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><object name=\"m_fog1\" motion=\"0.9689124217106447 0 -0.24740395925452294 0 0 1 0 0 0.24740395925452294 0 0.9689124217106447 0 0.9887710779360422 0 0.14943813247359922 0.3 0 1 0 0 -0.14943813247359922 0 0.9887710779360422 0\"/><state object=\"m_fog1\" shader=\"fog1\"><mesh P=\"-10 -10 -1 10 -10 -1 10 10 -1 -10 10 -1 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "motion": true,
+      "motion_note": "Camera and every object share the motion: camera-space geometry is static, so the static analytic gate holds at every shutter time. Static worldtocamera or object inverses would shift depth/boundaries away from the analytic values."
+    },
+    {
       "name": "reject_scatter_color",
       "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><scatter_volume name=\"v\" color=\".5 .2 .5\" anisotropy=\"0.5\" density=\"0.6\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
       "width": 16,
@@ -973,8 +1130,8 @@
       "rejection": true
     },
     {
-      "name": "reject_motion",
-      "xml": "<cycles><camera camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" motion_blur=\"true\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><state shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
+      "name": "reject_motion_reflection",
+      "xml": "<cycles><camera shuttertime=\"1\" camera_type=\"perspective\" fov=\"0.9\" nearclip=\"0.125\" farclip=\"20\"/>\n<film filter_type=\"box\" filter_width=\"1\"/><integrator seed=\"123\" motion_blur=\"true\" use_adaptive_sampling=\"false\"/>\n<background transparent=\"true\"><background name=\"b\" color=\"0.1 0.1 0.1\"/>\n<connect from=\"b background\" to=\"output surface\"/></background><shader name=\"fog0\"><absorption_volume name=\"v\" color=\"0 0 0\" density=\"0.3\"/>\n<connect from=\"v volume\" to=\"output volume\"/></shader><object name=\"m_fog0\" motion=\"1.0 0 0.0 0 0 1 0 0 -0.0 0 1.0 0 -1.0 0 0.0 0 0 1 0 0 0.0 0 1.0 0\"/><state object=\"m_fog0\" shader=\"fog0\"><mesh P=\"-10 -10 2 10 -10 2 10 10 2 -10 10 2 -10 -10 8 10 -10 8 10 10 8 -10 10 8\"\nnverts=\"4 4 4 4 4 4\" verts=\"0 3 2 1 4 5 6 7 0 1 5 4 3 7 6 2 0 4 7 3 1 2 6 5\"/></state></cycles>",
       "width": 16,
       "height": 12,
       "samples": 1,

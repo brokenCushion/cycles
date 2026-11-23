@@ -1,6 +1,7 @@
 # Deep motion blur (phase 4)
 
-Status: **M-a and M-b implemented and validated** (2026-11-23); M-c in progress.
+Status: **M-a, M-b and M-c implemented and validated** (M-a/M-b 2026-11-23,
+M-c 2026-11-24).
 Branch `blender-deep-multilayer`.
 
 Goal: deep alpha matches a motion-blurred Cycles beauty for animated characters
@@ -148,3 +149,51 @@ deep volume path and CPU oracle with values interpolated at `ray.time`. Audit
 the error-budget proofs (straight-line depth map per ray at a fixed time). Use
 the independent CPU shader oracle per ray time, `tools/deep_boundary_cases.json`
 motion cases and `validate_volume_camera_curves.py`.
+
+### M-c results (2026-11-24)
+
+Implemented: `deep_camera_depth_row(cam, motion, time)` gives the depth row of the
+same interpolated camera `deep_camera_depth` uses (unchanged when static); the
+homogeneous, native NanoVDB and shader-evaluated volume paths and the CPU oracle
+use it plus the ray-time object inverse. Preflight drops the Deep Volume motion
+rejection; the camera keeps the rigid/handedness rule; volume objects take the
+object rule (scale/shear allowed, no reflection); deforming volume boundaries and
+VDB velocity-grid blur are rejected. Shader-evaluated grids under motion use the
+smallest voxel edge over the shutter. Scanner mirrors it (`volume_deform`,
+`volume_velocity`); drift suite 162 cases, 0 false positives/negatives.
+
+Error budgets: every proof is per ray, and each ray's transforms are fixed at its
+time, so the affine depth map, straight object-space ray, cubic-per-cell grid
+bound, telescoped products and cutoff clamp still hold; the pixel average is a
+convex mix of per-ray curves. No budget change.
+
+Gates (`D:\temp\cycles_deep_motion\volume`): 21 positive + 4 negative Blender
+fixtures pass on CPU/CUDA/OptiX (deep vs raw curve ≤ 0.272 × bound, ledger
+≤ 1.2e-8, unbiased alpha, CPU beauty exact, byte identity); ray-time shader
+oracle ≤ 7.9e-5 (h/64), native grids ≤ 1.95e-7; time-aware geometry oracle depth
+≤ 4.8e-5; matched camera+volume vs static rig ≤ 1.7e-5 with 0 count differences;
+boundary matched-motion cases 10/10; cross-backend flat alpha 42/42 ≤ 1.8e-6;
+static suites identical to M-b (deep 125/125, CPU beauty 53/53, static hair
+41/41); M-a/M-b suites pass; CUDA 75/75 common kernel resources unchanged.
+Production (960x540, 64 spp, moving VDB plume, moving camera, mist, moving sign):
+CPU and OptiX bias 1.86e-6 ± 4.47e-6, CPU–OptiX p99 2.2e-7, Gaffer DeepRecolor
+RGB p99 2.7e-3, 190 MB at error 1e-3.
+
+GPU raw beauty: CUDA 20/21 and OptiX 20/21 calibrated. The two M-c GPU raw-beauty
+flags (CUDA `vdb_static` (31,18), OptiX `vdb_scale_eval` (34,21), Combined.A)
+were resolved on 2026-11-24 by the volume majorant-snapshot diagnostic: deep-on
+and deep-off agree, bit-identically in the required six renders. On CUDA the
+flagged alternate value also appears in snapshot deep-off renders, so it comes
+from majorant/accumulation order and not from deep capture (see VALIDATION.md
+step 4).
+
+Found during M-c (pre-existing, static):
+- Scaled native VDBs with Volume Space = Object (Blender's default) get the wrong
+  deep density: Cycles multiplies by `object_volume_density`, the deep grid path
+  does not (a 0.00375-scaled VDB gave τ 267× too low). Workaround: Space = World.
+- A ground plane coplanar with a mist slab's bottom face gives deep alpha above
+  beauty (mean +0.137).
+- Strict mode can overflow the volume reconstruction interval budget with
+  fast-moving homogeneous boxes (explicit failure).
+- One unexplained OptiX "Illegal address (deep_surface)" while ~4 GPU jobs shared
+  the card; not reproduced alone.

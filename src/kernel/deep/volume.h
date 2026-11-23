@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
 #include "kernel/deep/write.h"
+#include "kernel/deep/camera_depth.h"
 #include "kernel/deep/volume_boundary.h"
 #include "kernel/deep/volume_native.h"
 #include "kernel/deep/shader_eval.h"
@@ -58,7 +59,8 @@ ccl_device KernelDeepResult deep_volume_shader(
   const double required = ::ceil((end - start) / dt);
   if (!(step > 0 && dt > 0 && required >= 1 && required <= 16384 && density && eps_ray > 0))
     return {DEEP_FAILED, 0, DEEP_ERROR_GRID_STEPS};
-  const float4 camera_z = kernel_data.cam.worldtocamera.z;
+  const float4 camera_z = deep_camera_depth_row(
+      kernel_data.cam, kernel_data_array(camera_motion), ray.time);
   const double depth_origin = double(camera_z.x) * double(ray.P.x) +
                               double(camera_z.y) * double(ray.P.y) +
                               double(camera_z.z) * double(ray.P.z) + double(camera_z.w);
@@ -197,7 +199,8 @@ ccl_device KernelDeepResult deep_volume_interval(
     if (sigma.x > 0) {
       if (count == capacity)
         return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
-      const float4 camera_z = kernel_data.cam.worldtocamera.z;
+      const float4 camera_z = deep_camera_depth_row(
+          kernel_data.cam, kernel_data_array(camera_motion), ray.time);
       const double depth_origin = double(camera_z.x) * double(ray.P.x) +
                                   double(camera_z.y) * double(ray.P.y) +
                                   double(camera_z.z) * double(ray.P.z) + double(camera_z.w);
@@ -327,7 +330,7 @@ ccl_device_inline bool deep_volume_nearest_bvh(
 ccl_device void deep_volume_clamp(KernelGlobals kg, const Ray &ray,
                                   const double depth, double &clip_end)
 {
-  const float4 z = kernel_data.cam.worldtocamera.z;
+  const float4 z = deep_camera_depth_row(kernel_data.cam, kernel_data_array(camera_motion), ray.time);
   const double origin = double(z.x)*double(ray.P.x) + double(z.y)*double(ray.P.y) +
                          double(z.z)*double(ray.P.z) + double(z.w);
   const double direction = double(z.x)*double(ray.D.x) + double(z.y)*double(ray.D.y) +
@@ -351,7 +354,11 @@ ccl_device KernelDeepResult deep_volume_object(
   double origin[3] = {double(ray.P.x), double(ray.P.y), double(ray.P.z)};
   double direction[3] = {double(ray.D.x), double(ray.D.y), double(ray.D.z)};
   if (!(kernel_data_fetch(object_flag, object) & SD_OBJECT_TRANSFORM_APPLIED)) {
-    const Transform tfm = object_fetch_transform(kg, object, OBJECT_INVERSE_TRANSFORM);
+    /* The object's inverse at this ray's shutter time, as native shading and
+     * BVH2 instance traversal compute it; static objects keep the stored inverse.
+     * Boundary vertices are object-space (preflight rejects deforming boundaries). */
+    Transform tfm;
+    object_fetch_transform_motion_test(kg, object, ray.time, &tfm);
     const float4 rows[3] = {tfm.x, tfm.y, tfm.z};
     double p[3], d[3];
     for (int axis = 0; axis < 3; ++axis) {
@@ -509,6 +516,8 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
     if (initial_objects_count == DEEP_MAX_MEDIA)
       return {DEEP_FAILED, 0, DEEP_ERROR_MEDIA_CAPACITY};
     initial_objects[initial_objects_count++] = hit.object;
+    if (hit.type & PRIMITIVE_MOTION)
+      return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
     ShaderDataTinyStorage storage{};
     ShaderData &sd = *AS_SHADER_DATA(&storage);
     shader_setup_from_ray(kg, &sd, &initial_ray, &hit);
@@ -561,11 +570,17 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
       const Intersection hit = boundaries[boundary];
       if (eps_ray > 0 && double(hit.t) > clip_end)
         return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
-      if (hit.type != PRIMITIVE_TRIANGLE)
+      /* Static or motion (deforming) triangles. Shading and surface depth use
+       * the ray time; a medium's boundary must be static object-space geometry
+       * (deep_volume_object reads its static vertices), so a deforming volume
+       * boundary fails here as well as in preflight. */
+      if ((hit.type & ~PRIMITIVE_MOTION) != PRIMITIVE_TRIANGLE)
         return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
       ShaderDataTinyStorage storage{};
       ShaderData &sd = *AS_SHADER_DATA(&storage);
       shader_setup_from_ray(kg, &sd, &ray, &hit);
+      if ((hit.type & PRIMITIVE_MOTION) && (sd.shader_flag & SD_HAS_VOLUME))
+        return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
       const bool back = (sd.runtime_flag & SR_BACKFACING) != 0;
       boundary_back[boundary] = back;
       bool duplicate = has_previous &&

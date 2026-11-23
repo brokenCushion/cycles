@@ -189,6 +189,20 @@ comparisons are informational, never a blocker. Do not revisit this scope.
    of one float3 write can land in a different order from R. Patch and evidence:
    `D:\temp\cycles_deep_motion\diag_curves`.
 
+   Resolution recorded 2026-11-24, M-c deep volume transform motion (`on`; CUDA
+   `vdb_static` pixel (31,18) and OptiX `vdb_scale_eval` pixel (34,21),
+   Combined.A +5.96e-08, i.e. 32 and 16 FLOAT ULP, 1.48x and 1.45x the absolute
+   limit): resolved by the majorant-snapshot diagnostic (`9a017f055` applied
+   unchanged to the M-c tree; diagnostic executable `a636b7c3…a3a7`, target
+   `0b77a4cb…8f76`). The official three-off/three-on agreement passed
+   bit-identically on all 12 raw channels with 64 accepted samples in both cases.
+   Over 10 deep-on and 10 deep-off diagnostic renders per fixture, every deep-on
+   render matched a deep-off render exactly; OptiX was bit-identical across all
+   20, and on CUDA snapshot deep-off also produced the flagged alternate state
+   (2/10 vs deep-on 3/10), so neither value is deep-specific. Original calibrated
+   flags are preserved. Patch and evidence:
+   `D:\temp\cycles_deep_motion\volume\diag_flags`.
+
 User's statistical note: under exchangeability, exceeding 31 leave-one-out
 maxima occurs roughly 1/32 per independent measure. Twelve channels plus a
 count give multiple opportunities; albedo R/G/B describe one correlated

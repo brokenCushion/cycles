@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
+#include "kernel/deep/camera_depth.h"
 #if defined(WITH_NANOVDB) && (!defined(__KERNEL_GPU__) || defined(__KERNEL_CUDA__))
 #  include "kernel/deep/volume_grid.h"
 #endif
@@ -8,7 +9,7 @@ CCL_NAMESPACE_BEGIN
 
 /* Resolve the same density attribute and texture transforms as native volume
  * shading. Host preflight supplies a validated scalar extinction multiplier.
- * The static camera/object contract is checked again before using transforms. */
+ * Camera and object transforms are those of this ray's shutter time. */
 ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
                                                ccl_private ShaderData *sd,
                                                const ccl_private Ray *ray,
@@ -25,8 +26,10 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
                                                ccl_private KernelDeepWriteState *write = nullptr)
 {
 #if defined(WITH_NANOVDB) && (!defined(__KERNEL_GPU__) || defined(__KERNEL_CUDA__))
-  if ((sd->object_flag & SD_OBJECT_MOTION) || kernel_data.cam.num_motion_steps ||
-      (sd->shader_flag & SD_VOLUME_CUBIC))
+  /* Transform motion is evaluated at the ray time below. Velocity-grid motion
+   * (advection during the shutter) is not captured; preflight rejects it. */
+  if ((sd->shader_flag & SD_VOLUME_CUBIC) ||
+      ((sd->object_flag & SD_OBJECT_HAS_VOLUME_MOTION) && kernel_data.cam.shuttertime != -1.0f))
     return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
   const AttributeDescriptor desc = find_attribute(kg, sd, ATTR_STD_VOLUME_DENSITY);
   if (!is_attribute_found(desc) || desc.element != ATTR_ELEMENT_VOXEL ||
@@ -47,7 +50,8 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
   const double physical_length = sqrt(direction[0] * direction[0] +
                                       direction[1] * direction[1] +
                                       direction[2] * direction[2]);
-  const Transform object_inverse = object_fetch_transform(kg, sd->object, OBJECT_INVERSE_TRANSFORM);
+  Transform object_inverse;
+  object_fetch_transform_motion_test(kg, sd->object, ray->time, &object_inverse);
   /* Evaluate the native FLOAT transform coefficients in double, avoiding an
    * intermediate FLOAT position subtraction for long/translated grid rays. */
   for (int transform = 0; transform < (texture.use_transform_3d ? 2 : 1); ++transform) {
@@ -66,7 +70,8 @@ ccl_device KernelDeepResult deep_volume_native(KernelGlobals kg,
       direction[axis] = d[axis];
     }
   }
-  const float4 camera_z = kernel_data.cam.worldtocamera.z;
+  const float4 camera_z = deep_camera_depth_row(
+      kernel_data.cam, kernel_data_array(camera_motion), ray->time);
   const double depth_origin = double(camera_z.x) * double(ray->P.x) +
                               double(camera_z.y) * double(ray->P.y) +
                               double(camera_z.z) * double(ray->P.z) + double(camera_z.w);

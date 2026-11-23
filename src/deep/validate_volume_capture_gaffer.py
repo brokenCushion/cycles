@@ -6,6 +6,7 @@ import csv
 import json
 import math
 from pathlib import Path
+import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
@@ -305,6 +306,37 @@ validate('overlap_camera_inside', [((-10,-10,-2,10,10,6),.3),((-10,-10,-1,10,10,
 validate('both_clips_inside', slab, near=3, far=4)
 validate('volume_miss', [((20,20,2,21,21,8),.3)])
 validate('odd_batch', [((-.9,-.8,3,.9,.8,7),.3)], samples=3, w=19, h=13)
+
+
+def tfm(x=0, z=0, angle=0, sx=1):
+    c, s = math.cos(angle), math.sin(angle)
+    return f'{sx*c} 0 {s} {x} 0 1 0 0 {-s*sx} 0 {c} {z}'
+
+
+def matched(xml, motion):
+    """Camera and every object share one transform motion (M-c). Camera-space geometry
+    is static, so the static analytic oracle holds at every shutter time."""
+    m = ' '.join(motion)
+    xml = xml.replace('<camera camera_type="perspective"',
+                      f'<camera shuttertime="1" motion="{m}" camera_type="perspective"', 1)
+    xml = xml.replace('<integrator seed="123"', '<integrator seed="123" motion_blur="true"', 1)
+    return re.sub(r'<state shader="([^"]+)"><mesh',
+                  lambda g: f'<object name="m_{g.group(1)}" motion="{m}"/>'
+                            f'<state object="m_{g.group(1)}" shader="{g.group(1)}"><mesh', xml)
+
+
+dolly = (tfm(z=-1.5), tfm(z=.5))
+yaw = (tfm(angle=-.25), tfm(x=.3, angle=.15))
+three = (tfm(x=-.4, z=-1), tfm(z=.2, angle=.1), tfm(x=.5, z=1.5, angle=-.2))
+two_media = [((-10,-10,2,10,10,6),.3),((-10,-10,4,10,10,8),.2)]
+validate('motion_matched_dolly', slab, xml_override=matched(scene(slab), dolly))
+validate('motion_matched_rotation', two_media, xml_override=matched(scene(two_media), yaw))
+partial = [((-.9,-.8,3,.9,.8,7),.3)]
+validate('motion_matched_three_steps', partial, samples=16, xml_override=matched(scene(partial), three))
+validate('motion_matched_surface_in_fog', slab, surface=.4, samples=4,
+         xml_override=matched(scene(slab, surface=.4), dolly))
+inside = [((-10,-10,-2,10,10,6),.3),((-10,-10,-1,10,10,8),.2)]
+validate('motion_matched_camera_inside', inside, xml_override=matched(scene(inside), yaw))
 valid = scene(slab)
 scatter_valid = scene(slab, scattering=.5)
 for name, xml, extra in (
@@ -317,7 +349,10 @@ for name, xml, extra in (
     ('reject_negative', valid.replace('density="0.3"','density="-1"'), ()),
     ('reject_nan', valid.replace('density="0.3"','density="nan"'), ()),
     ('reject_dof', valid.replace('camera_type="perspective"','camera_type="perspective" aperturesize="0.1"'), ()),
-    ('reject_motion', valid.replace('seed="123"','seed="123" motion_blur="true"'), ()),
+    # A static scene with motion blur renders since M-c; a volume reflecting during the shutter does not.
+    ('reject_motion_reflection', re.sub(r'<state shader="fog0"><mesh',
+        f'<object name="m_fog0" motion="{tfm()} {tfm(sx=-1)}"/><state object="m_fog0" shader="fog0"><mesh',
+        valid.replace('seed="123"','seed="123" motion_blur="true"')), ()),
     ('reject_heterogeneous', valid.replace('<absorption_volume name="v"', '<checker_texture name="c"/><absorption_volume name="v"').replace('<connect from="v volume"', '<connect from="c fac" to="v density"/><connect from="v volume"'), ()),
     ('reject_osl', valid, ('--shadingsys','osl')),
     ('reject_reduction', valid, ('--deep-reduce',)),

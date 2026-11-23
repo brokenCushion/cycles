@@ -81,7 +81,7 @@ UNDECIDABLE = [
     'Cycles optimized/finalized graph, numeric conversions, shader compilation and OSL optimized-group queries are not exposed to Python; constant folding may remove a reported node (documented possible false positive).',
     'RNA depsgraphs use their exposed evaluation mode; render-only modifier/particle differences, Cycles culling, subdivision synchronization, generated procedurals and final shared-geometry assignment require render-time validation.',
     'Compiled volume extinction, grid metadata/interpolation, manifold triangle boundaries, voxel step, closure capacity and NanoVDB build support require Cycles evaluation; volume findings are conservative warnings unless an RNA contradiction proves rejection.',
-    'Camera rigid motion (unit orthogonal axes, handedness of the static camera) and animated FOV are evaluated at Blender sync shutter times; shutter samples, volume motion and finite non-degenerate unreflected surface/hair object motion require temporal Cycles synchronization; those risks are warned or conservatively blocked.',
+    'Camera rigid motion (unit orthogonal axes, handedness of the static camera), animated FOV and deforming volume boundary meshes are evaluated at Blender sync shutter times; shutter samples and finite non-degenerate unreflected object motion (surfaces, hair and volumes) require temporal Cycles synchronization; those risks are warned or conservatively blocked.',
     'Device availability, tiling selected by the host, pixel-size overrides, custom pixel jitter, AO bounce overrides, bake state and 30-bit synced object count require session state; render-context restrictions remain authoritative.',
     'Murmur ID collisions and holdout-closure manifests require the final synchronized object names and compiled shader graph.',
 ]
@@ -281,7 +281,7 @@ def resolved_path(scene, layer, frame):
     return os.path.normpath(text)
 
 
-CAMERA_MOTION_REASON = ('deep motion requires finite rigid camera/volume transforms without scale, '
+CAMERA_MOTION_REASON = ('deep motion requires finite rigid camera transforms without scale, '
                         'shear or a handedness change during the shutter')
 CAMERA_FOV_REASON = 'requires mono perspective or surface orthographic camera without animated field of view'
 
@@ -348,6 +348,71 @@ def camera_motion_findings(scene, camera, layer, depsgraph):
     return findings
 
 
+VOLUME_DEFORM_REASON = ('deep volume meshes must not deform during the shutter; object transform motion '
+                        'is supported, deforming volume boundaries are not')
+VOLUME_VELOCITY_REASON = ("deep volumes do not support velocity-grid motion blur: set the volume's "
+                          'Velocity Scale to 0 or remove its velocity grid')
+
+
+def volume_material(obj, layer):
+    materials = [layer.material_override] if layer.material_override else [s.material for s in obj.material_slots]
+    for material in materials:
+        output = material.node_tree.get_output_node('CYCLES') if material and material.node_tree else None
+        if output and output.inputs['Volume'].is_linked:
+            return True
+    return False
+
+
+def volume_motion_findings(scene, obj, depsgraph, layer):
+    """Mirror validate_deep_scene() for volumes under motion blur (M-c).
+    Grid objects: a velocity grid with nonzero Velocity Scale is rejected (Blender loads velocity
+    grids whenever motion blur needs them). Mesh boundaries with a volume material: Blender sync
+    keeps the motion position attribute only when vertices differ at a shutter step
+    (sync_mesh_motion), and preflight rejects that. Sample the evaluated mesh at sync times."""
+    findings = []
+    if obj.type == 'VOLUME':
+        data = obj.evaluated_get(depsgraph).data
+        if data.velocity_scale != 0:
+            try:
+                if not data.grids.is_loaded: data.grids.load()
+                names = {g.name for g in data.grids}
+            except Exception:
+                names = None
+            velocity = {'velocity', 'velocity_x', 'velocity_y', 'velocity_z', data.velocity_grid}
+            if names is None:
+                findings.append(('WARN', 'volume_velocity', 'velocity grids could not be listed; ' + VOLUME_VELOCITY_REASON))
+            elif names & velocity:
+                findings.append(('BLOCK', 'volume_velocity', VOLUME_VELOCITY_REASON))
+        return findings
+    if any(m.type == 'FLUID' and m.fluid_type == 'DOMAIN' for m in obj.modifiers):
+        # Synced as a Cycles grid volume; its velocity grid depends on the bake cache.
+        findings.append(('WARN', 'volume_velocity', 'fluid domain velocity grids require render-time confirmation; ' + VOLUME_VELOCITY_REASON))
+        return findings
+    if obj.type != 'MESH' or not volume_material(obj, layer):
+        return findings
+    if not (obj.cycles.use_motion_blur and obj.cycles.use_deform_motion):
+        return findings
+    steps = (2 << (max(1, obj.cycles.motion_steps) - 1)) + 1
+    shutter = scene.render.motion_blur_shutter
+    delta = {'START': .5 * shutter, 'END': -.5 * shutter}.get(scene.render.motion_blur_position, 0.)
+    frame, subframe = scene.frame_current, scene.frame_subframe
+    meshes = []
+    try:
+        for i in range(steps):
+            t = frame + subframe + delta + (2. * i / (steps - 1) - 1.) * shutter * .5
+            whole = math.floor(t)
+            scene.frame_set(whole, subframe=t - whole)
+            evaluated = obj.evaluated_get(depsgraph)
+            mesh = evaluated.to_mesh()
+            meshes.append(([tuple(v.co) for v in mesh.vertices], len(mesh.loop_triangles)))
+            evaluated.to_mesh_clear()
+    finally:
+        scene.frame_set(frame, subframe=subframe)
+    if any(m != meshes[0] for m in meshes):
+        findings.append(('BLOCK', 'volume_deform', VOLUME_DEFORM_REASON))
+    return findings
+
+
 def scan(scene, layer_name=None, frame=None, device=None):
     original_frame, subframe = scene.frame_current,scene.frame_subframe
     window = bpy.context.window
@@ -387,13 +452,12 @@ def scan(scene, layer_name=None, frame=None, device=None):
                 data=camera.data
                 if data.type not in ({'PERSP'} if volume else {'PERSP','ORTHO'}): add('BLOCK','camera','requires mono perspective or surface orthographic camera')
                 if data.clip_start < 0 or data.clip_end <= data.clip_start or not math.isfinite(data.clip_end): add('BLOCK','clip','invalid camera clipping')
-                if volume and scene.render.use_motion_blur: add('BLOCK','volume_camera','deep volumes require a static pinhole camera: disable motion blur (moving cameras and objects are unsupported with Deep Volume)')
-                if volume and (data.dof.use_dof or data.clip_start<=0): add('BLOCK','volume_camera','volumes require static pinhole camera and positive near clip')
+                if volume and (data.dof.use_dof or data.clip_start<=0): add('BLOCK','volume_camera','deep volumes require a pinhole camera without depth of field and a positive near clip')
                 for level,rule,reason in camera_motion_findings(scene,camera,layer,lambda: bpy.context.evaluated_depsgraph_get() if window else layer.depsgraph): add(level,rule,reason)
                 if data.dof.use_dof and (data.dof.aperture_ratio<=0 or data.dof.aperture_fstop<=0): add('BLOCK','aperture','invalid aperture')
             if scene.render.use_motion_blur:
                 if scene.render.motion_blur_shutter<=0: add('BLOCK','shutter','motion blur requires positive shutter duration')
-                add('WARN','shutter_curve','Uniform shutter curve and unreflected non-degenerate surface/hair object motion at all shutter times require render-time confirmation')
+                add('WARN','shutter_curve','Uniform shutter curve and unreflected non-degenerate object motion (surfaces, hair, volumes) at all shutter times require render-time confirmation')
             prefs=bpy.context.preferences.addons['cycles'].preferences
             backend=device or ('CPU' if scene.cycles.device=='CPU' else prefs.compute_device_type)
             if backend!='CPU':
@@ -411,6 +475,7 @@ def scan(scene, layer_name=None, frame=None, device=None):
             depsgraph.update()
             entry['depsgraph_mode']=depsgraph.mode
             observed=set()
+            volume_motion={}
             has_grid=False
             has_eval=False
             for instance in depsgraph.object_instances:
@@ -444,14 +509,16 @@ def scan(scene, layer_name=None, frame=None, device=None):
                     if scene.cycles.shading_system: add('BLOCK','hair_osl','OSL on hair is unsupported by deep capture',**fields)
                 if obj.modifiers and obj.modifiers[-1].type=='SUBSURF' and obj.modifiers[-1].show_render and obj.modifiers[-1].use_adaptive_subdivision: add('BLOCK','subdivision','subdivision is unsupported',**fields)
                 if obj.is_shadow_catcher or parent.is_shadow_catcher or getattr(obj.cycles,'is_caustics_caster',False) or getattr(obj.cycles,'is_caustics_receiver',False): add('BLOCK','object_flags','shadow catcher and caustics are unsupported',**fields)
-                # Deforming surface meshes, moving/deforming Ribbon hair and scaled object motion are captured
-                # at each ray's shutter time. Volumes keep their own motion block (volume_camera).
+                # Deforming surface meshes, moving/deforming Ribbon hair, scaled object motion and volume
+                # transform motion are captured at each ray's shutter time (M-a/M-b/M-c).
                 if scene.render.use_motion_blur and getattr(obj.cycles,'use_motion_blur',True):
                     if instance.matrix_world.to_3x3().determinant()<=0 and (obj.animation_data or parent.animation_data or obj.parent):
                         add('WARN','transform_motion','reflected or degenerate transforms that move during the shutter are rejected by deep motion',**fields)
                 if volume:
                     determinant=instance.matrix_world.to_3x3().determinant()
                     if not math.isfinite(determinant) or determinant==0: add('BLOCK','transform','deep requires finite nonsingular transforms',**fields)
+                # Sampled after the instance loop: frame changes invalidate the iterator.
+                if volume and scene.render.use_motion_blur and original.name not in volume_motion: volume_motion[original.name]=(original,fields)
                 if obj.type=='VOLUME':
                     has_grid=True
                     add('WARN','volume','Native grid must satisfy SUPPORT.md: '+SUPPORT_VOLUME,**fields)
@@ -465,6 +532,8 @@ def scan(scene, layer_name=None, frame=None, device=None):
                         if not volume: add('BLOCK','volume_disabled','volume shaders are unsupported without volume visibility',material=material.name,**fields)
                         elif (shader_eval or scene.cycles.shading_system) and obj.type!='VOLUME' and scene.cycles.deep_volume_step<=0: add('BLOCK','volume_step','shader-evaluated volume without a grid requires volume step',material=material.name,**fields)
                     inspect_material(material,lambda level,rule,reason,**kw:add(level,rule,reason,**fields,**kw))
+            for original,fields in volume_motion.values():
+                for level,rule,reason in volume_motion_findings(scene,original,depsgraph,layer): add(level,rule,reason,**fields)
             for obj in scene.objects:
                 if obj.name not in observed and obj.type in {'MESH','CURVES','VOLUME','POINTCLOUD'}: add('OK-ignored','excluded','excluded, hidden, or not present in this layer depsgraph',object=obj.name)
             if scene.world and scene.world.node_tree:

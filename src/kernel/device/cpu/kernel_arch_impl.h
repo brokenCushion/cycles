@@ -110,7 +110,7 @@ bool KERNEL_FUNCTION_FULL_NAME(deep_volume_oracle)(const ThreadKernelGlobalsCPU 
   ShaderData sd{};
   shader_setup_from_ray(kg, &sd, &ray, &hits[hit]);
   const VolumeStack entry = {object, sd.shader};
-  const float4 z = kernel_data.cam.worldtocamera.z;
+  const float4 z = deep_camera_depth_row(kernel_data.cam, kernel_data_array(camera_motion), ray.time);
   const double origin = double(z.x)*double(ray.P.x) + double(z.y)*double(ray.P.y) +
                         double(z.z)*double(ray.P.z) + double(z.w);
   const double dz = double(z.x)*double(ray.D.x) + double(z.y)*double(ray.D.y) + double(z.z)*double(ray.D.z);

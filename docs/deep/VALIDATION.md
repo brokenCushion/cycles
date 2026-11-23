@@ -158,6 +158,26 @@ comparisons are informational, never a blocker. Do not revisit this scope.
    Unresolved pixels or any unchanged bias/count gate failure stop work for
    investigation; this adds no numerical threshold or renderer change.
 
+   Surface addendum (user decision, 2026-11-23): the majorant snapshot covers
+   volumes only. For surface-only fixtures a calibrated flag is resolved when the
+   separate accumulation-trace diagnostic build (device printf of every
+   render-buffer atomic add and every bounce-0 camera-chain intersection at the
+   flagged pixels) shows, over at least six independent deep-on and six deep-off
+   renders of the matching case, (a) bit-identical camera-chain intersections and
+   (b) bit-identical per-sample contribution multisets for every checked pass,
+   with differences confined to atomic accumulation order. Report the order-only
+   ULP spread of deep-off alone beside the flagged deep-on deviation. The same
+   diagnostic-only, preservation and recording rules apply; no threshold changes.
+   GPU render-buffer passes are accumulated with atomic float adds whose order is
+   scheduling-dependent; deep capture's extra synchronisation may shift that
+   order's distribution without changing any summed value.
+
+   Resolution recorded 2026-11-23, M-a armature OptiX (`on`, pixels (28,28) and
+   (26,22), Denoising Albedo.B 5-6 ULP): resolved. 16 diagnostic renders gave
+   315/315 identical intersections and identical contribution multisets on all
+   passes; deep-off-only order spread reached 11 ULP (Albedo.B) and 4 ULP
+   (Combined). Patch and evidence: `D:\temp\cycles_deep_motion\diag_armature`.
+
 User's statistical note: under exchangeability, exceeding 31 leave-one-out
 maxima occurs roughly 1/32 per independent measure. Twelve channels plus a
 count give multiple opportunities; albedo R/G/B describe one correlated

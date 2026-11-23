@@ -171,7 +171,8 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
     if (!scene_intersect(kg, &ray, PATH_RAY_VISIBILITY_CAMERA, &isect))
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
     /* Test for a hit beyond the limit, so a complete chain exactly at capacity succeeds. */
-    if (isect.type != PRIMITIVE_TRIANGLE &&
+    /* Static or motion (deforming / motion-blurred) triangles; static ribbons. */
+    if ((isect.type & ~PRIMITIVE_MOTION) != PRIMITIVE_TRIANGLE &&
         (isect.type & PRIMITIVE_ALL) != PRIMITIVE_CURVE_RIBBON)
       return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
     integrator_state_write_isect(state, &isect);
@@ -183,7 +184,9 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
       trace->write(trace->context, {0, isect.type, isect.prim,
           PRIMITIVE_UNPACK_SEGMENT(isect.type), isect.object, isect.u, isect.v, isect.t,
           backfacing ? -1.0f : 1.0f, 0, 0});
-    if (count && previous.type == PRIMITIVE_TRIANGLE && isect.type == PRIMITIVE_TRIANGLE &&
+    /* Same triangle type, static or motion: the test reads only tri_vindex and u/v. */
+    if (count && previous.type == isect.type &&
+        (isect.type & ~PRIMITIVE_MOTION) == PRIMITIVE_TRIANGLE &&
         deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing)) {
       ray.tmin = intersection_t_offset(isect.t);
       ray.self.object = isect.object;

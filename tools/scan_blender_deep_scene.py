@@ -81,7 +81,7 @@ UNDECIDABLE = [
     'Cycles optimized/finalized graph, numeric conversions, shader compilation and OSL optimized-group queries are not exposed to Python; constant folding may remove a reported node (documented possible false positive).',
     'RNA depsgraphs use their exposed evaluation mode; render-only modifier/particle differences, Cycles culling, subdivision synchronization, generated procedurals and final shared-geometry assignment require render-time validation.',
     'Compiled volume extinction, grid metadata/interpolation, manifold triangle boundaries, voxel step, closure capacity and NanoVDB build support require Cycles evaluation; volume findings are conservative warnings unless an RNA contradiction proves rejection.',
-    'Camera shutter samples, animated FOV and finite rigid motion transforms at all shutter times require temporal Cycles synchronization; animation/deform risks are warned or conservatively blocked.',
+    'Camera rigid motion (unit orthogonal axes, handedness of the static camera) and animated FOV are evaluated at Blender sync shutter times; shutter samples, volume/hair motion and finite non-degenerate unreflected surface object motion require temporal Cycles synchronization; those risks are warned or conservatively blocked.',
     'Device availability, tiling selected by the host, pixel-size overrides, custom pixel jitter, AO bounce overrides, bake state and 30-bit synced object count require session state; render-context restrictions remain authoritative.',
     'Murmur ID collisions and holdout-closure manifests require the final synchronized object names and compiled shader graph.',
 ]
@@ -281,6 +281,73 @@ def resolved_path(scene, layer, frame):
     return os.path.normpath(text)
 
 
+CAMERA_MOTION_REASON = ('deep motion requires finite rigid camera/volume/hair transforms without scale, '
+                        'shear or a handedness change during the shutter')
+CAMERA_FOV_REASON = 'requires mono perspective or surface orthographic camera without animated field of view'
+
+
+def camera_motion_findings(scene, camera, layer, depsgraph):
+    """Mirror validate_deep_scene() for the camera. Sample it at Blender sync's shutter times
+    (sync_objects_and_motion), apply blender_camera_matrix (Z flip, then transform_clear_scale)
+    and the rigid rule: unit orthogonal rows and the static matrix's handedness at every step.
+    Animated FOV is detected at relative times -1/+1 like sync_camera_motion. Restores the frame."""
+    data = camera.data
+    blur = scene.render.use_motion_blur
+    # Without motion blur only a vector pass synchronizes adjacent frames (shutter 2, no offset).
+    if data.type not in {'PERSP', 'ORTHO'} or not (blur or layer.use_pass_vector): return []
+    shutter = scene.render.motion_blur_shutter if blur else 2.0
+    delta = {'START': .5 * shutter, 'END': -.5 * shutter}.get(scene.render.motion_blur_position, 0.) if blur else 0.
+    steps = 0
+    if blur and camera.cycles.use_motion_blur:
+        steps = (2 << (max(1, camera.cycles.motion_steps) - 1)) + 1
+    times = sorted({2. * i / (steps - 1) - 1. for i in range(steps)} | {-1., 0., 1.})
+    frame, subframe = scene.frame_current, scene.frame_subframe
+    samples = {}
+    try:
+        for relative in times:
+            t = frame + subframe + delta + relative * shutter * .5
+            whole = math.floor(t)
+            scene.frame_set(whole, subframe=t - whole)
+            evaluated = camera.evaluated_get(depsgraph())
+            d = evaluated.data
+            samples[relative] = ([list(row) for row in evaluated.matrix_world],
+                                 (d.lens, d.sensor_width, d.sensor_height, d.sensor_fit))
+    finally:
+        scene.frame_set(frame, subframe=subframe)
+    findings = []
+    if data.type == 'PERSP' and any(samples[r][1] != samples[0.][1] for r in (-1., 1.)):
+        findings.append(('BLOCK', 'camera_fov', CAMERA_FOV_REASON))
+    if not steps: return findings
+
+    def cycles_matrix(m):
+        # tfm * transform_scale(1, 1, -1), then normalize each 3x3 column (zero length -> NaN).
+        rows = [[m[i][0], m[i][1], -m[i][2], m[i][3]] for i in range(3)]
+        for j in range(3):
+            length = math.sqrt(sum(rows[i][j] ** 2 for i in range(3)))
+            for i in range(3): rows[i][j] = rows[i][j] / length if length else float('nan')
+        return rows
+
+    def determinant(r):
+        x, y, z = (row[:3] for row in r)
+        return (x[0] * (y[1] * z[2] - y[2] * z[1]) - x[1] * (y[0] * z[2] - y[2] * z[0]) +
+                x[2] * (y[0] * z[1] - y[1] * z[0]))
+    current = cycles_matrix(samples[0.][0])
+    motion = [cycles_matrix(samples[2. * i / (steps - 1) - 1.][0]) for i in range(steps)]
+    if all(step == current for step in motion): return findings
+    handedness = determinant(current)
+    dot = lambda a, b: sum(a[k] * b[k] for k in range(3))
+    for r in motion:
+        x, y, z = (row[:3] for row in r)
+        ok = (all(math.isfinite(v) for row in r for v in row) and math.isfinite(handedness) and handedness != 0 and
+              all(abs(dot(v, v) - 1) < 1e-4 for v in (x, y, z)) and
+              all(abs(dot(a, b)) < 1e-4 for a, b in ((x, y), (x, z), (y, z))) and
+              (determinant(r) > 0) == (handedness > 0))
+        if not ok:
+            findings.append(('BLOCK', 'camera_motion', CAMERA_MOTION_REASON))
+            break
+    return findings
+
+
 def scan(scene, layer_name=None, frame=None, device=None):
     original_frame, subframe = scene.frame_current,scene.frame_subframe
     window = bpy.context.window
@@ -320,12 +387,13 @@ def scan(scene, layer_name=None, frame=None, device=None):
                 data=camera.data
                 if data.type not in ({'PERSP'} if volume else {'PERSP','ORTHO'}): add('BLOCK','camera','requires mono perspective or surface orthographic camera')
                 if data.clip_start < 0 or data.clip_end <= data.clip_start or not math.isfinite(data.clip_end): add('BLOCK','clip','invalid camera clipping')
-                if volume and (scene.render.use_motion_blur or data.dof.use_dof or data.clip_start<=0): add('BLOCK','volume_camera','volumes require static pinhole camera and positive near clip')
-                if camera.animation_data or data.animation_data: add('WARN','camera_motion','Animated camera needs shutter-time rigid-transform/FOV validation')
+                if volume and scene.render.use_motion_blur: add('BLOCK','volume_camera','deep volumes require a static pinhole camera: disable motion blur (moving cameras and objects are unsupported with Deep Volume)')
+                if volume and (data.dof.use_dof or data.clip_start<=0): add('BLOCK','volume_camera','volumes require static pinhole camera and positive near clip')
+                for level,rule,reason in camera_motion_findings(scene,camera,layer,lambda: bpy.context.evaluated_depsgraph_get() if window else layer.depsgraph): add(level,rule,reason)
                 if data.dof.use_dof and (data.dof.aperture_ratio<=0 or data.dof.aperture_fstop<=0): add('BLOCK','aperture','invalid aperture')
             if scene.render.use_motion_blur:
                 if scene.render.motion_blur_shutter<=0: add('BLOCK','shutter','motion blur requires positive shutter duration')
-                add('WARN','shutter_curve','Uniform shutter curve and all shutter-time rigid transforms require render-time confirmation')
+                add('WARN','shutter_curve','Uniform shutter curve and unreflected non-degenerate surface object motion at all shutter times require render-time confirmation')
             prefs=bpy.context.preferences.addons['cycles'].preferences
             backend=device or ('CPU' if scene.cycles.device=='CPU' else prefs.compute_device_type)
             if backend!='CPU':
@@ -377,8 +445,11 @@ def scan(scene, layer_name=None, frame=None, device=None):
                     if scene.cycles.shading_system: add('BLOCK','hair_osl','OSL on hair is unsupported by deep capture',**fields)
                 if obj.modifiers and obj.modifiers[-1].type=='SUBSURF' and obj.modifiers[-1].show_render and obj.modifiers[-1].use_adaptive_subdivision: add('BLOCK','subdivision','subdivision is unsupported',**fields)
                 if obj.is_shadow_catcher or parent.is_shadow_catcher or getattr(obj.cycles,'is_caustics_caster',False) or getattr(obj.cycles,'is_caustics_receiver',False): add('BLOCK','object_flags','shadow catcher and caustics are unsupported',**fields)
-                if scene.render.use_motion_blur and getattr(obj.cycles,'use_motion_blur',True) and getattr(obj.cycles,'use_deform_motion',True):
-                    if getattr(obj.data,'shape_keys',None) or any(m.type in {'ARMATURE','LATTICE','MESH_DEFORM','SURFACE_DEFORM','CAST','SIMPLE_DEFORM','WAVE','DISPLACE','CLOTH','SOFT_BODY'} and m.show_render for m in obj.modifiers): add('BLOCK','deform_motion','deforming motion is unsupported (conservative before Cycles synchronization)',**fields)
+                # Deforming surface meshes and scaled surface object motion are captured at each ray's
+                # shutter time. Hair and volumes keep their own motion blocks (hair_motion, volume_camera).
+                if scene.render.use_motion_blur and getattr(obj.cycles,'use_motion_blur',True):
+                    if instance.matrix_world.to_3x3().determinant()<=0 and (obj.animation_data or parent.animation_data or obj.parent):
+                        add('WARN','transform_motion','reflected or degenerate transforms that move during the shutter are rejected by deep motion',**fields)
                 if volume:
                     determinant=instance.matrix_world.to_3x3().determinant()
                     if not math.isfinite(determinant) or determinant==0: add('BLOCK','transform','deep requires finite nonsingular transforms',**fields)

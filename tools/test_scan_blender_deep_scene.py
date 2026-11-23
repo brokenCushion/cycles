@@ -36,6 +36,12 @@ def fixture():
     return s,obj,mat,bsdf,out
 
 
+def fcurves(owner):
+    action=owner.animation_data.action
+    if len(getattr(action,'fcurves',[])):return list(action.fcurves)
+    return [fc for layer in getattr(action,'layers',[]) for strip in layer.strips for bag in strip.channelbags for fc in bag.fcurves]
+
+
 def apply_case(case,s,obj,mat,bsdf,out):
     n=mat.node_tree.nodes;link=mat.node_tree.links.new
     if case.startswith('candidate_'):
@@ -119,12 +125,40 @@ def apply_case(case,s,obj,mat,bsdf,out):
     elif case=='deform':
         s.render.use_motion_blur=True
         obj.modifiers.new('Deform','WAVE')
+    elif case.startswith('camera_') and case!='camera_off':
+        # Blender cameras are reflected in Cycles (Z flip); deep keeps each step's handedness.
+        cam=s.camera
+        def key(owner,path,values,interpolation=None):
+            for frame,value in values:
+                setattr(owner,path,value);owner.keyframe_insert(path,frame=frame)
+            if interpolation:
+                for fc in fcurves(owner):
+                    for k in fc.keyframe_points:k.interpolation=interpolation
+        s.render.use_motion_blur=case!='camera_fov_vector'
+        if case in {'camera_motion','camera_motion_deform','camera_motion_reflected','camera_volume_motion'}:
+            key(cam,'location',((0,(0,0,9)),(2,(.4,0,7))))
+        if case=='camera_motion_deform':obj.modifiers.new('Deform','WAVE')
+        if case=='camera_motion_reflected':cam.scale=(-1,1,1)
+        if case=='camera_handedness_flip':
+            key(cam,'scale',((1,(1,1,1)),(1.2,(-1,1,1))),'CONSTANT')
+        if case=='camera_shear':
+            parent=bpy.data.objects.new('Rig',None);s.collection.objects.link(parent)
+            # Non-uniform parent scale over a rotated child shears the camera axes.
+            cam.rotation_euler=(0,0,.7);cam.parent=parent
+            key(parent,'scale',((0,(1,1,1)),(2,(3,1,1))))
+        if case in {'camera_fov','camera_fov_vector'}:
+            cam.data.type='PERSP'
+            key(cam.data,'lens',((0,50),(2,80)))
+            if case=='camera_fov_vector':s.view_layers[0].use_pass_vector=True
+        if case=='camera_volume_motion':
+            s.cycles.use_deep_volume=True
+            node=n.new('ShaderNodeVolumeScatter');link(node.outputs[0],out.inputs['Volume'])
     elif case!='diffuse':raise ValueError(case)
 
 
 def main():
     root=Path(sys.argv[sys.argv.index('--')+1]);root.mkdir(parents=True,exist_ok=False)
-    cases=['diffuse','hair_mesh','particle_hair','holdout_hair','shared_hair','light_reflection','light_transparent_depth','mix_float','mix_vector','ao_opacity','bevel_opacity','ao_color','bevel_color','ray_portal','displacement','muted','unreachable','group','adaptive','shadow_catcher','caustics','volume','panoramic','border','multiview','samples','time_limit','transparent_glass','rolling_shutter','guiding','strict_ids','deform','camera_off','instance']
+    cases=['diffuse','hair_mesh','particle_hair','holdout_hair','shared_hair','light_reflection','light_transparent_depth','mix_float','mix_vector','ao_opacity','bevel_opacity','ao_color','bevel_color','ray_portal','displacement','muted','unreachable','group','adaptive','shadow_catcher','caustics','volume','panoramic','border','multiview','samples','time_limit','transparent_glass','rolling_shutter','guiding','strict_ids','deform','camera_off','instance','camera_motion','camera_motion_deform','camera_motion_reflected','camera_handedness_flip','camera_shear','camera_fov','camera_fov_vector','camera_volume_motion']
     from test_blender_deep_allowlist import CLOSURES,UTILITIES,LIGHT
     cases += ['candidate_'+name for name in [*CLOSURES,*UTILITIES,*('lp_'+x for x in LIGHT)]]
     results=[]
@@ -153,6 +187,14 @@ def main():
     false_positives=[r for r in results if r['mismatch'] and r['scanner_block']]
     print('SCANNER_DRIFT_SUMMARY',len(results),'cases',len(false_negatives),'false negatives',len(false_positives),'false positives',flush=True)
     assert not false_negatives,false_negatives
+    # Camera motion: reflected Blender cameras render; scale/shear/handedness/FOV/volume cases reject.
+    for r in results:
+        base=r['case'].rsplit('-',1)[0]
+        if base in {'camera_motion','camera_motion_deform','camera_motion_reflected'}:
+            assert r['render_pass'] and not r['scanner_block'],r
+        if base in {'camera_handedness_flip','camera_shear','camera_fov','camera_volume_motion'}:
+            assert not r['render_pass'] and r['scanner_block'],r
+    print('SCANNER_CAMERA_MOTION_PASS',flush=True)
     s,obj,mat,bsdf,out=fixture()
     s.cycles.device='GPU'
     s.cycles.deep_output_path=str(root/'device-check'/'{view_layer}_####')
@@ -179,7 +221,7 @@ def main():
     (root/'paths.json').write_text(json.dumps(paths,indent=2))
     print('SCANNER_PATHS_PASS',len(paths),flush=True)
     # Only graph folding may justify a conservative false positive; keep every finding.
-    assert all(all(f['rule'] in {'node','light_path','displacement','deform_motion'} for f in r['findings']) for r in false_positives),false_positives
+    assert all(all(f['rule'] in {'node','light_path','displacement'} for f in r['findings']) for r in false_positives),false_positives
 
 
 if __name__=='__main__':main()

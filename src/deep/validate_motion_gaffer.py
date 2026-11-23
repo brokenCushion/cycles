@@ -3,6 +3,7 @@
 import csv
 import json
 import math
+import re
 from pathlib import Path
 import struct
 import subprocess
@@ -44,6 +45,18 @@ def source(geometry, camera_motion=(), extra_camera='', adaptive=False):
 
 translations = (tfm(z=0), tfm(z=2))
 rotations = (tfm(angle=-.2), tfm(angle=.2))
+# Blender cameras are reflected (blender_camera_matrix flips Z). Mirror X here: the static
+# camera matrix and every motion step have determinant -1 and still look along +Z.
+FLIP_X = '-1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1'
+
+def reflect(transform):
+    v = transform.split()
+    for i in (0, 4, 8):
+        v[i] = str(-float(v[i]))
+    return ' '.join(v)
+
+def reflected(xml):
+    return re.sub(r'(<camera [^>]*/>)', r'<transform matrix="' + FLIP_X + r'">\1</transform>', xml, count=1)
 fixtures = {
     'object_depth': source(moving('near', 5, (tfm(z=-1), tfm(z=1)))),
     'camera_depth': source(plane('near', 6), translations),
@@ -54,6 +67,9 @@ fixtures = {
     'adaptive_lens_motion': source(moving('near', 6, translations), translations,
                                    'aperturesize="0.2" focaldistance="6"', True),
 }
+fixtures['reflected_camera_depth'] = reflected(source(plane('near', 6), tuple(map(reflect, translations))))
+fixtures['reflected_matched_translation'] = reflected(source(moving('near', 6, translations), tuple(map(reflect, translations))))
+fixtures['reflected_matched_rotation'] = reflected(source(moving('near', 6, rotations), tuple(map(reflect, rotations))))
 opaque = source(moving('near', 6, translations), translations)
 opaque = opaque.replace(material('near', .5), '<shader name="near"><emission name="e" color="0.3 0.5 0.7"/><connect from="e emission" to="output surface"/></shader>')
 fixtures['opaque_motion'] = opaque
@@ -138,9 +154,10 @@ for name, xml in fixtures.items():
         check(max_z<2e-5,'CPU/GPU depth mismatch'); stats['max_cpu_depth_difference']=max_z
     values = [z for p in raw.values() for e in p.values() for z,a in e]
     stats.update(min_depth=min(values), max_depth=max(values))
-    if name in ('matched_translation','matched_rotation','adaptive_lens_motion','opaque_motion','osl_motion'):
+    if name in ('matched_translation','matched_rotation','adaptive_lens_motion','opaque_motion','osl_motion',
+                'reflected_matched_translation','reflected_matched_rotation'):
         check(max(abs(z-6) for z in values)<2e-5,'Camera-relative depth is not invariant')
-    if name in ('object_depth','camera_depth'):
+    if name in ('object_depth','camera_depth','reflected_camera_depth'):
         check(min(values)<4.1 and max(values)>5.9,'Shutter time is not sampled')
     if name == 'crossing_depths':
         for population in raw.values():
@@ -159,15 +176,27 @@ for name, xml in fixtures.items():
 error = max(abs(events[0][0] + all_raw['camera_depth'][key][sample][0][0] - 10)
             for key,pop in all_raw['object_depth'].items() for sample,events in pop.items())
 check(error<2e-5,'Object/camera shutter-time mismatch'); report['paired_time_error']=error
+# The reflected camera samples the same shutter times and depths (mirrored image of a uniform plane).
+error = max(abs(events[0][0] + all_raw['reflected_camera_depth'][key][sample][0][0] - 10)
+            for key,pop in all_raw['object_depth'].items() for sample,events in pop.items())
+check(error<2e-5,'Reflected camera shutter-time mismatch'); report['reflected_paired_time_error']=error
 for name, xml in {
     'rolling': fixtures['object_depth'].replace('shuttertime="1"','shuttertime="1" rolling_shutter_type="top"'),
     'animated_fov': fixtures['camera_depth'].replace('fov="0.9"','fov="0.9" use_perspective_motion="true"'),
     'nonuniform_shutter': fixtures['object_depth'].replace('shuttertime="1"','shuttertime="1" shutter_curve="0 1"'),
-    'scaled_motion': source(moving('near',6,('2 0 0 0 0 1 0 0 0 0 1 0',tfm(z=1)))),
+    # Surface objects accept scaled affine motion (M-a); reflection and degeneracy stay rejected.
+    'reflected_motion': source(moving('near',6,('-2 0 0 0 0 1 0 0 0 0 1 0',tfm(z=1)))),
+    'degenerate_motion': source(moving('near',6,('0 0 0 0 0 1 0 0 0 0 1 0',tfm(z=1)))),
     'malformed_camera_motion': source(plane('near',6), ('1 0 0',)),
+    # Rigid camera motion keeps the static matrix's handedness, unit scale and no shear.
+    'camera_handedness_change': reflected(source(plane('near',6), translations)),
+    'scaled_camera_motion': source(plane('near',6), (tfm(z=0), '2 0 0 0 0 1 0 0 0 0 1 2')),
+    'sheared_camera_motion': source(plane('near',6), (tfm(z=0), '1 0.2 0 0 0 1 0 0 0 0 1 2')),
     'nonfinite_camera_motion': source(plane('near',6), (tfm(),tfm(z=float('nan')))),
     'malformed_object_motion': source(moving('near',6,('1 0 0',))),
 }.items(): render(name,xml,failure=True)
+# Scaled, non-rigid surface object motion renders (formerly a rejection case).
+render('scaled_motion', source(moving('near',6,('2 0 0 0 0 1 0 0 0 0 1 0',tfm(z=1)))))
 
 script=Gaffer.ScriptNode()
 for i,name in enumerate(fixtures):

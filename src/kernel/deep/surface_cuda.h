@@ -45,7 +45,8 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
     isect.prim = PRIM_NONE;
     if (!scene_intersect(kg, &ray, PATH_RAY_VISIBILITY_CAMERA, &isect))
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
-    if (isect.type != PRIMITIVE_TRIANGLE &&
+    /* Static or motion (deforming / motion-blurred) triangles; static ribbons. */
+    if ((isect.type & ~PRIMITIVE_MOTION) != PRIMITIVE_TRIANGLE &&
         (isect.type & PRIMITIVE_ALL) != PRIMITIVE_CURVE_RIBBON)
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_PRIMITIVE};
     const float depth = deep_camera_depth(
@@ -69,7 +70,9 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
         return {DEEP_FAILED, 1, DEEP_ERROR_DIAGNOSTIC_CAPACITY};
       return {DEEP_COMPLETE, 1, DEEP_ERROR_NONE};
     }
-    if (count && previous.type == PRIMITIVE_TRIANGLE && isect.type == PRIMITIVE_TRIANGLE &&
+    /* Same triangle type, static or motion: the test reads only tri_vindex and u/v. */
+    if (count && previous.type == isect.type &&
+        (isect.type & ~PRIMITIVE_MOTION) == PRIMITIVE_TRIANGLE &&
         deep_same_surface_boundary(kg, previous, isect, previous_backfacing, backfacing))
     {
       ray.tmin = intersection_t_offset(isect.t);

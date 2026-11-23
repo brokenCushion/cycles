@@ -44,8 +44,11 @@ nothing partial is written):
 
 | Scene feature | Preflight message |
 | --- | --- |
-| Deforming meshes with motion blur | `only static polygon meshes and background lighting are supported` |
 | Any motion blur when hair is present | `deep hair requires static geometry and camera; hair motion is unsupported` |
+| Motion blur with Deep Volume on (any moving camera or object) | `deep volumes require a static pinhole camera: disable motion blur (moving cameras and objects are unsupported with Deep Volume)` |
+| Volume with depth of field or zero clip start | `deep volumes require static pinhole camera and positive near clip` |
+| Camera that scales, shears or mirrors during the shutter (e.g. a camera under an animated non-uniformly scaled parent) | `deep motion requires finite rigid camera/volume/hair transforms without scale, shear or a handedness change during the shutter` |
+| Mesh object mirrored (negative scale) or collapsed during the shutter | `deep surface motion requires finite non-degenerate transforms without reflection` |
 | Hair and smoke/volume in the same layer | `hair requires Deep Volume off for this layer` (split into separate view layers) |
 | Thick or Thick Linear hair shape | `deep hair requires Ribbon shape; THICK and THICK_LINEAR are unsupported` |
 | OSL on hair; Hair Info node | `OSL on hair is unsupported by deep capture`; `Hair Info is unsupported by deep capture` |
@@ -57,10 +60,18 @@ nothing partial is written):
 | Multi-GPU, tiling, time limit, >4096 samples | `requires single CPU, CUDA or OptiX background rendering`; `requires 1..4096 maximum samples, full resolution, no time limit or tiling` |
 | Denoiser upscaling | `deep output requires native-resolution denoising without upscaling` |
 
-Camera and rigid object (transform) motion blur on meshes is supported. Animated
-characters render frame by frame with motion blur off; a common approach is to
-render deep without blur and add blur in compositing from motion vectors.
-The full matrix is in [SUPPORT.md](SUPPORT.md).
+Motion blur on meshes is supported: animated cameras, object transforms
+(including animated scale) and deforming meshes (armatures, shape keys). Each
+camera ray records depth at its own shutter time, so the deep image integrates
+the shutter like the beauty. Blender's camera matrix is mirrored for Cycles
+(Z flip); deep accepts that and only requires that the camera stays rigid and
+keeps the same handedness for the whole shutter. Hair and Deep Volume layers
+still need motion blur off (milestones M-b and M-c). With strict deep, moving
+surfaces keep about one deep sample per camera sample, so files grow (about
+143 MB at 960x540, 64 samples on the character test). The scanner evaluates the
+camera at the same shutter times and reports `camera_motion`, `camera_fov` and
+`volume_camera` exactly as preflight does. The full matrix is in
+[SUPPORT.md](SUPPORT.md).
 
 ### Verified production render
 

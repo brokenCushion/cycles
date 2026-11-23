@@ -1,6 +1,7 @@
 # Deep motion blur (phase 4)
 
-Status: **planned** (2026-11-22). Branch `blender-deep-multilayer`.
+Status: **M-a implemented and validated** (2026-11-23); M-b and M-c planned.
+Branch `blender-deep-multilayer`.
 
 Goal: deep alpha matches a motion-blurred Cycles beauty for animated characters
 with deforming meshes, then hair, then volumes. Deep keeps recording one sample
@@ -10,7 +11,7 @@ is needed.
 
 ## Current state
 
-- Camera and rigid, unit-scale object motion are supported for surfaces
+- Before M-a, camera and rigid, unit-scale object motion were supported for surfaces
   (`validate_motion`, [deep.cpp](../../src/session/deep.cpp) around line 608).
 - Deforming meshes are rejected twice:
   - preflight: `only static polygon meshes ...` (deep.cpp around line 690);
@@ -69,6 +70,38 @@ Validation:
 
 Risks: near-coincident hits on deforming shared edges; CPU vs OptiX edge hits
 with more than two motion steps; shaders reading motion attributes.
+
+### M-a results (2026-11-23)
+
+Implemented (uncommitted at time of writing). Blender fixtures (shape key, shape
+key with 3 steps, armature, scale, crossing, fold, parented armature) pass on
+CPU, CUDA and OptiX: ledger under 1e-6, CPU beauty deep on/off exact, deep vs
+beauty alpha unbiased, byte identity, CUDA beauty policy 7/7. One OptiX beauty
+policy miss on the armature fixture's original render (2 fallback pixels; all
+10 fresh candidates clean, OptiX deep-off renders themselves nondeterministic) is
+undecided: diagnose or waive.
+
+Character stand-in (`D:\temp\cycles_deep_motion\character`, `camfix`): 98k-triangle
+skinned body with walk cycle and shape keys, a folding semi-transparent cape, a
+flag under an animated non-uniformly scaled parent, animated dolly camera. CPU
+480x270 at steps 1 and 3 and OptiX 960x540 frames 9 and 22 pass; cross-backend
+differences are single-sample edge flips; Gaffer DeepRecolor matches except where
+the beauty's own alpha is noisy over semi-transparent surfaces (deep stores the
+exact coverage).
+
+Camera fix (2026-11-23): Blender cameras failed preflight because
+`blender_camera_matrix` returns `tfm * scale(1,1,-1)` (determinant -1) and the
+rigid rule required a positive determinant (a bug predating M-a). The rule now
+keeps each step's handedness equal to the static matrix's and still requires
+finite, unit, orthogonal axes. `transform_motion_decompose` stores a reflection
+as scale -1 and slerps the rotation; the camera ray and `deep_camera_depth`
+share the interpolated matrix, so depth is exact. Verified by matched-camera
+invariance (max 8.6e-6 CPU, 4.8e-6 CUDA, 2.05e-5 OptiX at 3 steps, the OptiX
+residual likely from its SRT object interpolation), analytic dolly ranges,
+standalone reflected `<transform>` fixtures and the character scene with the
+real dolly. Volume depth still uses the static `worldtocamera`, so Deep Volume
+keeps motion blur rejected; M-c must interpolate the camera at `ray.time` in
+`volume.h`, `volume_native.h` and the CPU oracle (`deep_volume_oracle`).
 
 ## M-b: hair motion
 

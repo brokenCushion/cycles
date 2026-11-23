@@ -171,9 +171,9 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
     if (!scene_intersect(kg, &ray, PATH_RAY_VISIBILITY_CAMERA, &isect))
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
     /* Test for a hit beyond the limit, so a complete chain exactly at capacity succeeds. */
-    /* Static or motion (deforming / motion-blurred) triangles; static ribbons. */
+    /* Static or motion (deforming / motion-blurred) triangles and ribbons. */
     if ((isect.type & ~PRIMITIVE_MOTION) != PRIMITIVE_TRIANGLE &&
-        (isect.type & PRIMITIVE_ALL) != PRIMITIVE_CURVE_RIBBON)
+        (isect.type & PRIMITIVE_ALL & ~PRIMITIVE_MOTION) != PRIMITIVE_CURVE_RIBBON)
       return {DEEP_FAILED, 0, DEEP_ERROR_PRIMITIVE};
     integrator_state_write_isect(state, &isect);
     integrator_state_write_ray(state, &ray);

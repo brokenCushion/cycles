@@ -81,7 +81,7 @@ UNDECIDABLE = [
     'Cycles optimized/finalized graph, numeric conversions, shader compilation and OSL optimized-group queries are not exposed to Python; constant folding may remove a reported node (documented possible false positive).',
     'RNA depsgraphs use their exposed evaluation mode; render-only modifier/particle differences, Cycles culling, subdivision synchronization, generated procedurals and final shared-geometry assignment require render-time validation.',
     'Compiled volume extinction, grid metadata/interpolation, manifold triangle boundaries, voxel step, closure capacity and NanoVDB build support require Cycles evaluation; volume findings are conservative warnings unless an RNA contradiction proves rejection.',
-    'Camera rigid motion (unit orthogonal axes, handedness of the static camera) and animated FOV are evaluated at Blender sync shutter times; shutter samples, volume/hair motion and finite non-degenerate unreflected surface object motion require temporal Cycles synchronization; those risks are warned or conservatively blocked.',
+    'Camera rigid motion (unit orthogonal axes, handedness of the static camera) and animated FOV are evaluated at Blender sync shutter times; shutter samples, volume motion and finite non-degenerate unreflected surface/hair object motion require temporal Cycles synchronization; those risks are warned or conservatively blocked.',
     'Device availability, tiling selected by the host, pixel-size overrides, custom pixel jitter, AO bounce overrides, bake state and 30-bit synced object count require session state; render-context restrictions remain authoritative.',
     'Murmur ID collisions and holdout-closure manifests require the final synchronized object names and compiled shader graph.',
 ]
@@ -281,7 +281,7 @@ def resolved_path(scene, layer, frame):
     return os.path.normpath(text)
 
 
-CAMERA_MOTION_REASON = ('deep motion requires finite rigid camera/volume/hair transforms without scale, '
+CAMERA_MOTION_REASON = ('deep motion requires finite rigid camera/volume transforms without scale, '
                         'shear or a handedness change during the shutter')
 CAMERA_FOV_REASON = 'requires mono perspective or surface orthographic camera without animated field of view'
 
@@ -393,7 +393,7 @@ def scan(scene, layer_name=None, frame=None, device=None):
                 if data.dof.use_dof and (data.dof.aperture_ratio<=0 or data.dof.aperture_fstop<=0): add('BLOCK','aperture','invalid aperture')
             if scene.render.use_motion_blur:
                 if scene.render.motion_blur_shutter<=0: add('BLOCK','shutter','motion blur requires positive shutter duration')
-                add('WARN','shutter_curve','Uniform shutter curve and unreflected non-degenerate surface object motion at all shutter times require render-time confirmation')
+                add('WARN','shutter_curve','Uniform shutter curve and unreflected non-degenerate surface/hair object motion at all shutter times require render-time confirmation')
             prefs=bpy.context.preferences.addons['cycles'].preferences
             backend=device or ('CPU' if scene.cycles.device=='CPU' else prefs.compute_device_type)
             if backend!='CPU':
@@ -441,12 +441,11 @@ def scan(scene, layer_name=None, frame=None, device=None):
                     if volume: add('BLOCK','hair_volume','hair requires Deep Volume off for this layer (View Layer > Deep > Volume: Off)',**fields)
                     if entry['effective_z_tolerance']!=0: add('BLOCK','hair_tolerance','hair requires Surface Depth Tolerance 0 for this layer',**fields)
                     if scene.cycles_curves.shape!='RIBBONS': add('BLOCK','hair_shape','deep hair requires Ribbon shape; THICK and THICK_LINEAR are unsupported',**fields)
-                    if scene.render.use_motion_blur: add('BLOCK','hair_motion','deep hair requires static geometry and camera; hair motion is unsupported',**fields)
                     if scene.cycles.shading_system: add('BLOCK','hair_osl','OSL on hair is unsupported by deep capture',**fields)
                 if obj.modifiers and obj.modifiers[-1].type=='SUBSURF' and obj.modifiers[-1].show_render and obj.modifiers[-1].use_adaptive_subdivision: add('BLOCK','subdivision','subdivision is unsupported',**fields)
                 if obj.is_shadow_catcher or parent.is_shadow_catcher or getattr(obj.cycles,'is_caustics_caster',False) or getattr(obj.cycles,'is_caustics_receiver',False): add('BLOCK','object_flags','shadow catcher and caustics are unsupported',**fields)
-                # Deforming surface meshes and scaled surface object motion are captured at each ray's
-                # shutter time. Hair and volumes keep their own motion blocks (hair_motion, volume_camera).
+                # Deforming surface meshes, moving/deforming Ribbon hair and scaled object motion are captured
+                # at each ray's shutter time. Volumes keep their own motion block (volume_camera).
                 if scene.render.use_motion_blur and getattr(obj.cycles,'use_motion_blur',True):
                     if instance.matrix_world.to_3x3().determinant()<=0 and (obj.animation_data or parent.animation_data or obj.parent):
                         add('WARN','transform_motion','reflected or degenerate transforms that move during the shutter are rejected by deep motion',**fields)

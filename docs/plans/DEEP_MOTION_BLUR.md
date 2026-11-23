@@ -1,6 +1,6 @@
 # Deep motion blur (phase 4)
 
-Status: **M-a implemented and validated** (2026-11-23); M-b and M-c planned.
+Status: **M-a and M-b implemented and validated** (2026-11-23); M-c in progress.
 Branch `blender-deep-multilayer`.
 
 Goal: deep alpha matches a motion-blurred Cycles beauty for animated characters
@@ -76,10 +76,18 @@ with more than two motion steps; shaders reading motion attributes.
 Implemented (uncommitted at time of writing). Blender fixtures (shape key, shape
 key with 3 steps, armature, scale, crossing, fold, parented armature) pass on
 CPU, CUDA and OptiX: ledger under 1e-6, CPU beauty deep on/off exact, deep vs
-beauty alpha unbiased, byte identity, CUDA beauty policy 7/7. One OptiX beauty
-policy miss on the armature fixture's original render (2 fallback pixels; all
-10 fresh candidates clean, OptiX deep-off renders themselves nondeterministic) is
-undecided: diagnose or waive.
+beauty alpha unbiased, byte identity, CUDA beauty policy 7/7. OptiX beauty
+recalibration (120 seed-123 controls, leave-one-out limit 1): crossing and
+shapekey pass 11/11. Armature's original deep-on render had 2 fallback pixels;
+candidates 0-9 had 0. An accumulation-trace diagnostic
+(`D:\temp\cycles_deep_motion\diag_armature`, 8 deep-on and 8 deep-off renders)
+showed bit-identical bounce-0 intersections (315/315) and bit-identical
+per-sample contribution multisets on every pass between deep-on and deep-off.
+The deviation (Denoising Albedo.B 5-6 ULP) is the order of atomic float adds
+into the render buffer, which also varies run to run with deep off (up to 11 ULP).
+Deep capture's extra queue synchronisation may shift the distribution of that
+order but changes no summed value. Not a deep bug; no renderer change. Resolved
+under the VALIDATION.md step 4 surface addendum (approved 2026-11-23).
 
 Character stand-in (`D:\temp\cycles_deep_motion\character`, `camfix`): 98k-triangle
 skinned body with walk cycle and shape keys, a folding semi-transparent cape, a
@@ -109,6 +117,28 @@ Accept `PRIMITIVE_MOTION_CURVE_RIBBON`; split camera motion from hair geometry
 motion in preflight; keep Ribbon only, tolerance 0, capacities 16/64. Fixtures:
 moving ribbons and camera-only motion over static hair. Same gates; a native
 backend waiver may be needed for cross-backend ribbon edges.
+
+### M-b results (2026-11-23)
+
+Implemented: motion ribbons accepted in CPU/CUDA/OptiX capture (the old ribbon
+check let only static ribbons through); preflight drops the hair motion rule and
+gives hair objects the surface motion rule; scanner and tests mirror it. 13
+positive and 6 negative Blender fixtures (`D:\temp\cycles_deep_motion\hair`) pass
+on CPU/CUDA/OptiX: ledger < 1e-6, CPU deep on/off exact, unbiased alpha, byte
+identity, exact ribbon depth under motion and deformation, analytic dolly depth.
+Raw beauty policy: CUDA 13/13; OptiX 12/13, one Denoising Albedo.B pixel (20 ULP)
+in curves_deform. Repeats show deep-off varying symmetrically (655 vs 677 pixels,
+up to 23 ULP) and the deep-on repeat equal to deep-off, the same signature as M-a's
+armature; formal resolution needs the step 4 surface accumulation trace.
+Cross-backend ribbon edges use the native waiver in SUPPORT.md: differences occur
+with motion blur off and match pristine beauty alpha (correlation 0.8-0.98).
+Static Ribbon suite byte-identical to M-a on all backends. The character with Fur
+visible passes CPU steps 1/3, a moving-fur variant and OptiX frames 9/22 with the
+real dolly.
+
+Known pre-existing drift (not motion): with strict deep, the scanner treats hair
+tolerance as 0 while preflight checks the raw layer tolerance, so strict + Custom
+layer tolerance > 0 + hair is rejected at render time but passes the scanner.
 
 ## M-c: volume transform motion
 

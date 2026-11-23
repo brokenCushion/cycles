@@ -44,11 +44,10 @@ nothing partial is written):
 
 | Scene feature | Preflight message |
 | --- | --- |
-| Any motion blur when hair is present | `deep hair requires static geometry and camera; hair motion is unsupported` |
 | Motion blur with Deep Volume on (any moving camera or object) | `deep volumes require a static pinhole camera: disable motion blur (moving cameras and objects are unsupported with Deep Volume)` |
 | Volume with depth of field or zero clip start | `deep volumes require static pinhole camera and positive near clip` |
-| Camera that scales, shears or mirrors during the shutter (e.g. a camera under an animated non-uniformly scaled parent) | `deep motion requires finite rigid camera/volume/hair transforms without scale, shear or a handedness change during the shutter` |
-| Mesh object mirrored (negative scale) or collapsed during the shutter | `deep surface motion requires finite non-degenerate transforms without reflection` |
+| Camera that scales, shears or mirrors during the shutter (e.g. a camera under an animated non-uniformly scaled parent) | `deep motion requires finite rigid camera/volume transforms without scale, shear or a handedness change during the shutter` |
+| Mesh or hair object mirrored (negative scale) or collapsed during the shutter (the scanner only warns) | `deep surface motion requires finite non-degenerate transforms without reflection` |
 | Hair and smoke/volume in the same layer | `hair requires Deep Volume off for this layer` (split into separate view layers) |
 | Thick or Thick Linear hair shape | `deep hair requires Ribbon shape; THICK and THICK_LINEAR are unsupported` |
 | OSL on hair; Hair Info node | `OSL on hair is unsupported by deep capture`; `Hair Info is unsupported by deep capture` |
@@ -65,13 +64,55 @@ Motion blur on meshes is supported: animated cameras, object transforms
 camera ray records depth at its own shutter time, so the deep image integrates
 the shutter like the beauty. Blender's camera matrix is mirrored for Cycles
 (Z flip); deep accepts that and only requires that the camera stays rigid and
-keeps the same handedness for the whole shutter. Hair and Deep Volume layers
-still need motion blur off (milestones M-b and M-c). With strict deep, moving
-surfaces keep about one deep sample per camera sample, so files grow (about
-143 MB at 960x540, 64 samples on the character test). The scanner evaluates the
-camera at the same shutter times and reports `camera_motion`, `camera_fov` and
-`volume_camera` exactly as preflight does. The full matrix is in
-[SUPPORT.md](SUPPORT.md).
+keeps the same handedness for the whole shutter. Ribbon hair moves too
+(transforms, deforming particle and Curves hair); the Ribbon, Deep Volume off
+and depth tolerance 0 rules above still apply. Deep Volume layers still need
+motion blur off (milestone M-c). With strict deep, moving
+surfaces keep about one deep sample per camera sample, so files grow (161 MB at
+960x540 and 626 MB at 1920x1080, 64 samples, on the character test); see
+[Shrinking motion-blurred deep EXRs](#shrinking-motion-blurred-deep-exrs). The
+scanner evaluates the camera at the same shutter times and reports
+`camera_motion`, `camera_fov` and `volume_camera` exactly as preflight does. The
+full matrix is in [SUPPORT.md](SUPPORT.md).
+
+### Shrinking motion-blurred deep EXRs
+
+In Blender the deep file size is controlled by **Surface Depth Tolerance**
+(`scene.cycles.deep_z_tolerance`), which only applies in numeric mode
+(`deep_error > 0`; strict forces 0). `deep_error` itself sets the error bound and
+headers; with z tolerance 0 a numeric render has the same payload as strict. The
+standalone `--deep-reduce` has no Blender equivalent.
+
+Merging is same-object and depth-relative and ignores shutter time, so motion blur
+(depth smeared across the shutter) reduces what the default 1e-4 can merge.
+Measured on a 98k-triangle deforming character with a semi-transparent cape and an
+animated dolly (OptiX, 64 samples, 2026-11-23 build `1312e151`):
+
+| Setting (error / z tol) | 960x540 MB | Samples/px mean/p99/max | 1920x1080 MB | Flat alpha vs strict | Holdout edge p99 / bias |
+| --- | --- | --- | --- | --- | --- |
+| strict (0 / 0) | 161.0 | 64.8/192/258 | 625.8 | 0 | 0 |
+| 1e-3 / 0 | 161.0 | 64.8/192/258 | - | 0 | 0 |
+| 1e-3 / 1e-4 (default) | 121.0 | 40.8/111/189 | 396.4 | 4e-7 | 3.0e-3 / ~0 |
+| 1e-3 / 3e-4 | 75.2 | 22.5/70/121 | - | 4e-7 | 5.3e-3 / 5e-6 |
+| **1e-3 / 1e-3** | **35.2** | 9.2/31/62 | **105.2** | 4e-7 | 8.0e-3 / -4e-5 |
+| 1e-3 / 3e-3 | 16.3 | 3.8/13/41 | - | 4e-7 | 8.5e-3 / -3e-4 |
+| 1e-3 / 1e-2 | 7.4 | 1.6/5/38 | - | 4e-7 | 1.6e-2 / -2.4e-3 |
+| 64-sample seed noise (reference) | - | - | - | - | 1.1e-2 / 2e-5 |
+
+Error values 1e-4, 3e-3 and 1e-2 give the same size as 1e-3 at equal z tolerance.
+Front depth and coverage are unchanged at every setting; DeepRecolor -> DeepToFlat
+vs beauty is unchanged (RGB p99 1.4e-3, same as strict); render time is
+unaffected. Without motion blur the default 1e-4 already halves the file
+(140 -> 73 MB).
+
+**Recommended for motion-blurred production renders:** Transmittance Error
+`0.001`, Surface Depth Tolerance `0.001` (about 17-22% of strict size). Holdout
+cuts through merged bands stay below 64-sample noise. Use the default `0.0001`
+when holdout edges inside objects are critical; avoid `0.003` or more with
+in-object holdouts (systematic bias). Deep IDs need numeric error (strict + IDs
+fails preflight), add about 1% to the size and do not change merging. Deep sample
+retention (`deep_samples`) also shrinks files but changes the sample population
+(alpha no longer matches beauty), so avoid it for holdout work.
 
 ### Verified production render
 

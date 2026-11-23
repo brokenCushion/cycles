@@ -45,9 +45,9 @@ ccl_device KernelDeepResult deep_surface_cuda(KernelGlobals kg,
     isect.prim = PRIM_NONE;
     if (!scene_intersect(kg, &ray, PATH_RAY_VISIBILITY_CAMERA, &isect))
       return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
-    /* Static or motion (deforming / motion-blurred) triangles; static ribbons. */
+    /* Static or motion (deforming / motion-blurred) triangles and ribbons. */
     if ((isect.type & ~PRIMITIVE_MOTION) != PRIMITIVE_TRIANGLE &&
-        (isect.type & PRIMITIVE_ALL) != PRIMITIVE_CURVE_RIBBON)
+        (isect.type & PRIMITIVE_ALL & ~PRIMITIVE_MOTION) != PRIMITIVE_CURVE_RIBBON)
       return {DEEP_FAILED, unsigned(count), DEEP_ERROR_PRIMITIVE};
     const float depth = deep_camera_depth(
         kernel_data.cam, kernel_data_array(camera_motion), ray.time, ray.P + ray.D * isect.t);

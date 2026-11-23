@@ -18,9 +18,9 @@ unchanged.
 | Devices | Single CPU/CUDA/OptiX with SVM; CPU/OptiX OSL scalar surfaces and named volume fixtures, background render. CUDA OSL is unsupported. Explicit SVM shader-volume evaluation passes on CPU/CUDA/OptiX. |
 | Shading | Native SVM scalar camera opacity/extinction; OSL constant/texture/noise/camera-query surfaces and Script/native-node materials, within preflight. Shader volumes cover constant, textured and grid-reading extinction with stated adaptive stepping error. OSL trace/@ao/@bevel, unsafe ray/path/unknown queries, dynamic textures and unprovable closure capacity fail explicitly. Runtime rejects coloured/invalid extinction and cache misses. |
 | Geometry | Polygon surfaces/rigid instances; static homogeneous boundaries and native scalar NanoVDB density with linear interpolation. |
-| Hair | CPU/CUDA/OptiX: static SVM Ribbon surfaces, effective Deep Volume OFF and depth tolerance 0. Native transparent continuation, object-level IDs and holdouts; capacities 16/64 checked. THICK/THICK_LINEAR, hair motion, OSL on hair, Hair Info, hair in volume mode and point clouds remain rejected. |
+| Hair | CPU/CUDA/OptiX: SVM Ribbon surfaces, static or moving: object transform motion (finite, non-degenerate, unreflected, scale allowed), deforming particle and Curves hair, and camera motion over hair; any motion step count, qualified at 1 and 3. Effective Deep Volume OFF and depth tolerance 0. Native transparent continuation, object-level IDs and holdouts; capacities 16/64 checked. THICK/THICK_LINEAR, OSL on hair, Hair Info, hair in volume mode, reflected moving hair and point clouds remain rejected. Ribbon edge coverage can differ between CPU (Embree) and GPU as in native Blender (see the cross-backend note below). |
 | Camera | Surface-only perspective/orthographic, DOF and rigid camera motion (unit scale, no shear, the static camera's handedness at every motion step; Blender's Z-flipped camera matrix qualifies). Animated FOV, rolling shutter and non-uniform shutter curves are rejected. Deep Volume requires a static mono perspective camera without DOF and with motion blur off. |
-| Motion blur (surfaces) | Deforming meshes (armature, shape keys, modifiers) and finite, non-degenerate, unreflected object transform motion, including animated scale, at any motion step count (qualified at 1 and 3). Verified with Blender fixtures on CPU/CUDA/OptiX and a 98k-triangle deforming character stand-in. Hair motion (M-b) and volume motion (M-c) remain rejected. See [plan](../plans/DEEP_MOTION_BLUR.md). |
+| Motion blur (surfaces) | Deforming meshes (armature, shape keys, modifiers) and finite, non-degenerate, unreflected object transform motion, including animated scale, at any motion step count (qualified at 1 and 3). Verified with Blender fixtures on CPU/CUDA/OptiX and a 98k-triangle deforming character stand-in. Hair motion is supported within the Hair row (M-b); volume motion (M-c) remains rejected. See [plan](../plans/DEEP_MOTION_BLUR.md). |
 | Samples | Fixed/native adaptive accepted populations; `--deep-samples 0` uses all, positive N retains the first N without changing beauty. |
 | Denoising | Native OIDN, including GPU OIDN in supplied landscape fixtures; deep remains separate from beauty. |
 | IDs | Optional UINT `id`, raw name hashes and manifest; numeric error required. Strict + IDs fails preflight. |
@@ -65,7 +65,11 @@ reproduces a beauty-alpha difference of the same size AND each backend's deep
 flattened alpha matches its own beauty alpha within its existing header bound.
 Report both differences. Known native difference: **OSL texture-driven opacity
 can differ between CPU and OptiX by up to ~1e-3, as in native Blender** (CPU
-OpenImageIO textures versus OptiX Cycles images). All other cases retain 1e-4;
+OpenImageIO textures versus OptiX Cycles images). **Ribbon hair edge coverage
+can differ between CPU and CUDA/OptiX by single-sample flips at ribbon edges (up
+to ~0.07 flattened alpha at 64 spp), as in native Blender beauty alpha** (Embree
+flat curves versus Cycles GPU ribbon intersection; present with motion blur off;
+each backend's deep matches its own beauty; M-b, 2026-11-23). All other cases retain 1e-4;
 curves, depth shifts and counts are informational. Byte/curve identity applies
 only within the same build and backend.
 

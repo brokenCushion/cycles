@@ -610,12 +610,12 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
       require_deep(isfinite_safe(weight) && weight == 1.0f,
                    "deep motion currently requires a uniform shutter curve");
   }
-  /* Rigid motion (camera, volumes, hair) keeps unit scale and no shear, and each
+  /* Rigid motion (camera, volumes) keeps unit scale and no shear, and each
    * step keeps the handedness of the static matrix. Blender cameras are
    * reflected (blender_camera_matrix flips Z), so a positive determinant cannot
    * be required. transform_motion_decompose stores a reflection as scale -1 and
    * interpolates it unchanged; ray generation and deep_camera_depth share that
-   * interpolated matrix. Surface objects may use any finite, non-degenerate,
+   * interpolated matrix. Surface and hair objects may use any finite, non-degenerate,
    * unreflected affine motion: surface depth is taken from the ray-time hit
    * position, so scale needs no depth change. */
   const auto validate_motion = [&](const array<Transform> &motion,
@@ -660,7 +660,7 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                        fabsf(dot(x, z)) < 1e-4f && fabsf(dot(y, z)) < 1e-4f &&
                        std::isfinite(handedness) && handedness != 0 &&
                        (dot(x, cross(y, z)) > 0) == (handedness > 0),
-                   "deep motion requires finite rigid camera/volume/hair transforms without scale, "
+                   "deep motion requires finite rigid camera/volume transforms without scale, "
                    "shear or a handedness change during the shutter");
     }
   };
@@ -714,8 +714,9 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                    "hair requires Surface Depth Tolerance 0 for this layer");
       require_deep(static_cast<Hair *>(geometry)->curve_shape == CURVE_RIBBON,
                    "deep hair requires Ribbon shape; THICK and THICK_LINEAR are unsupported");
-      require_deep(!geometry->get_use_motion_blur() && !integrator->get_motion_blur(),
-                   "deep hair requires static geometry and camera; hair motion is unsupported");
+      /* Moving and deforming Ribbon hair: intersection (motion curve keys),
+       * curve shader setup and depth use the ray time, as for motion triangles.
+       * Camera motion is validated separately; object motion uses the surface rule. */
       require_deep(scene->params.shadingsystem == SHADINGSYSTEM_SVM,
                    "OSL on hair is unsupported by deep capture");
     }
@@ -841,11 +842,11 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                        (!has_volume || determinant > 0),
                    "deep requires finite nonsingular transforms and unreflected volumes");
     }
-    /* Volumes and hair keep the rigid rule until their motion milestones. */
+    /* Volumes keep the rigid rule until volume motion (M-c). Hair objects use
+     * the surface rule: ribbon depth is taken from the ray-time hit position. */
     bool rigid_motion = false;
     if (Geometry *geometry = object->get_geometry()) {
-      rigid_motion = geometry->geometry_type == Geometry::HAIR ||
-                     geometry->geometry_type == Geometry::VOLUME;
+      rigid_motion = geometry->geometry_type == Geometry::VOLUME;
       for (Node *node : geometry->get_used_shaders())
         rigid_motion |= static_cast<Shader *>(node)->graph->output()->input("Volume")->link !=
                         nullptr;

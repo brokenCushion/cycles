@@ -21,6 +21,11 @@ def cases():
     return names
 
 
+def motion_cases():
+    """Accepted motion-blur Ribbon cases (M-b), kept out of the historical pre-admission baseline."""
+    return ['motion_static', 'motion_object', 'motion_camera']
+
+
 def material(model='legacy', mix='opaque'):
     import bpy
     mat = bpy.data.materials.new('Hair'); mat.use_nodes = True
@@ -136,6 +141,16 @@ def fixture(name):
     elif name == 'grazing': obj.location.x = .12
     elif name == 'tip': obj.location.y = 1
     elif name == 'inside': scene.camera.location.z = 2
+    elif name.startswith('motion_'):
+        # Formerly the 'motion' rejection: any motion blur with hair. Hair, object and camera
+        # motion now render; the strand or camera moves linearly across the shutter.
+        scene.render.use_motion_blur = True
+        owner, path, values = dict(
+            motion_static=(None, None, ()),
+            motion_object=(obj, 'location', ((0, (-.3, 0, 0)), (2, (.3, 0, 0)))),
+            motion_camera=(scene.camera, 'location', ((0, (0, 0, 9)), (2, (0, 0, 7)))))[name]
+        for frame, value in values:
+            setattr(owner, path, value); owner.keyframe_insert(path, frame=frame)
     if name.endswith('_world') or name.startswith('chain_') or name == 'inside':
         bpy.data.objects.remove(plane, do_unlink=True)
     return scene
@@ -297,7 +312,7 @@ def render_hair(root, device='CPU'):
     import bpy
     from scan_blender_deep_scene import scan
     name, mode = root.parent.name, root.name
-    assert name in cases() and mode in ('on', 'off', 'off0', 'off1', 'off2', 'off3', 'off4',
+    assert name in cases() + motion_cases() and mode in ('on', 'off', 'off0', 'off1', 'off2', 'off3', 'off4',
                                       'repeat', 'strict', 'strict-repeat')
     root.mkdir(parents=True, exist_ok=False)
     scene = fixture(name)
@@ -363,7 +378,7 @@ def render_hair(root, device='CPU'):
 
 def rejection_isolation(report, name, target=None):
     rules = dict(THICK='hair_shape', THICK_LINEAR='hair_shape', volume='hair_volume',
-                 tolerance='hair_tolerance', motion='hair_motion', osl='hair_osl',
+                 tolerance='hair_tolerance', osl='hair_osl',
                  hair_info='node', pointcloud='geometry')
     blocks = [finding for layer in report['layers'] for finding in layer['findings']
               if finding['level'] == 'BLOCK']
@@ -382,7 +397,7 @@ def reject_hair(root, device='CPU', volume_only=False):
     results = []
     for name, message in [('THICK', 'Ribbon shape'), ('THICK_LINEAR', 'Ribbon shape'),
                           ('volume', 'Deep Volume off'), ('tolerance', 'Depth Tolerance 0'),
-                          ('motion', 'hair motion is unsupported'), ('osl', 'OSL on hair'),
+                          ('osl', 'OSL on hair'),
                           ('hair_info', 'Hair Info'), ('pointcloud', 'point clouds')]:
         if volume_only and name != 'volume': continue
         scene = fixture('single_1_plane')
@@ -398,10 +413,6 @@ def reject_hair(root, device='CPU', volume_only=False):
             layer.cycles.deep_volume_mode = 'ON'
             scene.camera.data.type = 'PERSP'
         elif name == 'tolerance': layer.cycles.deep_z_tolerance = .01
-        elif name == 'motion':
-            scene.render.use_motion_blur = True
-            for obj in scene.objects:
-                if obj.type == 'MESH': obj.cycles.use_deform_motion = False
         elif name == 'osl': scene.cycles.shading_system = True
         elif name == 'hair_info':
             mat = bpy.data.objects['Strands'].data.materials[0]

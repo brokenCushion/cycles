@@ -125,6 +125,19 @@ def apply_case(case,s,obj,mat,bsdf,out):
     elif case=='deform':
         s.render.use_motion_blur=True
         obj.modifiers.new('Deform','WAVE')
+    elif case.startswith('hair_motion') or case=='hair_camera_motion':
+        # Ribbon particle hair, tolerance 0: moving/deforming hair and camera motion render (M-b).
+        node=n.new('ShaderNodeBsdfHair');link(node.outputs[0],out.inputs['Surface'])
+        bpy.ops.object.particle_system_add();p=obj.particle_systems[-1].settings;p.type='HAIR';p.count=16;p.hair_length=1
+        s.cycles_curves.shape='THICK' if case=='hair_motion_thick' else 'RIBBONS'
+        s.cycles.deep_z_tolerance=0;s.render.use_motion_blur=True
+        if case=='hair_camera_motion':
+            for frame,z in ((0,9),(2,7)):s.camera.location.z=z;s.camera.keyframe_insert('location',frame=frame)
+        else:
+            obj.modifiers.new('Deform','WAVE')
+            for frame,x in ((0,-.3),(2,.3)):obj.location.x=x;obj.keyframe_insert('location',frame=frame)
+        if case=='hair_motion_volume':
+            s.cycles.use_deep_volume=True;s.camera.data.type='PERSP'
     elif case.startswith('camera_') and case!='camera_off':
         # Blender cameras are reflected in Cycles (Z flip); deep keeps each step's handedness.
         cam=s.camera
@@ -158,7 +171,7 @@ def apply_case(case,s,obj,mat,bsdf,out):
 
 def main():
     root=Path(sys.argv[sys.argv.index('--')+1]);root.mkdir(parents=True,exist_ok=False)
-    cases=['diffuse','hair_mesh','particle_hair','holdout_hair','shared_hair','light_reflection','light_transparent_depth','mix_float','mix_vector','ao_opacity','bevel_opacity','ao_color','bevel_color','ray_portal','displacement','muted','unreachable','group','adaptive','shadow_catcher','caustics','volume','panoramic','border','multiview','samples','time_limit','transparent_glass','rolling_shutter','guiding','strict_ids','deform','camera_off','instance','camera_motion','camera_motion_deform','camera_motion_reflected','camera_handedness_flip','camera_shear','camera_fov','camera_fov_vector','camera_volume_motion']
+    cases=['diffuse','hair_mesh','particle_hair','holdout_hair','shared_hair','light_reflection','light_transparent_depth','mix_float','mix_vector','ao_opacity','bevel_opacity','ao_color','bevel_color','ray_portal','displacement','muted','unreachable','group','adaptive','shadow_catcher','caustics','volume','panoramic','border','multiview','samples','time_limit','transparent_glass','rolling_shutter','guiding','strict_ids','deform','camera_off','instance','camera_motion','camera_motion_deform','camera_motion_reflected','camera_handedness_flip','camera_shear','camera_fov','camera_fov_vector','camera_volume_motion','hair_motion','hair_camera_motion','hair_motion_thick','hair_motion_volume']
     from test_blender_deep_allowlist import CLOSURES,UTILITIES,LIGHT
     cases += ['candidate_'+name for name in [*CLOSURES,*UTILITIES,*('lp_'+x for x in LIGHT)]]
     results=[]
@@ -195,6 +208,16 @@ def main():
         if base in {'camera_handedness_flip','camera_shear','camera_fov','camera_volume_motion'}:
             assert not r['render_pass'] and r['scanner_block'],r
     print('SCANNER_CAMERA_MOTION_PASS',flush=True)
+    # Hair motion (M-b): moving/deforming Ribbon hair and camera motion over hair render; THICK and
+    # Deep Volume stay rejected with motion blur. Indirect-only variants hide the hair.
+    for r in results:
+        base,variant=r['case'].rsplit('-',1)
+        if variant!='visible':continue
+        if base in {'hair_motion','hair_camera_motion'}:
+            assert r['render_pass'] and not r['scanner_block'],r
+        if base in {'hair_motion_thick','hair_motion_volume'}:
+            assert not r['render_pass'] and r['scanner_block'],r
+    print('SCANNER_HAIR_MOTION_PASS',flush=True)
     s,obj,mat,bsdf,out=fixture()
     s.cycles.device='GPU'
     s.cycles.deep_output_path=str(root/'device-check'/'{view_layer}_####')

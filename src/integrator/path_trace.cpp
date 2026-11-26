@@ -49,7 +49,13 @@ static void log_deep_spill(const deep::Capture &capture, const char *stage)
                              1.0)
                      << " spill_index_bytes=" << spill.index_bytes
                      << " spill_file_bytes=" << spill.file_bytes
+                     << " node_file_bytes=" << spill.node_file_bytes
+                     << " node_file_peak=" << spill.node_file_peak
+                     << " node_ram_peak=" << spill.node_ram_peak
                      << " directory=" << capture.spill_directory();
+  if (capture.reducing()) {
+    LOG_INFO_IMPORTANT << "Deep volume reducer " << stage << ": " << capture.reducer_summary();
+  }
 }
 #endif
 
@@ -511,6 +517,8 @@ void PathTrace::path_trace(RenderWork &render_work)
     /* Between passes: stop promptly on any capture error (with its first cause)
      * and check the free-space projection of the spill directory. */
     if (!is_cancel_requested()) {
+      /* Workers are joined: compact online-reducer node streams. */
+      deep_capture_->end_pass([this] { return is_cancel_requested(); });
       if (!deep_capture_->failed()) {
         const string warning = deep_capture_->check_spill_space();
         if (!warning.empty()) {
@@ -826,7 +834,7 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
       true, adaptive, settings.volume, settings.volume_grid, TaskScheduler::max_concurrency(),
       settings.volume_shader_evaluation ? settings.error / 2 : settings.error,
       settings.samples ? capture_samples : 0, settings.ids, settings.spill_dir,
-      settings.memory_bytes - capture_bytes);
+      settings.memory_bytes - capture_bytes, output_driver_->deep_camera_records());
   deep_capture_->open_diagnostics(output_driver_->deep_diagnostics_path());
   {
     const char *histogram = std::getenv("CYCLES_DEEP_HISTOGRAM");
@@ -840,7 +848,11 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
                                                 string(deep_capture_->spill_compression_limited() ?
                                                            "off (budget)" :
                                                            "off"))
-                     << " index=" << (deep_capture_->spill_index_sparse() ? "sparse" : "zero-filled");
+                     << " index=" << (deep_capture_->spill_index_sparse() ? "sparse" : "zero-filled")
+                     << " volume_reduce="
+                     << (deep_capture_->reducing() ?
+                             (deep_capture_->retains_samples() ? "online+raw" : "online") :
+                             "off");
   if (settings.volume_shader_evaluation) {
     deep_capture_->volume_shader_error = settings.error;
     deep_capture_->volume_shader_adaptive = !settings.volume_shader_fixed_step;
@@ -902,6 +914,8 @@ void PathTrace::write_deep_output()
                      << " spill_file_bytes=" << spill.file_bytes;
   if (deep_capture_->volume_shader_error)
     LOG_INFO_IMPORTANT << "Deep output: shader_evaluations=" << deep_capture_->shader_evaluations.load();
+  if (deep_capture_->reducing())
+    LOG_INFO_IMPORTANT << "Deep volume reducer exported: " << deep_capture_->reducer_summary();
   if (deep_capture_->collect_histogram)
     LOG_INFO_IMPORTANT << "Deep volume interval histogram: " << deep_capture_->volume_histogram();
 }

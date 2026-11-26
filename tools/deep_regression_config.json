@@ -3,7 +3,7 @@
   "blender": "D:/CyclesDeepScratch/optimization-phase8a/clangcl-deep/blender/blender.exe",
   "cycles": "D:/CyclesDeepScratch/optimization-phase8a/clangcl-deep/standalone/cycles.exe",
   "ctest_build": "D:/CyclesDeepScratch/optimization-phase8a/clangcl-deep/standalone-build",
-  "golden": "D:/CyclesDeepArchive/deep-references/clang-cl-20.1.8-nvcc-12.8.61-20261008",
+  "golden": "D:/CyclesDeepArchive/deep-references/clang-cl-20.1.8-nvcc-12.8.61-20261126-volume-reduce",
   "landscape": "builds/validation/landscape-cloud/scene-paths-fixed.blend",
   "cpu_cases": "builds/validation/landscape-cloud/final-fixtures/cases.json",
   "cuda_cases": "builds/validation/landscape-cloud/retained-final-cases.json",

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "deep/reconstruction.h"
+#include "deep/reducer.h"
 #include "deep/volume.h"
 #include "kernel/deep/types.h"
 #include <array>
@@ -10,6 +11,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
+#include <functional>
 #include <mutex>
 #include <memory>
 #include <vector>
@@ -25,6 +27,7 @@ namespace ccl::deep {
  * In-memory mode's budget covers raw capture only. Reads require joined workers. */
 class Capture {
   friend struct CaptureTestAccess;
+  friend struct ReducerTestAccess;
  public:
   Capture(int width,
           int height,
@@ -40,7 +43,8 @@ class Capture {
           int sample_limit = 0,
           bool ids = false,
           const std::string &spill_dir = std::string(),
-          size_t reserved_bytes = 0);
+          size_t reserved_bytes = 0,
+          bool retain_samples = true);
   ~Capture();
   void open_diagnostics(const std::string &path);
   bool diagnostics() const { return diagnostics_.is_open(); }
@@ -59,6 +63,25 @@ class Capture {
   VolumeCameraSample volume_sample(int x, int y, int sample,
                                    double density_tolerance = volume_density_error) const;
   std::vector<IntervalSample> reconstruct_volume_pixel(int x, int y) const;
+  /* Grid-volume spill captures with more than 8 samples reduce each pixel during
+   * render (the export-time balanced tree, run online): volume_sample, one-ray
+   * fit and sibling combines at ingest, so intermediate storage is about
+   * popcount(n) curves per pixel. CYCLES_DEEP_VOLUME_REDUCE=0 restores the raw
+   * path. retain_samples also keeps the raw per-sample spill (diagnostic
+   * records need it); otherwise volume_sample is unavailable. */
+  bool reducing() const
+  {
+    return bool(reducer_);
+  }
+  bool retains_samples() const
+  {
+    return !reducer_ || retain_samples_;
+  }
+  /* Between render passes (workers joined): compact node streams, enforce the
+   * reducer memory share. Errors are recorded as capture failures. */
+  void end_pass(const std::function<bool()> &cancelled = {});
+  /* Log line for the online reducer (empty when not reducing). */
+  std::string reducer_summary() const;
   std::vector<std::pair<uint32_t, std::string>> object_manifest;
   std::vector<std::pair<uint32_t, std::string>> holdout_manifest;
   void set_object_manifest(std::vector<std::pair<uint32_t, std::string>> manifest)
@@ -131,6 +154,8 @@ class Capture {
   struct SpillStatistics {
     uint64_t read_bytes = 0, write_bytes = 0, file_bytes = 0;
     uint64_t index_bytes = 0, event_raw_bytes = 0, event_file_bytes = 0;
+    /* Online volume reducer node streams (included in file_bytes). */
+    uint64_t node_file_bytes = 0, node_file_peak = 0, node_ram_peak = 0;
   };
   SpillStatistics spill_statistics() const;
   /* Spill files are delete-on-close files in this directory: the constructor
@@ -323,10 +348,37 @@ class Capture {
                    KernelDeepDensity *density = nullptr) const;
   void store_record(size_t index, const KernelDeepResult &result, const KernelDeepEvent *events,
                     const KernelDeepDensity *density);
+  /* Online volume reduction (see reducing()). */
+  class VolumePolicy;
+  friend class VolumePolicy;
+  std::unique_ptr<VolumePolicy> volume_policy_;
+  std::unique_ptr<PixelReducer> reducer_;
+  bool retain_samples_ = true;
+  size_t reduction_levels_ = 1;
+  size_t node_limit_ = 0; /* Test override of reconstruction_limit() for nodes. */
+  /* New reducer with this RAM share and ledger step (before any sample). */
+  void make_reducer(size_t ram, double step);
+  VolumeCameraSample build_volume_sample(uint64_t sample, const KernelDeepResult &result,
+                                         const KernelDeepEvent *record,
+                                         const KernelDeepDensity *density,
+                                         double density_tolerance,
+                                         ExportStatistics *statistics) const;
+  std::vector<IntervalSample> fit_volume(std::vector<VolumeCameraSample> samples,
+                                         double tolerance, size_t limit, double reduction,
+                                         size_t bytes, int x, int y,
+                                         ExportStatistics *statistics) const;
+  VolumeCameraSample combine_volume(VolumeCameraSample left, VolumeCameraSample right,
+                                    size_t levels, int x, int y,
+                                    ExportStatistics *statistics) const;
+  void record_reduced(size_t pixel, uint32_t sample, const KernelDeepResult &result,
+                      const KernelDeepEvent *events, const KernelDeepDensity *density);
+  std::vector<IntervalSample> reconstruct_reduced_pixel(int x, int y) const;
+  static void histogram_record(Histogram &histogram, size_t n);
   mutable std::atomic<int> error_{0};
   std::atomic<KernelDeepError> failure_{DEEP_ERROR_NONE};
   enum Error {
-    NONE = 0, OUT_OF_RANGE, DUPLICATE, INVALID_DEPTH, UNSUPPORTED_STATE, IO_ERROR, SPILL_SPACE
+    NONE = 0, OUT_OF_RANGE, DUPLICATE, INVALID_DEPTH, UNSUPPORTED_STATE, IO_ERROR, SPILL_SPACE,
+    REDUCTION
   };
   mutable std::mutex error_mutex_;
   /* Written once, before error_ is published. */

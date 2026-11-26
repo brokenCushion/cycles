@@ -19,6 +19,10 @@ class DeepOutputDriver final : public OIIOOutputDriver {
     return true;
   }
   void write_deep_render_tile(const DeepTile &tile) override;
+  bool deep_camera_records() const override
+  {
+    return !records_path_.empty() || !deep_diagnostics_path().empty();
+  }
 
  private:
   string deep_path_, records_path_;

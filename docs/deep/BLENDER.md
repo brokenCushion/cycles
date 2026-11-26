@@ -29,11 +29,12 @@ Blender preferences.
    stops on event capacity.
 6. Run the read-only scanner first (see [Read-only scene scanner](#read-only-scene-scanner));
    it reports blockers before you spend render time.
-7. Volume layers spill tens to hundreds of GB of temporary data. Set
+7. VDB volume layers (more than 8 samples) merge during render and need little
+   temporary disk: junkshop Volume at 25% needs no spill; at 100% and 32 spp it peaks
+   near 21 GB and runs at Deep Working Memory 16384. For full-size renders set
    **Output > Output > Deep > Spill Directory** to a drive with room (blank uses
-   `CYCLES_DEEP_SPILL_DIR`, then %TEMP%). Junkshop Volume at 25% uses 24.5 GB
-   (62 GB before compression). If it cannot fit, the render stops early and prints
-   both numbers.
+   `CYCLES_DEEP_SPILL_DIR`, then %TEMP%). Procedural volumes and surfaces still spill
+   raw data. Turning on per-sample diagnostics keeps the old raw spill too.
 
 **Render in the background** (interactive F12 deep rendering is experimental):
 
@@ -167,7 +168,11 @@ file is never visible under its final name.
 
 - **Export row budget.** If the export reports "Deep export row exceeds
   --deep-memory-mb budget", set Deep Working Memory to the printed
-  `minimum deep_memory_mb`; that value covers every row.
+  `minimum deep_memory_mb`; that value covers every row. VDB volume layers no
+  longer hit this.
+- **Volume merge cost.** Merging uses render-thread time (about +60% per pass on
+  CPU). On CUDA/OptiX it currently runs on one host thread, so strict volume
+  renders are slower on GPU (up to about 3.6x on the motion VDB test).
 - **Folded volume meshes.** Deep volume capture pairs mesh entry and exit faces to
   find where a ray is inside a volume. A mesh that folds over itself (for example a
   strong Displace modifier on a smoke puff) can leave an interval open, and it

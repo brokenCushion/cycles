@@ -162,6 +162,86 @@ uint64_t minimum_memory_mb(const uint64_t needed, const size_t population_bytes)
   return (available + population_bytes + mebibyte - 1) / mebibyte;
 }
 
+/* Curve back to a camera sample: surfaces as events, spans as optical depth.
+ * The online reducer's copy of the export-time tree's from_curve (same arithmetic). */
+VolumeCameraSample curve_sample(const std::vector<IntervalSample> &curve, const uint64_t id,
+                                const double weight)
+{
+  VolumeCameraSample sample{{id, weight, true, {}}, {}};
+  const size_t surfaces = std::count_if(curve.begin(), curve.end(),
+      [](const IntervalSample &span) { return span.front == span.back; });
+  sample.camera.events.reserve(surfaces);
+  sample.intervals.reserve(curve.size() - surfaces);
+  for (const auto &span : curve)
+    if (span.front == span.back)
+      sample.camera.events.push_back({span.front, span.alpha, span.object, span.facing});
+    else
+      sample.intervals.push_back({span.front, span.back, -std::log1p(-span.alpha), span.object});
+  return sample;
+}
+
+/* Exact node payload: {u32 intervals, u32 events}, then intervals
+ * {f64 front, f64 back, f64 optical depth, i32 object} and events
+ * {f64 depth, f64 alpha, i32 object, i32 facing}, in order. */
+constexpr size_t node_interval_bytes = 28, node_event_bytes = 24;
+std::vector<unsigned char> encode_volume(const VolumeCameraSample &sample)
+{
+  const uint32_t counts[2] = {uint32_t(sample.intervals.size()),
+                              uint32_t(sample.camera.events.size())};
+  std::vector<unsigned char> bytes(8 + counts[0] * node_interval_bytes +
+                                   counts[1] * node_event_bytes);
+  unsigned char *out = bytes.data();
+  std::memcpy(out, counts, 8);
+  out += 8;
+  for (const auto &v : sample.intervals) {
+    std::memcpy(out, &v.front, 8);
+    std::memcpy(out + 8, &v.back, 8);
+    std::memcpy(out + 16, &v.optical_depth, 8);
+    std::memcpy(out + 24, &v.object, 4);
+    out += node_interval_bytes;
+  }
+  for (const auto &e : sample.camera.events) {
+    std::memcpy(out, &e.depth, 8);
+    std::memcpy(out + 8, &e.alpha, 8);
+    std::memcpy(out + 16, &e.object, 4);
+    std::memcpy(out + 20, &e.facing, 4);
+    out += node_event_bytes;
+  }
+  return bytes;
+}
+VolumeCameraSample decode_volume(const unsigned char *in, const size_t bytes, const uint64_t id,
+                                 const double weight)
+{
+  uint32_t counts[2];
+  if (bytes < 8)
+    throw std::runtime_error("Truncated deep volume node");
+  std::memcpy(counts, in, 8);
+  if (bytes != 8 + uint64_t(counts[0]) * node_interval_bytes +
+                   uint64_t(counts[1]) * node_event_bytes)
+    throw std::runtime_error("Invalid deep volume node size");
+  in += 8;
+  VolumeCameraSample sample{{id, weight, true, {}}, {}};
+  sample.camera.events.reserve(counts[1]);
+  sample.intervals.reserve(counts[0]);
+  for (uint32_t i = 0; i < counts[0]; ++i, in += node_interval_bytes) {
+    VolumeInterval v;
+    std::memcpy(&v.front, in, 8);
+    std::memcpy(&v.back, in + 8, 8);
+    std::memcpy(&v.optical_depth, in + 16, 8);
+    std::memcpy(&v.object, in + 24, 4);
+    sample.intervals.push_back(v);
+  }
+  for (uint32_t i = 0; i < counts[1]; ++i, in += node_event_bytes) {
+    SurfaceEvent e;
+    std::memcpy(&e.depth, in, 8);
+    std::memcpy(&e.alpha, in + 8, 8);
+    std::memcpy(&e.object, in + 16, 4);
+    std::memcpy(&e.facing, in + 20, 4);
+    sample.camera.events.push_back(e);
+  }
+  return sample;
+}
+
 #ifdef _WIN32
 std::wstring widen(const std::string &text)
 {
@@ -246,6 +326,40 @@ bool Capture::spill_compression_supported()
 #endif
 }
 
+/* Online volume reduction: the export-time combine on encoded nodes. Parent
+ * and children are aligned ranges, so ids and weights follow from the key. */
+class Capture::VolumePolicy final : public ReducerPolicy {
+ public:
+  explicit VolumePolicy(const Capture &capture) : capture_(capture) {}
+  std::vector<unsigned char> combine(const size_t pixel,
+                                     const NodeKey &parent,
+                                     const unsigned char *left,
+                                     const size_t left_bytes,
+                                     const unsigned char *right,
+                                     const size_t right_bytes) override
+  {
+    const uint64_t half = uint64_t(1) << (parent.level - 1);
+    const int x = int(pixel % size_t(capture_.width_)), y = int(pixel / size_t(capture_.width_));
+    VolumeCameraSample merged = capture_.combine_volume(
+        decode_volume(left, left_bytes, parent.first(), double(half)),
+        decode_volume(right, right_bytes, parent.first() + half, double(half)),
+        capture_.reduction_levels_, x, y, nullptr);
+    const size_t n = merged.intervals.size() + merged.camera.events.size();
+    const size_t limit = capture_.node_limit_ ? capture_.node_limit_ :
+                                                capture_.reconstruction_limit();
+    if (n > limit)
+      throw std::runtime_error("Deep volume node exceeds the reconstruction limit: " +
+                               std::to_string(n) + " intervals, limit " +
+                               std::to_string(limit) + ", level " +
+                               std::to_string(parent.level) + ", pixel " + std::to_string(x) +
+                               "," + std::to_string(y));
+    return encode_volume(merged);
+  }
+
+ private:
+  const Capture &capture_;
+};
+
 Capture::Band::~Band()
 {
   if (index)
@@ -270,7 +384,8 @@ Capture::Capture(const int width,
                  const int sample_limit,
                  const bool ids,
                  const std::string &spill_dir,
-                 const size_t reserved_bytes)
+                 const size_t reserved_bytes,
+                 const bool retain_samples)
     : error_setting_(error), width_(width), height_(height), samples_(samples), max_events_(max_events), volume_(volume),
       volume_grid_(volume_grid)
 {
@@ -354,7 +469,8 @@ Capture::Capture(const int width,
     rows_per_band_ = (height - 1) / 64 + 1;
     const size_t band_count = (height - 1) / rows_per_band_ + 1;
 #ifdef _WIN32
-    if (band_count * 2 + size_t(rows_per_band_) + 16 > size_t(_getmaxstdio()))
+    if (band_count * (volume_grid && samples > 8 ? 4 : 2) + size_t(rows_per_band_) + 16 >
+        size_t(_getmaxstdio()))
       throw std::invalid_argument("Deep band files exceed stdio open-file limit");
 #endif
     spill_memory_bytes_ = size_t((max_bytes - population_bytes) / 8);
@@ -439,12 +555,20 @@ Capture::Capture(const int width,
     stride_ = sizeof(SpillRecord);
     std::array<unsigned char, 65536> zeros{};
     index_sparse_ = true;
+    /* Grid volumes above 8 samples reduce online; the raw spill remains only
+     * when per-sample records are requested (or reduction is disabled). */
+    const bool reduce_volume = volume_grid && samples > 8 &&
+                               CYCLES_DEEP_ENV("CYCLES_DEEP_VOLUME_REDUCE") != "0";
+    const bool raw_spill = !reduce_volume || retain_samples;
+    retain_samples_ = raw_spill;
     for (int y = 0; y < height; y += rows_per_band_) {
       bands_.push_back(std::make_unique<Band>());
       Band &band = *bands_.back();
       band.first_y = y;
       band.rows = std::min(rows_per_band_, height - y);
       band.pixels = size_t(width) * band.rows;
+      if (!raw_spill)
+        continue;
       band.records = band.pixels * samples;
       index_total_bytes_ += band.records * stride_;
       /* The fixed index is a sparse file of its final size, so unwritten pages read
@@ -467,6 +591,17 @@ Capture::Capture(const int width,
       if (std::fflush(band.index) != 0)
         io_failure("Deep band index flush", band.index_path, 0, errno);
     }
+    if (reduce_volume) {
+      /* Same per-level allowance as the export-time tree. Levels come from the
+       * sample cap, which equals the population without adaptive sampling. */
+      for (size_t n = samples; n > 2; n = (n + 1) / 2)
+        ++reduction_levels_;
+      volume_policy_ = std::make_unique<VolumePolicy>(*this);
+      /* The reducer uses the export staging share, idle during capture; with a
+       * retained raw spill both share it. */
+      make_reducer(raw_spill ? spill_memory_bytes_ / 2 : spill_memory_bytes_,
+                   error_budget(error).reconstruction / (2 * reduction_levels_));
+    }
     return;
   }
   if (count > (max_bytes - population_bytes) / stride_)
@@ -479,6 +614,19 @@ Capture::Capture(const int width,
     density_.resize(count * capacity_);
 }
 Capture::~Capture() = default;
+void Capture::make_reducer(const size_t ram, const double step)
+{
+  ReducerIo io;
+  io.open = [this](std::string &path) {
+    bool unused = false;
+    return open_spill_file("nodes", 0, unused, path);
+  };
+  io.written = [this](const uint64_t bytes) { spill_written(bytes); };
+  reducer_.reset();
+  reducer_ = std::make_unique<PixelReducer>(width_, height_, rows_per_band_, uint32_t(samples_),
+                                            ram, step, compression_, std::move(io),
+                                            *volume_policy_);
+}
 
 void Capture::open_diagnostics(const std::string &path)
 {
@@ -521,8 +669,46 @@ Capture::SpillStatistics Capture::spill_statistics() const
     result.event_raw_bytes += band.event_bytes;
     result.event_file_bytes += compression_ ? band.events.file_bytes : band.event_bytes;
   }
-  result.file_bytes = result.index_bytes + result.event_file_bytes;
+  if (reducer_) {
+    const auto nodes = reducer_->statistics();
+    result.node_file_bytes = nodes.file_bytes;
+    result.node_file_peak = nodes.file_peak;
+    result.node_ram_peak = nodes.ram_peak;
+    result.read_bytes += nodes.file_read_bytes;
+    result.write_bytes += nodes.stored_written;
+  }
+  result.file_bytes = result.index_bytes + result.event_file_bytes + result.node_file_bytes;
   return result;
+}
+void Capture::end_pass(const std::function<bool()> &cancelled)
+{
+  if (!reducer_ || failed())
+    return;
+  try {
+    reducer_->compact(cancelled);
+  }
+  catch (const SpaceError &error) {
+    set_error(SPILL_SPACE, error.what());
+  }
+  catch (const std::exception &error) {
+    set_error(IO_ERROR, error.what());
+  }
+}
+std::string Capture::reducer_summary() const
+{
+  if (!reducer_)
+    return std::string();
+  const auto s = reducer_->statistics();
+  std::ostringstream out;
+  out << "levels=" << reduction_levels_ << " merges=" << s.merges
+      << " merge_worker_seconds=" << s.merge_seconds << " ram_bytes=" << s.ram_bytes
+      << " ram_peak=" << s.ram_peak << " ram_limit=" << s.ram_limit
+      << " node_file_bytes=" << s.file_bytes << " node_live_file_bytes=" << s.live_file_bytes
+      << " node_file_peak=" << s.file_peak << " node_raw_written=" << s.raw_written
+      << " node_stored_written=" << s.stored_written << " node_read_bytes=" << s.file_read_bytes
+      << " evicted=" << s.evicted_nodes << " reloaded=" << s.reloaded_nodes
+      << " compactions=" << s.compactions << " raw_samples=" << (retain_samples_ ? 1 : 0);
+  return out.str();
 }
 void Capture::decode_index(const size_t index, size_t &pixel, uint32_t &sample) const
 {
@@ -1020,6 +1206,8 @@ const char *base_error_message(const int error, const KernelDeepError failure)
       return "deep spill I/O failed (disk full, seek, read or write error)";
     case 6: /* SPILL_SPACE */
       return "deep spill disk space is insufficient";
+    case 7: /* REDUCTION */
+      return "deep volume reduction failed";
     case 1:
       return "camera sample outside capture bounds";
     case 2:
@@ -1170,9 +1358,59 @@ void Capture::record_sample(const int x,
       return;
     }
   }
+  if (reducer_) {
+    record_reduced(size_t(y) * width_ + x, sample, result, events, density);
+    return;
+  }
   const size_t index = record_index(size_t(y) * width_ + x, sample);
   std::lock_guard<std::mutex> lock(bands_.empty() ? mutex_ : band_for_pixel(size_t(y) * width_ + x).mutex);
   store_record(index, result, events, density);
+}
+void Capture::record_reduced(const size_t pixel,
+                             const uint32_t sample,
+                             const KernelDeepResult &result,
+                             const KernelDeepEvent *events,
+                             const KernelDeepDensity *density)
+{
+  if (retain_samples_) {
+    {
+      const std::lock_guard<std::mutex> lock(band_for_pixel(pixel).mutex);
+      store_record(record_index(pixel, sample), result, events, density);
+    }
+    if (error_.load() != NONE)
+      return;
+  }
+  const int x = int(pixel % width_), y = int(pixel / width_);
+  try {
+    /* The export-time leaf: density allowance halved for the one-ray fit,
+     * which runs in strict mode (as reconstruct_volume_pixel does). */
+    const auto budget = error_budget(error_setting_);
+    VolumeCameraSample leaf = build_volume_sample(sample, result, events, density,
+                                                  budget.density / 2, nullptr);
+    if (error_setting_ == 0) {
+      const auto compact = fit_volume({leaf}, budget.reconstruction, reconstruction_limit(),
+                                      budget.density / 2, std::numeric_limits<size_t>::max(),
+                                      x, y, nullptr);
+      leaf = curve_sample(compact, leaf.camera.id, leaf.camera.weight);
+    }
+    if (collect_histogram)
+      histogram_record(ray_histogram_, leaf.intervals.size() + leaf.camera.events.size());
+    reducer_->add(pixel, sample, encode_volume(leaf));
+    if (!retain_samples_)
+      ++completed_;
+  }
+  catch (const DuplicateSample &error) {
+    set_error(DUPLICATE, error.what());
+  }
+  catch (const SpaceError &error) {
+    set_error(SPILL_SPACE, error.what());
+  }
+  catch (const ReducerIoError &error) {
+    set_error(IO_ERROR, error.what());
+  }
+  catch (const std::exception &error) {
+    set_error(REDUCTION, error.what());
+  }
 }
 void Capture::set_population(const int x, const int y, const uint32_t count)
 {
@@ -1204,6 +1442,10 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
 {
   if (sample < 0 || sample >= population(x, y))
     throw std::out_of_range("Deep camera sample outside population");
+  if (!retains_samples())
+    throw std::runtime_error(
+        "Per-sample deep volume records are not retained by the online reducer; request "
+        "diagnostic records before rendering or set CYCLES_DEEP_VOLUME_REDUCE=0");
   KernelDeepResult result{};
   thread_local std::unordered_map<const Capture *, std::weak_ptr<ReadScratch>> cache;
   auto scratch = cache[this].lock();
@@ -1236,8 +1478,18 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
   }
   if (error_.load() != NONE || result.status != DEEP_COMPLETE)
     throw std::runtime_error("Cannot read incomplete deep capture");
-  VolumeCameraSample output{{uint64_t(sample), 1, true, {}}, {}};
-  const KernelDeepEvent *record = events.data();
+  return build_volume_sample(uint64_t(sample), result, events.data(),
+                             volume_grid_ ? density.data() : nullptr, density_tolerance,
+                             &export_statistics);
+}
+VolumeCameraSample Capture::build_volume_sample(const uint64_t sample,
+                                                const KernelDeepResult &result,
+                                                const KernelDeepEvent *record,
+                                                const KernelDeepDensity *density,
+                                                const double density_tolerance,
+                                                ExportStatistics *statistics) const
+{
+  VolumeCameraSample output{{sample, 1, true, {}}, {}};
   double opaque_depth = std::numeric_limits<double>::infinity();
   for (unsigned i = 0; i < result.count; ++i)
     if (deep_event_type(record[i]) == DEEP_SURFACE && record[i].surface_alpha == 1)
@@ -1269,7 +1521,7 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
       output.intervals.push_back({event.front, event.back, event.optical_depth, object});
   }
   for (const auto &entry : object_cubic) {
-    ExportTimer timer{&export_statistics, ExportStatistics::DensityFit};
+    ExportTimer timer{statistics, ExportStatistics::DensityFit};
     const auto fitted = integrate_cubic_density(entry.second,
         density_tolerance / object_cubic.size(), reconstruction_limit());
     if (fitted.size() > reconstruction_limit() - output.intervals.size())
@@ -1278,7 +1530,7 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
       output.intervals.push_back({v.front, v.back, v.optical_depth, entry.first});
   }
   if (!cubic.empty()) {
-    ExportTimer timer{&export_statistics, ExportStatistics::DensityFit};
+    ExportTimer timer{statistics, ExportStatistics::DensityFit};
     const auto fitted = integrate_cubic_density(cubic, density_tolerance, reconstruction_limit());
     if (output.intervals.size() > reconstruction_limit() ||
         fitted.size() > reconstruction_limit() - output.intervals.size())
@@ -1319,6 +1571,15 @@ bool Capture::finalize() const
   }
   if (completed_.load() != expected)
     return false;
+  if (reducer_) {
+    /* Accepted counts plus exact node coverage of [0, population) prove the
+     * samples are complete with none outside the population. */
+    for (size_t pixel = 0; pixel < size_t(width_) * height_; ++pixel)
+      if (!reducer_->complete(pixel, adaptive() ? populations_[pixel] : uint32_t(samples_)))
+        return false;
+    if (!retain_samples_)
+      return true;
+  }
   try {
     if (bands_.empty()) {
       if (adaptive())
@@ -1602,6 +1863,36 @@ void Capture::begin_export_row(const int y) const
   ExportTimer timer{&export_statistics, ExportStatistics::Staging};
   if (bands_.empty())
     return;
+  if (reducer_ && !retain_samples_) {
+    if (!exporting_) {
+      if (!finalize())
+        throw std::runtime_error("Cannot export incomplete deep capture");
+      exporting_ = true;
+      next_export_y_ = height_ - 1;
+    }
+    if (export_row_open_ || y != next_export_y_)
+      throw std::runtime_error("Deep export rows must be sequential Y-down");
+  }
+  if (reducer_) {
+    /* Export reads only each pixel's surviving nodes: about width x L curves. */
+    const size_t first = size_t(y) * width_;
+    const uint64_t bytes = reducer_->staging_bytes(first, width_);
+    if (bytes > reducer_->ram_limit()) {
+      const uint64_t share = retain_samples_ ? 2 : 1;
+      throw std::runtime_error(
+          "Deep volume export row nodes exceed --deep-memory-mb budget: row y=" +
+          std::to_string(y) + " needs " + std::to_string(bytes) + " bytes, reducer share " +
+          std::to_string(reducer_->ram_limit()) + " bytes; minimum deep_memory_mb " +
+          std::to_string((8 * share * bytes + population_bytes_ + reserved_bytes_ + mebibyte - 1) /
+                         mebibyte));
+    }
+    reducer_->reserve(bytes);
+    reducer_->stage(first, width_);
+    if (!retain_samples_) {
+      export_row_open_ = true;
+      return;
+    }
+  }
   if (!exporting_) {
     if (!finalize())
       throw std::runtime_error("Cannot export incomplete deep capture");
@@ -1647,6 +1938,13 @@ void Capture::end_export_row(const int y) const
     return;
   if (!export_row_open_ || y != next_export_y_)
     throw std::runtime_error("Deep export row completion mismatch");
+  if (reducer_ && !retain_for_validation)
+    reducer_->release(size_t(y) * width_, width_);
+  if (reducer_ && !retain_samples_) {
+    export_row_open_ = false;
+    --next_export_y_;
+    return;
+  }
   Band &band = band_for_pixel(size_t(y) * width_);
   if (band.rebucketed || y == band.first_y) {
     std::vector<SpillRecord>().swap(staged_records_);
@@ -1709,21 +2007,128 @@ std::vector<SurfaceSample> Capture::reconstruct_pixel(const int x, const int y) 
     ledger.samples.push_back({uint64_t(sample), 1, true, events(x, y, sample)});
   return reconstruct(ledger, ids());
 }
+std::vector<IntervalSample> Capture::fit_volume(std::vector<VolumeCameraSample> samples,
+                                               const double tolerance,
+                                               const size_t limit,
+                                               const double reduction,
+                                               const size_t bytes,
+                                               const int x,
+                                               const int y,
+                                               ExportStatistics *statistics) const
+{
+  ExportTimer timer{statistics, ExportStatistics::MixtureFit};
+  if (!ids())
+    return reconstruct_volume(std::move(samples), tolerance, limit, reduction, bytes);
+  try {
+    return reconstruct_volume_ids(std::move(samples), tolerance + reduction, limit, bytes);
+  }
+  catch (const std::runtime_error &error) {
+    throw std::runtime_error(std::string(error.what()) + ", pixel=" +
+                             std::to_string(x) + "," + std::to_string(y));
+  }
+}
+void Capture::histogram_record(Histogram &histogram, const size_t n)
+{
+  int bucket = 0;
+  for (size_t v = n; v && bucket < histogram_buckets - 1; v >>= 1)
+    ++bucket;
+  histogram.count[bucket].fetch_add(1, std::memory_order_relaxed);
+  histogram.total.fetch_add(n, std::memory_order_relaxed);
+  histogram.items.fetch_add(1, std::memory_order_relaxed);
+  uint64_t maximum = histogram.maximum.load();
+  while (maximum < n && !histogram.maximum.compare_exchange_weak(maximum, uint64_t(n)))
+    ;
+}
+/* One balanced-tree combine, as in the export-time tree: the left operand
+ * covers the lower samples and keeps its id; allowance R/(2 levels). */
+VolumeCameraSample Capture::combine_volume(VolumeCameraSample left,
+                                           VolumeCameraSample right,
+                                           const size_t levels,
+                                           const int x,
+                                           const int y,
+                                           ExportStatistics *statistics) const
+{
+  const auto budget = error_budget(error_setting_);
+  const uint64_t id = left.camera.id;
+  const double weight = left.camera.weight + right.camera.weight;
+  std::vector<VolumeCameraSample> pair;
+  pair.push_back(std::move(left));
+  pair.push_back(std::move(right));
+  const auto curve = fit_volume(std::move(pair), budget.reconstruction / (2 * levels),
+                                reconstruction_limit(), budget.reconstruction / (2 * levels),
+                                std::numeric_limits<size_t>::max(), x, y, statistics);
+  if (collect_histogram) {
+    int level = 0;
+    while (level < histogram_levels - 1 && double(uint64_t(1) << (level + 1)) < weight)
+      ++level;
+    histogram_record(level_histogram_[level], curve.size());
+  }
+  return curve_sample(curve, id, weight);
+}
+std::vector<IntervalSample> Capture::reconstruct_reduced_pixel(const int x, const int y) const
+{
+  ExportTimer pixel_timer{&export_statistics, ExportStatistics::Pixel};
+  const size_t pixel = size_t(y) * width_ + x;
+  const uint32_t cameras = uint32_t(population(x, y));
+  if (!reducer_->complete(pixel, cameras))
+    throw std::runtime_error("Cannot read incomplete deep capture");
+  const auto budget = error_budget(error_setting_);
+  thread_local std::vector<PixelReducer::ExportNode> nodes;
+  thread_local std::vector<std::vector<unsigned char>> scratch;
+  {
+    ExportTimer timer{&export_statistics, ExportStatistics::Read};
+    reducer_->export_nodes(pixel, nodes, scratch);
+  }
+  /* Same retained-curve memory rule as the export-time tree. */
+  size_t retained = 0;
+  for (const auto &node : nodes) {
+    uint32_t counts[2];
+    std::memcpy(counts, node.payload, 8);
+    retained += (size_t(counts[0]) + counts[1]) * 128;
+  }
+  if (volume_pixel_bytes_ && retained > volume_pixel_bytes_)
+    throw std::runtime_error(
+        "Deep volume pixel reconstruction exceeds --deep-memory-mb budget: retained " +
+        std::to_string(retained) + ", budget " + std::to_string(volume_pixel_bytes_) +
+        ", pixel " + std::to_string(x) + "," + std::to_string(y));
+  /* Fold the remaining (decreasing) aligned groups from the right, then the
+   * final fit, exactly as the export-time tree does after its last camera. */
+  const auto decode = [&](const PixelReducer::ExportNode &node) {
+    return decode_volume(node.payload, node.bytes, node.key.first(),
+                         double(uint64_t(1) << node.key.level));
+  };
+  const double step = reducer_->step_error();
+  VolumeCameraSample sample = decode(nodes.back());
+  double ledger = nodes.back().error;
+  for (size_t i = nodes.size() - 1; i-- > 0;) {
+    sample = combine_volume(decode(nodes[i]), std::move(sample), reduction_levels_, x, y,
+                            &export_statistics);
+    ledger = std::max(ledger, nodes[i].error) + step;
+  }
+  /* Ledger: deepest leaf-to-root path of spent per-level allowances. */
+  const double allowance = budget.reconstruction / 2;
+  if (ledger > allowance * (1 + 1e-9)) {
+    std::ostringstream message;
+    message << std::setprecision(6) << "Deep volume reduction ledger exceeds its allowance: "
+            << ledger << " > " << allowance << " (" << reduction_levels_ << " levels of " << step
+            << "), pixel " << x << "," << y;
+    throw std::runtime_error(message.str());
+  }
+  std::vector<VolumeCameraSample> ledger_samples;
+  ledger_samples.push_back(std::move(sample));
+  return fit_volume(std::move(ledger_samples), budget.reconstruction / 2, reconstruction_limit(),
+                    0, volume_pixel_bytes_ ? volume_pixel_bytes_ : std::numeric_limits<size_t>::max(),
+                    x, y, &export_statistics);
+}
 std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const int y) const
 {
+  if (reducer_ && volume_ && error_.load() == NONE)
+    return reconstruct_reduced_pixel(x, y);
   ExportTimer pixel_timer{&export_statistics, ExportStatistics::Pixel};
   auto fit = [&](std::vector<VolumeCameraSample> samples, double tolerance, size_t limit,
                  double reduction, size_t bytes = std::numeric_limits<size_t>::max()) {
-    ExportTimer timer{&export_statistics, ExportStatistics::MixtureFit};
-    if (!ids())
-      return reconstruct_volume(std::move(samples), tolerance, limit, reduction, bytes);
-    try {
-      return reconstruct_volume_ids(std::move(samples), tolerance + reduction, limit, bytes);
-    }
-    catch (const std::runtime_error &error) {
-      throw std::runtime_error(std::string(error.what()) + ", pixel=" +
-                               std::to_string(x) + "," + std::to_string(y));
-    }
+    return fit_volume(std::move(samples), tolerance, limit, reduction, bytes, x, y,
+                      &export_statistics);
   };
   if (!volume_ || error_.load() != NONE)
     throw std::runtime_error("Invalid volume capture reconstruction");
@@ -1731,8 +2136,11 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   std::vector<VolumeCameraSample> ledger;
   const int cameras = population(x, y);
   const bool compact_ray = volume_grid_ && samples_ > 8;
+  /* Per-level allowance from the sample cap (equal to the population without
+   * adaptive sampling), as the online reducer must choose it before the
+   * population is known; raw and reduced captures then agree exactly. */
   size_t levels = 1;
-  for (size_t n = cameras; n > 2; n = (n + 1) / 2)
+  for (size_t n = compact_ray ? size_t(samples_) : size_t(cameras); n > 2; n = (n + 1) / 2)
     ++levels;
   ledger.reserve(compact_ray ? levels : cameras);
   std::vector<size_t> populations;
@@ -1868,6 +2276,66 @@ std::string Capture::check_spill_space()
 {
   if (bands_.empty() || failed())
     return std::string();
+  if (reducer_ && !retain_samples_) {
+    /* Node storage: live curves grow with tree level, not with samples.
+     * Project live node bytes by (final levels + 1) / (current mean level + 1),
+     * double it for dead records awaiting compaction, add 5% and the reserve. */
+    const auto nodes = reducer_->statistics();
+    std::error_code ec;
+    const auto info = std::filesystem::space(native_path(spill_directory_), ec);
+    if (ec)
+      return "Deep spill: cannot query free space in " + spill_directory_ + ": " + ec.message();
+    const uint64_t free_bytes = uint64_t(info.available);
+    const uint64_t stored = nodes.file_bytes;
+    const uint64_t quota_free = spill_quota_bytes_ ?
+                                    (spill_quota_bytes_ > stored ? spill_quota_bytes_ - stored : 0) :
+                                    UINT64_MAX;
+    const uint64_t available = std::min(free_bytes, quota_free);
+    const std::string advice =
+        ". Choose a larger spill directory (Output > Deep > Spill Directory, --deep-spill-dir or "
+        "CYCLES_DEEP_SPILL_DIR), or reduce samples, resolution or events";
+    if (available < spill_reserve_bytes) {
+      set_error(SPILL_SPACE, "spill directory " + spill_directory_ + " has " +
+                                 std::to_string(available) + " usable bytes, below the " +
+                                 std::to_string(spill_reserve_bytes) + " byte reserve, after " +
+                                 std::to_string(stored) + " stored node bytes" + advice);
+      return std::string();
+    }
+    const size_t done = completed_.load();
+    if (!done)
+      return std::string();
+    const uint64_t live = reducer_->live_bytes();
+    const double mean = double(done) / (double(width_) * height_);
+    const double growth = std::max(1.0, (std::log2(double(samples_)) + 1) /
+                                            (std::log2(std::max(1.0, mean)) + 1));
+    /* Nodes reach disk only beyond the reducer's RAM share. */
+    const uint64_t projected =
+        uint64_t(2 * std::max(0.0, double(live) * growth - double(reducer_->ram_limit())));
+    const uint64_t remaining = projected > stored ? projected - stored : 0;
+    const uint64_t needed = remaining + remaining / 20 + spill_reserve_bytes;
+    if (needed <= available)
+      return std::string();
+    const std::string message =
+        "spill directory " + spill_directory_ + " (" + std::to_string(free_bytes) +
+        " bytes free" +
+        (spill_quota_bytes_ ? ", quota " + std::to_string(spill_quota_bytes_) + " bytes" :
+                              std::string()) +
+        ") cannot hold the projected volume node storage: " + std::to_string(live) +
+        " live node bytes after " + std::to_string(done) + " of " + std::to_string(count_) +
+        " camera samples project to " + std::to_string(projected) +
+        " stored bytes (x" + std::to_string(growth) +
+        " level growth, less the RAM share, x2 compaction headroom); still needed " +
+        std::to_string(needed) + " bytes (5% margin + " + std::to_string(spill_reserve_bytes) +
+        " reserve) versus " + std::to_string(available) + " usable" + advice;
+    if (adaptive()) {
+      if (projection_warned_)
+        return std::string();
+      projection_warned_ = true;
+      return "Deep spill projection uses the adaptive sample cap as an upper bound: " + message;
+    }
+    set_error(SPILL_SPACE, message);
+    return std::string();
+  }
   /* Workers are joined between passes, so band counters are stable. */
   uint64_t stored = 0, largest_raw = 0, largest_staged = 0;
   for (const auto &item : bands_) {

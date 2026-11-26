@@ -70,6 +70,20 @@ space, or the optional `CYCLES_DEEP_SPILL_MAX_MB` quota, drops below 256 MiB. Bu
 failures print the bytes needed and the minimum `deep_memory_mb`; the export row
 check runs before the first row is written. Strict surfaces remain unbounded.
 
+Grid-volume layers above 8 samples reduce each pixel during rendering instead of at
+export: the same per-ray density and one-ray fits and the same balanced combines with
+allowance R/(2*levels), applied to aligned sample ranges as soon as both halves exist.
+Export folds the remaining groups and runs the final fit. Strict and non-adaptive
+numeric output is byte-identical to export-time reduction, whatever the arrival order.
+Levels come from the sample cap; with adaptive sampling this gives smaller per-level
+allowances than before, so output stays within the stated bound but is not
+byte-identical to earlier builds. Intermediate storage is about popcount(n) <=
+log2(samples) curves per pixel. Resident nodes use deep_memory_mb/8 (hard cap 5/4 of
+it); the rest go to delete-on-close node streams in the spill directory, compacted
+between passes. Duplicates, incomplete coverage, a node over the interval limit, or a
+reduction ledger over its allowance fail with numbers. Per-sample diagnostic records
+keep the raw spill as well. `CYCLES_DEEP_VOLUME_REDUCE=0` restores raw spill.
+
 CPU beauty remains exact. CUDA/OptiX beauty policy and its GPU-only change scope
 are in [VALIDATION.md](VALIDATION.md); source hashes and 75 kernel resource records
 provide the host-only proof.

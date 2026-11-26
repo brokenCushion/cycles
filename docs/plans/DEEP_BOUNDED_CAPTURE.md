@@ -6,6 +6,13 @@ delete-on-close files, sparse index, zstd spill (2.56x on junkshop), early stop 
 space projection, budget numbers, interval histogram. Junkshop Volume 25%: spill
 62.0 -> 24.5 GB, wall time +7.7%. Measured per-node volume intervals: mean
 150-420, max about 1.2k (sizes Stage 2).
+Stage 2 (merge volumes during render) implemented 2026-11-26: online aligned-range
+tree, node arena and stream, ledger. Strict and non-adaptive volumes byte-identical;
+adaptive volumes use cap levels and pass the oracle within bound; their 11 golden
+references were regenerated (user-approved) into deep-references\n...-20261126-volume-reduce, regression PASS with only the 15 pre-existing
+landscape/surface_bevel divergences. Junkshop Volume 25%: spill 24.5 GB -> 0, wall 341 -> 195 s;
+100% at 32 spp: disk 467 -> 21.5 GB peak, 43.5 -> 34 min, deep_memory_mb 32768 ->
+16384, EXR byte-identical.
 
 Goal: intermediate deep data is bounded per pixel and per band, not by
 samples x events. The numeric error contract in

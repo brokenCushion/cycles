@@ -98,6 +98,9 @@ class OutputDriver {
 
   virtual bool supports_deep_output() const { return false; }
   virtual string deep_diagnostics_path() const { return {}; }
+  /* Per-sample diagnostic records will be read through DeepTile::get_camera_sample,
+   * so capture must retain raw samples next to any online reduction. */
+  virtual bool deep_camera_records() const { return !deep_diagnostics_path().empty(); }
   /* Called after all workers finish and completeness is verified. Throw to report
    * host delivery failure through Session::progress. No callback on cancellation. */
   virtual void write_deep_render_tile(const DeepTile & /* tile */)

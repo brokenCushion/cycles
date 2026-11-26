@@ -44,6 +44,7 @@ struct CaptureTestAccess {
 }
 using ccl::deep::Capture;
 using ccl::deep::CaptureTestAccess;
+int run_reducer_tests(); /* reducer_test.cpp: online volume reduction. */
 static_assert(std::is_trivially_copyable_v<KernelDeepEvent>);
 static_assert(std::is_standard_layout_v<KernelDeepEvent>);
 static_assert(offsetof(KernelDeepEvent, front) == 4);
@@ -872,6 +873,8 @@ int main()
     }
     std::cout
         << "Capture coverage, lifecycle, concurrent writes, bounds and budget checks passed\n";
+    if (run_reducer_tests() != 0)
+      return 1;
   }
   catch (const std::exception &e) {
     std::cerr << e.what() << '\n';

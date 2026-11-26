@@ -498,6 +498,48 @@ int run_surface_reducer_tests()
         check(online->reducer_summary().find("kind=surface") != std::string::npos);
         ++capture_cases;
       }
+    /* Parallel host ingest (GPU path): 2 and 8 workers, one-record and
+     * default chunks, a 1.5 MiB share (eviction), pass ends: identical to the
+     * raw path. */
+    for (const bool ids : {false, true})
+      for (const unsigned threads : {2u, 8u})
+        for (const bool tiny : {false, true}) {
+          const Frame f = make_frame(16, 66, 37, ids, 300 + ids);
+          auto raw = make_capture(f, 1e-4f, true, false, true);
+          for (int s = 0; s < f.samples; ++s)
+            for (int y = 0; y < f.height; ++y)
+              for (int x = 0; x < f.width; ++x)
+                record(*raw, f, x, y, s);
+          check(raw->finalize());
+          const Image b = export_image(*raw);
+          auto c = std::make_unique<Capture>(f.width, f.height, f.samples, 12u * 1024 * 1024, 16,
+                                             true, false, false, false, 2, 1e-4f, 0, f.ids,
+                                             spill_root().string(), 0, false);
+          if (f.ids)
+            c->set_object_manifest({{11u, "a"}, {22u, "b"}, {33u, "c"}});
+          check(c->surface_reducing());
+          set_env("CYCLES_DEEP_INGEST_CHUNK", tiny ? "1" : nullptr);
+          c->set_ingest_threads(int(threads));
+          set_env("CYCLES_DEEP_INGEST_CHUNK", nullptr);
+          check(c->ingest_threads() == int(threads));
+          /* Passes of growing sample ranges, as the GPU scheduler issues them. */
+          for (int start = 0, size = 1; start < f.samples; start += size, size = std::min(size * 2, 16)) {
+            for (int y = 0; y < f.height; ++y)
+              for (int x = 0; x < f.width; ++x)
+                for (int s = start; s < std::min(f.samples, start + size); ++s)
+                  record(*c, f, x, y, s);
+            c->end_pass();
+          }
+          check(c->finalize());
+          const Image a = export_image(*c);
+          for (size_t p = 0; p < a.size(); ++p)
+            check(identical(a[p], b[p]));
+          const std::string summary = c->reducer_summary();
+          check(summary.find("ingest_threads=" + std::to_string(threads)) != std::string::npos);
+          std::cout << "surface ingest ids=" << ids << " threads=" << threads << " tiny=" << tiny
+                    << ": " << summary.substr(summary.find("evicted=")) << "\n";
+          ++capture_cases;
+        }
     /* Opaque-only capture (record API, no event capacity). */
     {
       const int w = 3, h = 2, n = 24;

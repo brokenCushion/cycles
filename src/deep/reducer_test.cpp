@@ -52,6 +52,14 @@ struct ReducerTestAccess {
   {
     return c.reducer_->step_error();
   }
+  static uint64_t decode_bytes(const Capture &c, const uint64_t raw)
+  {
+    return c.export_decode_bytes(raw);
+  }
+  static uint64_t fixed_bytes(const Capture &c)
+  {
+    return PixelReducer::fixed_bytes(c.width(), c.height());
+  }
 };
 }  // namespace ccl::deep
 
@@ -534,6 +542,150 @@ int run_reducer_tests()
             ++oracle_checks;
           }
     }
+    /* 9. Parallel host ingest (the GPU consume path): 1, 3 and 8 workers,
+     * one-record and default chunks, retained raw records, a small RAM share
+     * (cooperative sweeps from ingest workers, reloads and parallel compaction
+     * at every pass end): byte-identical to the raw reference. */
+    size_t ingest_cases = 0;
+    for (const float error : {0.f, 1e-4f}) {
+      const Fixture f = make_fixture(3, 66, error == 0 ? 17 : 40, error, error > 0,
+                                     1200 + int(error * 1e4f));
+      auto reference = make_capture(f, false, true);
+      feed(*reference, f, Order::Forward, 0);
+      const Image expected = export_image(*reference);
+      for (const unsigned threads : {1u, 3u, 8u})
+        for (const bool tiny : {false, true})
+          for (const bool retain : {false, true}) {
+            if (error == 0 && (threads == 3 || retain))
+              continue; /* strict leaves are slow: fewer cases */
+            auto online = make_capture(f, true, retain);
+            /* Strict nodes are large: a row's nodes must still fit the share. */
+            const uint64_t small =
+                2 * ReducerTestAccess::fixed_bytes(*online) + (error == 0 ? 1024 : 96) * 1024;
+            ReducerTestAccess::rebuild(*online, small, ReducerTestAccess::step(*online));
+            ReducerTestAccess::compaction_threshold(*online, 0);
+            set_env("CYCLES_DEEP_INGEST_CHUNK", tiny ? "1" : nullptr);
+            online->set_ingest_threads(int(threads));
+            set_env("CYCLES_DEEP_INGEST_CHUNK", nullptr);
+            check(online->ingest_threads() == int(threads));
+            feed(*online, f, Order::Passes, 11 + threads, false, [&] { online->end_pass(); });
+            check(!online->failed());
+            check(online->finalize());
+            check(identical(export_image(*online), expected));
+            const auto stats = ReducerTestAccess::statistics(*online);
+            check(stats.evicted_nodes > 0 && stats.reloaded_nodes > 0 && stats.sweeps > 0);
+            check(online->reducer_summary().find("ingest_threads=" + std::to_string(threads)) !=
+                  std::string::npos);
+            ++ingest_cases;
+            std::cout << "ingest error=" << error << " threads=" << threads << " tiny=" << tiny
+                      << " retain=" << retain << " evicted=" << stats.evicted_nodes
+                      << " sweeps=" << stats.sweeps << " compactions=" << stats.compactions
+                      << "\n";
+          }
+    }
+    /* 10. CPU-like concurrent ingest under a small share: render threads run
+     * cooperative eviction sweeps; bytes identical, sweeps observed. */
+    {
+      const Fixture f = make_fixture(4, 66, 33, 1e-4f, false, 1300);
+      auto reference = make_capture(f, false, true);
+      feed(*reference, f, Order::Forward, 0);
+      const Image expected = export_image(*reference);
+      for (int repeat = 0; repeat < 3; ++repeat) {
+        auto online = make_capture(f, true, false);
+        const uint64_t small = 2 * ReducerTestAccess::fixed_bytes(*online) + 64 * 1024;
+        ReducerTestAccess::rebuild(*online, small, ReducerTestAccess::step(*online));
+        feed(*online, f, Order::Threads, 21 + repeat);
+        online->end_pass();
+        check(online->finalize());
+        check(identical(export_image(*online), expected));
+        const auto stats = ReducerTestAccess::statistics(*online);
+        check(stats.sweeps > 0 && stats.evicted_nodes > 0);
+        ++ingest_cases;
+        std::cout << "threads sweep evicted=" << stats.evicted_nodes << " sweeps=" << stats.sweeps
+                  << " evict_seconds=" << stats.evict_seconds
+                  << " wait_seconds=" << stats.wait_seconds << "\n";
+      }
+    }
+    /* 11. Destruction with queued ingest and evicted nodes joins every worker
+     * and leaves no spill files; a cancelled parallel compaction keeps bytes. */
+    {
+      const Fixture f = make_fixture(4, 66, 32, 1e-4f, false, 1301);
+      {
+        auto c = make_capture(f, true, false);
+        set_env("CYCLES_DEEP_INGEST_CHUNK", "1");
+        c->set_ingest_threads(6);
+        set_env("CYCLES_DEEP_INGEST_CHUNK", nullptr);
+        for (int s = 0; s < 20; ++s)
+          for (int y = 0; y < f.height; ++y)
+            for (int x = 0; x < f.width; ++x)
+              record(*c, f, x, y, s);
+        c->end_pass();
+        ReducerTestAccess::evict_all(*c);
+        for (int s = 20; s < 32; ++s)
+          for (int y = 0; y < f.height; ++y)
+            for (int x = 0; x < f.width; ++x)
+              record(*c, f, x, y, s);
+        /* No drain: the destructor discards and joins. */
+      }
+      check(std::filesystem::is_empty(spill_root()));
+      std::cout << "ingest destruction: workers joined, no spill files\n";
+    }
+    /* 12. Duplicates and missing samples through the ingest queue keep their
+     * messages (reported after the queue drains). */
+    {
+      const Fixture f = make_fixture(2, 1, 16, 1e-4f, false, 1302);
+      auto c = make_capture(f, true, false);
+      c->set_ingest_threads(2);
+      record(*c, f, 1, 0, 5);
+      record(*c, f, 1, 0, 5);
+      check(!c->finalize());
+      check(c->failed());
+      const std::string message = c->error_message();
+      check(message.find("more than once") != std::string::npos &&
+            message.find("pixel 1,0, sample 5") != std::string::npos);
+      auto incomplete = make_capture(f, true, false);
+      incomplete->set_ingest_threads(2);
+      for (int s = 0; s < 16; ++s)
+        for (int x = 0; x < 2; ++x)
+          if (!(x == 0 && s == 9))
+            record(*incomplete, f, x, 0, s);
+      check(!incomplete->finalize() && !incomplete->failed());
+      const std::string missing = incomplete->error_message();
+      check(missing.find("accepted 31 of 32") != std::string::npos &&
+            missing.find("pixel 0,0 accepted 15 of population 16") != std::string::npos);
+      std::cout << "ingest duplicate: " << message << "\n";
+    }
+    /* 13. Resident node tables beyond the share fail with numbers. */
+    {
+      const Fixture f = make_fixture(64, 64, 9, 1e-4f, false, 1303);
+      auto c = make_capture(f, true, false);
+      const uint64_t fixed = ReducerTestAccess::fixed_bytes(*c);
+      ReducerTestAccess::rebuild(*c, 2 * fixed + 4096, ReducerTestAccess::step(*c));
+      for (int y = 0; y < f.height && !c->failed(); ++y)
+        for (int x = 0; x < f.width; ++x)
+          record(*c, f, x, y, 0);
+      check(c->failed());
+      const std::string message = c->error_message();
+      std::cout << "table failure: " << message << "\n";
+      check(message.find("resident node tables exceed its memory share") != std::string::npos &&
+            message.find("increase --deep-memory-mb") != std::string::npos);
+    }
+    /* 14. Export decode scratch of a compressed stream (charged at staging). */
+    {
+      const Fixture f = make_fixture(2, 2, 16, 1e-4f, false, 1304);
+      auto c = make_capture(f, false, true);
+      const uint64_t big = ReducerTestAccess::decode_bytes(*c, uint64_t(1) << 30);
+      const uint64_t one = ReducerTestAccess::decode_bytes(*c, 100);
+      std::cout << "export decode scratch: large stream " << big << " bytes, 100-byte stream "
+                << one << " bytes (compression " << c->spill_compression() << ")\n";
+      if (c->spill_compression())
+        check(big > 2u * 1024 * 1024 && big < 4u * 1024 * 1024 && one < big);
+      else
+        check(big == 0);
+    }
+    std::cout << "Parallel ingest and eviction: " << ingest_cases
+              << " byte-identity cases; destruction, duplicate, completion, table and decode "
+                 "checks passed\n";
     std::cout << "Online volume reduction: " << identity_cases
               << " byte-identity cases; adaptive worst |T - oracle| " << adaptive_worst
               << " <= bound " << adaptive_bound << " over " << oracle_checks

@@ -5,7 +5,9 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <exception>
 #include <limits>
+#include <thread>
 #include <utility>
 #ifdef WITH_CYCLES_DEEP_ZSTD
 #  include <zstd.h>
@@ -36,7 +38,12 @@ PixelReducer::Band::~Band()
 {
   if (file)
     std::fclose(file);
+}
+
+PixelReducer::Codec::~Codec()
+{
 #ifdef WITH_CYCLES_DEEP_ZSTD
+  ZSTD_freeCCtx(static_cast<ZSTD_CCtx *>(compressor));
   ZSTD_freeDCtx(static_cast<ZSTD_DCtx *>(decompressor));
 #endif
 }
@@ -56,7 +63,9 @@ PixelReducer::PixelReducer(const int width,
 {
   if (width <= 0 || height <= 0 || rows_per_band <= 0 || samples == 0 ||
       samples > (uint32_t(1) << 31))
-    throw std::invalid_argument("Invalid deep reducer dimensions");
+    throw std::invalid_argument("Invalid deep reducer dimensions: " + std::to_string(width) + "x" +
+                                std::to_string(height) + ", " + std::to_string(rows_per_band) +
+                                " rows per band, " + std::to_string(samples) + " samples");
 #ifndef WITH_CYCLES_DEEP_ZSTD
   compression_ = 0;
 #endif
@@ -68,6 +77,7 @@ PixelReducer::PixelReducer(const int width,
         "Deep reducer pixel state exceeds its memory share: " + std::to_string(fixed) +
         " bytes for " + std::to_string(pixels) + " pixels, share " + std::to_string(ram_limit) +
         " bytes (deep_memory_mb/8); increase --deep-memory-mb");
+  fixed_bytes_ = fixed;
   evict_threshold_.store(int64_t(ram_limit));
   pixels_.resize(pixels);
   stripes_ = std::make_unique<std::mutex[]>(stripe_count);
@@ -81,14 +91,9 @@ uint64_t PixelReducer::fixed_bytes(const int width, const int height)
   return uint64_t(width) * uint64_t(height) * sizeof(Pixel) + stripe_count * sizeof(std::mutex);
 }
 
-PixelReducer::~PixelReducer()
-{
-#ifdef WITH_CYCLES_DEEP_ZSTD
-  ZSTD_freeCCtx(static_cast<ZSTD_CCtx *>(compressor_));
-#endif
-}
+PixelReducer::~PixelReducer() = default;
 
-void PixelReducer::charge(const int64_t bytes)
+void PixelReducer::charge(const int64_t bytes) const
 {
   const int64_t now = ram_.fetch_add(bytes) + bytes;
   uint64_t peak = ram_peak_.load();
@@ -96,22 +101,57 @@ void PixelReducer::charge(const int64_t bytes)
     ;
 }
 
-void PixelReducer::insert(Pixel &pixel, Node node)
+std::unique_ptr<PixelReducer::Codec> PixelReducer::acquire_codec() const
 {
-  if (pixel.count == pixel.capacity) {
-    if (pixel.capacity == std::numeric_limits<uint16_t>::max())
-      throw std::runtime_error("Deep reducer pixel node table is full (65535 nodes)");
+  {
+    const std::lock_guard<std::mutex> lock(codec_mutex_);
+    if (!codecs_.empty()) {
+      std::unique_ptr<Codec> codec = std::move(codecs_.back());
+      codecs_.pop_back();
+      return codec;
+    }
+  }
+  return std::make_unique<Codec>();
+}
+
+/* Charges the codec's current context and buffer memory, then parks it. */
+void PixelReducer::release_codec(std::unique_ptr<Codec> codec) const
+{
+  uint64_t bytes = codec->buffer.capacity();
+#ifdef WITH_CYCLES_DEEP_ZSTD
+  bytes += ZSTD_sizeof_CCtx(static_cast<ZSTD_CCtx *>(codec->compressor)) +
+           ZSTD_sizeof_DCtx(static_cast<ZSTD_DCtx *>(codec->decompressor));
+#endif
+  if (bytes != codec->charged) {
+    charge(int64_t(bytes) - int64_t(codec->charged));
+    codec_bytes_ += bytes - codec->charged;
+    codec->charged = bytes;
+  }
+  const std::lock_guard<std::mutex> lock(codec_mutex_);
+  codecs_.push_back(std::move(codec));
+}
+
+void PixelReducer::insert(const size_t pixel, Pixel &p, Node node)
+{
+  if (p.count == p.capacity) {
+    if (p.capacity == std::numeric_limits<uint16_t>::max())
+      throw std::runtime_error("Deep reducer pixel node table is full (65535 nodes) at pixel " +
+                               std::to_string(pixel % size_t(width_)) + "," +
+                               std::to_string(pixel / size_t(width_)) + ", " +
+                               std::to_string(p.accepted) + " samples accepted");
     const uint16_t capacity = uint16_t(
         std::min<uint32_t>(std::numeric_limits<uint16_t>::max(),
-                           pixel.capacity ? 2u * pixel.capacity : 4u));
+                           p.capacity ? 2u * p.capacity : 4u));
     auto nodes = std::make_unique<Node[]>(capacity);
-    for (uint16_t i = 0; i < pixel.count; ++i)
-      nodes[i] = std::move(pixel.nodes[i]);
-    charge(int64_t(capacity - pixel.capacity) * int64_t(sizeof(Node)));
-    pixel.nodes = std::move(nodes);
-    pixel.capacity = capacity;
+    for (uint16_t i = 0; i < p.count; ++i)
+      nodes[i] = std::move(p.nodes[i]);
+    const int64_t grown = int64_t(capacity - p.capacity) * int64_t(sizeof(Node));
+    charge(grown);
+    table_bytes_ += uint64_t(grown);
+    p.nodes = std::move(nodes);
+    p.capacity = capacity;
   }
-  pixel.nodes[pixel.count++] = std::move(node);
+  p.nodes[p.count++] = std::move(node);
 }
 
 PixelReducer::Node PixelReducer::take(Pixel &pixel, const uint16_t index)
@@ -122,63 +162,88 @@ PixelReducer::Node PixelReducer::take(Pixel &pixel, const uint16_t index)
   return node;
 }
 
-/* Reads an evicted node; the caller holds the pixel's stripe or runs alone. */
+/* Reads an evicted node; the caller holds the pixel's stripe or runs alone.
+ * Only the file read holds the band lock; decoding runs outside it. */
 void PixelReducer::load(const size_t pixel, Node &node, std::vector<unsigned char> &destination) const
 {
   Band &b = band(pixel);
   destination.resize(node.raw);
-  const std::lock_guard<std::mutex> lock(b.mutex);
-  seek(b.file, node.offset, b.path);
-  uint32_t header[2];
-  if (std::fread(header, 1, sizeof(header), b.file) != sizeof(header))
-    io_failure("Deep node header read", b.path, sizeof(header));
-  if (header[0] != node.raw || header[1] != node.stored)
-    throw std::runtime_error("Corrupt deep node header in " + b.path + " at offset " +
-                             std::to_string(node.offset));
-  if (node.stored == node.raw) {
-    if (node.raw && std::fread(destination.data(), 1, node.raw, b.file) != node.raw)
-      io_failure("Deep node read", b.path, node.raw);
-  }
-  else {
+  const bool compressed = node.stored != node.raw;
+  std::unique_ptr<Codec> codec = compressed ? acquire_codec() : nullptr;
+  try {
+    {
+      const std::lock_guard<std::mutex> lock(b.mutex);
+      seek(b.file, node.offset, b.path);
+      uint32_t header[2];
+      if (std::fread(header, 1, sizeof(header), b.file) != sizeof(header))
+        io_failure("Deep node header read", b.path, sizeof(header));
+      if (header[0] != node.raw || header[1] != node.stored)
+        throw std::runtime_error("Corrupt deep node header in " + b.path + " at offset " +
+                                 std::to_string(node.offset) + ": raw " +
+                                 std::to_string(header[0]) + "/" + std::to_string(node.raw) +
+                                 ", stored " + std::to_string(header[1]) + "/" +
+                                 std::to_string(node.stored) + " bytes");
+      if (!compressed) {
+        if (node.raw && std::fread(destination.data(), 1, node.raw, b.file) != node.raw)
+          io_failure("Deep node read", b.path, node.raw);
+      }
+      else {
+        codec->buffer.resize(std::max<size_t>(codec->buffer.size(), node.stored));
+        if (std::fread(codec->buffer.data(), 1, node.stored, b.file) != node.stored)
+          io_failure("Deep node read", b.path, node.stored);
+      }
+    }
+    if (compressed) {
 #ifdef WITH_CYCLES_DEEP_ZSTD
-    b.scratch.resize(std::max<size_t>(b.scratch.size(), node.stored));
-    if (std::fread(b.scratch.data(), 1, node.stored, b.file) != node.stored)
-      io_failure("Deep node read", b.path, node.stored);
-    if (!b.decompressor && !(const_cast<Band &>(b).decompressor = ZSTD_createDCtx()))
-      throw std::runtime_error("Cannot create deep node decompressor");
-    const size_t decoded = ZSTD_decompressDCtx(static_cast<ZSTD_DCtx *>(b.decompressor),
-                                               destination.data(), node.raw, b.scratch.data(),
-                                               node.stored);
-    if (ZSTD_isError(decoded) || decoded != node.raw)
-      throw std::runtime_error("Corrupt deep node frame in " + b.path);
+      if (!codec->decompressor && !(codec->decompressor = ZSTD_createDCtx()))
+        throw std::runtime_error("Cannot create deep node decompressor");
+      const size_t decoded = ZSTD_decompressDCtx(static_cast<ZSTD_DCtx *>(codec->decompressor),
+                                                 destination.data(), node.raw,
+                                                 codec->buffer.data(), node.stored);
+      if (ZSTD_isError(decoded) || decoded != node.raw)
+        throw std::runtime_error("Corrupt deep node frame in " + b.path + " at offset " +
+                                 std::to_string(node.offset) + " (" +
+                                 std::to_string(node.stored) + " stored, " +
+                                 std::to_string(node.raw) + " raw bytes)");
 #else
-    throw std::runtime_error("Compressed deep node stream without zstd support");
+      throw std::runtime_error("Compressed deep node stream without zstd support: " + b.path);
 #endif
+    }
   }
-  read_bytes_ += sizeof(header) + node.stored;
+  catch (...) {
+    if (codec)
+      release_codec(std::move(codec));
+    throw;
+  }
+  if (codec)
+    release_codec(std::move(codec));
+  read_bytes_ += 8 + node.stored;
 }
 
-/* Caller holds the pixel's stripe and the evict mutex (or runs alone). */
-void PixelReducer::evict_node(const size_t pixel, Node &node)
+/* Caller holds the pixel's stripe (or runs alone) and owns the codec. */
+void PixelReducer::evict_node(const size_t pixel, Node &node, Codec &codec)
 {
   Band &b = band(pixel);
   const unsigned char *data = node.ram.get();
   size_t stored = node.raw;
 #ifdef WITH_CYCLES_DEEP_ZSTD
   if (compression_ && node.raw >= 64) {
-    if (!compressor_ && !(compressor_ = ZSTD_createCCtx()))
+    if (!codec.compressor && !(codec.compressor = ZSTD_createCCtx()))
       throw std::runtime_error("Cannot create deep node compressor");
-    compress_scratch_.resize(std::max(compress_scratch_.size(), ZSTD_compressBound(node.raw)));
-    const size_t n = ZSTD_compressCCtx(static_cast<ZSTD_CCtx *>(compressor_),
-                                       compress_scratch_.data(), compress_scratch_.size(),
-                                       node.ram.get(), node.raw, compression_);
+    codec.buffer.resize(std::max(codec.buffer.size(), ZSTD_compressBound(node.raw)));
+    const size_t n = ZSTD_compressCCtx(static_cast<ZSTD_CCtx *>(codec.compressor),
+                                       codec.buffer.data(), codec.buffer.size(), node.ram.get(),
+                                       node.raw, compression_);
     if (!ZSTD_isError(n) && n < node.raw) {
       stored = n;
-      data = compress_scratch_.data();
+      data = codec.buffer.data();
     }
   }
+#else
+  (void)codec;
 #endif
   const uint32_t header[2] = {node.raw, uint32_t(stored)};
+  uint64_t total;
   {
     const std::lock_guard<std::mutex> lock(b.mutex);
     if (!b.file)
@@ -191,12 +256,10 @@ void PixelReducer::evict_node(const size_t pixel, Node &node)
     node.stored = uint32_t(stored);
     b.file_bytes += sizeof(header) + stored;
     b.live_bytes += sizeof(header) + stored;
+    total = (file_total_ += sizeof(header) + stored);
   }
   raw_written_ += node.raw;
   stored_written_ += sizeof(header) + stored;
-  uint64_t total = 0;
-  for (const auto &item : bands_)
-    total += item->file_bytes;
   uint64_t peak = file_peak_.load();
   while (total > peak && !file_peak_.compare_exchange_weak(peak, total))
     ;
@@ -214,9 +277,15 @@ void PixelReducer::add(const size_t pixel,
                        const double leaf_error)
 {
   if (pixel >= pixels_.size() || sample >= samples_)
-    throw std::out_of_range("Deep reducer sample outside capture bounds");
+    throw std::out_of_range("Deep reducer sample outside capture bounds: pixel index " +
+                            std::to_string(pixel) + " of " + std::to_string(pixels_.size()) +
+                            ", sample " + std::to_string(sample) + " of " +
+                            std::to_string(samples_));
   if (leaf.size() > std::numeric_limits<uint32_t>::max())
-    throw std::runtime_error("Deep reducer node payload too large");
+    throw std::runtime_error("Deep reducer node payload too large: " +
+                             std::to_string(leaf.size()) + " bytes at pixel " +
+                             std::to_string(pixel % size_t(width_)) + "," +
+                             std::to_string(pixel / size_t(width_)));
   {
     const std::lock_guard<std::mutex> lock(stripe(pixel));
     Pixel &p = pixels_[pixel];
@@ -270,7 +339,11 @@ void PixelReducer::add(const size_t pixel,
                                 .count());
       ++merges_;
       if (merged.size() > std::numeric_limits<uint32_t>::max())
-        throw std::runtime_error("Deep reducer node payload too large");
+        throw std::runtime_error("Deep reducer node payload too large: " +
+                                 std::to_string(merged.size()) + " bytes at pixel " +
+                                 std::to_string(pixel % size_t(width_)) + "," +
+                                 std::to_string(pixel / size_t(width_)) + ", level " +
+                                 std::to_string(parent.level));
       if (other.ram)
         charge(-int64_t(other.raw + node_overhead));
       charge(-int64_t(current.raw + node_overhead));
@@ -285,7 +358,7 @@ void PixelReducer::add(const size_t pixel,
       charge(int64_t(parent_node.raw + node_overhead));
       current = std::move(parent_node);
     }
-    insert(p, std::move(current));
+    insert(pixel, p, std::move(current));
     ++p.accepted;
   }
   finish_pixel(pixel);
@@ -298,45 +371,129 @@ void PixelReducer::finish_pixel(size_t)
   evict();
 }
 
+/* Resident node tables cannot be evicted: past the limit, fail with numbers
+ * instead of growing without bound. */
+void PixelReducer::check_tables() const
+{
+  const uint64_t tables = table_bytes_.load();
+  if (fixed_bytes_ + tables <= ram_limit_)
+    return;
+  throw std::runtime_error(
+      "Deep reducer resident node tables exceed its memory share: " + std::to_string(tables) +
+      " table bytes + " + std::to_string(fixed_bytes_) + " pixel state bytes > share " +
+      std::to_string(ram_limit_) + " bytes (deep_memory_mb/8) for " +
+      std::to_string(pixels_.size()) + " pixels; increase --deep-memory-mb");
+}
+
 void PixelReducer::evict()
 {
-  /* Workers skip while another thread evicts, up to a hard cap of 5/4 of the
-   * share; beyond it they wait for the running sweep (back-pressure). */
-  std::unique_lock<std::mutex> lock(evict_mutex_, std::try_to_lock);
-  if (!lock.owns_lock()) {
-    if (ram_.load() <= int64_t(ram_limit_ + ram_limit_ / 4))
+  /* Cooperative sweep: the first thread over the threshold starts it; others
+   * keep adding below the hard cap of 5/4 of the share and, above it, help by
+   * claiming bands (back-pressure without idle waiting). */
+  const int64_t limit = int64_t(ram_limit_), cap = limit + limit / 4;
+  std::unique_lock<std::mutex> lock(evict_mutex_);
+  if (!sweeping_) {
+    if (ram_.load() <= evict_threshold_.load())
       return;
-    lock.lock();
+    sweeping_ = true;
+    sweep_target_ = limit / 2;
+    sweep_first_ = evict_band_;
+    sweep_next_.store(0);
+    ++sweeps_;
   }
-  if (ram_.load() <= evict_threshold_.load())
+  else if (ram_.load() <= cap)
     return;
-  evict_to(int64_t(ram_limit_ / 2));
+  ++sweepers_;
+  const int64_t target = sweep_target_;
+  lock.unlock();
+  std::exception_ptr error;
+  try {
+    sweep(target);
+  }
+  catch (...) {
+    error = std::current_exception();
+  }
+  lock.lock();
+  if (--sweepers_ == 0) {
+    const size_t claimed = std::min(sweep_next_.load(), bands_.size());
+    evict_band_ = (sweep_first_ + (claimed ? claimed - 1 : 0)) % bands_.size();
+    /* Busy or resident-only memory cannot go lower: avoid repeated full sweeps
+     * until another quarter of the limit has been added (never above the cap). */
+    evict_threshold_.store(std::min(cap, std::max(limit, ram_.load() + limit / 4)));
+    sweeping_ = false;
+    evict_done_.notify_all();
+    if (!error && claimed == bands_.size() && ram_.load() > limit) {
+      try {
+        check_tables();
+      }
+      catch (...) {
+        error = std::current_exception();
+      }
+    }
+  }
+  else if (!error) {
+    const auto start = std::chrono::steady_clock::now();
+    evict_done_.wait(lock, [&] { return !sweeping_ || ram_.load() <= cap; });
+    wait_ns_ += uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             std::chrono::steady_clock::now() - start)
+                             .count());
+  }
+  if (error)
+    std::rethrow_exception(error);
 }
 
-void PixelReducer::reserve(const uint64_t bytes)
+/* Claims whole bands from the running sweep until RAM reaches the target. */
+void PixelReducer::sweep(const int64_t target)
 {
-  const std::lock_guard<std::mutex> lock(evict_mutex_);
-  evict_to(int64_t(ram_limit_) - int64_t(std::min<uint64_t>(bytes, ram_limit_)));
+  const auto start = std::chrono::steady_clock::now();
+  std::unique_ptr<Codec> codec = acquire_codec();
+  const size_t n = bands_.size();
+  try {
+    for (size_t i; ram_.load() > target && (i = sweep_next_.fetch_add(1)) < n;)
+      evict_band((sweep_first_ + i) % n, target, *codec);
+  }
+  catch (...) {
+    release_codec(std::move(codec));
+    throw;
+  }
+  release_codec(std::move(codec));
+  evict_ns_ += uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                            std::chrono::steady_clock::now() - start)
+                            .count());
 }
 
-/* Caller holds the evict mutex. */
-void PixelReducer::evict_to(const int64_t target)
+void PixelReducer::evict_band(const size_t index, const int64_t target, Codec &codec)
 {
-  for (size_t visited = 0; visited < pixels_.size() && ram_.load() > target; ++visited) {
-    const size_t p = evict_cursor_;
-    evict_cursor_ = (evict_cursor_ + 1) % pixels_.size();
+  const size_t first = index * size_t(rows_per_band_) * size_t(width_);
+  const size_t last = std::min(pixels_.size(), first + size_t(rows_per_band_) * size_t(width_));
+  for (size_t p = first; p < last && ram_.load() > target; ++p) {
     std::unique_lock<std::mutex> pixel_lock(stripe(p), std::try_to_lock);
     if (!pixel_lock.owns_lock())
       continue;
     Pixel &px = pixels_[p];
     for (uint16_t i = 0; i < px.count; ++i)
       if (px.nodes[i].ram)
-        evict_node(p, px.nodes[i]);
+        evict_node(p, px.nodes[i], codec);
   }
-  /* Busy or resident-only memory cannot go lower: avoid repeated full sweeps
-   * until another quarter of the limit has been added (never above the cap). */
-  evict_threshold_.store(std::min(int64_t(ram_limit_ + ram_limit_ / 4),
-                                  std::max(int64_t(ram_limit_), ram_.load() + int64_t(ram_limit_ / 4))));
+}
+
+void PixelReducer::reserve(const uint64_t bytes)
+{
+  /* Single-threaded export: one serial sweep over every band. */
+  const std::lock_guard<std::mutex> lock(evict_mutex_);
+  const int64_t target = int64_t(ram_limit_) - int64_t(std::min<uint64_t>(bytes, ram_limit_));
+  if (ram_.load() <= target)
+    return;
+  std::unique_ptr<Codec> codec = acquire_codec();
+  try {
+    for (size_t i = 0; i < bands_.size() && ram_.load() > target; ++i)
+      evict_band((evict_band_ + i) % bands_.size(), target, *codec);
+  }
+  catch (...) {
+    release_codec(std::move(codec));
+    throw;
+  }
+  release_codec(std::move(codec));
 }
 
 void PixelReducer::compact_band(const size_t index, const std::function<bool()> &cancelled)
@@ -354,10 +511,16 @@ void PixelReducer::compact_band(const size_t index, const std::function<bool()> 
   uint64_t offset = 0;
   const size_t first = index * size_t(rows_per_band_) * size_t(width_);
   const size_t last = std::min(pixels_.size(), first + size_t(rows_per_band_) * size_t(width_));
+  /* The new file counts toward live spill until it replaces the old one. */
+  const auto give_back = [&](const uint64_t bytes) {
+    if (bytes && io_.released)
+      io_.released(bytes);
+  };
   try {
     for (size_t pixel = first; pixel < last; ++pixel) {
       if (cancelled && (pixel - first) % size_t(width_) == 0 && cancelled()) {
         std::fclose(file);
+        give_back(offset);
         return;
       }
       Pixel &px = pixels_[pixel];
@@ -384,24 +547,83 @@ void PixelReducer::compact_band(const size_t index, const std::function<bool()> 
   }
   catch (...) {
     std::fclose(file);
+    give_back(offset);
     throw;
   }
   for (auto &[node, position] : moved)
     node->offset = position;
   std::fclose(b.file);
+  const uint64_t old_bytes = b.file_bytes;
   b.file = file;
   b.path = path;
+  file_total_ -= old_bytes;
+  file_total_ += offset;
   b.file_bytes = offset;
   b.live_bytes = offset;
+  give_back(old_bytes);
   ++compactions_;
 }
 
 void PixelReducer::compact(const std::function<bool()> &cancelled)
 {
+  const auto start = std::chrono::steady_clock::now();
+  std::vector<size_t> todo;
   for (size_t i = 0; i < bands_.size(); ++i) {
-    if (cancelled && cancelled())
+    const Band &b = *bands_[i];
+    const uint64_t dead = b.file_bytes - b.live_bytes;
+    if (b.file && dead && dead > std::max<uint64_t>(b.live_bytes, compaction_threshold_))
+      todo.push_back(i);
+  }
+  if (!todo.empty()) {
+    /* One band per thread (bands own disjoint pixels and files). The caller's
+     * cancel predicate is evaluated under a lock; every thread is joined
+     * before returning, so cancellation never outlives this call. */
+    std::mutex cancel_mutex, error_mutex;
+    std::atomic<bool> stop{false};
+    const auto stopped = [&] {
+      if (stop.load())
+        return true;
+      if (!cancelled)
+        return false;
+      const std::lock_guard<std::mutex> lock(cancel_mutex);
+      if (cancelled())
+        stop.store(true);
+      return stop.load();
+    };
+    std::atomic<size_t> next{0};
+    std::exception_ptr error;
+    const auto work = [&] {
+      try {
+        for (size_t i; !stopped() && (i = next.fetch_add(1)) < todo.size();)
+          compact_band(todo[i], stopped);
+      }
+      catch (...) {
+        stop.store(true);
+        const std::lock_guard<std::mutex> lock(error_mutex);
+        if (!error)
+          error = std::current_exception();
+      }
+    };
+    const unsigned threads = unsigned(std::min<size_t>(
+        todo.size(), std::max(1u, std::min(8u, std::thread::hardware_concurrency()))));
+    std::vector<std::thread> helpers;
+    try {
+      for (unsigned t = 1; t < threads; ++t)
+        helpers.emplace_back(work);
+    }
+    catch (...) {
+      /* Fewer helpers: the caller still compacts every band. */
+    }
+    work();
+    for (std::thread &thread : helpers)
+      thread.join();
+    compact_ns_ += uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                std::chrono::steady_clock::now() - start)
+                                .count());
+    if (error)
+      std::rethrow_exception(error);
+    if (stop.load())
       return;
-    compact_band(i, cancelled);
   }
   if (ram_.load() > int64_t(ram_limit_))
     evict();
@@ -498,6 +720,7 @@ void PixelReducer::release(const size_t first, const size_t count)
       }
     }
     charge(-int64_t(p.capacity) * int64_t(sizeof(Node)));
+    table_bytes_ -= uint64_t(p.capacity) * sizeof(Node);
     p.nodes.reset();
     p.count = p.capacity = 0;
   }
@@ -568,6 +791,12 @@ PixelReducer::Statistics PixelReducer::statistics() const
   s.compactions = compactions_.load();
   s.merges = merges_.load();
   s.merge_seconds = merge_ns_.load() * 1e-9;
+  s.sweeps = sweeps_.load();
+  s.table_bytes = table_bytes_.load();
+  s.codec_bytes = codec_bytes_.load();
+  s.evict_seconds = evict_ns_.load() * 1e-9;
+  s.wait_seconds = wait_ns_.load() * 1e-9;
+  s.compact_seconds = compact_ns_.load() * 1e-9;
   return s;
 }
 

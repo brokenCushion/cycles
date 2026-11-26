@@ -27,6 +27,14 @@ records but not the events. Junkshop Girl 25%: spill 394 MB -> 0. GPU folding is
 serial on the host consume thread (Stage 5). Junkshop Volume 25%: spill 24.5 GB -> 0, wall 341 -> 195 s;
 100% at 32 spp: disk 467 -> 21.5 GB peak, 43.5 -> 34 min, deep_memory_mb 32768 ->
 16384, EXR byte-identical.
+Stage 5 (hardening) implemented 2026-11-27: parallel host ingest on GPU, cooperative
+per-band eviction, parallel compaction, pooled zstd contexts with decode outside the
+band lock, table-limit and live-quota enforcement, export decode scratch charged at
+staging. Deep EXRs byte-identical to Stage 4 (regression, compact suite, junkshop).
+Motion VDB strict: CUDA 134 -> 29 s, OptiX 345 -> 110 s (Stage 1: 34 / 123 s); surface
+CUDA smoke 23.3 -> 7.5 s. Junkshop 25% OptiX layers 277 -> 236 s, Volume on OptiX
+649 -> 568 s; Volume CPU full size 32 spp Compact 1960 -> 1761 s (53 s per pass).
+All planned stages are complete.
 
 Goal: intermediate deep data is bounded per pixel and per band, not by
 samples x events. The numeric error contract in

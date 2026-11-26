@@ -874,6 +874,13 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
   if (settings.ids)
     deep_capture_->set_object_manifest(settings.object_manifest);
   deep_capture_->holdout_manifest = settings.holdout_manifest;
+  /* GPU devices consume deep batches on one host thread: reduce them on host
+   * workers while it prepares the next batch (CPU render threads already
+   * ingest in parallel). Output bytes do not depend on this. */
+  if (device_->info.type != DEVICE_CPU && deep_capture_->reducing()) {
+    deep_capture_->set_ingest_threads(TaskScheduler::max_concurrency());
+    LOG_INFO_IMPORTANT << "Deep ingest: host_threads=" << deep_capture_->ingest_threads();
+  }
   for (auto &work : path_trace_works_) {
     work->set_deep_capture(deep_capture_.get());
   }

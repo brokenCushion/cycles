@@ -108,6 +108,18 @@ the raw path unless a capacity merge happens, and the header bound E still holds
 Strict surfaces remain unbounded (raw spill). DeepTile hosts that read per-sample
 records must request them (`deep_camera_records`).
 
+On CUDA/OptiX the host thread that reads back device batches only checks and queues each
+camera sample; host worker threads (one per CPU thread, each owning a fixed subset of
+pixels) run the online volume and surface reduction while the next batch renders. The
+queue uses at most 1/8 of the reducer share and counts against it. Output is
+byte-identical to synchronous ingest. Eviction to node streams is shared: threads that
+reach the 5/4 hard cap help evict whole bands instead of waiting, and node streams are
+compacted one band per thread between passes. Node tables that alone exceed
+deep_memory_mb/8 fail with their numbers. `CYCLES_DEEP_SPILL_MAX_MB` charges live spill
+bytes (compaction gives node-stream bytes back). Export decoding of a compressed band
+(about 2.8 MiB) is charged to the staging allowance; a band that does not fit with it is
+re-bucketed into raw rows.
+
 CPU beauty remains exact. CUDA/OptiX beauty policy and its GPU-only change scope
 are in [VALIDATION.md](VALIDATION.md); source hashes and 75 kernel resource records
 provide the host-only proof.

@@ -4,10 +4,12 @@
 #include <algorithm>
 #include <array>
 #include <cerrno>
+#include <chrono>
 #include <cmath>
 #include <condition_variable>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <exception>
 #include <filesystem>
 #include <functional>
@@ -380,6 +382,239 @@ class Capture::SurfacePolicy final : public ReducerPolicy {
   const Capture &capture_;
 };
 
+/* Parallel host ingest (see Capture::set_ingest_threads). The producer copies
+ * each record into its pixel's worker chunk; full chunks are queued to that
+ * worker. Every chunk byte is charged to the reducer's memory share, and the
+ * queued (including in-process) bytes are capped: the producer waits when the
+ * cap is reached. Records of one pixel always go to the same worker, so one
+ * pixel is never reduced by two threads at once. */
+class Capture::Ingest {
+ public:
+  Ingest(Capture &capture, const unsigned threads, const size_t chunk_bytes,
+         const size_t queue_bytes)
+      : capture_(capture), chunk_bytes_(chunk_bytes), queue_bytes_(queue_bytes)
+  {
+    for (unsigned i = 0; i < threads; ++i)
+      workers_.push_back(std::make_unique<Worker>());
+    try {
+      for (auto &item : workers_) {
+        Worker *worker = item.get();
+        worker->thread = std::thread([this, worker] { loop(*worker); });
+      }
+    }
+    catch (...) {
+      shutdown();
+      throw;
+    }
+  }
+  ~Ingest()
+  {
+    shutdown();
+  }
+  unsigned threads() const
+  {
+    return unsigned(workers_.size());
+  }
+  size_t chunk_bytes() const
+  {
+    return chunk_bytes_;
+  }
+  size_t queue_bytes() const
+  {
+    return queue_bytes_;
+  }
+  void push(const size_t pixel, const uint32_t sample, const KernelDeepResult &result,
+            const KernelDeepEvent *events, const KernelDeepDensity *density)
+  {
+    const size_t event_bytes = size_t(result.count) * sizeof(KernelDeepEvent);
+    const size_t density_bytes = density ? size_t(result.count) * sizeof(KernelDeepDensity) : 0;
+    const size_t bytes = header_bytes + align(event_bytes) + align(density_bytes);
+    const std::lock_guard<std::mutex> lock(producer_);
+    Worker &w = *workers_[pixel % workers_.size()];
+    if (!w.open.empty() && w.open.size() + bytes > w.open.capacity())
+      submit(w);
+    if (w.open.capacity() == 0) {
+      w.open.reserve(std::max(chunk_bytes_, bytes));
+      capture_.reducer_->account(int64_t(w.open.capacity()));
+    }
+    const size_t at = w.open.size();
+    w.open.resize(at + bytes);
+    unsigned char *out = w.open.data() + at;
+    Header header{};
+    header.pixel = uint64_t(pixel);
+    header.sample = sample;
+    header.density = density ? 1u : 0u;
+    header.result = result;
+    std::memcpy(out, &header, sizeof(header));
+    if (event_bytes)
+      std::memcpy(out + header_bytes, events, event_bytes);
+    if (density_bytes)
+      std::memcpy(out + header_bytes + align(event_bytes), density, density_bytes);
+    ++records_;
+    if (w.open.size() >= chunk_bytes_)
+      submit(w);
+  }
+  /* Queues every partial chunk and waits until all workers are idle. */
+  void drain()
+  {
+    {
+      const std::lock_guard<std::mutex> lock(producer_);
+      for (auto &w : workers_)
+        if (!w->open.empty())
+          submit(*w);
+    }
+    std::unique_lock<std::mutex> lock(mutex_);
+    idle_.wait(lock, [&] {
+      if (stop_.load())
+        return true;
+      if (busy_)
+        return false;
+      for (const auto &w : workers_)
+        if (!w->queue.empty())
+          return false;
+      return true;
+    });
+  }
+  std::string summary() const
+  {
+    std::ostringstream out;
+    out << " ingest_threads=" << workers_.size() << " ingest_records=" << records_.load()
+        << " ingest_chunk_bytes=" << chunk_bytes_ << " ingest_queue_bytes=" << queue_bytes_
+        << " ingest_queue_peak=" << peak_.load()
+        << " ingest_producer_wait_seconds=" << wait_ns_.load() * 1e-9;
+    return out.str();
+  }
+
+ private:
+  struct Header {
+    uint64_t pixel;
+    uint32_t sample, density;
+    KernelDeepResult result;
+  };
+  static constexpr size_t align(const size_t bytes)
+  {
+    return (bytes + 15) & ~size_t(15);
+  }
+  static constexpr size_t header_bytes = (sizeof(Header) + 15) & ~size_t(15);
+  struct Worker {
+    std::deque<std::vector<unsigned char>> queue;
+    std::vector<unsigned char> open; /* Producer-owned (under producer_). */
+    std::condition_variable wake;
+    std::thread thread;
+  };
+
+  /* Caller holds producer_. Waits while the queue cap is reached. */
+  void submit(Worker &w)
+  {
+    std::vector<unsigned char> chunk;
+    chunk.swap(w.open);
+    const size_t bytes = chunk.capacity();
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (!(stop_.load() || queued_ == 0 || queued_ + bytes <= queue_bytes_)) {
+      const auto start = std::chrono::steady_clock::now();
+      space_.wait(lock, [&] { return stop_.load() || queued_ == 0 || queued_ + bytes <= queue_bytes_; });
+      wait_ns_ += uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                               std::chrono::steady_clock::now() - start)
+                               .count());
+    }
+    if (stop_.load()) {
+      lock.unlock();
+      capture_.reducer_->account(-int64_t(bytes));
+      return;
+    }
+    queued_ += bytes;
+    if (queued_ > peak_.load())
+      peak_.store(queued_);
+    w.queue.push_back(std::move(chunk));
+    w.wake.notify_one();
+  }
+  void process(const std::vector<unsigned char> &chunk)
+  {
+    size_t at = 0;
+    while (at < chunk.size() && !stop_.load()) {
+      Header header;
+      std::memcpy(&header, chunk.data() + at, sizeof(header));
+      const size_t event_bytes = size_t(header.result.count) * sizeof(KernelDeepEvent);
+      const auto *events = reinterpret_cast<const KernelDeepEvent *>(chunk.data() + at +
+                                                                     header_bytes);
+      const auto *density = header.density ?
+                                reinterpret_cast<const KernelDeepDensity *>(
+                                    chunk.data() + at + header_bytes + align(event_bytes)) :
+                                nullptr;
+      if (!capture_.failed())
+        capture_.reduce_record(size_t(header.pixel), header.sample, header.result,
+                               header.result.count ? events : nullptr, density);
+      at += header_bytes + align(event_bytes) +
+            (header.density ? align(size_t(header.result.count) * sizeof(KernelDeepDensity)) : 0);
+    }
+  }
+  void loop(Worker &w)
+  {
+    while (true) {
+      std::vector<unsigned char> chunk;
+      {
+        std::unique_lock<std::mutex> lock(mutex_);
+        w.wake.wait(lock, [&] { return stop_.load() || !w.queue.empty(); });
+        if (stop_.load())
+          return;
+        chunk.swap(w.queue.front());
+        w.queue.pop_front();
+        ++busy_;
+      }
+      try {
+        process(chunk);
+      }
+      catch (const std::exception &error) {
+        capture_.set_error(REDUCTION, std::string("parallel ingest worker: ") + error.what());
+      }
+      const size_t bytes = chunk.capacity();
+      std::vector<unsigned char>().swap(chunk);
+      capture_.reducer_->account(-int64_t(bytes));
+      {
+        const std::lock_guard<std::mutex> lock(mutex_);
+        queued_ -= bytes;
+        --busy_;
+      }
+      space_.notify_all();
+      idle_.notify_all();
+    }
+  }
+  /* Stops and joins every worker, discarding queued records (destruction). */
+  void shutdown()
+  {
+    {
+      const std::lock_guard<std::mutex> lock(mutex_);
+      stop_.store(true);
+    }
+    for (auto &w : workers_)
+      w->wake.notify_all();
+    space_.notify_all();
+    idle_.notify_all();
+    for (auto &w : workers_)
+      if (w->thread.joinable())
+        w->thread.join();
+    int64_t bytes = 0;
+    for (auto &w : workers_) {
+      for (const auto &chunk : w->queue)
+        bytes += int64_t(chunk.capacity());
+      bytes += int64_t(w->open.capacity());
+      w->queue.clear();
+      std::vector<unsigned char>().swap(w->open);
+    }
+    if (bytes && capture_.reducer_)
+      capture_.reducer_->account(-bytes);
+  }
+
+  Capture &capture_;
+  const size_t chunk_bytes_, queue_bytes_;
+  std::vector<std::unique_ptr<Worker>> workers_;
+  std::mutex producer_, mutex_;
+  std::condition_variable space_, idle_;
+  size_t queued_ = 0, busy_ = 0;
+  std::atomic<bool> stop_{false};
+  std::atomic<uint64_t> records_{0}, peak_{0}, wait_ns_{0};
+};
+
 Capture::Band::~Band()
 {
   if (index)
@@ -477,7 +712,10 @@ Capture::Capture(const int width,
       spill_quota_bytes_ = megabytes * mebibyte;
     }
     /* Two MiB covers 480-lane host/device events and 64 media (1,994,496 bytes),
-     * fixed scratch and I/O. Beauty/shader memory remains outside this budget. */
+     * fixed scratch and I/O. Beauty/shader memory remains outside this budget.
+     * Export decode scratch of a compressed band stream (export_decode_bytes,
+     * about 2.8 MiB) is charged to the staging allowance when the band is
+     * staged; a band that does not fit with it is re-bucketed into raw rows. */
     const uint64_t events = uint64_t(samples) * capacity_;
     const uint64_t output_events = volume ? reconstruction_limit() : events;
     /* Volume pixel streaming retains only 12-byte FLOAT samples per row.
@@ -658,20 +896,72 @@ Capture::Capture(const int width,
   if (volume_grid_)
     density_.resize(count * capacity_);
 }
-Capture::~Capture() = default;
+Capture::~Capture()
+{
+  /* Join ingest workers before the reducer and spill state go away. */
+  ingest_.reset();
+}
 void Capture::make_reducer(const size_t ram, const double step)
 {
+  const int threads = ingest_threads();
+  if (ingest_) {
+    ingest_->drain();
+    ingest_.reset();
+  }
   ReducerIo io;
   io.open = [this](std::string &path) {
     bool unused = false;
     return open_spill_file("nodes", 0, unused, path);
   };
   io.written = [this](const uint64_t bytes) { spill_written(bytes); };
+  io.released = [this](const uint64_t bytes) { spill_released_ += bytes; };
   reducer_.reset();
   ReducerPolicy &policy = volume_policy_ ? static_cast<ReducerPolicy &>(*volume_policy_) :
                                            static_cast<ReducerPolicy &>(*surface_policy_);
   reducer_ = std::make_unique<PixelReducer>(width_, height_, rows_per_band_, uint32_t(samples_),
                                             ram, step, compression_, std::move(io), policy);
+  if (threads)
+    set_ingest_threads(threads);
+}
+void Capture::set_ingest_threads(int threads)
+{
+  if (ingest_) {
+    ingest_->drain();
+    ingest_.reset();
+  }
+  const std::string text = CYCLES_DEEP_ENV("CYCLES_DEEP_INGEST_THREADS");
+  if (!text.empty()) {
+    char *end = nullptr;
+    const long value = std::strtol(text.c_str(), &end, 10);
+    if (*end || value < 0 || value > 256)
+      throw std::invalid_argument("CYCLES_DEEP_INGEST_THREADS must be 0 (synchronous) to 256");
+    threads = int(value);
+  }
+  if (!reducer_ || threads <= 0 || exporting_)
+    return;
+  threads = std::min(threads, 64);
+  /* Queue: an eighth of the reducer share, 64 KiB..64 MiB; chunks let every worker
+   * hold work while the producer fills the next one. */
+  const size_t queue = std::clamp<size_t>(reducer_->ram_limit() / 8, 64 * 1024, 64 * mebibyte);
+  size_t chunk = std::clamp<size_t>(queue / (4 * size_t(threads)), 4096, 256 * 1024);
+  const std::string chunk_text = CYCLES_DEEP_ENV("CYCLES_DEEP_INGEST_CHUNK");
+  if (!chunk_text.empty()) {
+    char *end = nullptr;
+    const unsigned long long value = std::strtoull(chunk_text.c_str(), &end, 10);
+    if (*end || value == 0 || value > 64 * mebibyte)
+      throw std::invalid_argument("CYCLES_DEEP_INGEST_CHUNK must be 1..67108864 bytes");
+    chunk = size_t(value);
+  }
+  ingest_ = std::make_unique<Ingest>(*this, unsigned(threads), chunk, queue);
+}
+int Capture::ingest_threads() const
+{
+  return ingest_ ? int(ingest_->threads()) : 0;
+}
+void Capture::drain_ingest() const
+{
+  if (ingest_)
+    ingest_->drain();
 }
 
 void Capture::open_diagnostics(const std::string &path)
@@ -728,6 +1018,7 @@ Capture::SpillStatistics Capture::spill_statistics() const
 }
 void Capture::end_pass(const std::function<bool()> &cancelled)
 {
+  drain_ingest();
   if (!reducer_ || failed())
     return;
   try {
@@ -755,7 +1046,12 @@ std::string Capture::reducer_summary() const
       << " node_file_peak=" << s.file_peak << " node_raw_written=" << s.raw_written
       << " node_stored_written=" << s.stored_written << " node_read_bytes=" << s.file_read_bytes
       << " evicted=" << s.evicted_nodes << " reloaded=" << s.reloaded_nodes
-      << " compactions=" << s.compactions << " raw_samples=" << (retain_samples_ ? 1 : 0);
+      << " compactions=" << s.compactions << " raw_samples=" << (retain_samples_ ? 1 : 0)
+      << " evict_sweeps=" << s.sweeps << " evict_worker_seconds=" << s.evict_seconds
+      << " evict_wait_seconds=" << s.wait_seconds << " compact_seconds=" << s.compact_seconds
+      << " table_bytes=" << s.table_bytes << " codec_bytes=" << s.codec_bytes;
+  if (ingest_)
+    out << ingest_->summary();
   if (surface_policy_) {
     const auto &a = surface_statistics_;
     out << " surface_capacity=" << surface_capacity_ << " surface_budget=" << surface_merge_budget()
@@ -892,21 +1188,29 @@ void Capture::spill_written(const uint64_t bytes) const
   std::error_code ec;
   const auto info = std::filesystem::space(native_path(spill_directory_), ec);
   uint64_t available = ec ? UINT64_MAX : uint64_t(info.available);
+  /* Compaction gives node stream bytes back: the quota charges live bytes. */
+  const uint64_t released = std::min(spill_released_.load(), written);
+  const uint64_t live = written - released;
   if (spill_quota_bytes_) {
-    const uint64_t used = written + index_total_bytes_;
+    const uint64_t used = live + index_total_bytes_;
     available = std::min(available, spill_quota_bytes_ > used ? spill_quota_bytes_ - used : 0);
   }
   if (available >= spill_reserve_bytes)
     return;
   const size_t done = completed_.load();
   throw SpaceError(
-      "free space in " + spill_directory_ + (spill_quota_bytes_ ? " (with quota)" : "") +
+      "free space in " + spill_directory_ +
+      (spill_quota_bytes_ ? " (with CYCLES_DEEP_SPILL_MAX_MB quota " +
+                                std::to_string(spill_quota_bytes_) + " bytes)" :
+                            std::string()) +
       " fell to " + std::to_string(available) + " bytes after " + std::to_string(written) +
-      " stored event bytes (" + std::to_string(done) + " of " + std::to_string(count_) +
-      " camera samples" +
-      (done ? ", projected " + std::to_string(uint64_t((long double)written * count_ / done)) +
-                  " bytes" :
-              std::string()) +
+      " stored spill bytes (" + std::to_string(live) + " live, " +
+      std::to_string(index_total_bytes_) + " index; " + std::to_string(done) + " of " +
+      std::to_string(count_) + " camera samples" +
+      (done && !reducer_ ?
+           ", projected " + std::to_string(uint64_t((long double)written * count_ / done)) +
+               " bytes" :
+           std::string()) +
       "); reserve " + std::to_string(spill_reserve_bytes) + " bytes");
 }
 
@@ -1416,7 +1720,30 @@ void Capture::record_sample(const int x,
     }
   }
   if (reducer_) {
-    record_reduced(size_t(y) * width_ + x, sample, result, events, density);
+    const size_t pixel = size_t(y) * width_ + x;
+    if (ingest_) {
+      /* Raw records (when retained) keep their caller-thread order; only the
+       * reduction moves to the ingest workers. */
+      if (retain_samples_) {
+        {
+          const std::lock_guard<std::mutex> lock(band_for_pixel(pixel).mutex);
+          store_record(record_index(pixel, sample), result, events, density);
+        }
+        if (error_.load() != NONE)
+          return;
+      }
+      try {
+        ingest_->push(pixel, sample, result, events, volume_grid_ ? density : nullptr);
+      }
+      catch (const std::exception &error) {
+        set_error(REDUCTION, std::string("parallel ingest queue (") +
+                                 std::to_string(ingest_->queue_bytes()) + " byte cap, " +
+                                 std::to_string(ingest_->chunk_bytes()) + " byte chunks): " +
+                                 error.what());
+      }
+      return;
+    }
+    record_reduced(pixel, sample, result, events, density);
     return;
   }
   const size_t index = record_index(size_t(y) * width_ + x, sample);
@@ -1437,6 +1764,14 @@ void Capture::record_reduced(const size_t pixel,
     if (error_.load() != NONE)
       return;
   }
+  reduce_record(pixel, sample, result, events, density);
+}
+void Capture::reduce_record(const size_t pixel,
+                            const uint32_t sample,
+                            const KernelDeepResult &result,
+                            const KernelDeepEvent *events,
+                            const KernelDeepDensity *density)
+{
   const int x = int(pixel % width_), y = int(pixel / width_);
   if (surface_policy_) {
     try {
@@ -1656,6 +1991,7 @@ std::vector<SurfaceEvent> Capture::events(const int x, const int y, const int sa
 }
 bool Capture::finalize() const
 {
+  drain_ingest();
   const std::lock_guard<std::mutex> lock(mutex_);
   if (error_.load() != NONE)
     return false;
@@ -1745,20 +2081,26 @@ void Capture::load_stream(Band &band, SpillStream &stream,
   const size_t records = size_t(width_) * rows * samples_;
   const auto budget_failure = [&](const char *what) {
     const uint64_t needed = uint64_t(bytes) + uint64_t(records) * sizeof(SpillRecord);
+    const uint64_t scratch = stream.raw ? 0 : export_decode_bytes(bytes);
     return std::runtime_error(
         std::string(what) + ": " + std::to_string(rows) + " row(s) from y=" +
-        std::to_string(first_y) + " need " + std::to_string(needed) + " bytes (events " +
+        std::to_string(first_y) + " need " + std::to_string(needed + scratch) + " bytes (events " +
         std::to_string(bytes) + " + records " + std::to_string(records * sizeof(SpillRecord)) +
-        "), staging limit " + std::to_string(spill_memory_bytes_) +
+        " + decode scratch " + std::to_string(scratch) + "), staging limit " +
+        std::to_string(spill_memory_bytes_) +
         " bytes (deep_memory_mb/8 after adaptive populations); minimum deep_memory_mb " +
-        std::to_string((8 * needed + population_bytes_ + reserved_bytes_ + mebibyte - 1) /
+        std::to_string((8 * (needed + scratch) + population_bytes_ + reserved_bytes_ +
+                        mebibyte - 1) /
                        mebibyte));
   };
-  if (bytes > spill_memory_bytes_ || records > (spill_memory_bytes_ - bytes) / sizeof(SpillRecord))
+  const uint64_t decode = stream.raw ? 0 : export_decode_bytes(bytes);
+  if (bytes > spill_memory_bytes_ || decode > spill_memory_bytes_ - bytes ||
+      records > (spill_memory_bytes_ - bytes - decode) / sizeof(SpillRecord))
     throw budget_failure("Deep export row exceeds --deep-memory-mb budget");
   staged_records_ = std::vector<SpillRecord>(records);
   staged_events_ = std::vector<unsigned char>(bytes);
-  if (staged_events_.capacity() + staged_records_.capacity() * sizeof(SpillRecord) > spill_memory_bytes_)
+  if (staged_events_.capacity() + staged_records_.capacity() * sizeof(SpillRecord) + decode >
+      spill_memory_bytes_)
     throw budget_failure("Deep staged vector capacities exceed memory budget");
   if (compression_ && !stream.raw) {
 #ifdef WITH_CYCLES_DEEP_ZSTD
@@ -1769,14 +2111,16 @@ void Capture::load_stream(Band &band, SpillStream &stream,
     seek_record(stream.file, 0);
     stream.reading = true;
     band.event_page.first = size_t(-1);
-    constexpr size_t batch_blocks = 32;
+    constexpr size_t batch_blocks = decode_batch_blocks;
     struct Job {
       size_t stored_offset, stored, raw_offset, raw;
     };
     std::vector<Job> jobs;
     jobs.reserve(batch_blocks);
-    std::vector<unsigned char> batch(batch_blocks * event_page_bytes);
-    BatchPool pool(std::max(1u, std::min(8u, std::thread::hardware_concurrency())));
+    /* Stored blocks of one batch never exceed the stored stream. */
+    std::vector<unsigned char> batch(size_t(std::min<uint64_t>(batch_blocks * event_page_bytes,
+                                                               stream.file_bytes)));
+    BatchPool pool(std::max(1u, std::min(unsigned(decode_threads), std::thread::hardware_concurrency())));
     uint64_t file_offset = 0;
     size_t raw_offset = 0;
     while (raw_offset < bytes) {
@@ -1789,8 +2133,11 @@ void Capture::load_stream(Band &band, SpillStream &stream,
           io_failure("Deep spill block header read", stream.path, sizeof(header), errno);
         const size_t raw = header[0], stored = header[1];
         if (raw == 0 || raw > event_page_bytes || stored > raw || raw > bytes - raw_offset ||
-            stored > stream.file_bytes - file_offset - sizeof(header))
-          throw std::runtime_error("Invalid deep spill block in " + stream.path);
+            stored > stream.file_bytes - file_offset - sizeof(header) ||
+            stored > batch.size() - stored_offset)
+          throw std::runtime_error("Invalid deep spill block in " + stream.path + " at offset " +
+                                   std::to_string(file_offset) + " (raw " + std::to_string(raw) +
+                                   ", stored " + std::to_string(stored) + " bytes)");
         if (std::fread(batch.data() + stored_offset, 1, stored, stream.file) != stored)
           io_failure("Deep spill block read", stream.path, stored, errno);
         jobs.push_back({stored_offset, stored, raw_offset, raw});
@@ -2028,8 +2375,10 @@ void Capture::begin_export_row(const int y) const
   Band &band = band_for_pixel(size_t(y) * width_);
   if (staged_first_y_ < 0) {
     const size_t index_bytes = band.records * sizeof(SpillRecord);
+    const uint64_t decode = export_decode_bytes(band.event_bytes);
     if (!band.rebucketed && (band.event_bytes > spill_memory_bytes_ ||
-        index_bytes > spill_memory_bytes_ - band.event_bytes))
+        decode > spill_memory_bytes_ - band.event_bytes ||
+        index_bytes > spill_memory_bytes_ - band.event_bytes - decode))
       rebucket(band);
     if (band.rebucketed)
       load_stream(band, *band.row_files[y - band.first_y], y, 1);
@@ -2198,6 +2547,18 @@ VolumeCameraSample Capture::combine_volume(VolumeCameraSample left,
     histogram_record(level_histogram_[level], curve.size());
   }
   return curve_sample(curve, id, weight);
+}
+uint64_t Capture::export_decode_bytes(const uint64_t raw_bytes) const
+{
+#ifdef WITH_CYCLES_DEEP_ZSTD
+  if (!compression_ || !raw_bytes)
+    return 0;
+  return std::min<uint64_t>(raw_bytes, decode_batch_blocks * event_page_bytes) +
+         uint64_t(decode_threads) * ZSTD_estimateDCtxSize();
+#else
+  (void)raw_bytes;
+  return 0;
+#endif
 }
 double Capture::surface_merge_budget() const
 {

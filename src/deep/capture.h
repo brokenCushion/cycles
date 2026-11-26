@@ -101,9 +101,25 @@ class Capture {
   {
     return surface_statistics_;
   }
-  /* Between render passes (workers joined): compact node streams, enforce the
-   * reducer memory share. Errors are recorded as capture failures. */
+  /* Between render passes (workers joined): wait for queued ingest, compact
+   * node streams (one band per thread), enforce the reducer memory share.
+   * Errors are recorded as capture failures. */
   void end_pass(const std::function<bool()> &cancelled = {});
+  /* Parallel host ingest for single-producer callers (the GPU consume loop).
+   * With an online reducer, record_sample validates the record (and stores
+   * the raw spill when it is retained) on the caller thread, then copies it
+   * into a queue; `threads` host workers reduce it while the caller prepares
+   * the next device batch. Pixels are partitioned (pixel % threads), so each
+   * pixel is reduced by one worker; reducer results depend only on which
+   * samples arrived, so output bytes equal synchronous ingest. Queue bytes are
+   * charged to the reducer's memory share and bounded (back-pressure).
+   * finalize(), end_pass() and destruction wait for (or, on destruction,
+   * discard) queued records. Call before the first sample; 0 restores
+   * synchronous ingest. Without an online reducer it has no effect.
+   * CYCLES_DEEP_INGEST_THREADS overrides the count (0 = synchronous) and
+   * CYCLES_DEEP_INGEST_CHUNK the record chunk size in bytes (validation). */
+  void set_ingest_threads(int threads);
+  int ingest_threads() const;
   /* Log line for the online reducer (empty when not reducing). */
   std::string reducer_summary() const;
   std::vector<std::pair<uint32_t, std::string>> object_manifest;
@@ -239,8 +255,10 @@ class Capture {
   /* reserved_bytes: host allocations already taken from the user budget before
    * max_bytes; added back when a message states the minimum deep_memory_mb. */
   size_t max_bytes_ = 0, population_bytes_ = 0, reserved_bytes_ = 0;
-  /* Stored event-stream bytes; drives the in-render free-space floor. */
-  mutable std::atomic<uint64_t> spill_written_{0};
+  /* Stored spill bytes written (event streams, node streams and compaction
+   * copies); drives the in-render free-space floor. Compaction gives node
+   * stream bytes back (spill_released_), so the quota charges live bytes. */
+  mutable std::atomic<uint64_t> spill_written_{0}, spill_released_{0};
   /* Interval-count histograms: per-ray curves and balanced-tree nodes by level. */
   static constexpr int histogram_buckets = 18, histogram_levels = 13;
   struct Histogram {
@@ -287,6 +305,10 @@ class Capture {
   };
   /* Also the compression block size (raw bytes per zstd block). */
   static constexpr size_t event_page_bytes = 64 * 1024;
+  /* Export decoding of a compressed stream: stored blocks per batch and
+   * decoder threads (one zstd context each). */
+  static constexpr size_t decode_batch_blocks = 32;
+  static constexpr unsigned decode_threads = 8;
   struct EventPage {
     size_t first = size_t(-1), bytes = 0;
     uint64_t last_used = 0;
@@ -397,6 +419,13 @@ class Capture {
                                     ExportStatistics *statistics) const;
   void record_reduced(size_t pixel, uint32_t sample, const KernelDeepResult &result,
                       const KernelDeepEvent *events, const KernelDeepDensity *density);
+  /* The online-reducer part of record_reduced (no raw spill). */
+  void reduce_record(size_t pixel, uint32_t sample, const KernelDeepResult &result,
+                     const KernelDeepEvent *events, const KernelDeepDensity *density);
+  /* Export decode scratch for a compressed stream of `raw_bytes`: one batch of
+   * stored blocks (up to 32 x 64 KiB) and up to 8 decoder contexts, about
+   * 2.8 MiB for streams of 32 blocks or more; 0 for raw streams. */
+  uint64_t export_decode_bytes(uint64_t raw_bytes) const;
   std::vector<IntervalSample> reconstruct_reduced_pixel(int x, int y) const;
   std::vector<SurfaceSample> reconstruct_surface_pixel(int x, int y) const;
   /* Online surface accumulation (see surface_reducing()). */
@@ -417,5 +446,11 @@ class Capture {
   mutable std::string error_detail_;
   mutable std::string incomplete_detail_; /* error_message() text for incomplete reducers. */
   void set_error(Error error, const std::string &detail = std::string()) const;
+  /* Parallel host ingest (see set_ingest_threads). Declared last: destroyed
+   * (workers joined) before the reducer and spill state. */
+  class Ingest;
+  friend class Ingest;
+  std::unique_ptr<Ingest> ingest_;
+  void drain_ingest() const;
 };
 }  // namespace ccl::deep

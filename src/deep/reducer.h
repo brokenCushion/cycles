@@ -4,6 +4,7 @@
 #include "deep/reconstruction.h"
 
 #include <atomic>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -63,11 +64,13 @@ class ReducerPolicy {
                                              size_t right_bytes) = 0;
 };
 
-/* Host spill hooks: create a delete-on-close file in the spill directory, and
- * account stored bytes (may throw when free space falls below the reserve). */
+/* Host spill hooks: create a delete-on-close file in the spill directory,
+ * account stored bytes (may throw when free space falls below the reserve) and
+ * report file bytes given back by compaction (live spill accounting). */
 struct ReducerIo {
   std::function<FILE *(std::string &path)> open;
   std::function<void(uint64_t bytes)> written;
+  std::function<void(uint64_t bytes)> released;
 };
 
 /* Per-pixel online reducer: pixel state, node RAM arena and per-band node
@@ -78,13 +81,20 @@ struct ReducerIo {
  *   serialized by a striped lock, and policy work runs under that lock only.
  * - finish_pixel(): enforces the RAM limit after a worker's pixel batch.
  * - compact(): between render passes (no concurrent add); rewrites band node
- *   streams that are mostly dead and enforces the RAM limit.
+ *   streams that are mostly dead, one band per thread, and enforces the RAM
+ *   limit. Every helper thread is joined before it returns, also on cancel.
  * - stage()/export_nodes()/release(): export reads only surviving nodes.
  *
- * RAM (payloads, pixel state and node tables) is held within ram_limit by
- * evicting node payloads to the band's append-only node stream (one zstd frame
- * per node when compression > 0). Evicted nodes are read back when a sibling
- * arrives; their file bytes then become dead until the band is compacted. */
+ * RAM (payloads, pixel state, node tables, zstd contexts and external bytes
+ * such as an ingest queue) is held within ram_limit by evicting node payloads
+ * to the band's append-only node stream (one zstd frame per node when
+ * compression > 0). Eviction is a cooperative sweep: the thread that crosses
+ * the limit starts it, threads that reach the hard cap (5/4 of the limit) help
+ * by claiming whole bands instead of waiting, everyone else keeps adding.
+ * Evicted nodes are read back when a sibling arrives (decoded outside the band
+ * lock); their file bytes then become dead until the band is compacted. Node
+ * tables are resident: if they alone outgrow the limit the add fails with the
+ * numbers. Payload bytes never depend on eviction, so output does not either. */
 class PixelReducer {
  public:
   struct Statistics {
@@ -92,7 +102,8 @@ class PixelReducer {
     uint64_t file_bytes = 0, live_file_bytes = 0, raw_written = 0, stored_written = 0;
     uint64_t file_read_bytes = 0, file_peak = 0, evicted_nodes = 0, reloaded_nodes = 0;
     uint64_t compactions = 0, live_nodes = 0, merges = 0;
-    double merge_seconds = 0;
+    uint64_t sweeps = 0, table_bytes = 0, codec_bytes = 0;
+    double merge_seconds = 0, evict_seconds = 0, wait_seconds = 0, compact_seconds = 0;
   };
   struct ExportNode {
     NodeKey key;
@@ -119,6 +130,12 @@ class PixelReducer {
 
   void add(size_t pixel, uint32_t sample, std::vector<unsigned char> leaf, double leaf_error = 0);
   void finish_pixel(size_t pixel);
+  /* Charge (or, negative, release) resident bytes owned by the caller, e.g.
+   * queued ingest records; eviction keeps the total within the limit. */
+  void account(int64_t bytes)
+  {
+    charge(bytes);
+  }
   void compact(const std::function<bool()> &cancelled = {});
   /* Single-threaded export: evict resident nodes until `bytes` more fit. */
   void reserve(uint64_t bytes);
@@ -171,10 +188,16 @@ class PixelReducer {
     FILE *file = nullptr;
     std::string path;
     uint64_t file_bytes = 0, live_bytes = 0;
-    void *decompressor = nullptr;
-    std::vector<unsigned char> scratch;
     mutable std::mutex mutex;
     ~Band();
+  };
+  /* One zstd compressor, decompressor and stored-bytes buffer, borrowed by a
+   * thread for an eviction sweep or a node reload. Their memory is charged. */
+  struct Codec {
+    void *compressor = nullptr, *decompressor = nullptr;
+    std::vector<unsigned char> buffer;
+    uint64_t charged = 0;
+    ~Codec();
   };
   static constexpr size_t stripe_count = 4096;
   static constexpr size_t node_overhead = 16; /* Allocator bookkeeping per payload. */
@@ -187,13 +210,18 @@ class PixelReducer {
   {
     return *bands_[pixel / size_t(width_) / size_t(rows_per_band_)];
   }
-  void charge(int64_t bytes);
-  void insert(Pixel &pixel, Node node);
+  void charge(int64_t bytes) const;
+  void insert(size_t pixel, Pixel &pixel_state, Node node);
   Node take(Pixel &pixel, uint16_t index);
   void load(size_t pixel, Node &node, std::vector<unsigned char> &destination) const;
-  void evict_node(size_t pixel, Node &node);
+  void evict_node(size_t pixel, Node &node, Codec &codec);
   void evict();
-  void evict_to(int64_t target);
+  /* Evict resident payloads of one band's pixels until RAM <= target. */
+  void evict_band(size_t band, int64_t target, Codec &codec);
+  void sweep(int64_t target);
+  void check_tables() const;
+  std::unique_ptr<Codec> acquire_codec() const;
+  void release_codec(std::unique_ptr<Codec> codec) const;
   void compact_band(size_t index, const std::function<bool()> &cancelled);
 
   int width_, height_, rows_per_band_;
@@ -206,16 +234,28 @@ class PixelReducer {
   std::vector<Pixel> pixels_;
   std::vector<std::unique_ptr<Band>> bands_;
   mutable std::unique_ptr<std::mutex[]> stripes_;
-  std::atomic<int64_t> ram_{0};
-  std::atomic<uint64_t> ram_peak_{0};
+  mutable std::atomic<int64_t> ram_{0};
+  mutable std::atomic<uint64_t> ram_peak_{0};
   std::atomic<int64_t> evict_threshold_{0};
+  /* Cooperative eviction sweep (guarded by evict_mutex_, except the band
+   * claim counter). */
   std::mutex evict_mutex_;
-  void *compressor_ = nullptr;
-  std::vector<unsigned char> compress_scratch_;
-  size_t evict_cursor_ = 0;
+  std::condition_variable evict_done_;
+  bool sweeping_ = false;
+  int sweepers_ = 0;
+  int64_t sweep_target_ = 0;
+  size_t sweep_first_ = 0, evict_band_ = 0;
+  std::atomic<size_t> sweep_next_{0};
+  /* Idle codecs (one per concurrently evicting or reloading thread). */
+  mutable std::mutex codec_mutex_;
+  mutable std::vector<std::unique_ptr<Codec>> codecs_;
+  mutable std::atomic<uint64_t> codec_bytes_{0};
+  uint64_t fixed_bytes_ = 0;
+  std::atomic<uint64_t> table_bytes_{0}, file_total_{0};
   uint64_t compaction_threshold_ = uint64_t(64) * 1024 * 1024;
   mutable std::atomic<uint64_t> raw_written_{0}, stored_written_{0}, read_bytes_{0},
-      evicted_{0}, reloaded_{0}, compactions_{0}, merges_{0}, merge_ns_{0}, file_peak_{0};
+      evicted_{0}, reloaded_{0}, compactions_{0}, merges_{0}, merge_ns_{0}, file_peak_{0},
+      sweeps_{0}, evict_ns_{0}, wait_ns_{0}, compact_ns_{0};
 };
 
 /* One captured surface event of a camera sample (FLOAT capture values). */

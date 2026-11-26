@@ -860,8 +860,10 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
     deep_capture_->volume_step_max = settings.volume_step_max;
   }
   deep_capture_->z_tolerance = settings.error ? settings.z_tolerance : 0;
+  deep_capture_->compact = settings.compact;
   const char *baseline = std::getenv("CYCLES_DEEP_Z_BASELINE");
-  deep_capture_->retain_for_validation = deep_capture_->z_tolerance > 0 && baseline && baseline[0];
+  deep_capture_->retain_for_validation = (deep_capture_->z_tolerance > 0 || settings.compact) &&
+                                         baseline && baseline[0];
   if (settings.ids)
     deep_capture_->set_object_manifest(settings.object_manifest);
   deep_capture_->holdout_manifest = settings.holdout_manifest;

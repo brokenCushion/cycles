@@ -12,14 +12,17 @@
 #include <OpenEXR/ImfPartType.h>
 #include <OpenEXR/ImfStdIO.h>
 #include <OpenEXR/ImfStringAttribute.h>
+#include <Imath/half.h>
 
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cstring>
 #include <fstream>
 #include <limits>
 #include <sstream>
 #include <map>
+#include <memory>
 #include <iomanip>
 #include <numeric>
 #include <stdexcept>
@@ -76,7 +79,7 @@ double check_quantization(const std::vector<SurfaceSample> &source,
 void merge_pixel(const SurfaceImage &image, FloatPixel &out,
                  const std::vector<SurfaceSample> &tags, const double allowance)
 {
-  if (!image.error || !image.z_tolerance) return;
+  if (!image.error || !image.z_tolerance || image.compact) return;
   std::vector<IntervalSample> curve;
   curve.reserve(tags.size());
   for (size_t i = 0; i < tags.size(); ++i)
@@ -86,6 +89,118 @@ void merge_pixel(const SurfaceImage &image, FloatPixel &out,
   for (const auto &v : curve) {
     out.z.push_back(float(v.front)); out.back.push_back(float(v.back)); out.a.push_back(float(v.alpha));
     if (image.ids) out.id.push_back(image.object_manifest[v.object].first);
+  }
+}
+
+/* Feedback rounding moves each step at most half a HALF spacing of alpha
+ * (<= 2^-12 for alpha in [.5, 1]) times the running transmittance, so the
+ * worst pixel error is 2^-12; with every alpha below .5 it is 2^-13 and
+ * below .03 it is 2^-17. Surface plans enable HALF only when the reserve
+ * covers the feedback bound; volume plans need the 2e-5 minimum and rely on
+ * measured escalation (a pixel that still does not fit fails with numbers). */
+constexpr double half_feedback_bound = 2.5e-4;
+constexpr double half_volume_minimum = 2e-5;
+
+/* Exact difference of two step curves (point samples), no throw. */
+double step_curve_error(const FloatPixel &a, const FloatPixel &b)
+{
+  size_t i = 0, j = 0;
+  double ta = 1.0, tb = 1.0, error = 0;
+  while (i < a.z.size() || j < b.z.size()) {
+    const double z = std::min(i < a.z.size() ? double(a.z[i]) : INFINITY,
+                              j < b.z.size() ? double(b.z[j]) : INFINITY);
+    while (i < a.z.size() && double(a.z[i]) == z) ta *= 1.0 - double(a.a[i++]);
+    while (j < b.z.size() && double(b.z[j]) == z) tb *= 1.0 - double(b.a[j++]);
+    error = std::max(error, std::abs(ta - tb));
+  }
+  return error;
+}
+
+[[noreturn]] void compact_failure(const SurfaceImage &image, const size_t p, const char *what,
+                                  const double spent, const double allowance)
+{
+  const size_t width = size_t(image.data_window.max_x) - image.data_window.min_x + 1;
+  std::ostringstream message;
+  message << std::setprecision(6) << "Compact deep " << what << " exceeds its allowance at pixel "
+          << int64_t(image.data_window.min_x) + int64_t(p % width) << ','
+          << int64_t(image.data_window.min_y) + int64_t(p / width) << ": " << spent << " > "
+          << allowance;
+  throw std::invalid_argument(message.str());
+}
+
+/* Compact surface pixel: out holds FLOAT z/a(/id) for tags, spent is the
+ * already measured exact error (FLOAT quantization, optional reduction).
+ * Same-object groups merge with the existing exact-product rule and are
+ * written as point samples at the group's front depth; HALF rounding error is
+ * measured exactly and charged to the same per-pixel ledger. */
+void compact_surface_pixel(const SurfaceImage &image, const CompactPlan &plan, FloatPixel &out,
+                           const std::vector<SurfaceSample> &tags, double spent, const size_t p)
+{
+  auto *stats = image.compact_statistics;
+  if (stats) {
+    stats->pixels++;
+    stats->samples_in += out.z.size();
+    stats->update(stats->max_quantization, spent);
+  }
+  std::vector<IntervalSample> curve;
+  curve.reserve(tags.size());
+  for (size_t i = 0; i < tags.size(); ++i)
+    curve.push_back({out.z[i], out.z[i], out.a[i], tags[i].object, tags[i].facing});
+  if (image.error && image.z_tolerance) {
+    SurfaceMergeStatistics merge;
+    curve = merge_surface_depths(curve, image.z_tolerance,
+                                 std::max(0.0, plan.ledger - spent - plan.half_reserve), &merge);
+    spent += merge.spent;
+    if (stats) {
+      stats->merge_groups += merge.groups;
+      stats->merge_rejected += merge.rejected;
+      stats->merge_removed += merge.removed;
+      stats->update(stats->max_merge, merge.spent);
+    }
+    for (auto &v : curve) {
+      v.alpha = double(float(v.alpha));
+      v.back = v.front; /* Point at the group's front; product exact at its end. */
+    }
+  }
+  if (plan.half) {
+    FloatPixel before;
+    for (const auto &v : curve) {
+      before.z.push_back(float(v.front));
+      before.a.push_back(float(v.alpha));
+    }
+    bool done = false;
+    for (int level = 0; level < 2 && !done; ++level) {
+      auto rounded = round_half_alpha(curve, level);
+      FloatPixel after;
+      for (const auto &v : rounded) {
+        after.z.push_back(float(v.front));
+        after.a.push_back(float(v.alpha));
+      }
+      const double error = step_curve_error(before, after);
+      if (spent + error <= plan.ledger) {
+        if (stats) {
+          stats->half_level[level]++;
+          stats->update(stats->max_half, error);
+        }
+        spent += error;
+        curve = std::move(rounded);
+        done = true;
+      }
+      else if (level == 1)
+        compact_failure(image, p, "HALF alpha rounding", spent + error, plan.ledger);
+    }
+  }
+  if (spent > plan.ledger)
+    compact_failure(image, p, "surface publication", spent, plan.ledger);
+  out.z.clear(); out.back.clear(); out.a.clear(); out.id.clear();
+  for (const auto &v : curve) {
+    out.z.push_back(float(v.front));
+    out.a.push_back(float(v.alpha));
+    if (image.ids) out.id.push_back(image.object_manifest[v.object].first);
+  }
+  if (stats) {
+    stats->samples_out += out.z.size();
+    stats->update(stats->max_total, spent);
   }
 }
 
@@ -137,7 +252,10 @@ std::vector<FloatPixel> prepare(const SurfaceImage &image)
       previous = sample.depth;
     }
     const double error = check_quantization(pixel, result[p]);
-    merge_pixel(image, result[p], pixel, export_error - error);
+    if (image.compact)
+      compact_surface_pixel(image, compact_plan(image, false), result[p], pixel, error, p);
+    else
+      merge_pixel(image, result[p], pixel, export_error - error);
   }
   return result;
 }
@@ -182,7 +300,7 @@ void insert_ids(Imf::DeepFrameBuffer &fb, std::vector<FloatPixel> &pixels,
                                  sizeof(uint32_t)));
 }
 
-Imf::Header make_header(const SurfaceImage &image)
+Imf::Header make_header(const SurfaceImage &image, const bool volume = false)
 {
   if (!std::isfinite(image.z_tolerance) || image.z_tolerance < 0)
     throw std::invalid_argument("Invalid surface depth tolerance");
@@ -228,8 +346,31 @@ Imf::Header make_header(const SurfaceImage &image)
     header.insert("cycles:deepReconstructionError", Imf::DoubleAttribute(budget.effective));
   }
   header.setView(image.view);
-  for (const char *name : {"Z", "ZBack", "A"}) {
-    header.channels().insert(name, Imf::Channel(Imf::FLOAT));
+  const auto plan = compact_plan(image, volume);
+  if (!plan.enabled) {
+    for (const char *name : {"Z", "ZBack", "A"}) {
+      header.channels().insert(name, Imf::Channel(Imf::FLOAT));
+    }
+  }
+  else {
+    header.channels().insert("Z", Imf::Channel(Imf::FLOAT));
+    if (plan.zback) header.channels().insert("ZBack", Imf::Channel(Imf::FLOAT));
+    header.channels().insert("A", Imf::Channel(plan.half ? Imf::HALF : Imf::FLOAT));
+    header.insert("cycles:deepSize", Imf::StringAttribute("compact"));
+    header.insert("cycles:deepCompactAlpha", Imf::StringAttribute(plan.half ? "half" : "float"));
+    header.insert("cycles:deepCompactZBack", Imf::StringAttribute(
+        plan.zback ? (volume ? "kept" : "kept; point samples, ZBack = Z") :
+                     "omitted; point samples, ZBack = Z"));
+    header.insert("cycles:deepCompactZTolerance",
+                  Imf::DoubleAttribute(image.error ? double(image.z_tolerance) : 0.0));
+    header.insert("cycles:deepCompactVolumeTolerance", Imf::DoubleAttribute(plan.volume_allowance));
+    header.insert("cycles:deepCompactHalfAllowance", Imf::DoubleAttribute(plan.half_reserve));
+    header.insert("cycles:deepCompactLedger", Imf::DoubleAttribute(plan.ledger));
+    header.insert("cycles:deepCompactRule", Imf::StringAttribute(
+        "per-pixel ledger: measured FLOAT quantization + volume simplification (exact curve error) "
+        "+ surface merge FLOAT rounding + measured HALF rounding <= ledger; same-object surface "
+        "groups within deepCompactZTolerance are point samples at the group front with exact "
+        "product alpha; volume groups keep total optical depth"));
   }
   if (image.ids) {
     header.channels().insert("id", Imf::Channel(Imf::UINT));
@@ -267,6 +408,64 @@ Imf::Header make_header(const SurfaceImage &image)
   return header;
 }
 
+/* Compact channels: HALF alpha (values already exactly representable) and an
+ * omitted ZBack, decided by the header. Exact files never take this path. */
+struct CompactChannels {
+  bool half_alpha = false, zback = true;
+  std::vector<std::vector<Imath::half>> alpha;
+  std::vector<Imath::half *> pointers;
+  explicit CompactChannels(const Imf::Header &header)
+  {
+    half_alpha = header.channels().findChannel("A")->type == Imf::HALF;
+    zback = header.channels().findChannel("ZBack") != nullptr;
+  }
+  void prepare(std::vector<FloatPixel> &pixels)
+  {
+    if (!zback)
+      for (const auto &pixel : pixels)
+        for (size_t i = 0; i < pixel.back.size(); ++i)
+          if (pixel.back[i] != pixel.z[i])
+            throw std::logic_error("Compact ZBack omission requires point samples");
+    if (!half_alpha) return;
+    alpha.resize(pixels.size());
+    pointers.resize(pixels.size());
+    for (size_t p = 0; p < pixels.size(); ++p) {
+      alpha[p].clear();
+      alpha[p].reserve(pixels[p].a.size());
+      for (const float a : pixels[p].a) {
+        alpha[p].push_back(Imath::half(a));
+        if (float(alpha[p].back()) != a)
+          throw std::logic_error("Compact alpha is not HALF-representable");
+      }
+      pointers[p] = alpha[p].empty() ? nullptr : alpha[p].data();
+    }
+  }
+  void insert(Imf::DeepFrameBuffer &fb, const Imath::Box2i &bounds, std::vector<float *> &a,
+              std::vector<float *> &back, const size_t width)
+  {
+    if (half_alpha) {
+      const auto s = Imf::Slice::Make(Imf::HALF, pointers.data(), bounds, sizeof(Imath::half *),
+                                      width * sizeof(Imath::half *));
+      fb.insert("A", Imf::DeepSlice(Imf::HALF, s.base, s.xStride, s.yStride, sizeof(Imath::half)));
+    }
+    else {
+      const auto s = Imf::Slice::Make(Imf::FLOAT, a.data(), bounds, sizeof(float *),
+                                      width * sizeof(float *));
+      fb.insert("A", Imf::DeepSlice(Imf::FLOAT, s.base, s.xStride, s.yStride, sizeof(float)));
+    }
+    if (zback) {
+      const auto s = Imf::Slice::Make(Imf::FLOAT, back.data(), bounds, sizeof(float *),
+                                      width * sizeof(float *));
+      fb.insert("ZBack", Imf::DeepSlice(Imf::FLOAT, s.base, s.xStride, s.yStride, sizeof(float)));
+    }
+  }
+};
+
+bool compact_header(const Imf::Header &header)
+{
+  return header.findTypedAttribute<Imf::StringAttribute>("cycles:deepSize") != nullptr;
+}
+
 void serialize(Imf::OStream &stream, const Imf::Header &header, std::vector<FloatPixel> &pixels)
 {
   const auto dw = header.dataWindow();
@@ -286,13 +485,22 @@ void serialize(Imf::OStream &stream, const Imf::Header &header, std::vector<Floa
    * subtraction outside the allocated array; the deep grid stores pointers. */
   const auto zs = Imf::Slice::Make(
       Imf::FLOAT, z.data(), dw, sizeof(float *), width * sizeof(float *));
-  const auto as = Imf::Slice::Make(
-      Imf::FLOAT, a.data(), dw, sizeof(float *), width * sizeof(float *));
-  const auto bs = Imf::Slice::Make(
-      Imf::FLOAT, back.data(), dw, sizeof(float *), width * sizeof(float *));
-  fb.insert("Z", Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
-  fb.insert("ZBack", Imf::DeepSlice(Imf::FLOAT, bs.base, bs.xStride, bs.yStride, sizeof(float)));
-  fb.insert("A", Imf::DeepSlice(Imf::FLOAT, as.base, as.xStride, as.yStride, sizeof(float)));
+  std::unique_ptr<CompactChannels> compact;
+  if (compact_header(header)) {
+    compact = std::make_unique<CompactChannels>(header);
+    compact->prepare(pixels);
+    fb.insert("Z", Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
+    compact->insert(fb, dw, a, back, width);
+  }
+  else {
+    const auto as = Imf::Slice::Make(
+        Imf::FLOAT, a.data(), dw, sizeof(float *), width * sizeof(float *));
+    const auto bs = Imf::Slice::Make(
+        Imf::FLOAT, back.data(), dw, sizeof(float *), width * sizeof(float *));
+    fb.insert("Z", Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
+    fb.insert("ZBack", Imf::DeepSlice(Imf::FLOAT, bs.base, bs.xStride, bs.yStride, sizeof(float)));
+    fb.insert("A", Imf::DeepSlice(Imf::FLOAT, as.base, as.xStride, as.yStride, sizeof(float)));
+  }
   std::vector<uint32_t *> ids;
   if (header.channels().findChannel("id")) insert_ids(fb, pixels, dw, ids);
   Imf::DeepScanLineOutputFile file(stream, header, 1);
@@ -385,12 +593,259 @@ static std::vector<IntervalSample> project_volume_depths(const std::vector<Inter
   return result;
 }
 
+/* Best exact-mode FLOAT publication of one curve: projection, or plain
+ * rounding when that is closer (as the exact writer chooses). */
+static std::vector<IntervalSample> quantize_curve(const std::vector<IntervalSample> &source,
+                                                  double &error)
+{
+  auto projected = project_volume_depths(source);
+  error = interval_curve_error(source, projected);
+  std::vector<IntervalSample> rounded;
+  rounded.reserve(source.size());
+  for (const auto &v : source)
+    rounded.push_back({double(float(v.front)), double(float(v.back)), double(float(v.alpha)),
+                       v.object, v.facing});
+  const double rounded_error = interval_curve_error(source, rounded);
+  if (rounded_error < error) {
+    error = rounded_error;
+    return rounded;
+  }
+  return projected;
+}
+
+static size_t volume_count(const std::vector<IntervalSample> &curve)
+{
+  return std::count_if(curve.begin(), curve.end(), [](const auto &v) { return v.front < v.back; });
+}
+
+/* Compact volume pixel. Ledger per pixel (the exact writer's publication
+ * allowance P): measured simplification + FLOAT error against the source
+ * curve, plus surface merge FLOAT rounding, plus measured HALF rounding.
+ * ID mode keeps one curve per object and sums the per-object errors
+ * (product differences telescope). Never merges across objects. */
+static FloatPixel prepare_volume_compact(const SurfaceImage &image,
+                                         const std::vector<IntervalSample> &source,
+                                         const double publication_scale, const size_t p)
+{
+  const auto plan = compact_plan(image, true);
+  auto *stats = image.compact_statistics;
+  const double ledger = plan.ledger * publication_scale;
+  const double reserve = plan.half_reserve * publication_scale;
+  const double max_alpha = plan.half ? .45 : -std::expm1(-2.0);
+  std::map<int, std::vector<IntervalSample>> objects;
+  if (image.ids) {
+    for (const auto &v : source) {
+      if (v.object < 0 || size_t(v.object) >= image.object_manifest.size())
+        throw std::invalid_argument("Deep interval object outside manifest");
+      objects[v.object].push_back(v);
+    }
+    for (auto &entry : objects)
+      std::sort(entry.second.begin(), entry.second.end(), [](const auto &a, const auto &b) {
+        if (a.front != b.front) return a.front < b.front;
+        return a.back < b.back;
+      });
+  }
+  else if (!source.empty())
+    objects[-1] = source;
+  if (source.size() > std::numeric_limits<unsigned int>::max())
+    throw std::invalid_argument("Volume sample count exceeds UINT");
+  size_t total_volume = 0;
+  for (const auto &entry : objects) total_volume += volume_count(entry.second);
+  std::map<int, std::vector<IntervalSample>> quantized;
+  std::map<int, double> errors;
+  std::map<int, bool> simplified;
+  for (const auto &entry : objects) {
+    const size_t count = volume_count(entry.second);
+    const double share = total_volume ? double(count) / total_volume : 0.0;
+    std::vector<IntervalSample> curve = entry.second;
+    bool changed = false;
+    if (plan.volume_allowance > 0 && count > 1) {
+      auto simple = simplify_volume_curve(entry.second, share * plan.volume_allowance, max_alpha);
+      if (simple.skipped && stats) stats->volume_skipped++;
+      changed = simple.curve.size() != entry.second.size();
+      curve = std::move(simple.curve);
+    }
+    double error;
+    auto published = quantize_curve(curve, error);
+    if (changed) error = interval_curve_error(entry.second, published);
+    /* Never keep more samples than the exact writer's own coalescing would,
+     * when that result also fits this object's share of the ledger. */
+    if (count > 1) {
+      double exact_error;
+      auto exact = quantize_curve(entry.second, exact_error);
+      if (exact.size() > 64) {
+        const auto reduced = reduce_interval_curve(
+            exact, std::min(1e-2, share * error_budget(image.error).coalescing * publication_scale));
+        if (reduced.size() < exact.size()) {
+          auto projected = project_volume_depths(reduced);
+          const double reduced_error = interval_curve_error(entry.second, projected);
+          if (reduced_error <= share * (ledger - reserve)) {
+            exact = std::move(projected);
+            exact_error = reduced_error;
+          }
+        }
+      }
+      if (exact.size() < published.size() && exact_error <= share * (ledger - reserve)) {
+        published = std::move(exact);
+        error = exact_error;
+        changed = false;
+      }
+    }
+    quantized[entry.first] = std::move(published);
+    errors[entry.first] = error;
+    simplified[entry.first] = changed;
+  }
+  const auto sum = [&] {
+    double total = 0;
+    for (const auto &entry : errors) total = std::nextafter(total + entry.second, INFINITY);
+    return total;
+  };
+  /* Undo simplification, largest error first, until the ledger leaves the
+   * HALF reserve; counted as skipped curves. */
+  while (sum() > ledger - reserve) {
+    int worst = 0;
+    double worst_error = -1;
+    for (const auto &entry : errors)
+      if (simplified[entry.first] && entry.second > worst_error) {
+        worst = entry.first;
+        worst_error = entry.second;
+      }
+    if (worst_error < 0) break;
+    double error;
+    quantized[worst] = quantize_curve(objects[worst], error);
+    errors[worst] = error;
+    simplified[worst] = false;
+    if (stats) stats->volume_skipped++;
+  }
+  /* The exact writer's adjacent-interval coalescing, on what simplification
+   * left: each object may spend its interval share of the remaining headroom
+   * (before the HALF reserve), so compact never keeps more volume intervals
+   * than that pass would. Errors stay measured against the source curve. */
+  {
+    const double remaining = ledger - reserve - sum();
+    if (remaining > 0 && total_volume)
+      for (auto &entry : quantized) {
+        auto &curve = entry.second;
+        const size_t count = volume_count(curve);
+        if (curve.size() <= 64 || !count) continue;
+        const double share = double(volume_count(objects[entry.first])) / total_volume;
+        const auto reduced = reduce_interval_curve(curve, std::min(1e-2, share * remaining));
+        if (reduced.size() >= curve.size()) continue;
+        auto projected = project_volume_depths(reduced);
+        const double error = interval_curve_error(objects[entry.first], projected);
+        if (error <= errors[entry.first] + share * remaining && projected.size() < curve.size()) {
+          errors[entry.first] = error;
+          curve = std::move(projected);
+        }
+      }
+  }
+  double spent = sum();
+  if (spent > ledger)
+    compact_failure(image, p, "FLOAT volume curve", spent, ledger);
+  if (stats) {
+    stats->pixels++;
+    stats->samples_in += source.size();
+    size_t out = 0;
+    for (const auto &entry : quantized) out += volume_count(entry.second);
+    stats->volume_in += total_volume;
+    stats->volume_out += out;
+    stats->update(stats->max_quantization, spent);
+  }
+  if (image.error && image.z_tolerance) {
+    std::vector<IntervalSample> merged;
+    for (const auto &entry : quantized)
+      for (auto v : entry.second) {
+        v.object = entry.first;
+        merged.push_back(v);
+      }
+    if (image.ids)
+      std::sort(merged.begin(), merged.end(), [&](const auto &a, const auto &b) {
+        if (a.front != b.front) return a.front < b.front;
+        if (a.back != b.back) return a.back < b.back;
+        return image.object_manifest[a.object].first < image.object_manifest[b.object].first;
+      });
+    /* Merged spans are hard surfaces (nonzero facing); volumes have none. */
+    SurfaceMergeStatistics merge;
+    merged = merge_surface_depths(merged, image.z_tolerance,
+                                  std::max(0.0, ledger - spent - reserve), &merge);
+    spent += merge.spent;
+    if (stats) {
+      stats->merge_groups += merge.groups;
+      stats->merge_rejected += merge.rejected;
+      stats->merge_removed += merge.removed;
+      stats->update(stats->max_merge, merge.spent);
+    }
+    quantized.clear();
+    for (auto v : merged) {
+      if (v.facing && v.front < v.back) v.back = v.front;
+      quantized[image.ids ? v.object : -1].push_back(v);
+    }
+  }
+  if (plan.half) {
+    bool done = false;
+    for (int level = 0; level < 5 && !done; ++level) {
+      std::map<int, std::vector<IntervalSample>> rounded;
+      double error = 0;
+      for (const auto &entry : quantized) {
+        rounded[entry.first] = round_half_alpha(entry.second, level);
+        error += interval_curve_error(entry.second, rounded[entry.first]);
+      }
+      if (spent + error <= ledger) {
+        spent += error;
+        quantized = std::move(rounded);
+        done = true;
+        if (stats) {
+          stats->half_level[level]++;
+          stats->update(stats->max_half, error);
+        }
+      }
+      else if (level == 4)
+        compact_failure(image, p, "HALF alpha rounding", spent + error, ledger);
+    }
+  }
+  FloatPixel pixel;
+  for (const auto &entry : quantized)
+    for (const auto &v : entry.second) {
+      pixel.z.push_back(float(v.front));
+      pixel.back.push_back(float(v.back));
+      pixel.a.push_back(float(v.alpha));
+      if (image.ids) pixel.id.push_back(image.object_manifest[entry.first].first);
+    }
+  if (image.ids) {
+    std::vector<size_t> order(pixel.z.size());
+    std::iota(order.begin(), order.end(), 0);
+    std::sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+      if (pixel.z[a] != pixel.z[b]) return pixel.z[a] < pixel.z[b];
+      if (pixel.back[a] != pixel.back[b]) return pixel.back[a] < pixel.back[b];
+      return pixel.id[a] < pixel.id[b];
+    });
+    FloatPixel sorted;
+    for (const size_t i : order) {
+      sorted.z.push_back(pixel.z[i]); sorted.back.push_back(pixel.back[i]);
+      sorted.a.push_back(pixel.a[i]); sorted.id.push_back(pixel.id[i]);
+    }
+    pixel = std::move(sorted);
+  }
+  if (stats) {
+    stats->samples_out += pixel.z.size();
+    stats->update(stats->max_total, spent);
+  }
+  return pixel;
+}
+
 static std::vector<FloatPixel> prepare_volume(
     const SurfaceImage &image, const std::vector<std::vector<IntervalSample>> &source,
     const double publication_scale = 1, const size_t pixel_offset = 0)
 {
   if (!image.pixels.empty() || image.reduction_error != 0)
     throw std::invalid_argument("Volume fixture writer requires empty surface pixels and no reduction");
+  /* Strict compact keeps the exact volume samples (no simplification). */
+  if (image.compact && image.error) {
+    std::vector<FloatPixel> output(source.size());
+    for (size_t p = 0; p < source.size(); ++p)
+      output[p] = prepare_volume_compact(image, source[p], publication_scale, p + pixel_offset);
+    return output;
+  }
   if (image.ids) {
     std::vector<FloatPixel> output(source.size());
     for (size_t p = 0; p < source.size(); ++p) {
@@ -590,7 +1045,7 @@ void write_volume_exr(const std::filesystem::path &path,
                       const std::vector<std::vector<IntervalSample>> &source)
 {
   auto pixels = prepare_volume(image, source);
-  auto header = make_header(image);
+  auto header = make_header(image, true);
   header.insert("cycles:deepScope", Imf::StringAttribute("analytic_volume_reference"));
   AtomicOutput publication(path);
   std::ofstream output;
@@ -612,7 +1067,7 @@ void write_volume_exr_pixels(Imf::OStream &stream,
 {
   if (image.volume_export_workers <= 0)
     throw std::invalid_argument("Deep export requires positive worker count");
-  auto header = make_header(image);
+  auto header = make_header(image, true);
   header.insert("cycles:deepScope", Imf::StringAttribute(image.volume_shader_error ?
       "shader_evaluated_scalar_extinction" : "native_scalar_extinction"));
   const auto dw = header.dataWindow();
@@ -679,6 +1134,16 @@ void write_volume_exr_pixels(Imf::OStream &stream,
       const Imath::Box2i bounds({dw.min.x, int(y)}, {dw.max.x, int(y)});
       Imf::DeepFrameBuffer fb;
       fb.insertSampleCountSlice(Imf::Slice::Make(Imf::UINT, counts.data(), bounds));
+      std::unique_ptr<CompactChannels> compact;
+      if (compact_header(header)) {
+        compact = std::make_unique<CompactChannels>(header);
+        compact->prepare(pixels);
+        const auto s = Imf::Slice::Make(Imf::FLOAT, z.data(), bounds, sizeof(float *),
+                                        width * sizeof(float *));
+        fb.insert("Z", Imf::DeepSlice(Imf::FLOAT, s.base, s.xStride, s.yStride, sizeof(float)));
+        compact->insert(fb, bounds, a, back, width);
+      }
+      else
       for (const auto &channel : {std::make_pair("Z", &z), std::make_pair("ZBack", &back),
                                   std::make_pair("A", &a)}) {
         const auto s = Imf::Slice::Make(Imf::FLOAT, channel.second->data(), bounds,
@@ -718,6 +1183,131 @@ void write_volume_exr_pixels(const std::filesystem::path &path,
   publication.publish();
 }
 
+void CompactStatistics::update(std::atomic<uint64_t> &slot, const double value)
+{
+  if (!(value > 0)) return;
+  uint64_t bits;
+  std::memcpy(&bits, &value, sizeof(bits));
+  uint64_t previous = slot.load(std::memory_order_relaxed);
+  while (previous < bits &&
+         !slot.compare_exchange_weak(previous, bits, std::memory_order_relaxed)) {
+  }
+}
+
+double CompactStatistics::value(const std::atomic<uint64_t> &slot)
+{
+  const uint64_t bits = slot.load();
+  double value;
+  std::memcpy(&value, &bits, sizeof(value));
+  return value;
+}
+
+CompactPlan compact_plan(const SurfaceImage &image, const bool volume)
+{
+  CompactPlan plan;
+  if (!image.compact) return plan;
+  plan.enabled = true;
+  const auto budget = error_budget(image.error);
+  if (volume) {
+    /* Volumes: the existing publication allowance (R/4 + F) is the ledger.
+     * Simplification takes 0.1 (E - F): 1e-4 at E = 1e-3, 1e-5 at 1e-4. */
+    plan.ledger = budget.publication;
+    plan.volume_allowance = image.error ?
+                                std::min(0.1 * (double(image.error) - export_error), plan.ledger / 2) :
+                                0.0;
+    /* HALF takes the rest. Its per-pixel rounding is measured; pixels that
+     * do not fit escalate through feedback and exact splitting (level 4,
+     * every alpha <= .03, bounds each object curve by 2^-17). */
+    const double headroom = plan.ledger - plan.volume_allowance - export_error;
+    plan.half = image.error && headroom >= half_volume_minimum;
+    plan.half_reserve = plan.half ? headroom : 0.0;
+    plan.zback = true;
+  }
+  else {
+    /* Surfaces: the header bound is the ledger. Half of what FLOAT export
+     * leaves is reserved for HALF rounding when it covers the feedback bound. */
+    plan.ledger = image.error ? budget.effective :
+                                (image.reduction_error ? image.reduction_error : export_error);
+    const double reserve = (plan.ledger - export_error) / 2;
+    plan.half = reserve >= half_feedback_bound;
+    plan.half_reserve = plan.half ? reserve : 0.0;
+    /* Every compact surface sample is a point (ZBack = Z). */
+    plan.zback = !image.compact_omit_zback;
+  }
+  return plan;
+}
+
+std::string compact_summary(const CompactPlan &plan, const CompactStatistics &s)
+{
+  std::ostringstream out;
+  out << std::setprecision(4) << "Deep compact: alpha=" << (plan.half ? "half" : "float")
+      << " zback=" << (plan.zback ? "kept" : "omitted") << " ledger=" << plan.ledger
+      << " half_allowance=" << plan.half_reserve << " volume_allowance=" << plan.volume_allowance
+      << " pixels=" << s.pixels.load() << " samples=" << s.samples_in.load() << "->"
+      << s.samples_out.load() << " merge_groups=" << s.merge_groups.load()
+      << " merge_rejected=" << s.merge_rejected.load() << " merge_removed=" << s.merge_removed.load()
+      << " volume_intervals=" << s.volume_in.load() << "->" << s.volume_out.load()
+      << " volume_skipped=" << s.volume_skipped.load() << " half_levels=";
+  for (int i = 0; i < 5; ++i) out << (i ? "/" : "") << s.half_level[i].load();
+  out << " max_quantization=" << CompactStatistics::value(s.max_quantization)
+      << " max_merge=" << CompactStatistics::value(s.max_merge)
+      << " max_half=" << CompactStatistics::value(s.max_half)
+      << " max_total=" << CompactStatistics::value(s.max_total);
+  return out.str();
+}
+
+std::vector<IntervalSample> round_half_alpha(const std::vector<IntervalSample> &curve,
+                                             const int level)
+{
+  static const double split_alpha[] = {1, 1, .45, .12, .03};
+  if (level < 0 || level > 4)
+    throw std::invalid_argument("Invalid HALF rounding level");
+  std::vector<IntervalSample> pieces;
+  pieces.reserve(curve.size());
+  const double split = split_alpha[level];
+  for (const auto &s : curve) {
+    if (s.alpha <= split || s.alpha >= 1) {
+      pieces.push_back(s);
+      continue;
+    }
+    const double tau = -std::log1p(-s.alpha);
+    const int count = int(std::ceil(tau / -std::log1p(-split)));
+    if (s.front < s.back) {
+      /* Constant extinction: any split reproduces the curve exactly. */
+      double front = s.front;
+      for (int k = 1; k <= count; ++k) {
+        const double back = k == count ? s.back :
+                                         double(float(s.front + (s.back - s.front) * k / count));
+        if (back <= front) continue;
+        pieces.push_back({front, back, -std::expm1(-tau * (back - front) / (s.back - s.front)),
+                          s.object, s.facing});
+        front = back;
+      }
+    }
+    else
+      for (int k = 0; k < count; ++k)
+        pieces.push_back({s.front, s.back, -std::expm1(-tau / count), s.object, s.facing});
+  }
+  /* Largest HALF below one keeps a volume interval finite. */
+  const double below_one = double(float(Imath::half(0.99951171875f)));
+  std::vector<IntervalSample> result;
+  result.reserve(pieces.size());
+  double exact = 1, published = 1;
+  for (const auto &s : pieces) {
+    exact *= 1 - s.alpha;
+    double target = s.alpha;
+    if (level > 0 && published > 0)
+      target = 1 - exact / published;
+    target = std::clamp(target, 0.0, 1.0);
+    double alpha = double(float(Imath::half(float(target))));
+    if (s.front < s.back) alpha = std::min(alpha, below_one);
+    if (!(alpha > 0)) continue;
+    published *= 1 - alpha;
+    result.push_back({s.front, s.back, alpha, s.object, s.facing});
+  }
+  return result;
+}
+
 std::vector<SurfaceSample> reduce_surface(const std::vector<SurfaceSample> &source,
                                           const double tolerance)
 {
@@ -753,6 +1343,7 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
     throw std::invalid_argument(
         "Deep reduction error must be zero or greater than 1e-6, up to 0.01");
   const auto header = make_header(image);
+  const auto plan = compact_plan(image, false);
   const auto dw = header.dataWindow();
   const size_t width = size_t(int64_t(dw.max.x) - dw.min.x + 1);
   {
@@ -770,10 +1361,13 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
       scanline.data_window = {dw.min.x, int(y), dw.max.x, int(y)};
       scanline.pixels = row(int(y));
       auto pixels = prepare(scanline);
+      const size_t row_offset = size_t(y - dw.min.y) * width;
       if (image.reduction_error > 0 && !image.ids) {
         for (size_t x = 0; x < width; ++x) {
-          const auto reduced = reduce_surface(scanline.pixels[x],
-                                              image.reduction_error - export_error);
+          /* Compact HALF leaves reduction a quarter of what FLOAT export leaves. */
+          const double tolerance = plan.half ? (image.reduction_error - export_error) / 4 :
+                                               image.reduction_error - export_error;
+          const auto reduced = reduce_surface(scanline.pixels[x], tolerance);
           pixels[x].z.clear();
           pixels[x].a.clear();
           for (const auto &sample : reduced) {
@@ -781,13 +1375,19 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
             pixels[x].a.push_back(float(sample.alpha));
           }
           const double error = check_quantization(scanline.pixels[x], pixels[x], image.reduction_error);
-          merge_pixel(image, pixels[x], reduced, image.reduction_error - error);
+          if (plan.enabled)
+            compact_surface_pixel(image, plan, pixels[x], reduced, error, row_offset + x);
+          else
+            merge_pixel(image, pixels[x], reduced, image.reduction_error - error);
         }
       }
       if (!image.reduction_error || image.ids)
         for (size_t x = 0; x < width; ++x) {
           const double error = check_quantization(scanline.pixels[x], pixels[x]);
-          merge_pixel(image, pixels[x], scanline.pixels[x], export_error - error);
+          if (plan.enabled)
+            compact_surface_pixel(image, plan, pixels[x], scanline.pixels[x], error, row_offset + x);
+          else
+            merge_pixel(image, pixels[x], scanline.pixels[x], export_error - error);
         }
       std::vector<unsigned int> counts(width);
       std::vector<float *> z(width), a(width), back(width);
@@ -802,6 +1402,14 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
       fb.insertSampleCountSlice(Imf::Slice::Make(Imf::UINT, counts.data(), bounds));
       const auto zs = Imf::Slice::Make(
           Imf::FLOAT, z.data(), bounds, sizeof(float *), width * sizeof(float *));
+      std::unique_ptr<CompactChannels> compact;
+      if (plan.enabled) {
+        compact = std::make_unique<CompactChannels>(header);
+        compact->prepare(pixels);
+        fb.insert("Z", Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
+        compact->insert(fb, bounds, a, back, width);
+      }
+      else {
       const auto as = Imf::Slice::Make(
           Imf::FLOAT, a.data(), bounds, sizeof(float *), width * sizeof(float *));
       fb.insert("Z", Imf::DeepSlice(Imf::FLOAT, zs.base, zs.xStride, zs.yStride, sizeof(float)));
@@ -810,6 +1418,7 @@ void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const 
       fb.insert("ZBack",
                 Imf::DeepSlice(Imf::FLOAT, bs.base, bs.xStride, bs.yStride, sizeof(float)));
       fb.insert("A", Imf::DeepSlice(Imf::FLOAT, as.base, as.xStride, as.yStride, sizeof(float)));
+      }
       std::vector<uint32_t *> ids;
       if (image.ids) insert_ids(fb, pixels, bounds, ids);
       file.setFrameBuffer(fb);

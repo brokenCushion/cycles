@@ -84,6 +84,23 @@ between passes. Duplicates, incomplete coverage, a node over the interval limit,
 reduction ledger over its allowance fail with numbers. Per-sample diagnostic records
 keep the raw spill as well. `CYCLES_DEEP_VOLUME_REDUCE=0` restores raw spill.
 
+Compact deep output: Output > Deep > Deep Size (`--deep-size` in the standalone
+renderer) chooses Exact (default; files identical to earlier builds) or Compact.
+Compact stays within the file's `cycles:maxTransmittanceError` and records its choices
+in `cycles:deepSize` / `cycles:deepCompact*` header attributes. (1) Same-object
+hard-surface hits within the relative surface depth tolerance become one point sample
+at the group's front depth, with the exact alpha product, so transmittance outside each
+group is unchanged; layers following the scene use at least 1e-3, a layer's Custom value
+wins (hair keeps 0). (2) Each pixel's volume curve is simplified greedily; merged
+intervals keep their total optical depth so error does not build up along the ray.
+Allowance 1e-4 at 1e-3, about 1e-5 at 1e-4, half that for shader-evaluated volumes,
+none in strict. (3) Alpha is HALF when the per-pixel budget allows (surfaces at error
+about 1e-3 or more, volumes with at least 2e-5 left), otherwise the file stays FLOAT.
+(4) Z and ZBack stay FLOAT; point samples carry ZBack = Z, because Gaffer's DeepToFlat
+Range mode drops a missing ZBack and Nuke's behaviour without one is unconfirmed. All
+costs are measured exactly per pixel against the publication ledger; a pixel that cannot
+fit fails the export with its numbers. Junkshop frame 2 full size: 3.02 GB -> 0.82 GB.
+
 CPU beauty remains exact. CUDA/OptiX beauty policy and its GPU-only change scope
 are in [VALIDATION.md](VALIDATION.md); source hashes and 75 kernel resource records
 provide the host-only proof.

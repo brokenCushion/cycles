@@ -61,6 +61,8 @@ struct Options {
   string deep_spill_dir;
   string deep_error = "0.001";
   string deep_z_tolerance = "0.0001";
+  bool deep_z_tolerance_set = false;
+  string deep_size = "exact";
   bool deep_ids = false;
   int deep_samples = 0;
   bool deep_transparent = false;
@@ -195,9 +197,15 @@ static void session_init()
     DeepSettings &deep = options.session_params.deep;
     deep.enabled = true;
     deep.samples = options.deep_samples;
+    if (options.deep_size != "exact" && options.deep_size != "compact")
+      throw std::invalid_argument("Invalid --deep-size: use exact or compact");
+    deep.compact = options.deep_size == "compact";
+    /* Compact defaults to a 1e-3 surface depth tolerance; an explicit value wins. */
+    const string z_text = deep.compact && !options.deep_z_tolerance_set ? string("0.001") :
+                                                                          options.deep_z_tolerance;
     size_t z_consumed = 0;
-    deep.z_tolerance = std::stof(options.deep_z_tolerance, &z_consumed);
-    if (z_consumed != options.deep_z_tolerance.size())
+    deep.z_tolerance = std::stof(z_text, &z_consumed);
+    if (z_consumed != z_text.size())
       throw std::invalid_argument("Invalid --deep-z-tolerance");
     deep.ids = options.deep_ids;
     deep.transparent = options.deep_transparent;
@@ -507,8 +515,16 @@ static void options_parse(const int argc, const char **argv)
       .help("Absolute transmittance error: strict or (1e-6,0.01], default 0.001")
       .action([&](auto argv) { parse_string(argv, &options.deep_error); });
   ap.arg("--deep-z-tolerance %s:TOLERANCE")
-      .help("Relative same-object surface depth span; default 0.0001, strict forces 0")
-      .action([&](auto argv) { parse_string(argv, &options.deep_z_tolerance); });
+      .help("Relative same-object surface depth span; default 0.0001 (0.001 with --deep-size "
+            "compact), strict forces 0")
+      .action([&](auto argv) {
+        parse_string(argv, &options.deep_z_tolerance);
+        options.deep_z_tolerance_set = true;
+      });
+  ap.arg("--deep-size %s:SIZE")
+      .help("exact (default) or compact: surface groups as points, bounded volume curve "
+            "simplification and HALF alpha when the error allows, within --deep-error")
+      .action([&](auto argv) { parse_string(argv, &options.deep_size); });
   ap.arg("--deep-memory-mb %d:MIB")
       .help("Deep working memory budget in MiB (default 64; raw capture spills to temp disk)")
       .action([&](auto argv) { parse_int(argv, &options.deep_memory_mb); });

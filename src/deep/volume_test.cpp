@@ -121,6 +121,52 @@ int main(int argc, char **argv)
     std::filesystem::create_directories(directory);
 
     {
+      /* Compact volume curve simplification. */
+      std::vector<IntervalSample> curve;
+      double z = 5, tau = 0;
+      for (int i = 0; i < 400; ++i) {
+        const double a = -std::expm1(-(.002 + .0015 * std::sin(i * .05)));
+        curve.push_back({z, z + .02, a, 3, 0});
+        tau -= std::log1p(-a);
+        z += .02;
+      }
+      curve.push_back({z, z, .4, 3, 1});              /* surface step: kept */
+      curve.push_back({z, z + .5, .05, 4, 0});        /* other object: barrier */
+      curve.push_back({z + .5, z + 1, .05, 3, 0});
+      curve.push_back({z + 2, z + 2.5, .05, 3, 0});   /* gap: barrier */
+      const auto simple = simplify_volume_curve(curve, 1e-4, -std::expm1(-2.0));
+      std::cout << "simplified " << curve.size() << " -> " << simple.curve.size() << " skipped "
+                << simple.skipped << " error " << simple.error << '\n';
+      check(!simple.skipped && simple.curve.size() < curve.size() / 2, "Volume simplification did not reduce");
+      check(std::abs(simple.error - interval_curve_error(curve, simple.curve)) == 0 &&
+                simple.error <= 1e-4, "Simplification error not measured or over allowance");
+      double published = 0;
+      for (const auto &v : simple.curve)
+        if (v.object == 3 && v.front < v.back && v.back <= 5 + 400 * .02 + 1e-9)
+          published -= std::log1p(-v.alpha);
+      check(std::abs(published - tau) < 1e-12, "Simplification changed total optical depth");
+      check(std::abs(interval_transmittance(curve, z + 3) - interval_transmittance(simple.curve, z + 3)) < 1e-15,
+            "Transmittance after the curve changed");
+      size_t steps = 0, other = 0;
+      for (const auto &v : simple.curve) {
+        steps += v.front == v.back;
+        other += v.object == 4;
+        check(v.front == v.back || v.object == 3 || (v.object == 4 && v.front == z && v.back == z + .5),
+              "Simplification merged across an object");
+      }
+      check(steps == 1 && other == 1, "Surface step or other object lost");
+      check(simplify_volume_curve(curve, 0, .5).curve.size() == curve.size(), "Zero allowance changed curve");
+      const auto capped = simplify_volume_curve(curve, 1e-2, .1);
+      for (const auto &v : capped.curve)
+        check(v.front == v.back || v.alpha <= .1 + 1e-12 || v.object == 4, "Alpha cap exceeded");
+      /* A tight allowance merges less, never more error. */
+      const auto tight = simplify_volume_curve(curve, 1e-6, -std::expm1(-2.0));
+      check(tight.curve.size() >= simple.curve.size() && tight.error <= 1e-6,
+            "Tight simplification allowance");
+      std::cout << "PASS compact volume simplification: " << curve.size() << " -> "
+                << simple.curve.size() << " intervals, error " << simple.error << "\n";
+    }
+    {
       const std::vector<VolumeCameraSample> overlap = {
           {{0, 1, true, {}}, {{1, 4, .9, 0}, {2, 5, 1.2, 1}}}};
       const auto isolated = reconstruct_volume_ids(overlap, 1e-7, 65536, SIZE_MAX);

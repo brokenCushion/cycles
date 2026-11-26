@@ -10,7 +10,12 @@ Stage 2 (merge volumes during render) implemented 2026-11-26: online aligned-ran
 tree, node arena and stream, ledger. Strict and non-adaptive volumes byte-identical;
 adaptive volumes use cap levels and pass the oracle within bound; their 11 golden
 references were regenerated (user-approved) into deep-references\n...-20261126-volume-reduce, regression PASS with only the 15 pre-existing
-landscape/surface_bevel divergences. Junkshop Volume 25%: spill 24.5 GB -> 0, wall 341 -> 195 s;
+landscape/surface_bevel divergences.
+Stage 3 (compact deep output, added after the MoonRay size research) implemented
+2026-11-27: opt-in Deep Size Compact (surface depth merge, volume curve simplification,
+HALF alpha, ZBack = Z kept). Exact output byte-identical; Compact oracle suite 81/81;
+junkshop frame 2 full size 3.02 -> 0.82 GB. Remaining stages: merge surfaces during
+render, then hardening. Junkshop Volume 25%: spill 24.5 GB -> 0, wall 341 -> 195 s;
 100% at 32 spp: disk 467 -> 21.5 GB peak, 43.5 -> 34 min, deep_memory_mb 32768 ->
 16384, EXR byte-identical.
 

@@ -119,12 +119,38 @@ struct IntervalSample {
   int facing = 0; /* Nonzero only for a surface with unmixed provenance. */
 };
 
+/* Optional merge counters (compact output reports allowance rejections). */
+struct SurfaceMergeStatistics {
+  size_t groups = 0, rejected = 0, removed = 0;
+  double spent = 0; /* FLOAT alpha rounding charged to the allowance. */
+};
+
 /* Depth-domain approximation: only same-object, same-facing hard steps merge.
  * FLOAT alpha rounding spends the supplied remaining publication allowance.
  * Input is globally depth sorted; volumes and intervening objects are barriers. */
 std::vector<IntervalSample> merge_surface_depths(const std::vector<IntervalSample> &source,
                                                 double relative_tolerance,
-                                                double rounding_allowance);
+                                                double rounding_allowance,
+                                                SurfaceMergeStatistics *statistics = nullptr);
+
+/* Compact output: greedy bounded-error simplification of one final curve
+ * (one object in ID mode). Contiguous volume intervals of the same object
+ * merge into one constant-extinction interval that keeps the group's total
+ * optical depth exactly, so transmittance at every group end is unchanged and
+ * error does not accumulate along the ray. A group grows only while the
+ * transmittance error at its interior boundaries stays within the allowance
+ * and its alpha stays at or below max_alpha. Surface steps and gaps are kept.
+ * The result's exact whole-curve error (interval_curve_error) is measured; a
+ * curve that cannot be simplified within the allowance is returned unchanged
+ * with skipped set. */
+struct VolumeSimplification {
+  std::vector<IntervalSample> curve;
+  double error = 0; /* Exact measured curve error against the source. */
+  bool skipped = false;
+};
+VolumeSimplification simplify_volume_curve(const std::vector<IntervalSample> &source,
+                                           double allowance,
+                                           double max_alpha);
 
 /* Reference only: averages sample transmittance, then fits nonoverlapping
  * exponential intervals. Surface steps have front == back. Error is absolute

@@ -1870,6 +1870,10 @@ void Capture::begin_export_row(const int y) const
       exporting_ = true;
       next_export_y_ = height_ - 1;
     }
+    /* A same-capture validation companion exports the frame again; the
+     * reducer keeps its nodes for it (end_export_row skips release). */
+    if (retain_for_validation && next_export_y_ == -1 && !export_row_open_)
+      next_export_y_ = height_ - 1;
     if (export_row_open_ || y != next_export_y_)
       throw std::runtime_error("Deep export rows must be sequential Y-down");
   }

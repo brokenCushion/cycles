@@ -32,6 +32,8 @@ parser.add_argument('--deep-ids', action='store_true')
 parser.add_argument('--deep-error', default='0.001')
 parser.add_argument('--deep-z-tolerance', type=float, default=1e-4)
 parser.add_argument('--deep-samples', type=int, default=0)
+parser.add_argument('--deep-size', choices=('exact', 'compact'), default='exact',
+                    help='Deep Size; compact raises the scene surface depth tolerance to at least 1e-3')
 parser.add_argument('--fixed-sampling', action='store_true')
 parser.add_argument('--seed', type=int, help='Independent deep-off Monte Carlo control seed')
 parser.add_argument('--save-render-passes', action='store_true',
@@ -122,6 +124,12 @@ if args.deep:
         raise RuntimeError("This Blender does not include volume shader evaluation")
     scene.cycles.deep_error = error
     scene.cycles.deep_z_tolerance = args.deep_z_tolerance
+    if args.deep_size == 'compact':
+        if not hasattr(scene.cycles, 'deep_size'):
+            raise RuntimeError('This Blender does not include compact deep output')
+        scene.cycles.deep_size = 'COMPACT'
+    elif hasattr(scene.cycles, 'deep_size'):
+        scene.cycles.deep_size = 'EXACT'
     scene.cycles.deep_samples = args.deep_samples
     if hasattr(scene.cycles, "use_deep_ids"):
         scene.cycles.use_deep_ids = args.deep_ids
@@ -192,6 +200,10 @@ report = {
     'camera_scale': list(scene.camera.matrix_world.to_scale()),
     'pixel_aspect': [scene.render.pixel_aspect_x, scene.render.pixel_aspect_y],
 }
+if args.deep and args.deep_size == 'compact':
+    # Layers following the scene merge at the compact tolerance or more.
+    report['deep_size'] = 'compact'
+    report['deep_z_tolerance'] = max(args.deep_z_tolerance, 1e-3) if error else 0
 (directory/'settings.json').write_text(json.dumps(report, indent=2))
 start = time.monotonic()
 start_ns = time.time_ns()

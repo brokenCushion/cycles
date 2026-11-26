@@ -5,6 +5,8 @@
 #include "deep/reconstruction.h"
 #include "deep/volume.h"
 #include <OpenEXR/ImfForward.h>
+#include <atomic>
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <string>
@@ -16,6 +18,35 @@ struct ImageWindow {
 };
 
 enum class DeepCompression { None, Zips };
+
+/* Compact output counters, filled by the writers when SurfaceImage::compact
+ * is set. Counts are per file; errors are per-pixel maxima. Diagnostics only. */
+struct CompactStatistics {
+  std::atomic<uint64_t> pixels{0}, samples_in{0}, samples_out{0};
+  /* Surface depth merge: accepted groups, groups the allowance rejected, and
+   * samples removed by accepted groups. */
+  std::atomic<uint64_t> merge_groups{0}, merge_rejected{0}, merge_removed{0};
+  /* Volume curve simplification: intervals before/after, curves that could
+   * not be simplified within their allowance (kept unsimplified). */
+  std::atomic<uint64_t> volume_in{0}, volume_out{0}, volume_skipped{0};
+  /* Half alpha: pixels per rounding level (0 nearest, 1 error feedback,
+   * 2..4 feedback after splitting samples above alpha .45/.12/.03). */
+  std::atomic<uint64_t> half_level[5]{};
+  /* Maxima stored as IEEE bit patterns (nonnegative doubles order as uint). */
+  std::atomic<uint64_t> max_quantization{0}, max_merge{0}, max_half{0}, max_total{0};
+  void update(std::atomic<uint64_t> &slot, double value);
+  static double value(const std::atomic<uint64_t> &slot);
+};
+
+/* Static per-file compact decisions, made before any row is written. */
+struct CompactPlan {
+  bool enabled = false;
+  bool half = false;  /* HALF alpha channel; otherwise FLOAT. */
+  bool zback = true;  /* False: point-sample surface file, ZBack omitted (opt-in). */
+  double ledger = 0;  /* Per-pixel publication allowance all compact costs share. */
+  double half_reserve = 0;      /* Part of the ledger kept for half rounding. */
+  double volume_allowance = 0;  /* Volume simplification per-pixel allowance. */
+};
 
 struct SurfaceImage {
   ImageWindow display_window;
@@ -40,6 +71,14 @@ struct SurfaceImage {
    * Zero leaves synthetic/non-renderer callers responsible for their memory. */
   size_t volume_row_sample_limit = 0;
   int volume_export_workers = 1;
+  /* Opt-in compact output (surface merge as points, volume simplification,
+   * HALF alpha). False keeps exact bytes. */
+  bool compact = false;
+  /* Compact surface files write ZBack = Z on their point samples by default:
+   * Gaffer's DeepToFlat Range mode drops its flat ZBack output and Nuke's
+   * handling of a missing ZBack is unconfirmed. True omits the channel. */
+  bool compact_omit_zback = false;
+  CompactStatistics *compact_statistics = nullptr;
   /* Increasing image y, then x, starting at data_window.min. No implicit flip.
    * Each pixel contains strictly depth-sorted reconstructed point samples. */
   std::vector<std::vector<SurfaceSample>> pixels;
@@ -88,6 +127,15 @@ void write_deep_exr_rows(const std::filesystem::path &path,
                          const RowCallback &end_row = {});
 void write_deep_exr_rows(Imf::OStream &stream, const SurfaceImage &image, const RowProvider &row,
                          const RowCallback &begin_row = {}, const RowCallback &end_row = {});
+/* Plan for a surface (volume=false) or volume file. Throws on invalid error. */
+CompactPlan compact_plan(const SurfaceImage &image, bool volume);
+/* One log line describing the plan and counters. */
+std::string compact_summary(const CompactPlan &plan, const CompactStatistics &statistics);
+/* Round a sorted single curve's alphas to HALF (exposed for tests). level 0:
+ * nearest; 1: error feedback against the exact running transmittance; 2..4:
+ * feedback after splitting samples above alpha .45/.12/.03 exactly (intervals
+ * by depth, points into coincident copies). Samples rounding to 0 are dropped. */
+std::vector<IntervalSample> round_half_alpha(const std::vector<IntervalSample> &curve, int level);
 std::vector<SurfaceSample> reduce_surface(const std::vector<SurfaceSample> &source,
                                           double tolerance);
 

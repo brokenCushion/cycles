@@ -2,6 +2,7 @@
 #include "app/deep_output.h"
 #include "deep/exr_writer.h"
 #include "deep/publication.h"
+#include "util/log.h"
 #include <fstream>
 #include <iomanip>
 #include <limits>
@@ -26,6 +27,10 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
   image.volume_step_min = tile.volume_step_min();
   image.volume_step_max = tile.volume_step_max();
   image.z_tolerance = tile.z_tolerance();
+  image.compact = tile.compact();
+  deep::CompactStatistics compact_statistics;
+  if (image.compact)
+    image.compact_statistics = &compact_statistics;
   image.deep_samples = tile.sample_limit();
   image.object_manifest = tile.object_manifest();
   image.holdout_manifest = tile.holdout_manifest();
@@ -107,6 +112,11 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
       publication->publish();
     }
   };
+  const auto log_compact = [&] {
+    if (image.compact)
+      LOG_INFO_IMPORTANT << deep::compact_summary(deep::compact_plan(image, tile.volume),
+                                                  compact_statistics);
+  };
   if (tile.volume) {
     deep::write_volume_exr_pixels(path, image, [&](const int x, const int y) {
       check_cancel();
@@ -114,6 +124,7 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
       check_cancel();
       return pixel;
     }, check_cancel, begin_row, end_row);
+    log_compact();
     return;
   }
   deep::write_deep_exr_rows(
@@ -133,6 +144,7 @@ static void write_deep_tile(const OutputDriver::DeepTile &tile,
         return row;
       },
       check_cancel, begin_row, end_row);
+  log_compact();
 }
 DeepOutputDriver::DeepOutputDriver(const string_view beauty_path, const string_view pass,
                                     LogFunction log, const string_view deep_path,

@@ -92,6 +92,12 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
         options={'PATH_SUPPORTS_BLEND_RELATIVE'},
         description="Folder for temporary deep capture files, deleted when closed; blank uses CYCLES_DEEP_SPILL_DIR, then the system temp folder. Large volume renders need a drive with room",
     )
+    deep_size: EnumProperty(name="Deep Size", default='EXACT',
+        items=(('EXACT', "Exact", "Write every reconstructed sample with FLOAT channels"),
+               ('COMPACT', "Compact", "Smaller files within the same transmittance error: same-object surface "
+                "groups become point samples (layers that follow the scene use a surface depth tolerance of at "
+                "least 0.001), volume curves are simplified and alpha is HALF when the error budget allows")),
+        description="Exact keeps every sample; Compact makes much smaller deep files within the same error bound")
     deep_write_diagnostics: BoolProperty(
         name="Write Samples CSV", default=False,
         description="Write accepted camera samples for validation; can produce very large files",
@@ -219,6 +225,7 @@ class CYCLES_RENDER_PT_output_deep(CyclesButtonsPanel, Panel):
         self.layout.use_property_decorate = False
         self.layout.prop(context.scene.cycles, "deep_output_path")
         self.layout.prop(context.scene.cycles, "deep_spill_path")
+        self.layout.prop(context.scene.cycles, "deep_size")
         if (sum(layer.cycles.use_pass_deep for layer in context.scene.view_layers) > 1 and
                 "{view_layer}" not in context.scene.cycles.deep_output_path):
             self.layout.label(text="Add {view_layer} to avoid deep path collisions", icon='ERROR')
@@ -262,8 +269,12 @@ edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_
       params.deep.volume_shader_eval = false;
       params.deep.volume_step = 0;
     }
+    params.deep.compact = get_enum(cscene, "deep_size") == 1;
     if (get_enum(clayer, "deep_z_tolerance_mode") == 1)
       params.deep.z_tolerance = get_float(clayer, "deep_z_tolerance");
+    else if (params.deep.compact)
+      /* Compact: layers following the scene merge at 1e-3 or more; Custom wins. */
+      params.deep.z_tolerance = std::max(params.deep.z_tolerance, 1e-3f);
     params.deep.samples = get_int(cscene, "deep_samples");
     params.deep.ids = get_boolean(cscene, "use_deep_ids");
     params.deep.max_events = get_int(cscene, "deep_max_events");
@@ -310,6 +321,9 @@ edit('blender/output_driver.cpp', '#include "blender/output_driver.h"\n', '''#in
 #endif
 ''')
 edit('blender/output_driver.cpp', 'CCL_NAMESPACE_END', '''#ifdef WITH_CYCLES_DEEP_OPAQUE
+CCL_NAMESPACE_END
+#  include "util/log.h" /* Compact summary; kept inside the deep output block. */
+CCL_NAMESPACE_BEGIN
 void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
 {
   if (deep_path_.empty()) {
@@ -334,6 +348,13 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.object_manifest = tile.object_manifest();
   image.holdout_manifest = tile.holdout_manifest();
   image.ids = tile.ids();
+  image.compact = tile.compact();
+  /* Validation only: omit ZBack on compact surface files (default keeps ZBack = Z). */
+  const char *omit_zback = std::getenv("CYCLES_DEEP_COMPACT_OMIT_ZBACK");
+  image.compact_omit_zback = omit_zback && omit_zback[0] == '1';
+  deep::CompactStatistics compact_statistics;
+  if (image.compact)
+    image.compact_statistics = &compact_statistics;
   const auto check_cancel = [&] {
     if (tile.cancelled())
       throw std::runtime_error("Blender deep export cancelled; final file preserved");
@@ -446,9 +467,13 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
    * accepted-camera capture. This avoids adaptive GPU variation in the
    * depth-domain check and avoids rendering or capturing the scene twice. */
   const char *baseline = std::getenv("CYCLES_DEEP_Z_BASELINE");
-  if (baseline && baseline[0] && image.error && image.z_tolerance) {
+  if (baseline && baseline[0] && ((image.error && image.z_tolerance) || image.compact)) {
+    /* Compact validation compares against the exact same-capture file. */
     const float tolerance = image.z_tolerance;
+    const bool compact = image.compact;
     image.z_tolerance = 0;
+    image.compact = false;
+    image.compact_statistics = nullptr;
     const auto start = std::chrono::steady_clock::now();
     publish(baseline);
     const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
@@ -465,8 +490,15 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
     timing << "}";
     timing.close();
     image.z_tolerance = tolerance;
+    image.compact = compact;
+    if (compact)
+      image.compact_statistics = &compact_statistics;
   }
   publish(deep_path_);
+  if (image.compact)
+    LOG_INFO_IMPORTANT << deep::compact_summary(deep::compact_plan(image, tile.volume),
+                                                compact_statistics)
+                       << " layer=" << tile.layer;
 }
 #endif
 

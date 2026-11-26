@@ -11,6 +11,7 @@
 #include <OpenEXR/ImfPartType.h>
 #include <OpenEXR/ImfStringAttribute.h>
 #include <OpenEXR/OpenEXRConfig.h>
+#include <Imath/half.h>
 
 #include <algorithm>
 #include <climits>
@@ -20,6 +21,7 @@
 #include <iostream>
 #include <iterator>
 #include <limits>
+#include <map>
 #include <stdexcept>
 
 using namespace ccl::deep;
@@ -100,6 +102,269 @@ void surface_depth_merging(const std::filesystem::path &directory)
     }
   }
   std::cout << "PASS 1024-camera sloped surface, facing/object/volume barriers, span/header and alpha\n";
+}
+
+struct ReadPixel {
+  std::vector<float> z, back, a;
+  std::vector<uint32_t> id;
+};
+
+/* Read every pixel of a deep file as FLOAT (HALF converts on read). A file
+ * without ZBack reads ZBack = Z, as the OpenEXR deep specification states. */
+std::vector<ReadPixel> read_compact(const std::filesystem::path &path, Imf::Header *header_out = nullptr)
+{
+  Imf::DeepScanLineInputFile input(path.string().c_str(), 1);
+  const auto &header = input.header();
+  if (header_out) *header_out = header;
+  const auto dw = header.dataWindow();
+  const int width = dw.max.x - dw.min.x + 1, height = dw.max.y - dw.min.y + 1;
+  std::vector<unsigned> counts(size_t(width) * height);
+  Imf::DeepFrameBuffer fb;
+  fb.insertSampleCountSlice(Imf::Slice::Make(Imf::UINT, counts.data(), dw));
+  input.setFrameBuffer(fb);
+  input.readPixelSampleCounts(dw.min.y, dw.max.y);
+  std::vector<ReadPixel> pixels(counts.size());
+  std::vector<float *> z(counts.size()), back(counts.size()), a(counts.size());
+  std::vector<uint32_t *> id(counts.size());
+  const bool has_back = header.channels().findChannel("ZBack") != nullptr;
+  const bool has_id = header.channels().findChannel("id") != nullptr;
+  for (size_t p = 0; p < counts.size(); ++p) {
+    pixels[p].z.resize(counts[p]); pixels[p].back.resize(counts[p]); pixels[p].a.resize(counts[p]);
+    pixels[p].id.resize(counts[p]);
+    z[p] = pixels[p].z.data(); back[p] = pixels[p].back.data(); a[p] = pixels[p].a.data();
+    id[p] = pixels[p].id.data();
+  }
+  auto slice = [&](const char *name, auto &pointers, Imf::PixelType type, size_t size) {
+    const auto s = Imf::Slice::Make(type, pointers.data(), dw, sizeof(void *), width * sizeof(void *));
+    fb.insert(name, Imf::DeepSlice(type, s.base, s.xStride, s.yStride, size));
+  };
+  slice("Z", z, Imf::FLOAT, sizeof(float));
+  slice("A", a, Imf::FLOAT, sizeof(float));
+  if (has_back) slice("ZBack", back, Imf::FLOAT, sizeof(float));
+  if (has_id) slice("id", id, Imf::UINT, sizeof(uint32_t));
+  input.setFrameBuffer(fb);
+  input.readPixels(dw.min.y, dw.max.y);
+  if (!has_back)
+    for (auto &pixel : pixels) pixel.back = pixel.z;
+  return pixels;
+}
+
+void compact_output(const std::filesystem::path &directory)
+{
+  std::filesystem::create_directories(directory / "compact");
+  /* HALF rounding levels: nearest, feedback and exact splitting. */
+  {
+    std::vector<IntervalSample> curve;
+    double z = 10;
+    uint32_t state = 12345;
+    auto next = [&] { state = state * 1664525u + 1013904223u; return (state >> 8) / double(1 << 24); };
+    for (int i = 0; i < 400; ++i) {
+      const double a = i % 37 == 0 ? .5 + .4999 * next() : 1e-6 + .2 * next() * next();
+      curve.push_back({z, z, a, 0, 1});
+      z += .01 + next();
+    }
+    curve.push_back({z, z, .99987, 0, 1});
+    for (int level = 0; level < 5; ++level) {
+      const auto rounded = round_half_alpha(curve, level);
+      for (const auto &v : rounded)
+        require(float(Imath::half(float(v.alpha))) == float(v.alpha) && v.alpha > 0,
+                "HALF rounding produced a non-HALF or empty alpha");
+      const double error = interval_curve_error(curve, rounded);
+      if (level == 0) require(error <= std::ldexp(1.0, -11) * 1.001, "Nearest HALF exceeded u * opacity");
+      if (level == 1) require(error <= std::ldexp(1.0, -12) * 1.001, "Feedback HALF exceeded 2^-12");
+      if (level >= 2) {
+        require(error <= std::ldexp(1.0, -13) * 1.001, "Split feedback HALF exceeded 2^-13");
+        for (const auto &v : rounded) require(v.alpha <= .4502, "Split left a large alpha");
+      }
+    }
+    /* Interval splitting is exact in curve terms. */
+    const std::vector<IntervalSample> dense{{1, 2, .8, 0, 0}, {2, 3, .3, 0, 0}};
+    const auto split = round_half_alpha(dense, 4);
+    require(split.size() > 10 && interval_curve_error(dense, split) < 2e-5, "Interval split drifted");
+  }
+  /* Surface merge with the per-pixel ledger, points at the group front. */
+  {
+    SurfaceImage image{{0, 0, 2, 0}, {0, 0, 2, 0}};
+    image.error = 1e-3f;
+    image.z_tolerance = 1e-3f;
+    image.ids = true;
+    image.compact = true;
+    image.compression = DeepCompression::Zips;
+    image.object_manifest = {{0x11111111, "near"}, {0x22222222, "far"}};
+    CompactStatistics stats;
+    image.compact_statistics = &stats;
+    const auto f = [](double v) { return double(float(v)); };
+    const std::vector<std::vector<SurfaceSample>> row{
+        /* Three same-object hits within 1e-3 relative, then one more object. */
+        {{100.0, .2, 0, 1}, {f(100.03), .3, 0, 1}, {f(100.07), .1, 0, 1}, {150.0, .5, 1, 1}},
+        /* Another object between same-object hits is a barrier. */
+        {{100.0, .2, 0, 1}, {f(100.02), .3, 1, 1}, {f(100.04), .1, 0, 1}},
+        {}};
+    const auto plan = compact_plan(image, false);
+    require(plan.enabled && plan.half && plan.zback && plan.half_reserve >= 2.5e-4,
+            "Unexpected 1e-3 compact surface plan");
+    /* Default: ZBack kept and equal to Z on every (point) sample. */
+    const auto kept = directory / "compact" / "surface_ids_zback.exr";
+    write_deep_exr_rows(kept, image, [&](int) { return row; });
+    {
+      Imf::Header kept_header;
+      const auto kept_pixels = read_compact(kept, &kept_header);
+      require(kept_header.channels().findChannel("ZBack") != nullptr, "Default compact must keep ZBack");
+      for (const auto &pixel : kept_pixels)
+        require(pixel.back == pixel.z, "Compact surface ZBack must equal Z");
+    }
+    const auto stats_kept = stats.samples_out.load();
+    image.compact_omit_zback = true;
+    require(!compact_plan(image, false).zback, "Opt-in ZBack omission plan");
+    const auto path = directory / "compact" / "surface_ids.exr";
+    write_deep_exr_rows(path, image, [&](int) { return row; });
+    Imf::Header header;
+    const auto pixels = read_compact(path, &header);
+    require(stats.samples_out.load() == 2 * stats_kept, "ZBack choice changed the samples");
+    for (size_t p = 0; p < pixels.size(); ++p)
+      require(pixels[p].z == read_compact(kept)[p].z && pixels[p].a == read_compact(kept)[p].a,
+              "ZBack omission changed Z or A");
+    require(!header.channels().findChannel("ZBack") &&
+                header.channels().findChannel("A")->type == Imf::HALF &&
+                header.channels().findChannel("Z")->type == Imf::FLOAT,
+            "Compact surface channels must be Z FLOAT, A HALF, no ZBack");
+    require(header.typedAttribute<Imf::StringAttribute>("cycles:deepSize").value() == "compact" &&
+                header.typedAttribute<Imf::DoubleAttribute>("cycles:deepCompactZTolerance").value() ==
+                    double(1e-3f) &&
+                header.typedAttribute<Imf::DoubleAttribute>("cycles:maxTransmittanceError").value() ==
+                    double(1e-3f),
+            "Compact header attributes");
+    require(pixels[0].z.size() == 2 && pixels[0].z[0] == 100.0f && pixels[0].z[1] == 150.0f &&
+                pixels[0].id[0] == 0x11111111,
+            "Same-object group must be one point at its front depth");
+    const double product = 1 - .8 * .7 * .9;
+    require(std::abs(pixels[0].a[0] - product) <= std::ldexp(1.0, -12), "Group alpha is not the product");
+    require(pixels[1].z.size() == 3, "Merge crossed another object");
+    require(pixels[2].z.empty(), "Empty pixel gained samples");
+    require(stats.merge_groups == 2 && stats.merge_removed == 4 && stats.merge_rejected == 0 &&
+                stats.half_level[0] + stats.half_level[1] == 6,
+            "Compact surface statistics");
+    /* Final transmittance (outside every group) stays within the ledger. */
+    for (size_t p = 0; p < 2; ++p) {
+      double exact = 1, file = 1;
+      for (const auto &s : row[p]) exact *= 1 - s.alpha;
+      for (const float a : pixels[p].a) file *= 1 - double(a);
+      require(std::abs(exact - file) <= plan.ledger, "Flattened alpha outside the compact ledger");
+    }
+    /* Zero tolerance keeps every sample but still drops ZBack and halves alpha. */
+    image.z_tolerance = 0;
+    const auto zero = directory / "compact" / "surface_zero_tolerance.exr";
+    write_deep_exr_rows(zero, image, [&](int) { return row; });
+    require(read_compact(zero)[0].z.size() == 4, "Zero tolerance merged samples");
+    /* Exact mode keeps the legacy channels and no compact attributes. */
+    image.compact = false;
+    image.compact_statistics = nullptr;
+    const auto exact = directory / "compact" / "surface_exact.exr";
+    write_deep_exr_rows(exact, image, [&](int) { return row; });
+    Imf::Header exact_header;
+    read_compact(exact, &exact_header);
+    require(exact_header.channels().findChannel("ZBack") &&
+                exact_header.channels().findChannel("A")->type == Imf::FLOAT &&
+                !exact_header.findTypedAttribute<Imf::StringAttribute>("cycles:deepSize"),
+            "Exact mode changed channels or header");
+  }
+  /* A small error budget cannot absorb HALF: FLOAT alpha for the file. */
+  {
+    SurfaceImage image{{0, 0, 0, 0}, {0, 0, 0, 0}};
+    image.error = 1e-4f;
+    image.compact = true;
+    const auto plan = compact_plan(image, false);
+    image.compact_omit_zback = true;
+    require(plan.enabled && !plan.half, "1e-4 surfaces must keep FLOAT alpha");
+    const auto path = directory / "compact" / "surface_float_alpha.exr";
+    write_deep_exr_rows(path, image, [&](int) {
+      return std::vector<std::vector<SurfaceSample>>{{{5.0, .25, -1, 1}, {6.0, .5, -1, 1}}};
+    });
+    Imf::Header header;
+    const auto pixels = read_compact(path, &header);
+    require(header.channels().findChannel("A")->type == Imf::FLOAT &&
+                !header.channels().findChannel("ZBack") && pixels[0].a[0] == .25f,
+            "FLOAT-alpha compact file");
+    image.error = 0;
+    require(!compact_plan(image, false).half && !compact_plan(image, true).half &&
+                compact_plan(image, true).volume_allowance == 0,
+            "Strict compact must not simplify or use HALF");
+  }
+  /* Ledger rejections are counted. */
+  {
+    std::vector<IntervalSample> curve;
+    for (int i = 0; i < 64; ++i) {
+      const double z = 100 + i * 10;
+      curve.push_back({z, z, .123456789 + i * .00713, 0, 1});
+      curve.push_back({z + .01, z + .01, .3456789 - i * .00291, 0, 1});
+    }
+    SurfaceMergeStatistics stats;
+    const auto merged = merge_surface_depths(curve, 1e-3, 2e-7, &stats);
+    std::cout << "merge allowance 2e-7: groups " << stats.groups << " rejected " << stats.rejected
+              << " spent " << stats.spent << std::endl;
+    require(stats.groups > 0 && stats.rejected > 0 && stats.groups + stats.rejected == 64 &&
+                stats.spent <= 2e-7 && merged.size() == curve.size() - stats.removed,
+            "Merge allowance rejections not counted");
+  }
+  /* Volume writer: simplification + HALF alpha within the publication ledger. */
+  for (const bool ids : {false, true}) {
+    SurfaceImage image{{0, 0, 1, 0}, {0, 0, 1, 0}};
+    image.error = 1e-3f;
+    image.ids = ids;
+    image.compact = true;
+    image.object_manifest = {{0x33333333, "smoke"}, {0x44444444, "fog"}};
+    CompactStatistics stats;
+    image.compact_statistics = &stats;
+    std::vector<std::vector<IntervalSample>> source(2);
+    double z = 2;
+    for (int i = 0; i < 300; ++i) {
+      const double sigma = .02 + .015 * std::sin(i * .07);
+      source[0].push_back({z, z + .05, -std::expm1(-sigma * .05 * 10), ids ? i / 150 : -1, 0});
+      z += .05;
+    }
+    source[1] = {{3, 3.5, .1, ids ? 1 : -1, 0}, {3.5, 4, .2, ids ? 1 : -1, 0}};
+    const auto plan = compact_plan(image, true);
+    require(plan.half && plan.zback && std::abs(plan.volume_allowance - 9.99e-5) < 1e-10,
+            "Unexpected 1e-3 compact volume plan");
+    const auto path = directory / "compact" / (ids ? "volume_ids.exr" : "volume.exr");
+    write_volume_exr_pixels(path, image, [&](int x, int) { return source[x]; });
+    Imf::Header header;
+    const auto pixels = read_compact(path, &header);
+    require(header.channels().findChannel("ZBack") &&
+                header.channels().findChannel("A")->type == Imf::HALF,
+            "Compact volume keeps ZBack and uses HALF alpha");
+    for (size_t p = 0; p < 2; ++p) {
+      std::map<uint32_t, std::vector<IntervalSample>> curves;
+      for (size_t i = 0; i < pixels[p].z.size(); ++i)
+        curves[ids ? pixels[p].id[i] : 0].push_back(
+            {pixels[p].z[i], pixels[p].back[i], pixels[p].a[i], 0, 0});
+      double error = 0;
+      if (ids) {
+        std::map<int, std::vector<IntervalSample>> by_object;
+        for (const auto &v : source[p]) by_object[v.object].push_back(v);
+        for (auto &entry : by_object) {
+          const auto &file = curves[image.object_manifest[entry.first].first];
+          require(!file.empty(), "Object lost from compact ID volume");
+          error += interval_curve_error(entry.second, file);
+        }
+        require(curves.size() == by_object.size(), "Compact ID volume merged across objects");
+      }
+      else
+        error = interval_curve_error(source[p], curves[0]);
+      require(error <= plan.ledger, "Compact volume error outside the publication ledger");
+    }
+    std::cout << "compact volume " << (ids ? "ids" : "plain") << ": " << source[0].size() << " -> "
+              << pixels[0].z.size() << " samples; " << compact_summary(plan, stats) << std::endl;
+    /* ID curves are checked per object with their own prefix (conservative). */
+    require(pixels[0].z.size() < source[0].size() * (ids ? 9 : 5) / 10,
+            "Volume simplification did not reduce samples");
+    require(stats.volume_out < stats.volume_in && stats.pixels == 2 &&
+                stats.half_level[0] + stats.half_level[1] + stats.half_level[2] + stats.half_level[3] +
+                        stats.half_level[4] == 2,
+            "Compact volume statistics");
+  }
+  std::cout << "PASS compact output: HALF levels, surface merge points/ledger/rejections, "
+               "ZBack omission, FLOAT fallback, volume simplification and HALF ledger\n";
 }
 
 void volume_projection(const std::filesystem::path &directory)
@@ -629,6 +894,7 @@ int main(int argc, char **argv)
     require(argc == 2, "Usage: cycles_deep_exr_test OUTPUT_DIRECTORY");
     const std::filesystem::path directory(argv[1]);
     std::filesystem::create_directories(directory);
+    compact_output(directory);
     const auto source = ledgers();
     const auto base = fixture(source);
     std::filesystem::create_directories(directory / "settings");

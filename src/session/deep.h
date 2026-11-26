@@ -33,6 +33,10 @@ struct DeepSettings {
   /* Capture spill directory (temporary delete-on-close files); empty uses
    * CYCLES_DEEP_SPILL_DIR, then the system temp directory. */
   std::string spill_dir;
+  /* Compact output size (opt-in): surface groups as points, bounded volume
+   * curve simplification and HALF alpha, all within the existing error
+   * bound. False writes the exact files. */
+  bool compact = false;
 };
 
 class Scene;

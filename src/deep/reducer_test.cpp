@@ -371,6 +371,23 @@ int run_reducer_tests()
           std::cout << "identity samples=" << samples << " error=" << error << " ids=" << ids
                     << std::endl;
         }
+    /* 1b. A same-capture validation companion (compact output baseline)
+     * exports the reduced frame twice; both passes are identical. */
+    {
+      const Fixture f = make_fixture(3, 2, 40, 1e-3f, false, 4242);
+      auto reference = make_capture(f, false, true);
+      feed(*reference, f, Order::Forward, 0);
+      check(reference->finalize());
+      const Image expected = export_image(*reference);
+      auto online = make_capture(f, true, false);
+      online->retain_for_validation = true;
+      feed(*online, f, Order::Shuffled, 77);
+      check(online->finalize());
+      check(identical(export_image(*online), expected));
+      check(identical(export_image(*online), expected));
+      ++identity_cases;
+      std::cout << "validation companion: two reduced export passes identical" << std::endl;
+    }
     /* 2. Eviction to the node stream, reload, compaction at pass ends and a
      * cancelled compaction keep bytes identical. */
     for (const int samples : {17, 40}) {

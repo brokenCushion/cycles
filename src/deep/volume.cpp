@@ -19,7 +19,8 @@
 namespace ccl::deep {
 std::vector<IntervalSample> merge_surface_depths(const std::vector<IntervalSample> &source,
                                                 const double tolerance,
-                                                const double allowance)
+                                                const double allowance,
+                                                SurfaceMergeStatistics *statistics)
 {
   if (!std::isfinite(tolerance) || tolerance < 0 || !std::isfinite(allowance) || allowance < 0)
     throw std::invalid_argument("Invalid surface depth merging allowance");
@@ -56,9 +57,15 @@ std::vector<IntervalSample> merge_surface_depths(const std::vector<IntervalSampl
       if (rounding + cost <= allowance) {
         result.push_back({first.front, source[end - 1].back, alpha, first.object, first.facing});
         rounding += cost;
+        if (statistics) {
+          statistics->groups++;
+          statistics->removed += end - i - 1;
+          statistics->spent = rounding;
+        }
         i = end;
         continue;
       }
+      if (statistics) statistics->rejected++;
       /* Keep a rejected group exact; retrying every suffix would be quadratic. */
       result.insert(result.end(), source.begin() + i, source.begin() + end);
       i = end;
@@ -459,6 +466,84 @@ std::vector<IntervalSample> reduce_interval_curve(const std::vector<IntervalSamp
     }
     prefix *= 1-next.alpha;
   }
+  return result;
+}
+
+VolumeSimplification simplify_volume_curve(const std::vector<IntervalSample> &source,
+                                           const double allowance,
+                                           const double max_alpha)
+{
+  validate_curve(source);
+  if (!std::isfinite(allowance) || allowance < 0 || allowance > 1e-2 || !(max_alpha > 0) ||
+      max_alpha > max_interval_alpha)
+    throw std::invalid_argument("Invalid volume simplification allowance");
+  VolumeSimplification result;
+  if (allowance == 0 || source.size() < 2) {
+    result.curve = source;
+    return result;
+  }
+  const double max_tau = -std::log1p(-max_alpha);
+  /* Each extension rechecks every interior boundary of its group; bound the
+   * quadratic cost per group. Groups end exactly where they started anyway. */
+  constexpr size_t max_group = 256;
+  std::vector<double> cumulative;
+  /* The greedy test samples interior boundaries; the exact check below also
+   * covers interior extrema, so leave headroom and tighten on a miss. */
+  for (double target = 0.9 * allowance; target >= allowance * 0.05; target *= 0.25) {
+    std::vector<IntervalSample> curve;
+    curve.reserve(source.size());
+    double prefix = 1;
+    for (size_t i = 0; i < source.size();) {
+      const auto &first = source[i];
+      if (first.front == first.back) {
+        curve.push_back(first);
+        prefix *= 1 - first.alpha;
+        ++i;
+        continue;
+      }
+      cumulative.assign(1, -std::log1p(-first.alpha));
+      size_t end = i + 1;
+      while (end < source.size() && end - i < max_group) {
+        const auto &next = source[end];
+        if (next.front != source[end - 1].back || !(next.front < next.back) ||
+            next.object != first.object)
+          break;
+        const double total = cumulative.back() - std::log1p(-next.alpha);
+        if (total > max_tau)
+          break;
+        const double span = next.back - first.front;
+        bool fits = true;
+        for (size_t k = i; k < end && fits; ++k) {
+          const double estimate = total * (source[k].back - first.front) / span;
+          const double error = prefix * std::abs(std::exp(-cumulative[k - i]) - std::exp(-estimate));
+          fits = error <= target;
+        }
+        if (!fits)
+          break;
+        cumulative.push_back(total);
+        ++end;
+      }
+      if (end == i + 1)
+        curve.push_back(first);
+      else
+        curve.push_back({first.front, source[end - 1].back, -std::expm1(-cumulative.back()),
+                         first.object, 0});
+      prefix *= std::exp(-cumulative.back());
+      i = end;
+    }
+    if (curve.size() == source.size()) {
+      result.curve = source;
+      return result;
+    }
+    const double error = interval_curve_error(source, curve);
+    if (error <= allowance) {
+      result.curve = std::move(curve);
+      result.error = error;
+      return result;
+    }
+  }
+  result.curve = source;
+  result.skipped = true;
   return result;
 }
 

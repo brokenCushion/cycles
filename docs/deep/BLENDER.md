@@ -35,6 +35,13 @@ Blender preferences.
    **Output > Output > Deep > Spill Directory** to a drive with room (blank uses
    `CYCLES_DEEP_SPILL_DIR`, then %TEMP%). Procedural volumes and surfaces still spill
    raw data. Turning on per-sample diagnostics keeps the old raw spill too.
+8. For smaller files set **Output > Output > Deep > Deep Size** to Compact. It keeps the
+   same transmittance error: same-object surface groups become point samples (layers
+   set to Scene use a surface depth tolerance of at least 0.001; Custom keeps your
+   value, so hair layers at 0 are unchanged), volume curves are simplified, and alpha
+   is HALF when the error allows. Layers with no volumes should set the layer's Deep
+   **Volume** to Off to get the smaller surface format. Junkshop frame 2 full size:
+   3.02 GB Exact, 0.82 GB Compact.
 
 **Render in the background** (interactive F12 deep rendering is experimental):
 

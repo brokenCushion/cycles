@@ -79,6 +79,7 @@ class OutputDriver {
     virtual float volume_step_min() const { return 0; }
     virtual float volume_step_max() const { return 0; }
     virtual float z_tolerance() const { return 0; }
+    virtual bool compact() const { return false; }
     virtual bool ids() const { return false; }
     virtual int sample_limit() const { return 0; }
     virtual std::vector<std::pair<uint32_t, std::string>> object_manifest() const { return {}; }

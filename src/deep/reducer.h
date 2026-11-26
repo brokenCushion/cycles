@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
 
+#include "deep/reconstruction.h"
+
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -10,6 +12,7 @@
 #include <mutex>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace ccl::deep {
@@ -108,6 +111,9 @@ class PixelReducer {
                ReducerIo io,
                ReducerPolicy &policy);
   ~PixelReducer();
+  /* Resident pixel state and locks; the constructor requires it to fit half
+   * of ram_limit (callers may fall back to another path when it does not). */
+  static uint64_t fixed_bytes(int width, int height);
   PixelReducer(const PixelReducer &) = delete;
   PixelReducer &operator=(const PixelReducer &) = delete;
 
@@ -210,6 +216,104 @@ class PixelReducer {
   uint64_t compaction_threshold_ = uint64_t(64) * 1024 * 1024;
   mutable std::atomic<uint64_t> raw_written_{0}, stored_written_{0}, read_bytes_{0},
       evicted_{0}, reloaded_{0}, compactions_{0}, merges_{0}, merge_ns_{0}, file_peak_{0};
+};
+
+/* One captured surface event of a camera sample (FLOAT capture values). */
+struct SurfaceEventRecord {
+  float depth = 0, alpha = 0;
+  int32_t object = -1;
+  int8_t facing = 0;
+};
+
+/* Online surface accumulator (bounded surface capture). Per pixel it keeps the
+ * running sum curve S(z) = sum_s T_s(z) as sorted breakpoints, one per
+ * reconstruct() group key (depth, plus object with IDs). Each breakpoint holds
+ * the compensated (Kahan) partial sum of the folded samples' transmittance in
+ * sample order, so folding samples 0..N-1 in order performs exactly the
+ * floating-point operations of reconstruct(): every exported depth, alpha,
+ * object and facing is bit-identical when no capacity merge happens.
+ *
+ * Kahan summation is order dependent, so samples fold strictly in sample
+ * order. As PixelReducer payloads: a node starting at sample 0 holds the folded
+ * state; any other node holds its samples' raw sorted events. Combining a
+ * prefix with its right sibling folds the sibling's samples; other combines
+ * concatenate. The result depends only on which samples arrived.
+ *
+ * Capacity: when a pixel exceeds `capacity` breakpoints it merges adjacent
+ * breakpoints of one object with equal nonzero facing (the merge_surface_depths
+ * rule), each merge moving one step onto its neighbour with err = err_a +
+ * err_b + cost, accepted only while err <= budget * folded samples. Pairs
+ * within the depth tolerance (group diameter <= z_tolerance * front) go
+ * first and keep the front; otherwise the smaller step moves (min cost).
+ * Exported T error is at most max(err) / N <= budget. A pixel with no legal
+ * merge (or budget 0) keeps growing and stays exact. */
+struct SurfaceAccumulatorSettings {
+  bool ids = false;
+  size_t capacity = 4096;
+  double budget = 0;      /* Per-sample absolute T allowance for ledger merges. */
+  double z_tolerance = 0; /* Relative depth tolerance for preferred merges; 0 disables. */
+};
+
+struct SurfaceAccumulatorStatistics {
+  std::atomic<uint64_t> folded{0}, capacity_merges{0}, depth_merges{0}, overflow_folds{0};
+  std::atomic<uint64_t> max_breakpoints{0};
+  std::atomic<uint64_t> max_ledger{0}; /* IEEE bits of max exported err / N. */
+  void raise(std::atomic<uint64_t> &slot, uint64_t value);
+  void raise(std::atomic<uint64_t> &slot, double value);
+  static double value(const std::atomic<uint64_t> &slot);
+};
+
+class SurfaceAccumulator {
+ public:
+  struct Breakpoint {
+    float depth = 0;
+    float span = 0; /* Deepest original depth merged into this breakpoint. */
+    int32_t object = -1;
+    int8_t facing = 0;
+    bool mixed = false; /* Events of the key disagree on object or facing. */
+    double value = 0, correction = 0; /* Kahan state over folded samples. */
+    double err = 0;                   /* Ledger in sum units (merges only). */
+  };
+  struct State {
+    uint32_t count = 0;  /* Folded samples. */
+    bool merged = false; /* Any merge happened: err/span are encoded. */
+    std::vector<Breakpoint> points;
+  };
+  struct Result {
+    std::vector<SurfaceSample> samples;
+    double ledger = 0; /* Max exported T error bound, max(err) / N. */
+    uint32_t count = 0;
+    size_t breakpoints = 0;
+  };
+
+  /* Leaf payload of one camera sample. Drops alpha <= 0 events (they form no
+   * reconstruct() boundary) and sorts the rest in reconstruct() order. */
+  static std::vector<unsigned char> encode_sample(std::vector<SurfaceEventRecord> events,
+                                                  bool ids);
+  /* PixelReducer combine: fold when parent.k == 0, else concatenate. */
+  static std::vector<unsigned char> combine(const NodeKey &parent,
+                                            const unsigned char *left,
+                                            size_t left_bytes,
+                                            const unsigned char *right,
+                                            size_t right_bytes,
+                                            const SurfaceAccumulatorSettings &settings,
+                                            SurfaceAccumulatorStatistics *statistics);
+  /* Export: nodes in ascending sample order covering [0, population). Returns
+   * reconstruct()'s samples (bit-identical without merges) and the ledger. */
+  static Result finish(const std::vector<std::pair<const unsigned char *, size_t>> &nodes,
+                       uint32_t population,
+                       const SurfaceAccumulatorSettings &settings,
+                       SurfaceAccumulatorStatistics *statistics);
+  /* Payload helpers (tests): folded state of a payload and its encoding. */
+  static State decode_state(const unsigned char *data, size_t bytes,
+                            const SurfaceAccumulatorSettings &settings,
+                            SurfaceAccumulatorStatistics *statistics);
+  static std::vector<unsigned char> encode_state(const State &state);
+  /* Fold one sample's sorted events (as stored in a leaf) into the state. */
+  static void fold(State &state, const SurfaceEventRecord *events, size_t count,
+                   const SurfaceAccumulatorSettings &settings,
+                   SurfaceAccumulatorStatistics *statistics);
+  static std::vector<SurfaceSample> curve(const State &state, bool ids);
 };
 
 }  // namespace ccl::deep

@@ -15,7 +15,16 @@ Stage 3 (compact deep output, added after the MoonRay size research) implemented
 2026-11-27: opt-in Deep Size Compact (surface depth merge, volume curve simplification,
 HALF alpha, ZBack = Z kept). Exact output byte-identical; Compact oracle suite 81/81;
 junkshop frame 2 full size 3.02 -> 0.82 GB. Remaining stages: merge surfaces during
-render, then hardening. Junkshop Volume 25%: spill 24.5 GB -> 0, wall 341 -> 195 s;
+render, then hardening.
+Stage 4 (merge surfaces during render) implemented 2026-11-27: numeric surface layers
+with more than 8 samples fold each camera sample into a per-pixel running sum curve at
+ingest (SurfaceAccumulator over the Stage 2 PixelReducer), reproducing reconstruct()
+bit for bit; Exact and Compact output byte-identical to Stage 3, regression PASS.
+Capacity merges (default 4096 breakpoints) charge a ledger <= E-F (none in Compact or
+--deep-reduce). Strict, <=8 samples and CYCLES_DEEP_SURFACE_REDUCE=0 keep raw spill.
+Exact mode keeps one ~25 B breakpoint per distinct depth, so it removes the index and
+records but not the events. Junkshop Girl 25%: spill 394 MB -> 0. GPU folding is
+serial on the host consume thread (Stage 5). Junkshop Volume 25%: spill 24.5 GB -> 0, wall 341 -> 195 s;
 100% at 32 spp: disk 467 -> 21.5 GB peak, 43.5 -> 34 min, deep_memory_mb 32768 ->
 16384, EXR byte-identical.
 

@@ -77,6 +77,30 @@ class Capture {
   {
     return !reducer_ || retain_samples_;
   }
+  /* Numeric surface spill captures accumulate each pixel's running sum curve
+   * at ingest (SurfaceAccumulator): no per-sample spill, exported bytes equal
+   * reconstruct() of the raw records while no capacity merge happens. With
+   * retain_samples (records/diagnostics) the raw spill is also kept. Strict
+   * surfaces, 8 or fewer samples and CYCLES_DEEP_SURFACE_REDUCE=0 keep the
+   * raw path only;
+   * CYCLES_DEEP_SURFACE_CAPACITY sets the per-pixel breakpoint capacity
+   * (default 4096). */
+  bool surface_reducing() const
+  {
+    return bool(surface_policy_);
+  }
+  /* The standalone writer applies --deep-reduce (spending E - F): surface
+   * capacity merges then get no T allowance. Set before rendering. */
+  bool export_reduce = false;
+  /* T allowance per accepted sample for surface ledger merges: E - F when the
+   * writer spends only F (exact numeric output), else 0 (compact/reduce,
+   * whose writers spend up to E themselves). */
+  double surface_merge_budget() const;
+  SurfaceAccumulatorSettings surface_settings() const;
+  const SurfaceAccumulatorStatistics &surface_statistics() const
+  {
+    return surface_statistics_;
+  }
   /* Between render passes (workers joined): compact node streams, enforce the
    * reducer memory share. Errors are recorded as capture failures. */
   void end_pass(const std::function<bool()> &cancelled = {});
@@ -374,6 +398,13 @@ class Capture {
   void record_reduced(size_t pixel, uint32_t sample, const KernelDeepResult &result,
                       const KernelDeepEvent *events, const KernelDeepDensity *density);
   std::vector<IntervalSample> reconstruct_reduced_pixel(int x, int y) const;
+  std::vector<SurfaceSample> reconstruct_surface_pixel(int x, int y) const;
+  /* Online surface accumulation (see surface_reducing()). */
+  class SurfacePolicy;
+  friend class SurfacePolicy;
+  std::unique_ptr<SurfacePolicy> surface_policy_;
+  size_t surface_capacity_ = 4096;
+  mutable SurfaceAccumulatorStatistics surface_statistics_;
   static void histogram_record(Histogram &histogram, size_t n);
   mutable std::atomic<int> error_{0};
   std::atomic<KernelDeepError> failure_{DEEP_ERROR_NONE};
@@ -384,6 +415,7 @@ class Capture {
   mutable std::mutex error_mutex_;
   /* Written once, before error_ is published. */
   mutable std::string error_detail_;
+  mutable std::string incomplete_detail_; /* error_message() text for incomplete reducers. */
   void set_error(Error error, const std::string &detail = std::string()) const;
 };
 }  // namespace ccl::deep

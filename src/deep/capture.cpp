@@ -360,6 +360,26 @@ class Capture::VolumePolicy final : public ReducerPolicy {
   const Capture &capture_;
 };
 
+/* Surface payloads: prefix nodes fold, other nodes concatenate raw samples. */
+class Capture::SurfacePolicy final : public ReducerPolicy {
+ public:
+  explicit SurfacePolicy(const Capture &capture) : capture_(capture) {}
+  std::vector<unsigned char> combine(const size_t,
+                                     const NodeKey &parent,
+                                     const unsigned char *left,
+                                     const size_t left_bytes,
+                                     const unsigned char *right,
+                                     const size_t right_bytes) override
+  {
+    return SurfaceAccumulator::combine(parent, left, left_bytes, right, right_bytes,
+                                       capture_.surface_settings(),
+                                       &capture_.surface_statistics_);
+  }
+
+ private:
+  const Capture &capture_;
+};
+
 Capture::Band::~Band()
 {
   if (index)
@@ -559,7 +579,27 @@ Capture::Capture(const int width,
      * when per-sample records are requested (or reduction is disabled). */
     const bool reduce_volume = volume_grid && samples > 8 &&
                                CYCLES_DEEP_ENV("CYCLES_DEEP_VOLUME_REDUCE") != "0";
-    const bool raw_spill = !reduce_volume || retain_samples;
+    /* Numeric surfaces accumulate online; requested per-sample records keep
+     * the raw spill next to it (as for volumes), export reads the curve.
+     * Strict surfaces keep the raw path (no merge allowance, and the raw path
+     * is their byte-identity reference); so do 8 or fewer samples, whose raw
+     * list is already bounded (as for volumes). The reducer's resident pixel
+     * state must fit half its share; otherwise the raw path is used. */
+    const size_t surface_share = retain_samples ? spill_memory_bytes_ / 2 : spill_memory_bytes_;
+    bool reduce_surface = !volume && error > 0 && samples > 8 &&
+                          CYCLES_DEEP_ENV("CYCLES_DEEP_SURFACE_REDUCE") != "0" &&
+                          PixelReducer::fixed_bytes(width, height) <= surface_share / 2;
+    if (reduce_surface) {
+      const std::string capacity = CYCLES_DEEP_ENV("CYCLES_DEEP_SURFACE_CAPACITY");
+      if (!capacity.empty()) {
+        char *end = nullptr;
+        const unsigned long long value = std::strtoull(capacity.c_str(), &end, 10);
+        if (*end || value < 2 || value > 1000000)
+          throw std::invalid_argument("CYCLES_DEEP_SURFACE_CAPACITY must be 2..1000000 breakpoints");
+        surface_capacity_ = size_t(value);
+      }
+    }
+    const bool raw_spill = !(reduce_volume || reduce_surface) || retain_samples;
     retain_samples_ = raw_spill;
     for (int y = 0; y < height; y += rows_per_band_) {
       bands_.push_back(std::make_unique<Band>());
@@ -602,6 +642,11 @@ Capture::Capture(const int width,
       make_reducer(raw_spill ? spill_memory_bytes_ / 2 : spill_memory_bytes_,
                    error_budget(error).reconstruction / (2 * reduction_levels_));
     }
+    if (reduce_surface) {
+      /* The ledger lives in the payload; the reducer's per-level step is 0. */
+      surface_policy_ = std::make_unique<SurfacePolicy>(*this);
+      make_reducer(surface_share, 0);
+    }
     return;
   }
   if (count > (max_bytes - population_bytes) / stride_)
@@ -623,9 +668,10 @@ void Capture::make_reducer(const size_t ram, const double step)
   };
   io.written = [this](const uint64_t bytes) { spill_written(bytes); };
   reducer_.reset();
+  ReducerPolicy &policy = volume_policy_ ? static_cast<ReducerPolicy &>(*volume_policy_) :
+                                           static_cast<ReducerPolicy &>(*surface_policy_);
   reducer_ = std::make_unique<PixelReducer>(width_, height_, rows_per_band_, uint32_t(samples_),
-                                            ram, step, compression_, std::move(io),
-                                            *volume_policy_);
+                                            ram, step, compression_, std::move(io), policy);
 }
 
 void Capture::open_diagnostics(const std::string &path)
@@ -700,7 +746,9 @@ std::string Capture::reducer_summary() const
     return std::string();
   const auto s = reducer_->statistics();
   std::ostringstream out;
-  out << "levels=" << reduction_levels_ << " merges=" << s.merges
+  if (surface_policy_)
+    out << "kind=surface ";
+  out << "levels=" << (surface_policy_ ? 0 : reduction_levels_) << " merges=" << s.merges
       << " merge_worker_seconds=" << s.merge_seconds << " ram_bytes=" << s.ram_bytes
       << " ram_peak=" << s.ram_peak << " ram_limit=" << s.ram_limit
       << " node_file_bytes=" << s.file_bytes << " node_live_file_bytes=" << s.live_file_bytes
@@ -708,6 +756,15 @@ std::string Capture::reducer_summary() const
       << " node_stored_written=" << s.stored_written << " node_read_bytes=" << s.file_read_bytes
       << " evicted=" << s.evicted_nodes << " reloaded=" << s.reloaded_nodes
       << " compactions=" << s.compactions << " raw_samples=" << (retain_samples_ ? 1 : 0);
+  if (surface_policy_) {
+    const auto &a = surface_statistics_;
+    out << " surface_capacity=" << surface_capacity_ << " surface_budget=" << surface_merge_budget()
+        << " folded=" << a.folded.load() << " max_breakpoints=" << a.max_breakpoints.load()
+        << " capacity_merges=" << a.capacity_merges.load()
+        << " depth_merges=" << a.depth_merges.load()
+        << " overflow_folds=" << a.overflow_folds.load()
+        << " max_ledger=" << SurfaceAccumulatorStatistics::value(a.max_ledger);
+  }
   return out.str();
 }
 void Capture::decode_index(const size_t index, size_t &pixel, uint32_t &sample) const
@@ -1207,7 +1264,7 @@ const char *base_error_message(const int error, const KernelDeepError failure)
     case 6: /* SPILL_SPACE */
       return "deep spill disk space is insufficient";
     case 7: /* REDUCTION */
-      return "deep volume reduction failed";
+      return "deep online reduction failed";
     case 1:
       return "camera sample outside capture bounds";
     case 2:
@@ -1381,6 +1438,47 @@ void Capture::record_reduced(const size_t pixel,
       return;
   }
   const int x = int(pixel % width_), y = int(pixel / width_);
+  if (surface_policy_) {
+    try {
+      /* build_volume_sample's surface events (FLOAT values kept): events
+       * behind the nearest opaque surface are dropped. Zero-alpha events are
+       * removed and the rest sorted in reconstruct() order by the encoder. */
+      float opaque = std::numeric_limits<float>::infinity();
+      for (unsigned i = 0; i < result.count; ++i)
+        if (deep_event_type(events[i]) == DEEP_SURFACE && events[i].surface_alpha == 1)
+          opaque = std::min(opaque, events[i].front);
+      std::vector<SurfaceEventRecord> leaf;
+      leaf.reserve(result.count);
+      for (unsigned i = 0; i < result.count; ++i) {
+        const KernelDeepEvent &event = events[i];
+        if (event.front > opaque)
+          continue;
+        const int object = int(deep_event_object(event));
+        if (ids() && size_t(object) >= object_manifest.size())
+          throw std::runtime_error("Deep event object outside manifest");
+        leaf.push_back({event.front, event.surface_alpha, int32_t(object),
+                        int8_t(int(event.optical_depth))});
+      }
+      reducer_->add(pixel, sample, SurfaceAccumulator::encode_sample(std::move(leaf), ids()));
+      if (!retain_samples_)
+        ++completed_;
+    }
+    catch (const DuplicateSample &error) {
+      set_error(DUPLICATE, std::string("surface accumulator, ") + error.what());
+    }
+    catch (const SpaceError &error) {
+      set_error(SPILL_SPACE, error.what());
+    }
+    catch (const ReducerIoError &error) {
+      set_error(IO_ERROR, error.what());
+    }
+    catch (const std::exception &error) {
+      set_error(REDUCTION, std::string("surface accumulator at pixel ") + std::to_string(x) +
+                               "," + std::to_string(y) + ", sample " + std::to_string(sample) +
+                               ": " + error.what());
+    }
+    return;
+  }
   try {
     /* The export-time leaf: density allowance halved for the one-ray fit,
      * which runs in strict mode (as reconstruct_volume_pixel does). */
@@ -1444,8 +1542,11 @@ VolumeCameraSample Capture::volume_sample(const int x, const int y, const int sa
     throw std::out_of_range("Deep camera sample outside population");
   if (!retains_samples())
     throw std::runtime_error(
-        "Per-sample deep volume records are not retained by the online reducer; request "
-        "diagnostic records before rendering or set CYCLES_DEEP_VOLUME_REDUCE=0");
+        surface_policy_ ?
+            "Per-sample deep surface records are not retained by the online accumulator; request "
+            "diagnostic records before rendering or set CYCLES_DEEP_SURFACE_REDUCE=0" :
+            "Per-sample deep volume records are not retained by the online reducer; request "
+            "diagnostic records before rendering or set CYCLES_DEEP_VOLUME_REDUCE=0");
   KernelDeepResult result{};
   thread_local std::unordered_map<const Capture *, std::weak_ptr<ReadScratch>> cache;
   auto scratch = cache[this].lock();
@@ -1884,7 +1985,8 @@ void Capture::begin_export_row(const int y) const
     if (bytes > reducer_->ram_limit()) {
       const uint64_t share = retain_samples_ ? 2 : 1;
       throw std::runtime_error(
-          "Deep volume export row nodes exceed --deep-memory-mb budget: row y=" +
+          std::string(surface_policy_ ? "Deep surface" : "Deep volume") +
+          " export row nodes exceed --deep-memory-mb budget: row y=" +
           std::to_string(y) + " needs " + std::to_string(bytes) + " bytes, reducer share " +
           std::to_string(reducer_->ram_limit()) + " bytes; minimum deep_memory_mb " +
           std::to_string((8 * share * bytes + population_bytes_ + reserved_bytes_ + mebibyte - 1) /
@@ -1985,7 +2087,33 @@ const char *Capture::error_message() const
       return error_detail_.c_str();
     return base_error_message(error, failure_.load());
   }
-  return finalize() ? "" : "camera capture is incomplete";
+  if (finalize())
+    return "";
+  if (!reducer_ || retain_samples_)
+    return "camera capture is incomplete";
+  /* Online reducers keep no per-sample index: name the first incomplete pixel. */
+  size_t expected = count_;
+  if (adaptive()) {
+    expected = 0;
+    for (const uint32_t n : populations_)
+      expected += n;
+  }
+  std::string detail = "camera capture is incomplete: accepted " +
+                       std::to_string(completed_.load()) + " of " + std::to_string(expected) +
+                       " camera samples";
+  for (size_t pixel = 0; pixel < size_t(width_) * height_; ++pixel) {
+    const uint32_t population = adaptive() ? populations_[pixel] : uint32_t(samples_);
+    if (!reducer_->complete(pixel, population)) {
+      detail += "; first incomplete pixel " + std::to_string(pixel % width_) + "," +
+                std::to_string(pixel / width_) + " accepted " +
+                std::to_string(reducer_->accepted(pixel)) + " of population " +
+                std::to_string(population);
+      break;
+    }
+  }
+  const std::lock_guard<std::mutex> lock(error_mutex_);
+  incomplete_detail_ = detail;
+  return incomplete_detail_.c_str();
 }
 float Capture::value(const int x, const int y, const int sample) const
 {
@@ -2006,6 +2134,8 @@ std::vector<SurfaceSample> Capture::reconstruct_pixel(const int x, const int y) 
 {
   if (error_.load() != NONE)
     throw std::runtime_error(error_message());
+  if (surface_policy_)
+    return reconstruct_surface_pixel(x, y);
   PixelLedger ledger{x, y, {}};
   for (int sample = 0; sample < population(x, y); ++sample)
     ledger.samples.push_back({uint64_t(sample), 1, true, events(x, y, sample)});
@@ -2068,6 +2198,58 @@ VolumeCameraSample Capture::combine_volume(VolumeCameraSample left,
     histogram_record(level_histogram_[level], curve.size());
   }
   return curve_sample(curve, id, weight);
+}
+double Capture::surface_merge_budget() const
+{
+  /* The exact writer spends at most F = 1e-6 (FLOAT export and its z
+   * tolerance rounding) against the exported curve, so merges may use E - F.
+   * Compact and --deep-reduce writers spend up to E themselves. */
+  if (compact || export_reduce || error_setting_ == 0)
+    return 0;
+  return std::max(0.0, error_budget(error_setting_).effective - 1e-6);
+}
+SurfaceAccumulatorSettings Capture::surface_settings() const
+{
+  SurfaceAccumulatorSettings settings;
+  settings.ids = ids_;
+  settings.capacity = surface_capacity_;
+  settings.budget = surface_merge_budget();
+  settings.z_tolerance = error_setting_ ? double(z_tolerance) : 0.0;
+  return settings;
+}
+std::vector<SurfaceSample> Capture::reconstruct_surface_pixel(const int x, const int y) const
+{
+  ExportTimer pixel_timer{&export_statistics, ExportStatistics::Pixel};
+  const size_t pixel = size_t(y) * width_ + x;
+  const uint32_t cameras = uint32_t(population(x, y));
+  if (!reducer_->complete(pixel, cameras))
+    throw std::runtime_error("Deep surface accumulator is incomplete at pixel " +
+                             std::to_string(x) + "," + std::to_string(y) + ": accepted " +
+                             std::to_string(reducer_->accepted(pixel)) + " of population " +
+                             std::to_string(cameras) +
+                             " camera samples (nodes must cover samples 0.." +
+                             std::to_string(cameras ? cameras - 1 : 0) + " exactly)");
+  thread_local std::vector<PixelReducer::ExportNode> nodes;
+  thread_local std::vector<std::vector<unsigned char>> scratch;
+  {
+    ExportTimer timer{&export_statistics, ExportStatistics::Read};
+    reducer_->export_nodes(pixel, nodes, scratch);
+  }
+  std::vector<std::pair<const unsigned char *, size_t>> payloads;
+  payloads.reserve(nodes.size());
+  for (const auto &node : nodes)
+    payloads.emplace_back(node.payload, node.bytes);
+  try {
+    return SurfaceAccumulator::finish(payloads, cameras, surface_settings(), &surface_statistics_)
+        .samples;
+  }
+  catch (const std::invalid_argument &) {
+    throw; /* reconstruct()'s own input errors, unchanged. */
+  }
+  catch (const std::exception &error) {
+    throw std::runtime_error(std::string(error.what()) + ", pixel " + std::to_string(x) + "," +
+                             std::to_string(y));
+  }
 }
 std::vector<IntervalSample> Capture::reconstruct_reduced_pixel(const int x, const int y) const
 {
@@ -2310,8 +2492,12 @@ std::string Capture::check_spill_space()
       return std::string();
     const uint64_t live = reducer_->live_bytes();
     const double mean = double(done) / (double(width_) * height_);
-    const double growth = std::max(1.0, (std::log2(double(samples_)) + 1) /
-                                            (std::log2(std::max(1.0, mean)) + 1));
+    /* Volume nodes grow with tree level; surface curves with distinct depths
+     * can grow linearly in samples (up to their breakpoint capacity). */
+    const double growth = surface_policy_ ?
+                              std::max(1.0, double(samples_) / std::max(1.0, mean)) :
+                              std::max(1.0, (std::log2(double(samples_)) + 1) /
+                                                (std::log2(std::max(1.0, mean)) + 1));
     /* Nodes reach disk only beyond the reducer's RAM share. */
     const uint64_t projected =
         uint64_t(2 * std::max(0.0, double(live) * growth - double(reducer_->ram_limit())));
@@ -2324,7 +2510,8 @@ std::string Capture::check_spill_space()
         " bytes free" +
         (spill_quota_bytes_ ? ", quota " + std::to_string(spill_quota_bytes_) + " bytes" :
                               std::string()) +
-        ") cannot hold the projected volume node storage: " + std::to_string(live) +
+        ") cannot hold the projected " + (surface_policy_ ? "surface" : "volume") +
+        " node storage: " + std::to_string(live) +
         " live node bytes after " + std::to_string(done) + " of " + std::to_string(count_) +
         " camera samples project to " + std::to_string(projected) +
         " stored bytes (x" + std::to_string(growth) +

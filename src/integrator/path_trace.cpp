@@ -54,7 +54,9 @@ static void log_deep_spill(const deep::Capture &capture, const char *stage)
                      << " node_ram_peak=" << spill.node_ram_peak
                      << " directory=" << capture.spill_directory();
   if (capture.reducing()) {
-    LOG_INFO_IMPORTANT << "Deep volume reducer " << stage << ": " << capture.reducer_summary();
+    LOG_INFO_IMPORTANT << (capture.surface_reducing() ? "Deep surface reducer " :
+                                                        "Deep volume reducer ")
+                       << stage << ": " << capture.reducer_summary();
   }
 }
 #endif
@@ -850,7 +852,11 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
                                                            "off"))
                      << " index=" << (deep_capture_->spill_index_sparse() ? "sparse" : "zero-filled")
                      << " volume_reduce="
-                     << (deep_capture_->reducing() ?
+                     << (deep_capture_->reducing() && !deep_capture_->surface_reducing() ?
+                             (deep_capture_->retains_samples() ? "online+raw" : "online") :
+                             "off")
+                     << " surface_reduce="
+                     << (deep_capture_->surface_reducing() ?
                              (deep_capture_->retains_samples() ? "online+raw" : "online") :
                              "off");
   if (settings.volume_shader_evaluation) {
@@ -861,6 +867,7 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
   }
   deep_capture_->z_tolerance = settings.error ? settings.z_tolerance : 0;
   deep_capture_->compact = settings.compact;
+  deep_capture_->export_reduce = output_driver_->deep_surface_reduce();
   const char *baseline = std::getenv("CYCLES_DEEP_Z_BASELINE");
   deep_capture_->retain_for_validation = (deep_capture_->z_tolerance > 0 || settings.compact) &&
                                          baseline && baseline[0];
@@ -917,7 +924,9 @@ void PathTrace::write_deep_output()
   if (deep_capture_->volume_shader_error)
     LOG_INFO_IMPORTANT << "Deep output: shader_evaluations=" << deep_capture_->shader_evaluations.load();
   if (deep_capture_->reducing())
-    LOG_INFO_IMPORTANT << "Deep volume reducer exported: " << deep_capture_->reducer_summary();
+    LOG_INFO_IMPORTANT << (deep_capture_->surface_reducing() ? "Deep surface reducer exported: " :
+                                                               "Deep volume reducer exported: ")
+                       << deep_capture_->reducer_summary();
   if (deep_capture_->collect_histogram)
     LOG_INFO_IMPORTANT << "Deep volume interval histogram: " << deep_capture_->volume_histogram();
 }

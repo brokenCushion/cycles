@@ -25,7 +25,8 @@ endif()
 
 if(BUILD_TESTING)
   find_package(Threads REQUIRED)
-  add_executable(cycles_deep_capture_test capture_test.cpp reducer_test.cpp)
+  add_executable(cycles_deep_capture_test capture_test.cpp reducer_test.cpp
+                 surface_reducer_test.cpp)
   target_link_libraries(cycles_deep_capture_test PRIVATE cycles_deep_capture Threads::Threads)
   add_test(NAME cycles_deep_capture COMMAND cycles_deep_capture_test)
   add_executable(cycles_deep_reference_test reconstruction_test.cpp)

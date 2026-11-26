@@ -101,6 +101,13 @@ Range mode drops a missing ZBack and Nuke's behaviour without one is unconfirmed
 costs are measured exactly per pixel against the publication ledger; a pixel that cannot
 fit fails the export with its numbers. Junkshop frame 2 full size: 3.02 GB -> 0.82 GB.
 
+Numeric surface layers above 8 samples accumulate a bounded running curve during
+render. `CYCLES_DEEP_SURFACE_REDUCE=0` restores the raw spill; `CYCLES_DEEP_SURFACE_CAPACITY`
+(validation only) sets the per-pixel breakpoint capacity. Output is byte-identical to
+the raw path unless a capacity merge happens, and the header bound E still holds.
+Strict surfaces remain unbounded (raw spill). DeepTile hosts that read per-sample
+records must request them (`deep_camera_records`).
+
 CPU beauty remains exact. CUDA/OptiX beauty policy and its GPU-only change scope
 are in [VALIDATION.md](VALIDATION.md); source hashes and 75 kernel resource records
 provide the host-only proof.

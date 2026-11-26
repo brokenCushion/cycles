@@ -23,6 +23,10 @@ class DeepOutputDriver final : public OIIOOutputDriver {
   {
     return !records_path_.empty() || !deep_diagnostics_path().empty();
   }
+  bool deep_surface_reduce() const override
+  {
+    return reduce_;
+  }
 
  private:
   string deep_path_, records_path_;

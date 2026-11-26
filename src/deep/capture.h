@@ -38,7 +38,9 @@ class Capture {
           int export_workers = 1,
           float error = 0,
           int sample_limit = 0,
-          bool ids = false);
+          bool ids = false,
+          const std::string &spill_dir = std::string(),
+          size_t reserved_bytes = 0);
   ~Capture();
   void open_diagnostics(const std::string &path);
   bool diagnostics() const { return diagnostics_.is_open(); }
@@ -99,7 +101,13 @@ class Capture {
     return max_events_;
   }
   void fail(KernelDeepError reason = DEEP_ERROR_STATE);
+  /* Any recorded capture error is final; renderers poll this to stop early. */
+  bool failed() const
+  {
+    return error_.load() != NONE;
+  }
   bool finalize() const;
+  /* The first error wins, including its I/O cause (errno, bytes, file) or numbers. */
   const char *error_message() const;
   float value(int x, int y, int sample) const;
   std::vector<SurfaceSample> reconstruct_pixel(int x, int y) const;
@@ -116,12 +124,50 @@ class Capture {
     return samples_;
   }
   int sample_limit() const { return sample_limit_; }
-  /* Successful stdio transfers, including index initialization and page rereads.
-   * These are logical file I/O bytes, not physical disk traffic through OS caches. */
+  /* Successful stdio transfers, including index page rereads.
+   * These are logical file I/O bytes, not physical disk traffic through OS caches.
+   * file_bytes is the logical index plus the stored (possibly compressed) event
+   * stream; event_raw_bytes is the uncompressed event stream. */
   struct SpillStatistics {
     uint64_t read_bytes = 0, write_bytes = 0, file_bytes = 0;
+    uint64_t index_bytes = 0, event_raw_bytes = 0, event_file_bytes = 0;
   };
   SpillStatistics spill_statistics() const;
+  /* Spill files are delete-on-close files in this directory: the constructor
+   * argument, else CYCLES_DEEP_SPILL_DIR, else the system temp directory. */
+  const std::string &spill_directory() const
+  {
+    return spill_directory_;
+  }
+  /* Lossless zstd level of the append stream; 0 stores raw records. */
+  int spill_compression() const
+  {
+    return compression_;
+  }
+  bool spill_index_sparse() const
+  {
+    return index_sparse_;
+  }
+  /* Whether this build links the zstd spill codec. */
+  static bool spill_compression_supported();
+  /* Compression was requested but its capture state did not fit the budget. */
+  bool spill_compression_limited() const
+  {
+    return compression_limited_;
+  }
+  /* Free-space projection: event bytes per accepted camera sample extrapolated
+   * to the sample count, plus the index, the largest export re-bucket copy, a 5%
+   * margin and a 256 MiB reserve. Non-adaptive captures fail when it does not
+   * fit; adaptive captures (whose final count is only bounded) get a warning.
+   * Any capture fails when free space or the optional CYCLES_DEEP_SPILL_MAX_MB
+   * quota falls below the reserve. Call only between render passes. Returns a
+   * warning, or an empty string. */
+  static constexpr uint64_t spill_reserve_bytes = uint64_t(256) * 1024 * 1024;
+  std::string check_spill_space();
+  /* Diagnostic interval-count histograms for grid volumes, gathered during export
+   * when enabled (debug log level or CYCLES_DEEP_HISTOGRAM). Log only. */
+  bool collect_histogram = false;
+  std::string volume_histogram() const;
   mutable ExportStatistics export_statistics;
   float volume_shader_error = 0; /* Total stated bound; error() is the proven half. */
   bool volume_shader_adaptive = false;
@@ -134,6 +180,23 @@ class Capture {
 
  private:
   std::ofstream diagnostics_;
+  std::string spill_directory_;
+  int compression_ = 0;
+  bool compression_limited_ = false;
+  bool index_sparse_ = false;
+  uint64_t index_total_bytes_ = 0, spill_quota_bytes_ = 0;
+  bool projection_warned_ = false;
+  /* reserved_bytes: host allocations already taken from the user budget before
+   * max_bytes; added back when a message states the minimum deep_memory_mb. */
+  size_t max_bytes_ = 0, population_bytes_ = 0, reserved_bytes_ = 0;
+  /* Stored event-stream bytes; drives the in-render free-space floor. */
+  mutable std::atomic<uint64_t> spill_written_{0};
+  /* Interval-count histograms: per-ray curves and balanced-tree nodes by level. */
+  static constexpr int histogram_buckets = 18, histogram_levels = 13;
+  struct Histogram {
+    std::atomic<uint64_t> count[histogram_buckets] = {}, total{0}, items{0}, maximum{0};
+  };
+  mutable Histogram ray_histogram_, level_histogram_[histogram_levels];
   bool ids_ = false;
   float error_setting_ = 0;
   size_t volume_row_sample_limit_ = 0;
@@ -172,31 +235,56 @@ class Capture {
     uint64_t last_used = 0;
     std::vector<unsigned char> data;
   };
+  /* Also the compression block size (raw bytes per zstd block). */
   static constexpr size_t event_page_bytes = 64 * 1024;
   struct EventPage {
     size_t first = size_t(-1), bytes = 0;
     uint64_t last_used = 0;
+    uint64_t next_block = 0; /* Compressed stream: file offset after this block. */
     std::vector<unsigned char> data;
   };
-  struct RowFile {
+  /* Append-only stream. Raw mode stores records directly. Compressed mode stores
+   * {u32 raw, u32 stored} block headers; stored == raw marks an uncompressed block.
+   * raw_bytes are logical stream offsets, identical in both modes. */
+  struct SpillStream {
     FILE *file = nullptr;
-    size_t bytes = 0;
-    ~RowFile() { if (file) std::fclose(file); }
+    std::string path;
+    uint64_t raw_bytes = 0, file_bytes = 0;
+    bool reading = false;
+    bool raw = false; /* Always raw, e.g. transient re-bucket row files. */
+    std::vector<unsigned char> pending;
+    ~SpillStream()
+    {
+      close();
+    }
+    void close()
+    {
+      if (file)
+        std::fclose(file);
+      file = nullptr;
+      std::vector<unsigned char>().swap(pending);
+    }
   };
   struct Band {
     int first_y = 0, rows = 0;
     size_t pixels = 0, records = 0, event_bytes = 0;
-    FILE *index = nullptr, *events = nullptr;
+    FILE *index = nullptr;
+    std::string index_path;
+    SpillStream events;
     mutable std::mutex mutex;
     mutable std::array<SpillPage, spill_page_count> pages;
     mutable EventPage event_page;
     mutable uint64_t clock = 0, read_bytes = 0, write_bytes = 0;
-    mutable bool reading_events = false;
     bool rebucketed = false;
-    std::vector<std::unique_ptr<RowFile>> row_files;
-    ~Band() { if (index) std::fclose(index); if (events) std::fclose(events); }
+    std::vector<std::unique_ptr<SpillStream>> row_files;
+    /* Compressed mode: zstd contexts and one block of stored-data scratch. */
+    void *compressor = nullptr, *decompressor = nullptr;
+    std::vector<unsigned char> block;
+    ~Band();
   };
   std::vector<std::unique_ptr<Band>> bands_;
+  /* Raw stream bytes per image row (8 bytes per row) for the export preflight. */
+  std::vector<uint64_t> row_event_bytes_;
   int rows_per_band_ = 0;
   size_t spill_memory_bytes_ = 0;
   mutable std::vector<SpillRecord> staged_records_;
@@ -214,8 +302,19 @@ class Capture {
   void read_events(Band &band, size_t offset, unsigned char *destination, size_t bytes) const;
   SpillPage &spill_page(Band &band, size_t index) const;
   void flush_page(Band &band, SpillPage &page) const;
-  void load_stream(Band &band, FILE *file, size_t bytes, int first_y, int rows) const;
+  void load_stream(Band &band, SpillStream &stream, int first_y, int rows) const;
   void rebucket(Band &band) const;
+  FILE *open_spill_file(const char *kind, uint64_t sparse_bytes, bool &sparse,
+                        std::string &path) const;
+  /* Stream I/O under the band mutex; bytes count toward the band's statistics. */
+  void append(Band &band, SpillStream &stream, const void *data, size_t bytes) const;
+  void flush_stream(Band &band, SpillStream &stream) const;
+  /* Decodes one stored block at `offset` (raw <= event_page_bytes) into
+   * `destination`; returns the next block's file offset. */
+  uint64_t read_block(Band &band, SpillStream &stream, uint64_t offset,
+                      unsigned char *destination, size_t &raw) const;
+  /* Records stored stream bytes; throws when free space falls below the reserve. */
+  void spill_written(uint64_t bytes) const;
   size_t count_ = 0;
   std::atomic<size_t> completed_{0};
   size_t stride_ = 0, capacity_ = 0;
@@ -224,9 +323,14 @@ class Capture {
                    KernelDeepDensity *density = nullptr) const;
   void store_record(size_t index, const KernelDeepResult &result, const KernelDeepEvent *events,
                     const KernelDeepDensity *density);
-  std::atomic<int> error_{0};
+  mutable std::atomic<int> error_{0};
   std::atomic<KernelDeepError> failure_{DEEP_ERROR_NONE};
-  enum Error { NONE = 0, OUT_OF_RANGE, DUPLICATE, INVALID_DEPTH, UNSUPPORTED_STATE, IO_ERROR };
-  void set_error(Error error);
+  enum Error {
+    NONE = 0, OUT_OF_RANGE, DUPLICATE, INVALID_DEPTH, UNSUPPORTED_STATE, IO_ERROR, SPILL_SPACE
+  };
+  mutable std::mutex error_mutex_;
+  /* Written once, before error_ is published. */
+  mutable std::string error_detail_;
+  void set_error(Error error, const std::string &detail = std::string()) const;
 };
 }  // namespace ccl::deep

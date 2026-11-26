@@ -3,16 +3,259 @@
 #include <map>
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <cmath>
+#include <condition_variable>
+#include <cstdlib>
 #include <cstring>
+#include <exception>
+#include <filesystem>
+#include <functional>
 #include <iterator>
 #include <iomanip>
 #include <limits>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <system_error>
+#include <thread>
 #include <unordered_map>
+#ifdef WITH_CYCLES_DEEP_ZSTD
+/* Static library: size estimates for the memory preflight. */
+#  define ZSTD_STATIC_LINKING_ONLY
+#  include <zstd.h>
+#endif
+#ifdef _WIN32
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif
+#  ifndef NOGDI
+#    define NOGDI
+#  endif
+#  include <windows.h>
+#  include <winioctl.h>
+#  include <fcntl.h>
+#  include <io.h>
+#else
+#  include <fcntl.h>
+#  include <sys/types.h>
+#  include <unistd.h>
+#endif
 
 namespace ccl::deep {
+namespace {
+constexpr uint64_t mebibyte = uint64_t(1024) * 1024;
+
+std::string error_text(const int code)
+{
+#ifdef _WIN32
+  char buffer[256] = {};
+  strerror_s(buffer, sizeof(buffer), code);
+  return buffer;
+#else
+  return std::strerror(code);
+#endif
+}
+
+/* First-error I/O cause: operation, errno text, bytes attempted and the file. */
+[[noreturn]] void io_failure(const std::string &operation, const std::string &path,
+                             const size_t bytes, const int code)
+{
+  throw std::runtime_error(operation + " failed: " + error_text(code) + " (errno " +
+                           std::to_string(code) + "), " + std::to_string(bytes) +
+                           " bytes, file " + path);
+}
+
+/* Small persistent pool: the caller and helper threads share indices of one batch. */
+class BatchPool {
+ public:
+  explicit BatchPool(const unsigned threads)
+  {
+    for (unsigned i = 1; i < threads; ++i)
+      threads_.emplace_back([this] { loop(); });
+  }
+  ~BatchPool()
+  {
+    {
+      const std::lock_guard<std::mutex> lock(mutex_);
+      stop_ = true;
+    }
+    wake_.notify_all();
+    for (std::thread &thread : threads_)
+      thread.join();
+  }
+  void run(const size_t count, std::function<void(size_t)> task)
+  {
+    {
+      const std::lock_guard<std::mutex> lock(mutex_);
+      task_ = std::move(task);
+      count_ = count;
+      next_ = 0;
+      busy_ = threads_.size();
+      error_ = nullptr;
+      ++generation_;
+    }
+    wake_.notify_all();
+    work();
+    std::unique_lock<std::mutex> lock(mutex_);
+    done_.wait(lock, [&] { return busy_ == 0; });
+    if (error_)
+      std::rethrow_exception(error_);
+  }
+
+ private:
+  void work()
+  {
+    for (size_t i; (i = next_.fetch_add(1)) < count_;) {
+      try {
+        task_(i);
+      }
+      catch (...) {
+        const std::lock_guard<std::mutex> lock(mutex_);
+        if (!error_)
+          error_ = std::current_exception();
+      }
+    }
+  }
+  void loop()
+  {
+    uint64_t seen = 0;
+    while (true) {
+      {
+        std::unique_lock<std::mutex> lock(mutex_);
+        wake_.wait(lock, [&] { return stop_ || generation_ != seen; });
+        if (stop_)
+          return;
+        seen = generation_;
+      }
+      work();
+      const std::lock_guard<std::mutex> lock(mutex_);
+      if (--busy_ == 0)
+        done_.notify_one();
+    }
+  }
+  std::vector<std::thread> threads_;
+  std::mutex mutex_;
+  std::condition_variable wake_, done_;
+  std::function<void(size_t)> task_;
+  std::atomic<size_t> next_{0};
+  size_t count_ = 0, busy_ = 0;
+  uint64_t generation_ = 0;
+  std::exception_ptr error_;
+  bool stop_ = false;
+};
+
+/* Free space below the reserve; reported as its own capture error. */
+struct SpaceError : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
+/* Smallest --deep-memory-mb whose available bytes A (budget minus adaptive
+ * populations) satisfy A - floor(A / 8) >= needed: the staging eighth is
+ * charged on top of the needed fixed working set. */
+uint64_t minimum_memory_mb(const uint64_t needed, const size_t population_bytes)
+{
+  const uint64_t available = needed + (needed + 6) / 7 + 8;
+  return (available + population_bytes + mebibyte - 1) / mebibyte;
+}
+
+#ifdef _WIN32
+std::wstring widen(const std::string &text)
+{
+  if (text.empty())
+    return std::wstring();
+  const int n = MultiByteToWideChar(CP_UTF8, 0, text.data(), int(text.size()), nullptr, 0);
+  std::wstring result(size_t(std::max(n, 0)), L'\0');
+  if (n > 0)
+    MultiByteToWideChar(CP_UTF8, 0, text.data(), int(text.size()), result.data(), n);
+  return result;
+}
+std::string narrow(const std::wstring &text)
+{
+  if (text.empty())
+    return std::string();
+  const int n = WideCharToMultiByte(
+      CP_UTF8, 0, text.data(), int(text.size()), nullptr, 0, nullptr, nullptr);
+  std::string result(size_t(std::max(n, 0)), '\0');
+  if (n > 0)
+    WideCharToMultiByte(
+        CP_UTF8, 0, text.data(), int(text.size()), result.data(), n, nullptr, nullptr);
+  return result;
+}
+std::filesystem::path native_path(const std::string &text)
+{
+  return std::filesystem::path(widen(text));
+}
+std::string utf8_path(const std::filesystem::path &path)
+{
+  return narrow(path.wstring());
+}
+std::string environment(const wchar_t *name)
+{
+  wchar_t *value = nullptr;
+  size_t length = 0;
+  if (_wdupenv_s(&value, &length, name) != 0 || !value)
+    return std::string();
+  const std::string result = narrow(value);
+  std::free(value);
+  return result;
+}
+std::string system_message(const DWORD code)
+{
+  wchar_t *buffer = nullptr;
+  const DWORD n = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                                     FORMAT_MESSAGE_IGNORE_INSERTS,
+                                 nullptr, code, 0, reinterpret_cast<wchar_t *>(&buffer), 0,
+                                 nullptr);
+  std::wstring text = n ? std::wstring(buffer, n) : std::wstring(L"unknown error");
+  if (buffer)
+    LocalFree(buffer);
+  while (!text.empty() && (text.back() == L'\n' || text.back() == L'\r' || text.back() == L' ' ||
+                           text.back() == L'.'))
+    text.pop_back();
+  return narrow(text);
+}
+#  define CYCLES_DEEP_ENV(name) environment(L##name)
+#else
+std::filesystem::path native_path(const std::string &text)
+{
+  return std::filesystem::path(text);
+}
+std::string utf8_path(const std::filesystem::path &path)
+{
+  return path.string();
+}
+std::string environment(const char *name)
+{
+  const char *value = std::getenv(name);
+  return value ? std::string(value) : std::string();
+}
+#  define CYCLES_DEEP_ENV(name) environment(name)
+#endif
+}  // namespace
+
+bool Capture::spill_compression_supported()
+{
+#ifdef WITH_CYCLES_DEEP_ZSTD
+  return true;
+#else
+  return false;
+#endif
+}
+
+Capture::Band::~Band()
+{
+  if (index)
+    std::fclose(index);
+#ifdef WITH_CYCLES_DEEP_ZSTD
+  ZSTD_freeCCtx(static_cast<ZSTD_CCtx *>(compressor));
+  ZSTD_freeDCtx(static_cast<ZSTD_DCtx *>(decompressor));
+#endif
+}
+
 Capture::Capture(const int width,
                  const int height,
                  const int samples,
@@ -25,7 +268,9 @@ Capture::Capture(const int width,
                  const int export_workers,
                  const float error,
                  const int sample_limit,
-                 const bool ids)
+                 const bool ids,
+                 const std::string &spill_dir,
+                 const size_t reserved_bytes)
     : error_setting_(error), width_(width), height_(height), samples_(samples), max_events_(max_events), volume_(volume),
       volume_grid_(volume_grid)
 {
@@ -56,7 +301,46 @@ Capture::Capture(const int width,
   if (adaptive && count / samples > max_bytes / sizeof(uint32_t))
     throw std::invalid_argument("Deep adaptive populations exceed memory budget");
   const size_t population_bytes = adaptive ? count / samples * sizeof(uint32_t) : 0;
+  max_bytes_ = max_bytes;
+  population_bytes_ = population_bytes;
+  reserved_bytes_ = reserved_bytes;
   if (spill) {
+    /* Explicit directory, then CYCLES_DEEP_SPILL_DIR, then the system temp directory. */
+    spill_directory_ = spill_dir;
+    if (spill_directory_.empty())
+      spill_directory_ = CYCLES_DEEP_ENV("CYCLES_DEEP_SPILL_DIR");
+    if (spill_directory_.empty()) {
+      std::error_code ec;
+      spill_directory_ = utf8_path(std::filesystem::temp_directory_path(ec));
+      if (ec)
+        throw std::invalid_argument("Cannot determine the system temp directory for deep spill: " +
+                                    ec.message());
+    }
+    {
+      std::error_code ec;
+      if (!std::filesystem::is_directory(native_path(spill_directory_), ec))
+        throw std::invalid_argument("Deep spill directory does not exist or is not a directory: " +
+                                    spill_directory_);
+    }
+    const std::string compression = CYCLES_DEEP_ENV("CYCLES_DEEP_SPILL_COMPRESSION");
+#ifdef WITH_CYCLES_DEEP_ZSTD
+    compression_ = 1;
+    if (!compression.empty()) {
+      char *end = nullptr;
+      const long level = std::strtol(compression.c_str(), &end, 10);
+      if (*end || level < 0 || level > ZSTD_maxCLevel())
+        throw std::invalid_argument("CYCLES_DEEP_SPILL_COMPRESSION must be 0 (raw) or a zstd level");
+      compression_ = int(level);
+    }
+#endif
+    const std::string quota = CYCLES_DEEP_ENV("CYCLES_DEEP_SPILL_MAX_MB");
+    if (!quota.empty()) {
+      char *end = nullptr;
+      const unsigned long long megabytes = std::strtoull(quota.c_str(), &end, 10);
+      if (*end || megabytes == 0 || megabytes > UINT64_MAX / mebibyte)
+        throw std::invalid_argument("CYCLES_DEEP_SPILL_MAX_MB must be a positive MiB count");
+      spill_quota_bytes_ = megabytes * mebibyte;
+    }
     /* Two MiB covers 480-lane host/device events and 64 media (1,994,496 bytes),
      * fixed scratch and I/O. Beauty/shader memory remains outside this budget. */
     const uint64_t events = uint64_t(samples) * capacity_;
@@ -74,6 +358,21 @@ Capture::Capture(const int width,
       throw std::invalid_argument("Deep band files exceed stdio open-file limit");
 #endif
     spill_memory_bytes_ = size_t((max_bytes - population_bytes) / 8);
+#ifdef WITH_CYCLES_DEEP_ZSTD
+    /* Each band's compressed stream holds a pending block, a stored-block buffer
+     * and a zstd context until finalize. Export staging is idle during capture,
+     * so this state uses the staging allowance; when it does not fit, spill stays
+     * raw. Export decoding (one context plus one block) is fixed scratch. */
+    if (compression_ &&
+        (2 * event_page_bytes + 1024 + ZSTD_estimateCCtxSize_usingCParams(ZSTD_getCParams(
+                                           compression_, event_page_bytes, 0))) *
+                band_count >
+            spill_memory_bytes_)
+    {
+      compression_ = 0;
+      compression_limited_ = true;
+    }
+#endif
     const uint64_t shared = 2 * 1024 * 1024 +
                               (spill_page_bytes * spill_page_count + event_page_bytes) * band_count +
                               spill_memory_bytes_ +
@@ -86,8 +385,17 @@ Capture::Capture(const int width,
                               (volume_grid ? uint64_t(2) * reconstruction_limit() * 96 : 0);
     const uint64_t available = max_bytes - population_bytes;
     uint64_t fixed = shared + worker;
+    const auto working_set_failure = [&](const uint64_t row) {
+      const uint64_t needed = fixed - spill_memory_bytes_ + row;
+      return std::invalid_argument(
+          "Deep scanline working set exceeds --deep-memory-mb budget: needs " +
+          std::to_string(fixed + row) + " bytes (fixed " + std::to_string(fixed - spill_memory_bytes_) +
+          " + staging " + std::to_string(spill_memory_bytes_) + " + row " + std::to_string(row) +
+          "), available " + std::to_string(available) + " bytes; minimum deep_memory_mb " +
+          std::to_string(minimum_memory_mb(needed, population_bytes + reserved_bytes)));
+    };
     if (fixed > available)
-      throw std::invalid_argument("Deep scanline working set exceeds --deep-memory-mb budget");
+      throw working_set_failure(0);
     if (volume) {
       /* Preserve the serial row allowance. Parallel workers share the remaining
        * reconstruction reservation, rather than reducing accepted row capacity. */
@@ -117,14 +425,20 @@ Capture::Capture(const int width,
       volume_row_sample_limit_ = size_t(std::min(uint64_t(width) * output_events,
                                                row_bytes / row_sample_bytes));
       if (volume_row_sample_limit_ < output_events)
-        throw std::invalid_argument("Deep volume row cannot fit one maximum-capacity pixel");
+        throw std::invalid_argument(
+            "Deep volume row cannot fit one maximum-capacity pixel: row capacity " +
+            std::to_string(volume_row_sample_limit_) + " samples (" + std::to_string(row_bytes) +
+            " bytes at " + std::to_string(row_sample_bytes) + " bytes/sample), pixel maximum " +
+            std::to_string(output_events) + " samples; increase --deep-memory-mb");
     }
     else if (uint64_t(width) * output_events * row_sample_bytes > available - fixed)
-      throw std::invalid_argument("Deep scanline working set exceeds --deep-memory-mb budget");
+      throw working_set_failure(uint64_t(width) * output_events * row_sample_bytes);
     if (adaptive)
       populations_.assign(count / samples, 0);
+    row_event_bytes_.assign(height, 0);
     stride_ = sizeof(SpillRecord);
     std::array<unsigned char, 65536> zeros{};
+    index_sparse_ = true;
     for (int y = 0; y < height; y += rows_per_band_) {
       bands_.push_back(std::make_unique<Band>());
       Band &band = *bands_.back();
@@ -132,23 +446,26 @@ Capture::Capture(const int width,
       band.rows = std::min(rows_per_band_, height - y);
       band.pixels = size_t(width) * band.rows;
       band.records = band.pixels * samples;
-      band.index = std::tmpfile();
-      band.events = std::tmpfile();
-      if (!band.index || !band.events)
-        throw std::runtime_error("Cannot create temporary deep band files");
+      index_total_bytes_ += band.records * stride_;
+      /* The fixed index is a sparse file of its final size, so unwritten pages read
+       * as zeros without being written up front. Without sparse support, zero-fill. */
+      bool sparse = false, unused = false;
+      band.index = open_spill_file("index", band.records * stride_, sparse, band.index_path);
+      band.events.file = open_spill_file("events", 0, unused, band.events.path);
       for (SpillPage &page : band.pages)
         page.data.resize(spill_page_bytes);
       band.event_page.data.resize(event_page_bytes);
-      size_t remaining = band.records * stride_;
+      size_t remaining = sparse ? 0 : band.records * stride_;
+      index_sparse_ = index_sparse_ && sparse;
       while (remaining) {
         const size_t n = std::min(remaining, zeros.size());
         if (std::fwrite(zeros.data(), 1, n, band.index) != n)
-          throw std::runtime_error("Cannot allocate deep band index");
+          io_failure("Deep band index allocation", band.index_path, n, errno);
         band.write_bytes += n;
         remaining -= n;
       }
       if (std::fflush(band.index) != 0)
-        throw std::runtime_error("Cannot flush deep band index");
+        io_failure("Deep band index flush", band.index_path, 0, errno);
     }
     return;
   }
@@ -200,8 +517,11 @@ Capture::SpillStatistics Capture::spill_statistics() const
     const std::lock_guard<std::mutex> lock(band.mutex);
     result.read_bytes += band.read_bytes;
     result.write_bytes += band.write_bytes;
-    result.file_bytes += band.records * stride_ + band.event_bytes;
+    result.index_bytes += band.records * stride_;
+    result.event_raw_bytes += band.event_bytes;
+    result.event_file_bytes += compression_ ? band.events.file_bytes : band.event_bytes;
   }
+  result.file_bytes = result.index_bytes + result.event_file_bytes;
   return result;
 }
 void Capture::decode_index(const size_t index, size_t &pixel, uint32_t &sample) const
@@ -241,9 +561,222 @@ void seek_record(FILE *file, const size_t offset)
   const int result = fseeko(file, off_t(offset), SEEK_SET);
 #endif
   if (result != 0)
-    throw std::runtime_error("Deep spill seek failed");
+    throw std::runtime_error(std::string("Deep spill seek failed: ") + error_text(errno) +
+                             " (errno " + std::to_string(errno) + "), offset " +
+                             std::to_string(offset));
 }
 }  // namespace
+
+FILE *Capture::open_spill_file(const char *kind, const uint64_t sparse_bytes, bool &sparse,
+                               std::string &path) const
+{
+  static std::atomic<uint64_t> sequence{0};
+  sparse = false;
+#ifdef _WIN32
+  const std::filesystem::path directory = native_path(spill_directory_);
+  HANDLE handle = INVALID_HANDLE_VALUE;
+  for (int attempt = 0; attempt < 64 && handle == INVALID_HANDLE_VALUE; ++attempt) {
+    const std::filesystem::path name =
+        directory / ("cycles-deep-" + std::to_string(GetCurrentProcessId()) + "-" +
+                     std::to_string(sequence++) + "-" + kind + ".tmp");
+    path = utf8_path(name);
+    /* The system deletes the file when its last handle closes, including on
+     * process termination. Exclusive sharing keeps other processes out. */
+    handle = CreateFileW(name.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_NEW,
+                         FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, nullptr);
+    if (handle == INVALID_HANDLE_VALUE && GetLastError() != ERROR_FILE_EXISTS)
+      break;
+  }
+  if (handle == INVALID_HANDLE_VALUE) {
+    const DWORD code = GetLastError();
+    throw std::runtime_error("Cannot create deep spill file " + path + ": " +
+                             system_message(code) + " (Windows error " + std::to_string(code) +
+                             ")");
+  }
+  if (sparse_bytes) {
+    DWORD returned = 0;
+    if (DeviceIoControl(handle, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returned, nullptr)) {
+      LARGE_INTEGER size, zero;
+      size.QuadPart = LONGLONG(sparse_bytes);
+      zero.QuadPart = 0;
+      sparse = SetFilePointerEx(handle, size, nullptr, FILE_BEGIN) && SetEndOfFile(handle);
+      if (!SetFilePointerEx(handle, zero, nullptr, FILE_BEGIN))
+        sparse = false;
+    }
+  }
+  const int descriptor = _open_osfhandle(intptr_t(handle), _O_RDWR | _O_BINARY);
+  if (descriptor == -1) {
+    CloseHandle(handle);
+    throw std::runtime_error("Cannot open deep spill file descriptor " + path);
+  }
+  FILE *file = _fdopen(descriptor, "w+b");
+  if (!file) {
+    const int code = errno;
+    _close(descriptor);
+    io_failure("Deep spill stream open", path, 0, code);
+  }
+#else
+  std::string name = (std::filesystem::path(spill_directory_) /
+                      ("cycles-deep-" + std::to_string(getpid()) + "-" +
+                       std::to_string(sequence++) + "-" + kind + "-XXXXXX"))
+                         .string();
+  const int descriptor = mkstemp(name.data());
+  path = name;
+  if (descriptor == -1)
+    io_failure("Deep spill file creation", path, 0, errno);
+  /* Unlinked while open: removed when closed or when the process exits. */
+  unlink(name.c_str());
+  if (sparse_bytes)
+    sparse = ftruncate(descriptor, off_t(sparse_bytes)) == 0;
+  FILE *file = fdopen(descriptor, "w+b");
+  if (!file) {
+    const int code = errno;
+    close(descriptor);
+    io_failure("Deep spill stream open", path, 0, code);
+  }
+#endif
+  return file;
+}
+
+void Capture::spill_written(const uint64_t bytes) const
+{
+  constexpr uint64_t step = 64 * mebibyte;
+  const uint64_t before = spill_written_.fetch_add(bytes);
+  const uint64_t written = before + bytes;
+  if (written / step == before / step)
+    return;
+  /* Stop before the drive (or quota) is exhausted; reports carry both numbers. */
+  std::error_code ec;
+  const auto info = std::filesystem::space(native_path(spill_directory_), ec);
+  uint64_t available = ec ? UINT64_MAX : uint64_t(info.available);
+  if (spill_quota_bytes_) {
+    const uint64_t used = written + index_total_bytes_;
+    available = std::min(available, spill_quota_bytes_ > used ? spill_quota_bytes_ - used : 0);
+  }
+  if (available >= spill_reserve_bytes)
+    return;
+  const size_t done = completed_.load();
+  throw SpaceError(
+      "free space in " + spill_directory_ + (spill_quota_bytes_ ? " (with quota)" : "") +
+      " fell to " + std::to_string(available) + " bytes after " + std::to_string(written) +
+      " stored event bytes (" + std::to_string(done) + " of " + std::to_string(count_) +
+      " camera samples" +
+      (done ? ", projected " + std::to_string(uint64_t((long double)written * count_ / done)) +
+                  " bytes" :
+              std::string()) +
+      "); reserve " + std::to_string(spill_reserve_bytes) + " bytes");
+}
+
+void Capture::append(Band &band, SpillStream &stream, const void *data, const size_t bytes) const
+{
+  if (!bytes)
+    return;
+  if (!compression_ || stream.raw) {
+    if (stream.reading) {
+      seek_record(stream.file, stream.file_bytes);
+      stream.reading = false;
+    }
+    if (std::fwrite(data, 1, bytes, stream.file) != bytes)
+      io_failure("Deep spill append", stream.path, bytes, errno);
+    stream.raw_bytes += bytes;
+    stream.file_bytes += bytes;
+    band.write_bytes += bytes;
+    spill_written(bytes);
+    return;
+  }
+  const unsigned char *source = static_cast<const unsigned char *>(data);
+  size_t remaining = bytes;
+  while (remaining) {
+    if (stream.pending.capacity() < event_page_bytes)
+      stream.pending.reserve(event_page_bytes);
+    const size_t n = std::min(remaining, event_page_bytes - stream.pending.size());
+    stream.pending.insert(stream.pending.end(), source, source + n);
+    source += n;
+    remaining -= n;
+    stream.raw_bytes += n;
+    if (stream.pending.size() == event_page_bytes)
+      flush_stream(band, stream);
+  }
+}
+
+void Capture::flush_stream(Band &band, SpillStream &stream) const
+{
+  if (stream.pending.empty())
+    return;
+#ifdef WITH_CYCLES_DEEP_ZSTD
+  if (!band.compressor && !(band.compressor = ZSTD_createCCtx()))
+    throw std::runtime_error("Cannot create deep spill compressor");
+  const size_t raw = stream.pending.size();
+  band.block.resize(8 + ZSTD_compressBound(event_page_bytes));
+  size_t stored = ZSTD_compressCCtx(static_cast<ZSTD_CCtx *>(band.compressor),
+                                    band.block.data() + 8, band.block.size() - 8,
+                                    stream.pending.data(), raw, compression_);
+  /* Incompressible (or failed) blocks are stored raw; decoding is lossless either way. */
+  if (ZSTD_isError(stored) || stored >= raw) {
+    stored = raw;
+    std::memcpy(band.block.data() + 8, stream.pending.data(), raw);
+  }
+  const uint32_t header[2] = {uint32_t(raw), uint32_t(stored)};
+  std::memcpy(band.block.data(), header, sizeof(header));
+  if (stream.reading) {
+    seek_record(stream.file, stream.file_bytes);
+    stream.reading = false;
+  }
+  const size_t bytes = sizeof(header) + stored;
+  if (std::fwrite(band.block.data(), 1, bytes, stream.file) != bytes)
+    io_failure("Deep spill block write", stream.path, bytes, errno);
+  stream.file_bytes += bytes;
+  band.write_bytes += bytes;
+  stream.pending.clear();
+  spill_written(bytes);
+#else
+  (void)band;
+  throw std::logic_error("Deep spill compression is unavailable in this build");
+#endif
+}
+
+uint64_t Capture::read_block(Band &band, SpillStream &stream, const uint64_t offset,
+                             unsigned char *destination, size_t &raw) const
+{
+#ifdef WITH_CYCLES_DEEP_ZSTD
+  uint32_t header[2];
+  if (offset > stream.file_bytes || stream.file_bytes - offset < sizeof(header))
+    throw std::runtime_error("Truncated deep spill block header in " + stream.path);
+  seek_record(stream.file, size_t(offset));
+  stream.reading = true;
+  if (std::fread(header, 1, sizeof(header), stream.file) != sizeof(header))
+    io_failure("Deep spill block header read", stream.path, sizeof(header), errno);
+  raw = header[0];
+  const size_t stored = header[1];
+  if (raw == 0 || raw > event_page_bytes || stored > raw ||
+      stored > stream.file_bytes - offset - sizeof(header))
+    throw std::runtime_error("Invalid deep spill block in " + stream.path);
+  if (stored == raw) {
+    if (std::fread(destination, 1, raw, stream.file) != raw)
+      io_failure("Deep spill block read", stream.path, raw, errno);
+  }
+  else {
+    band.block.resize(std::max(band.block.size(), stored));
+    if (std::fread(band.block.data(), 1, stored, stream.file) != stored)
+      io_failure("Deep spill block read", stream.path, stored, errno);
+    if (!band.decompressor && !(band.decompressor = ZSTD_createDCtx()))
+      throw std::runtime_error("Cannot create deep spill decompressor");
+    const size_t decoded = ZSTD_decompressDCtx(static_cast<ZSTD_DCtx *>(band.decompressor),
+                                               destination, raw, band.block.data(), stored);
+    if (ZSTD_isError(decoded) || decoded != raw)
+      throw std::runtime_error("Corrupt deep spill block in " + stream.path);
+  }
+  band.read_bytes += sizeof(header) + stored;
+  return offset + sizeof(header) + stored;
+#else
+  (void)band;
+  (void)stream;
+  (void)offset;
+  (void)destination;
+  (void)raw;
+  throw std::logic_error("Deep spill compression is unavailable in this build");
+#endif
+}
 
 /* Capture holds only the destination band's mutex. */
 void Capture::flush_page(Band &band, SpillPage &page) const
@@ -253,7 +786,7 @@ void Capture::flush_page(Band &band, SpillPage &page) const
   const size_t bytes = page.dirty_end - page.dirty_begin;
   seek_record(band.index, page.first * stride_ + page.dirty_begin);
   if (std::fwrite(page.data.data() + page.dirty_begin, 1, bytes, band.index) != bytes)
-    throw std::runtime_error("Deep spill page write failed");
+    io_failure("Deep spill index page write", band.index_path, bytes, errno);
   band.write_bytes += bytes;
   page.dirty_begin = spill_page_bytes;
   page.dirty_end = 0;
@@ -278,7 +811,7 @@ Capture::SpillPage &Capture::spill_page(Band &band, const size_t index) const
     const size_t bytes = std::min(records, band.records - first) * stride_;
     seek_record(band.index, first * stride_);
     if (std::fread(page.data.data(), 1, bytes, band.index) != bytes)
-      throw std::runtime_error("Deep spill page read failed");
+      io_failure("Deep spill index page read", band.index_path, bytes, errno);
     band.read_bytes += bytes;
     page.first = first;
     page.bytes = bytes;
@@ -291,16 +824,55 @@ void Capture::read_events(Band &band, size_t offset,
 {
   if (offset > band.event_bytes || bytes > band.event_bytes - offset)
     throw std::runtime_error("Invalid deep event file offset");
+  if (compression_) {
+    /* Pre-export reads (validation only) scan block headers forward from the
+     * cached block, or from the start; blocks are immutable once stored. */
+    flush_stream(band, band.events);
+    EventPage &page = band.event_page;
+    while (bytes) {
+      if (page.first == size_t(-1) || offset < page.first || offset >= page.first + page.bytes) {
+        const bool forward = page.first != size_t(-1) && offset >= page.first + page.bytes;
+        uint64_t file_offset = forward ? page.next_block : 0;
+        size_t raw_offset = forward ? page.first + page.bytes : 0;
+        page.first = size_t(-1);
+        while (true) {
+          uint32_t header[2];
+          if (file_offset > band.events.file_bytes ||
+              band.events.file_bytes - file_offset < sizeof(header))
+            throw std::runtime_error("Deep event offset beyond stored blocks");
+          seek_record(band.events.file, size_t(file_offset));
+          band.events.reading = true;
+          if (std::fread(header, 1, sizeof(header), band.events.file) != sizeof(header))
+            io_failure("Deep spill block header read", band.events.path, sizeof(header), errno);
+          band.read_bytes += sizeof(header);
+          if (offset < raw_offset + header[0])
+            break;
+          raw_offset += header[0];
+          file_offset += sizeof(header) + header[1];
+        }
+        size_t raw = 0;
+        page.next_block = read_block(band, band.events, file_offset, page.data.data(), raw);
+        page.first = raw_offset;
+        page.bytes = raw;
+      }
+      const size_t n = std::min(bytes, page.bytes - (offset - page.first));
+      std::memcpy(destination, page.data.data() + offset - page.first, n);
+      destination += n;
+      offset += n;
+      bytes -= n;
+    }
+    return;
+  }
   while (bytes) {
     const size_t first = offset / event_page_bytes * event_page_bytes;
     EventPage &page = band.event_page;
     if (page.first != first) {
       page.first = size_t(-1);
       page.bytes = std::min(event_page_bytes, band.event_bytes - first);
-      seek_record(band.events, first);
-      band.reading_events = true;
-      if (std::fread(page.data.data(), 1, page.bytes, band.events) != page.bytes)
-        throw std::runtime_error("Deep event file read failed");
+      seek_record(band.events.file, first);
+      band.events.reading = true;
+      if (std::fread(page.data.data(), 1, page.bytes, band.events.file) != page.bytes)
+        io_failure("Deep event file read", band.events.path, page.bytes, errno);
       band.read_bytes += page.bytes;
       page.first = first;
     }
@@ -381,7 +953,12 @@ void Capture::store_record(const size_t index,
     KernelDeepResult previous{};
     read_record(index, previous, nullptr);
     if (previous.status != DEEP_EMPTY) {
-      set_error(DUPLICATE);
+      size_t pixel;
+      uint32_t sample;
+      decode_index(index, pixel, sample);
+      set_error(DUPLICATE, "pixel " + std::to_string(pixel % width_) + "," +
+                               std::to_string(pixel / width_) + ", sample " +
+                               std::to_string(sample));
       return;
     }
     if (!bands_.empty()) {
@@ -396,24 +973,20 @@ void Capture::store_record(const size_t index,
           bytes += sizeof(KernelDeepDensity);
       if (band.event_bytes > size_t(INT64_MAX) - bytes)
         throw std::runtime_error("Deep event file offset overflow");
-      if (band.reading_events) {
-        seek_record(band.events, band.event_bytes);
-        band.reading_events = false;
+      if (band.events.reading)
         band.event_page.first = size_t(-1);
-      }
       /* Self-describing stream records allow sequential re-bucketing without
        * an unbounded offset catalogue. Identity is canonical pixel/sample. */
       const SpillRecord header{uint64_t(pixel * samples_ + sample), result};
-      if (std::fwrite(&header, 1, sizeof(header), band.events) != sizeof(header) ||
-          (event_bytes && std::fwrite(events, 1, event_bytes, band.events) != event_bytes))
-        throw std::runtime_error("Deep event file append failed");
+      /* A free-space failure after a stored write still fails the capture. */
+      append(band, band.events, &header, sizeof(header));
+      append(band, band.events, events, event_bytes);
       for (unsigned i = 0; i < result.count; ++i)
-        if (has_density(deep_event_type(events[i])) &&
-            std::fwrite(density + i, 1, sizeof(*density), band.events) != sizeof(*density))
-          throw std::runtime_error("Deep density file append failed");
-      band.write_bytes += bytes;
+        if (has_density(deep_event_type(events[i])))
+          append(band, band.events, density + i, sizeof(*density));
       const SpillRecord stored{uint64_t(band.event_bytes + sizeof(header)), result};
       band.event_bytes += bytes;
+      row_event_bytes_[pixel / width_] += bytes;
       const size_t local = band_record_index(band, pixel, sample);
       SpillPage &page = spill_page(band, local);
       const size_t offset = (local - page.first) * stride_;
@@ -432,14 +1005,72 @@ void Capture::store_record(const size_t index,
     }
     ++completed_;
   }
-  catch (const std::exception &) {
-    set_error(IO_ERROR);
+  catch (const SpaceError &error) {
+    set_error(SPILL_SPACE, error.what());
+  }
+  catch (const std::exception &error) {
+    set_error(IO_ERROR, error.what());
   }
 }
-void Capture::set_error(const Error error)
+namespace {
+const char *base_error_message(const int error, const KernelDeepError failure)
 {
-  int expected = NONE;
-  error_.compare_exchange_strong(expected, error);
+  switch (error) {
+    case 5: /* IO_ERROR */
+      return "deep spill I/O failed (disk full, seek, read or write error)";
+    case 6: /* SPILL_SPACE */
+      return "deep spill disk space is insufficient";
+    case 1:
+      return "camera sample outside capture bounds";
+    case 2:
+      return "camera sample recorded more than once";
+    case 3:
+      return "camera intersection depth or opacity is invalid";
+    case 4:
+      switch (failure) {
+        case DEEP_ERROR_CAPACITY:
+          return "deep traversal limit exceeded";
+        case DEEP_ERROR_DIAGNOSTIC_CAPACITY:
+          return "deep raw-hit diagnostic capacity exceeded (no diagnostic truncation permitted)";
+        case DEEP_ERROR_EVENT_CAPACITY:
+          return "deep camera sample event capacity exceeded";
+        case DEEP_ERROR_GRID_STEPS:
+          return "deep grid traversal step limit exceeded";
+        case DEEP_ERROR_BOUNDARY_CAPACITY:
+          return "deep coincident or initial boundary capacity exceeded";
+        case DEEP_ERROR_MEDIA_CAPACITY:
+          return "deep camera sample medium capacity exceeded";
+        case DEEP_ERROR_CACHE_MISS:
+          return "deep capture texture cache miss";
+        case DEEP_ERROR_PRIMITIVE:
+          return "unsupported deep capture primitive";
+        case DEEP_ERROR_DEPTH:
+          return "invalid deep capture depth";
+        case DEEP_ERROR_EXTINCTION:
+          return "invalid or non-scalar deep extinction";
+        case DEEP_ERROR_MEDIUM:
+          return "unresolved deep volume boundary state";
+        case DEEP_ERROR_PROGRESS:
+          return "deep ray traversal did not advance";
+        default:
+          return "unsupported or incomplete camera capture state";
+      }
+    default:
+      return "";
+  }
+}
+}  // namespace
+void Capture::set_error(const Error error, const std::string &detail) const
+{
+  if (error_.load() != NONE)
+    return;
+  const std::lock_guard<std::mutex> lock(error_mutex_);
+  if (error_.load() != NONE)
+    return;
+  /* Compose before publishing; readers see error_ first, then this text. */
+  if (!detail.empty())
+    error_detail_ = std::string(base_error_message(error, failure_.load())) + ": " + detail;
+  error_.store(error);
 }
 void Capture::fail(const KernelDeepError reason)
 {
@@ -702,8 +1333,19 @@ bool Capture::finalize() const
       const std::lock_guard<std::mutex> band_lock(band.mutex);
       for (SpillPage &page : band.pages)
         flush_page(band, page);
-      if (std::fflush(band.index) || (!band.reading_events && std::fflush(band.events)))
-        return false;
+      if (band.events.file) {
+        flush_stream(band, band.events);
+        /* Export needs no compressor until a re-bucket; return capture state. */
+        std::vector<unsigned char>().swap(band.events.pending);
+#ifdef WITH_CYCLES_DEEP_ZSTD
+        ZSTD_freeCCtx(static_cast<ZSTD_CCtx *>(band.compressor));
+        band.compressor = nullptr;
+#endif
+      }
+      if (std::fflush(band.index))
+        io_failure("Deep spill index flush", band.index_path, 0, errno);
+      if (band.events.file && !band.events.reading && std::fflush(band.events.file))
+        io_failure("Deep spill event flush", band.events.path, 0, errno);
       if (adaptive()) {
         /* Accepted identities plus the total completion count prove there are
          * no extra records. Avoid scanning reserved, unconverged populations. */
@@ -727,26 +1369,104 @@ bool Capture::finalize() const
       }
     }
   }
-  catch (const std::exception &) {
+  catch (const std::exception &error) {
+    set_error(IO_ERROR, error.what());
     return false;
   }
   return true;
 }
 
-void Capture::load_stream(Band &band, FILE *file, const size_t bytes,
+void Capture::load_stream(Band &band, SpillStream &stream,
                            const int first_y, const int rows) const
 {
+  const size_t bytes = size_t(stream.raw_bytes);
   const size_t records = size_t(width_) * rows * samples_;
+  const auto budget_failure = [&](const char *what) {
+    const uint64_t needed = uint64_t(bytes) + uint64_t(records) * sizeof(SpillRecord);
+    return std::runtime_error(
+        std::string(what) + ": " + std::to_string(rows) + " row(s) from y=" +
+        std::to_string(first_y) + " need " + std::to_string(needed) + " bytes (events " +
+        std::to_string(bytes) + " + records " + std::to_string(records * sizeof(SpillRecord)) +
+        "), staging limit " + std::to_string(spill_memory_bytes_) +
+        " bytes (deep_memory_mb/8 after adaptive populations); minimum deep_memory_mb " +
+        std::to_string((8 * needed + population_bytes_ + reserved_bytes_ + mebibyte - 1) /
+                       mebibyte));
+  };
   if (bytes > spill_memory_bytes_ || records > (spill_memory_bytes_ - bytes) / sizeof(SpillRecord))
-    throw std::runtime_error("Deep export row exceeds --deep-memory-mb budget");
+    throw budget_failure("Deep export row exceeds --deep-memory-mb budget");
   staged_records_ = std::vector<SpillRecord>(records);
   staged_events_ = std::vector<unsigned char>(bytes);
   if (staged_events_.capacity() + staged_records_.capacity() * sizeof(SpillRecord) > spill_memory_bytes_)
-    throw std::runtime_error("Deep staged vector capacities exceed memory budget");
-  seek_record(file, 0);
-  if (bytes && std::fread(staged_events_.data(), 1, bytes, file) != bytes)
-    throw std::runtime_error("Deep sequential band read failed");
-  band.read_bytes += bytes;
+    throw budget_failure("Deep staged vector capacities exceed memory budget");
+  if (compression_ && !stream.raw) {
+#ifdef WITH_CYCLES_DEEP_ZSTD
+    /* Read batches of stored blocks sequentially and decode each batch in
+     * parallel straight into the staged stream. Fixed scratch: one batch of
+     * stored blocks plus one decoder context per thread. */
+    flush_stream(band, stream);
+    seek_record(stream.file, 0);
+    stream.reading = true;
+    band.event_page.first = size_t(-1);
+    constexpr size_t batch_blocks = 32;
+    struct Job {
+      size_t stored_offset, stored, raw_offset, raw;
+    };
+    std::vector<Job> jobs;
+    jobs.reserve(batch_blocks);
+    std::vector<unsigned char> batch(batch_blocks * event_page_bytes);
+    BatchPool pool(std::max(1u, std::min(8u, std::thread::hardware_concurrency())));
+    uint64_t file_offset = 0;
+    size_t raw_offset = 0;
+    while (raw_offset < bytes) {
+      jobs.clear();
+      size_t stored_offset = 0;
+      while (jobs.size() < batch_blocks && raw_offset < bytes) {
+        uint32_t header[2];
+        if (stream.file_bytes - file_offset < sizeof(header) ||
+            std::fread(header, 1, sizeof(header), stream.file) != sizeof(header))
+          io_failure("Deep spill block header read", stream.path, sizeof(header), errno);
+        const size_t raw = header[0], stored = header[1];
+        if (raw == 0 || raw > event_page_bytes || stored > raw || raw > bytes - raw_offset ||
+            stored > stream.file_bytes - file_offset - sizeof(header))
+          throw std::runtime_error("Invalid deep spill block in " + stream.path);
+        if (std::fread(batch.data() + stored_offset, 1, stored, stream.file) != stored)
+          io_failure("Deep spill block read", stream.path, stored, errno);
+        jobs.push_back({stored_offset, stored, raw_offset, raw});
+        stored_offset += stored;
+        raw_offset += raw;
+        file_offset += sizeof(header) + stored;
+        band.read_bytes += sizeof(header) + stored;
+      }
+      pool.run(jobs.size(), [&](const size_t i) {
+        const Job &job = jobs[i];
+        unsigned char *destination = staged_events_.data() + job.raw_offset;
+        if (job.stored == job.raw) {
+          std::memcpy(destination, batch.data() + job.stored_offset, job.raw);
+          return;
+        }
+        thread_local std::unique_ptr<ZSTD_DCtx, size_t (*)(ZSTD_DCtx *)> context(nullptr,
+                                                                                 ZSTD_freeDCtx);
+        if (!context)
+          context.reset(ZSTD_createDCtx());
+        const size_t decoded = context ? ZSTD_decompressDCtx(context.get(), destination, job.raw,
+                                                             batch.data() + job.stored_offset,
+                                                             job.stored) :
+                                         0;
+        if (!context || ZSTD_isError(decoded) || decoded != job.raw)
+          throw std::runtime_error("Corrupt deep spill block in " + stream.path);
+      });
+    }
+    if (file_offset != stream.file_bytes)
+      throw std::runtime_error("Deep spill stream has trailing blocks: " + stream.path);
+#endif
+  }
+  else {
+    seek_record(stream.file, 0);
+    stream.reading = true;
+    if (bytes && std::fread(staged_events_.data(), 1, bytes, stream.file) != bytes)
+      io_failure("Deep sequential band read", stream.path, bytes, errno);
+    band.read_bytes += bytes;
+  }
   size_t offset = 0;
   while (offset < bytes) {
     if (bytes - offset < sizeof(SpillRecord))
@@ -787,19 +1507,54 @@ void Capture::rebucket(Band &band) const
   std::vector<KernelDeepEvent> events;
   std::vector<KernelDeepDensity> density;
   if (capacity_ * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)) > spill_memory_bytes_)
-    throw std::runtime_error("Deep re-bucket scratch exceeds memory budget");
+    throw std::runtime_error("Deep re-bucket scratch exceeds memory budget: " +
+                             std::to_string(capacity_ * (sizeof(KernelDeepEvent) +
+                                                         sizeof(KernelDeepDensity))) +
+                             " bytes, staging limit " + std::to_string(spill_memory_bytes_));
+  /* Row files are transient (one band at a time) and stay raw: recompressing
+   * them would put a second encode on the serial export path. */
   for (int y = 0; y < band.rows; ++y) {
-    band.row_files.push_back(std::make_unique<RowFile>());
-    band.row_files.back()->file = std::tmpfile();
-    if (!band.row_files.back()->file)
-      throw std::runtime_error("Cannot create deep row file");
+    band.row_files.push_back(std::make_unique<SpillStream>());
+    bool unused = false;
+    band.row_files.back()->raw = true;
+    band.row_files.back()->file = open_spill_file("row", 0, unused, band.row_files.back()->path);
   }
-  seek_record(band.events, 0);
+  /* Sequential source reader: raw records, or decoded blocks in the event page. */
+  SpillStream &source = band.events;
+  band.event_page.first = size_t(-1);
+  uint64_t block_offset = 0;
+  size_t block_position = 0, block_size = 0;
+  if (!compression_) {
+    seek_record(source.file, 0);
+    source.reading = true;
+  }
+  const auto read = [&](void *destination, const size_t bytes, const char *what) {
+    if (!compression_) {
+      if (bytes && std::fread(destination, 1, bytes, source.file) != bytes)
+        io_failure(what, source.path, bytes, errno);
+      return;
+    }
+    unsigned char *output = static_cast<unsigned char *>(destination);
+    size_t remaining = bytes;
+    while (remaining) {
+      if (block_position == block_size) {
+        block_offset = read_block(band, source, block_offset, band.event_page.data.data(),
+                                  block_size);
+        block_position = 0;
+      }
+      const size_t n = std::min(remaining, block_size - block_position);
+      std::memcpy(output, band.event_page.data.data() + block_position, n);
+      output += n;
+      block_position += n;
+      remaining -= n;
+    }
+  };
   size_t remaining = band.event_bytes;
   while (remaining) {
     SpillRecord header;
-    if (remaining < sizeof(header) || std::fread(&header, 1, sizeof(header), band.events) != sizeof(header))
+    if (remaining < sizeof(header))
       throw std::runtime_error("Deep re-bucket header read failed");
+    read(&header, sizeof(header), "Deep re-bucket header read");
     remaining -= sizeof(header);
     const size_t row = size_t(header.event_offset / samples_ / width_);
     if (row < size_t(band.first_y) || row >= size_t(band.first_y + band.rows) ||
@@ -809,9 +1564,9 @@ void Capture::rebucket(Band &band) const
     const size_t event_bytes = header.result.count * sizeof(KernelDeepEvent);
     if (events.size() < header.result.count)
       events.resize(header.result.count);
-    if (event_bytes > remaining ||
-        (event_bytes && std::fread(events.data(), 1, event_bytes, band.events) != event_bytes))
+    if (event_bytes > remaining)
       throw std::runtime_error("Deep re-bucket event read failed");
+    read(events.data(), event_bytes, "Deep re-bucket event read");
     remaining -= event_bytes;
     size_t densities = 0;
     for (unsigned i = 0; i < header.result.count; ++i)
@@ -819,26 +1574,26 @@ void Capture::rebucket(Band &band) const
     const size_t density_bytes = densities * sizeof(KernelDeepDensity);
     if (density.size() < densities)
       density.resize(densities);
-    if (density_bytes > remaining ||
-        (density_bytes && std::fread(density.data(), 1, density_bytes, band.events) != density_bytes))
+    if (density_bytes > remaining)
       throw std::runtime_error("Deep re-bucket density read failed");
+    read(density.data(), density_bytes, "Deep re-bucket density read");
     remaining -= density_bytes;
-    RowFile &row_file = *band.row_files[row - band.first_y];
-    if (std::fwrite(&header, 1, sizeof(header), row_file.file) != sizeof(header) ||
-        (event_bytes && std::fwrite(events.data(), 1, event_bytes, row_file.file) != event_bytes) ||
-        (density_bytes && std::fwrite(density.data(), 1, density_bytes, row_file.file) != density_bytes))
-      throw std::runtime_error("Deep re-bucket write failed");
-    const size_t transferred = sizeof(header) + event_bytes + density_bytes;
-    band.read_bytes += transferred;
-    band.write_bytes += transferred;
-    row_file.bytes += transferred;
+    SpillStream &row_file = *band.row_files[row - band.first_y];
+    append(band, row_file, &header, sizeof(header));
+    append(band, row_file, events.data(), event_bytes);
+    append(band, row_file, density.data(), density_bytes);
+    if (!compression_)
+      band.read_bytes += sizeof(header) + event_bytes + density_bytes;
   }
-  for (const auto &row : band.row_files)
+  for (const auto &row : band.row_files) {
+    flush_stream(band, *row);
     if (std::fflush(row->file))
-      throw std::runtime_error("Deep row file flush failed");
+      io_failure("Deep row file flush", row->path, 0, errno);
+  }
+  band.event_page.first = size_t(-1);
   std::fclose(band.index);
-  std::fclose(band.events);
-  band.index = band.events = nullptr;
+  band.index = nullptr;
+  band.events.close();
   band.rebucketed = true;
 }
 
@@ -850,6 +1605,22 @@ void Capture::begin_export_row(const int y) const
   if (!exporting_) {
     if (!finalize())
       throw std::runtime_error("Cannot export incomplete deep capture");
+    /* A band is staged whole or, when it exceeds staging, row by row, and a
+     * row never needs more than its band, so the largest row decides whether
+     * the export fits. Fail before exporting any row, with the minimum budget. */
+    const uint64_t row_records = uint64_t(width_) * samples_ * sizeof(SpillRecord);
+    const auto largest = std::max_element(row_event_bytes_.begin(), row_event_bytes_.end());
+    if (largest != row_event_bytes_.end() && *largest + row_records > spill_memory_bytes_) {
+      const uint64_t needed = *largest + row_records;
+      throw std::runtime_error(
+          "Deep export row exceeds --deep-memory-mb budget: largest row y=" +
+          std::to_string(largest - row_event_bytes_.begin()) + " needs " + std::to_string(needed) +
+          " bytes (events " + std::to_string(*largest) + " + records " +
+          std::to_string(row_records) + "), staging limit " + std::to_string(spill_memory_bytes_) +
+          " bytes (deep_memory_mb/8 after adaptive populations and host reservations); minimum "
+          "deep_memory_mb " +
+          std::to_string((8 * needed + population_bytes_ + reserved_bytes_ + mebibyte - 1) / mebibyte));
+    }
     exporting_ = true;
     next_export_y_ = height_ - 1;
   }
@@ -863,12 +1634,10 @@ void Capture::begin_export_row(const int y) const
     if (!band.rebucketed && (band.event_bytes > spill_memory_bytes_ ||
         index_bytes > spill_memory_bytes_ - band.event_bytes))
       rebucket(band);
-    if (band.rebucketed) {
-      const RowFile &row = *band.row_files[y - band.first_y];
-      load_stream(band, row.file, row.bytes, y, 1);
-    }
+    if (band.rebucketed)
+      load_stream(band, *band.row_files[y - band.first_y], y, 1);
     else
-      load_stream(band, band.events, band.event_bytes, band.first_y, band.rows);
+      load_stream(band, band.events, band.first_y, band.rows);
   }
   export_row_open_ = true;
 }
@@ -891,9 +1660,16 @@ void Capture::end_export_row(const int y) const
         band.row_files[y - band.first_y].reset();
       else {
         std::fclose(band.index);
-        std::fclose(band.events);
-        band.index = band.events = nullptr;
+        band.index = nullptr;
+        band.events.close();
       }
+#ifdef WITH_CYCLES_DEEP_ZSTD
+      if (!band.rebucketed || y == band.first_y) {
+        ZSTD_freeDCtx(static_cast<ZSTD_DCtx *>(band.decompressor));
+        band.decompressor = nullptr;
+        std::vector<unsigned char>().swap(band.block);
+      }
+#endif
     }
   }
   export_row_open_ = false;
@@ -901,47 +1677,13 @@ void Capture::end_export_row(const int y) const
 }
 const char *Capture::error_message() const
 {
-  switch (error_.load()) {
-    case IO_ERROR:
-      return "deep spill I/O failed (disk full, seek, read or write error)";
-    case OUT_OF_RANGE:
-      return "camera sample outside capture bounds";
-    case DUPLICATE:
-      return "camera sample recorded more than once";
-    case INVALID_DEPTH:
-      return "camera intersection depth or opacity is invalid";
-    case UNSUPPORTED_STATE:
-      switch (failure_.load()) {
-        case DEEP_ERROR_CAPACITY:
-          return "deep traversal limit exceeded";
-        case DEEP_ERROR_DIAGNOSTIC_CAPACITY:
-          return "deep raw-hit diagnostic capacity exceeded (no diagnostic truncation permitted)";
-        case DEEP_ERROR_EVENT_CAPACITY:
-          return "deep camera sample event capacity exceeded";
-        case DEEP_ERROR_GRID_STEPS:
-          return "deep grid traversal step limit exceeded";
-        case DEEP_ERROR_BOUNDARY_CAPACITY:
-          return "deep coincident or initial boundary capacity exceeded";
-        case DEEP_ERROR_MEDIA_CAPACITY:
-          return "deep camera sample medium capacity exceeded";
-        case DEEP_ERROR_CACHE_MISS:
-          return "deep capture texture cache miss";
-        case DEEP_ERROR_PRIMITIVE:
-          return "unsupported deep capture primitive";
-        case DEEP_ERROR_DEPTH:
-          return "invalid deep capture depth";
-        case DEEP_ERROR_EXTINCTION:
-          return "invalid or non-scalar deep extinction";
-        case DEEP_ERROR_MEDIUM:
-          return "unresolved deep volume boundary state";
-        case DEEP_ERROR_PROGRESS:
-          return "deep ray traversal did not advance";
-        default:
-          return "unsupported or incomplete camera capture state";
-      }
-    default:
-      return finalize() ? "" : "camera capture is incomplete";
+  const int error = error_.load();
+  if (error != NONE) {
+    if (!error_detail_.empty())
+      return error_detail_.c_str();
+    return base_error_message(error, failure_.load());
   }
+  return finalize() ? "" : "camera capture is incomplete";
 }
 float Capture::value(const int x, const int y, const int sample) const
 {
@@ -1011,6 +1753,23 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
   auto bytes = [](const VolumeCameraSample &sample) {
     return (sample.intervals.capacity() + sample.camera.events.capacity()) * 128;
   };
+  /* Diagnostic interval counts (log only): per ray and per tree node level. */
+  struct LocalHistogram {
+    uint64_t count[histogram_buckets] = {}, total = 0, items = 0, maximum = 0;
+    void add(const size_t n)
+    {
+      int bucket = 0;
+      for (size_t v = n; v && bucket < histogram_buckets - 1; v >>= 1)
+        ++bucket;
+      ++count[bucket];
+      total += n;
+      ++items;
+      maximum = std::max(maximum, uint64_t(n));
+    }
+  };
+  std::unique_ptr<std::array<LocalHistogram, histogram_levels + 1>> histogram;
+  if (collect_histogram)
+    histogram = std::make_unique<std::array<LocalHistogram, histogram_levels + 1>>();
   auto combine = [&](VolumeCameraSample left, VolumeCameraSample right) {
     const uint64_t id = left.camera.id;
     const double weight = left.camera.weight + right.camera.weight;
@@ -1021,6 +1780,13 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
                                           budget.reconstruction / (2 * levels),
                                           reconstruction_limit(),
                                           budget.reconstruction / (2 * levels));
+    if (histogram) {
+      /* Level = ceil(log2(population)); balanced nodes have exact powers of two. */
+      int level = 0;
+      while (level < histogram_levels - 1 && double(uint64_t(1) << (level + 1)) < weight)
+        ++level;
+      (*histogram)[1 + level].add(curve.size());
+    }
     return from_curve(curve, id, weight);
   };
   size_t retained_bytes = 0;
@@ -1034,6 +1800,8 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
           {sample}, budget.reconstruction, reconstruction_limit(), budget.density / 2);
       sample = from_curve(compact, sample.camera.id, sample.camera.weight);
     }
+    if (histogram)
+      (*histogram)[0].add(sample.intervals.size() + sample.camera.events.size());
     size_t population = 1;
     /* Equal-sized adjacent groups form a balanced tree while the camera ledger
      * is read. Keep only logarithmically many curves, not every camera ray. */
@@ -1070,6 +1838,22 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
     }
     ledger.push_back(std::move(sample));
   }
+  if (histogram) {
+    for (int i = 0; i <= histogram_levels; ++i) {
+      const LocalHistogram &local = (*histogram)[i];
+      if (!local.items)
+        continue;
+      Histogram &global = i ? level_histogram_[i - 1] : ray_histogram_;
+      for (int b = 0; b < histogram_buckets; ++b)
+        if (local.count[b])
+          global.count[b].fetch_add(local.count[b], std::memory_order_relaxed);
+      global.total.fetch_add(local.total, std::memory_order_relaxed);
+      global.items.fetch_add(local.items, std::memory_order_relaxed);
+      uint64_t maximum = global.maximum.load();
+      while (maximum < local.maximum && !global.maximum.compare_exchange_weak(maximum, local.maximum))
+        ;
+    }
+  }
   /* Share the existing reconstruction allowance between mixture fitting and
    * streaming reduction; the total published error budget is unchanged. */
   return fit(std::move(ledger),
@@ -1078,5 +1862,127 @@ std::vector<IntervalSample> Capture::reconstruct_volume_pixel(const int x, const
                             compact_ray ? 0 : budget.reconstruction / 2,
                             volume_pixel_bytes_ ? volume_pixel_bytes_ :
                                                   std::numeric_limits<size_t>::max());
+}
+
+std::string Capture::check_spill_space()
+{
+  if (bands_.empty() || failed())
+    return std::string();
+  /* Workers are joined between passes, so band counters are stable. */
+  uint64_t stored = 0, largest_raw = 0, largest_staged = 0;
+  for (const auto &item : bands_) {
+    const Band &band = *item;
+    stored += compression_ ? band.events.file_bytes + band.events.pending.size() : band.event_bytes;
+    if (band.event_bytes > largest_raw) {
+      largest_raw = band.event_bytes;
+      largest_staged = band.event_bytes + band.records * stride_;
+    }
+  }
+  std::error_code ec;
+  const auto info = std::filesystem::space(native_path(spill_directory_), ec);
+  if (ec)
+    return "Deep spill: cannot query free space in " + spill_directory_ + ": " + ec.message();
+  const uint64_t free_bytes = uint64_t(info.available);
+  /* The quota charges the index at its full logical size from the start; free
+   * disk is charged only for index pages still to be allocated. */
+  const uint64_t quota_free = spill_quota_bytes_ ?
+                                  (spill_quota_bytes_ > stored + index_total_bytes_ ?
+                                       spill_quota_bytes_ - stored - index_total_bytes_ :
+                                       0) :
+                                  UINT64_MAX;
+  const size_t done = completed_.load();
+  const std::string where = spill_directory_ + " (" + std::to_string(free_bytes) + " bytes free" +
+                            (spill_quota_bytes_ ? ", CYCLES_DEEP_SPILL_MAX_MB quota " +
+                                                      std::to_string(spill_quota_bytes_) + " bytes" :
+                                                  std::string()) +
+                            ")";
+  const std::string advice =
+      ". Choose a larger spill directory (Output > Deep > Spill Directory, --deep-spill-dir or "
+      "CYCLES_DEEP_SPILL_DIR), or reduce samples, resolution or events";
+  const uint64_t available = std::min(free_bytes, quota_free);
+  if (available < spill_reserve_bytes) {
+    set_error(SPILL_SPACE, "spill directory " + where + " has " + std::to_string(available) +
+                               " usable bytes, below the " + std::to_string(spill_reserve_bytes) +
+                               " byte reserve, after " + std::to_string(stored) +
+                               " stored event bytes and a " + std::to_string(index_total_bytes_) +
+                               " byte index" + advice);
+    return std::string();
+  }
+  if (!done)
+    return std::string();
+  const long double scale = (long double)count_ / done;
+  const uint64_t projected = uint64_t(stored * scale);
+  const uint64_t events = projected > stored ? projected - stored : 0;
+  /* Export re-buckets a band whose stream and index exceed the staging budget,
+   * one band at a time, writing a raw second copy of that band. */
+  const uint64_t rebucket = uint64_t(largest_staged * scale) > spill_memory_bytes_ ?
+                                uint64_t(largest_raw * scale) :
+                                0;
+  const uint64_t index = index_sparse_ ? index_total_bytes_ : 0;
+  const auto required = [](const uint64_t remaining) {
+    return remaining + remaining / 20 + spill_reserve_bytes;
+  };
+  const bool disk_short = required(events + index + rebucket) > free_bytes;
+  const bool quota_short = required(events + rebucket) > quota_free;
+  if (!disk_short && !quota_short)
+    return std::string();
+  const uint64_t needed = disk_short ? required(events + index + rebucket) : required(events + rebucket);
+  const std::string message =
+      "spill directory " + where + " cannot hold the projected spill: " +
+      std::to_string(stored) + " stored event bytes after " + std::to_string(done) + " of " +
+      std::to_string(count_) + " camera samples project to " + std::to_string(projected) +
+      " bytes; still needed " + std::to_string(needed) + " bytes (events " +
+      std::to_string(events) + (disk_short ? " + unallocated index " + std::to_string(index) : "") +
+      " + export re-bucket copy " + std::to_string(rebucket) + " + 5% margin + " +
+      std::to_string(spill_reserve_bytes) + " reserve) versus " +
+      std::to_string(disk_short ? free_bytes : quota_free) +
+      (disk_short ? " bytes free" : " bytes left in the quota") + advice;
+  if (adaptive()) {
+    if (projection_warned_)
+      return std::string();
+    projection_warned_ = true;
+    return "Deep spill projection uses the adaptive sample cap as an upper bound: " + message;
+  }
+  set_error(SPILL_SPACE, message);
+  return std::string();
+}
+
+std::string Capture::volume_histogram() const
+{
+  std::ostringstream out;
+  const auto describe = [&](const char *label, const Histogram &h) {
+    const uint64_t items = h.items.load();
+    if (!items)
+      return;
+    out << label << " n=" << items << " mean=" << std::setprecision(4)
+        << double(h.total.load()) / items << " max=" << h.maximum.load();
+    /* Percentiles are bucket upper bounds: bucket b holds [2^(b-1), 2^b). */
+    const auto percentile = [&](const double q) {
+      uint64_t seen = 0;
+      for (int b = 0; b < histogram_buckets; ++b) {
+        seen += h.count[b].load();
+        if (seen >= q * items)
+          return b ? (uint64_t(1) << b) - 1 : uint64_t(0);
+      }
+      return h.maximum.load();
+    };
+    out << " p50<=" << percentile(.5) << " p90<=" << percentile(.9) << " p99<=" << percentile(.99)
+        << " buckets[";
+    bool first = true;
+    for (int b = 0; b < histogram_buckets; ++b)
+      if (const uint64_t n = h.count[b].load()) {
+        out << (first ? "" : " ") << (b ? (uint64_t(1) << (b - 1)) : 0) << ":" << n;
+        first = false;
+      }
+    out << "]";
+  };
+  describe("rays(after per-ray processing)", ray_histogram_);
+  for (int level = 0; level < histogram_levels; ++level) {
+    if (!level_histogram_[level].items.load())
+      continue;
+    out << "; ";
+    describe(("level" + std::to_string(level + 1)).c_str(), level_histogram_[level]);
+  }
+  return out.str();
 }
 }  // namespace ccl::deep

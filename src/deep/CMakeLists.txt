@@ -15,6 +15,13 @@ target_include_directories(cycles_deep_capture PUBLIC ${CMAKE_CURRENT_SOURCE_DIR
 target_compile_features(cycles_deep_capture PUBLIC cxx_std_17)
 target_link_libraries(cycles_deep_capture PUBLIC cycles_deep_reference)
 target_include_directories(cycles_deep_reference PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+# Lossless block compression of the capture spill stream uses the zstd library
+# that Blender and standalone Cycles already link; without it spill stays raw.
+if(ZSTD_INCLUDE_DIRS AND ZSTD_LIBRARIES)
+  target_include_directories(cycles_deep_capture SYSTEM PRIVATE ${ZSTD_INCLUDE_DIRS})
+  target_link_libraries(cycles_deep_capture PRIVATE ${ZSTD_LIBRARIES})
+  target_compile_definitions(cycles_deep_capture PRIVATE WITH_CYCLES_DEEP_ZSTD)
+endif()
 
 if(BUILD_TESTING)
   find_package(Threads REQUIRED)

@@ -36,6 +36,22 @@
 #include "util/time.h"
 
 CCL_NAMESPACE_BEGIN
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+static void log_deep_spill(const deep::Capture &capture, const char *stage)
+{
+  const deep::Capture::SpillStatistics spill = capture.spill_statistics();
+  LOG_INFO_IMPORTANT << "Deep capture " << stage
+                     << ": spill_event_raw_bytes=" << spill.event_raw_bytes
+                     << " spill_event_file_bytes=" << spill.event_file_bytes
+                     << " compression_ratio="
+                     << (spill.event_file_bytes ?
+                             double(spill.event_raw_bytes) / double(spill.event_file_bytes) :
+                             1.0)
+                     << " spill_index_bytes=" << spill.index_bytes
+                     << " spill_file_bytes=" << spill.file_bytes
+                     << " directory=" << capture.spill_directory();
+}
+#endif
 
 PathTrace::PathTrace(Device *device,
                      Device *denoise_device,
@@ -492,6 +508,24 @@ void PathTrace::path_trace(RenderWork &render_work)
     render_scheduler_.report_path_trace_time(
         render_work, max(0.0, time_dt() - start_time - excluded), is_cancel_requested());
     LOG_DEBUG << "Deep scheduler excluded capture seconds: " << excluded;
+    /* Between passes: stop promptly on any capture error (with its first cause)
+     * and check the free-space projection of the spill directory. */
+    if (!is_cancel_requested()) {
+      if (!deep_capture_->failed()) {
+        const string warning = deep_capture_->check_spill_space();
+        if (!warning.empty()) {
+          LOG_WARNING << warning;
+        }
+      }
+      if (deep_capture_->failed()) {
+        const string message = deep_capture_->error_message();
+        LOG_ERROR << "Deep capture failed during rendering; stopping: " << message;
+        log_deep_spill(*deep_capture_, "stopped");
+        if (progress_) {
+          progress_->set_error(message);
+        }
+      }
+    }
     return;
   }
 #endif
@@ -791,8 +825,22 @@ void PathTrace::reset_deep(const DeepSettings &settings, const BufferParams &par
       (settings.transparent || settings.volume) ? event_capacity : 0,
       true, adaptive, settings.volume, settings.volume_grid, TaskScheduler::max_concurrency(),
       settings.volume_shader_evaluation ? settings.error / 2 : settings.error,
-      settings.samples ? capture_samples : 0, settings.ids);
+      settings.samples ? capture_samples : 0, settings.ids, settings.spill_dir,
+      settings.memory_bytes - capture_bytes);
   deep_capture_->open_diagnostics(output_driver_->deep_diagnostics_path());
+  {
+    const char *histogram = std::getenv("CYCLES_DEEP_HISTOGRAM");
+    deep_capture_->collect_histogram = settings.volume_grid &&
+                                       (LOG_IS_ON(LOG_LEVEL_DEBUG) ||
+                                        (histogram && std::strcmp(histogram, "0") != 0));
+  }
+  LOG_INFO_IMPORTANT << "Deep spill: directory=" << deep_capture_->spill_directory()
+                     << " compression=" << (deep_capture_->spill_compression() ?
+                                                "zstd-" + std::to_string(deep_capture_->spill_compression()) :
+                                                string(deep_capture_->spill_compression_limited() ?
+                                                           "off (budget)" :
+                                                           "off"))
+                     << " index=" << (deep_capture_->spill_index_sparse() ? "sparse" : "zero-filled");
   if (settings.volume_shader_evaluation) {
     deep_capture_->volume_shader_error = settings.error;
     deep_capture_->volume_shader_adaptive = !settings.volume_shader_fixed_step;
@@ -819,6 +867,7 @@ void PathTrace::write_deep_output()
   if (!deep_capture_->finalize()) {
     throw std::runtime_error(deep_capture_->error_message());
   }
+  log_deep_spill(*deep_capture_, "complete");
   if (!output_driver_ || !output_driver_->supports_deep_output()) {
     throw std::runtime_error("Deep output driver was removed before delivery");
   }
@@ -853,6 +902,8 @@ void PathTrace::write_deep_output()
                      << " spill_file_bytes=" << spill.file_bytes;
   if (deep_capture_->volume_shader_error)
     LOG_INFO_IMPORTANT << "Deep output: shader_evaluations=" << deep_capture_->shader_evaluations.load();
+  if (deep_capture_->collect_histogram)
+    LOG_INFO_IMPORTANT << "Deep volume interval histogram: " << deep_capture_->volume_histogram();
 }
 #endif
 

@@ -106,6 +106,12 @@ void PathTraceWorkCPU::render_samples(RenderStatistics &statistics,
       if (is_cancel_requested()) {
         return;
       }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+      /* A failed deep capture is final: stop the pass promptly. */
+      if (deep_capture_ && deep_capture_->failed()) {
+        return;
+      }
+#endif
 
       const int y = work_index / image_width;
       const int x = work_index - y * image_width;
@@ -160,6 +166,11 @@ void PathTraceWorkCPU::render_samples_full_pipeline(ThreadKernelGlobalsCPU *kern
     if (is_cancel_requested()) {
       break;
     }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+    if (deep_capture_ && deep_capture_->failed()) {
+      break;
+    }
+#endif
 
     if (has_bake) {
       if (!kernels_.integrator_init_from_bake(

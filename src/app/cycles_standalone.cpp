@@ -58,6 +58,7 @@ struct Options {
   string deep_output_filepath;
   string deep_records_filepath;
   int deep_memory_mb = 64;
+  string deep_spill_dir;
   string deep_error = "0.001";
   string deep_z_tolerance = "0.0001";
   bool deep_ids = false;
@@ -216,6 +217,7 @@ static void session_init()
     }
     deep.max_events = options.deep_max_events;
     deep.memory_bytes = size_t(options.deep_memory_mb) * 1024 * 1024;
+    deep.spill_dir = options.deep_spill_dir;
   }
 #endif
 
@@ -510,6 +512,10 @@ static void options_parse(const int argc, const char **argv)
   ap.arg("--deep-memory-mb %d:MIB")
       .help("Deep working memory budget in MiB (default 64; raw capture spills to temp disk)")
       .action([&](auto argv) { parse_int(argv, &options.deep_memory_mb); });
+  ap.arg("--deep-spill-dir %s:DIR")
+      .help("Directory for temporary deep capture spill files (default CYCLES_DEEP_SPILL_DIR, "
+            "then the system temp directory)")
+      .action([&](auto argv) { parse_string(argv, &options.deep_spill_dir); });
   ap.arg("--deep-ids").help("Write per-sample UINT object IDs and name manifest")
       .action([&](auto) { options.deep_ids = true; });
   ap.arg("--deep-samples %d:SAMPLES")

@@ -29,6 +29,11 @@ Blender preferences.
    stops on event capacity.
 6. Run the read-only scanner first (see [Read-only scene scanner](#read-only-scene-scanner));
    it reports blockers before you spend render time.
+7. Volume layers spill tens to hundreds of GB of temporary data. Set
+   **Output > Output > Deep > Spill Directory** to a drive with room (blank uses
+   `CYCLES_DEEP_SPILL_DIR`, then %TEMP%). Junkshop Volume at 25% uses 24.5 GB
+   (62 GB before compression). If it cannot fit, the render stops early and prints
+   both numbers.
 
 **Render in the background** (interactive F12 deep rendering is experimental):
 
@@ -160,6 +165,9 @@ file is never visible under its final name.
 
 ### Known limits in production
 
+- **Export row budget.** If the export reports "Deep export row exceeds
+  --deep-memory-mb budget", set Deep Working Memory to the printed
+  `minimum deep_memory_mb`; that value covers every row.
 - **Folded volume meshes.** Deep volume capture pairs mesh entry and exit faces to
   find where a ray is inside a volume. A mesh that folds over itself (for example a
   strong Displace modifier on a smoke puff) can leave an interval open, and it

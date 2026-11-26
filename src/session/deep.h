@@ -30,6 +30,9 @@ struct DeepSettings {
   int samples = 0; /* 0 = all accepted beauty samples; otherwise their first N. */
   int max_events = 16;
   size_t memory_bytes = size_t(64) * 1024 * 1024;
+  /* Capture spill directory (temporary delete-on-close files); empty uses
+   * CYCLES_DEEP_SPILL_DIR, then the system temp directory. */
+  std::string spill_dir;
 };
 
 class Scene;

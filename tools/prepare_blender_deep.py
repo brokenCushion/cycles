@@ -87,6 +87,11 @@ edit('blender/addon/properties.py', 'class CyclesRenderSettings(bpy.types.Proper
         options={'ANIMATABLE', 'OUTPUT_PATH', 'PATH_SUPPORTS_BLEND_RELATIVE'},
         description="Blank uses the beauty output path; use {view_layer} in this override for separate deep layers; Blender frame numbering applies",
     )
+    deep_spill_path: StringProperty(
+        name="Spill Directory", subtype='DIR_PATH', default="",
+        options={'PATH_SUPPORTS_BLEND_RELATIVE'},
+        description="Folder for temporary deep capture files, deleted when closed; blank uses CYCLES_DEEP_SPILL_DIR, then the system temp folder. Large volume renders need a drive with room",
+    )
     deep_write_diagnostics: BoolProperty(
         name="Write Samples CSV", default=False,
         description="Write accepted camera samples for validation; can produce very large files",
@@ -213,6 +218,7 @@ class CYCLES_RENDER_PT_output_deep(CyclesButtonsPanel, Panel):
         self.layout.use_property_split = True
         self.layout.use_property_decorate = False
         self.layout.prop(context.scene.cycles, "deep_output_path")
+        self.layout.prop(context.scene.cycles, "deep_spill_path")
         if (sum(layer.cycles.use_pass_deep for layer in context.scene.view_layers) > 1 and
                 "{view_layer}" not in context.scene.cycles.deep_output_path):
             self.layout.label(text="Add {view_layer} to avoid deep path collisions", icon='ERROR')
@@ -222,6 +228,8 @@ class CYCLES_RENDER_PT_passes_aov""")
 edit('blender/addon/ui.py', '    CYCLES_RENDER_PT_passes_crypto,',
      '    CYCLES_RENDER_PT_passes_crypto,\n    CYCLES_RENDER_PT_passes_deep,\n'
      '    CYCLES_RENDER_PT_output_deep,')
+edit('blender/sync.cpp', '#include "BKE_appdir.hh"\n',
+     '#include "BKE_appdir.hh"\n#include "BKE_global.hh"\n')
 # Only render() supplies a layer. Creation, viewport and bake callers keep deep off.
 edit('blender/sync.h', '                                          float pixelsize);',
      '                                          float pixelsize,\n'
@@ -262,6 +270,8 @@ edit('blender/sync.cpp', '  return params;\n}\n\nDenoiseParams BlenderSync::get_
     if (get_enum(clayer, "deep_max_events_mode") == 1)
       params.deep.max_events = get_int(clayer, "deep_max_events");
     params.deep.memory_bytes = size_t(get_int(cscene, "deep_memory_mb")) * 1024 * 1024;
+    params.deep.spill_dir = blender_absolute_path(
+        *blender::G.main, &b_scene.id, get_string(cscene, "deep_spill_path"));
     /* Deep publication covers a complete frame. Native automatic tiling is not
      * part of that contract yet; capture storage itself can spill to disk. */
     params.use_auto_tile = false;

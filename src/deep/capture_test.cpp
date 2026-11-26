@@ -2,6 +2,9 @@
 #include "deep/capture.h"
 #include "deep/osl_features.h"
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -22,6 +25,20 @@ struct CaptureTestAccess {
     std::vector<KernelDeepEvent> events(result.count);
     capture.read_record(index, result, events.data());
     return events;
+  }
+  /* Exact I/O accounting fixtures use raw (uncompressed) spill records. */
+  static void raw_spill(Capture &capture)
+  {
+    capture.compression_ = 0;
+  }
+  static int compression(const Capture &capture)
+  {
+    return capture.compression_;
+  }
+  /* Codec coverage independent of the budget rule that enables compression. */
+  static void compress_spill(Capture &capture, const int level)
+  {
+    capture.compression_ = level;
   }
 };
 }
@@ -366,7 +383,11 @@ int main()
       check(!disk.finalize());
       for (bool spill : {false, true}) {
         Capture thin(1, 1, 1, 16 * 1024 * 1024, 1, spill, false, true, true);
+        CaptureTestAccess::raw_spill(thin);
         const auto initial_io = thin.spill_statistics();
+        /* The sparse index is not zero-filled up front. */
+        const uint64_t zero_fill = spill && !thin.spill_index_sparse() ? initial_io.file_bytes : 0;
+        check(initial_io.write_bytes == zero_fill);
         const KernelDeepEvent thin_event{DEEP_VOLUME_CUBIC, 1000, 1000, 0, 0};
         const KernelDeepDensity thin_density{{1e-8f, 1e-8f, 1e-8f, 1e-8f}, 1000, 1000 + 1e-8};
         thin.record_sample(0, 0, 0, {DEEP_COMPLETE, 1, DEEP_ERROR_NONE}, &thin_event, &thin_density);
@@ -380,7 +401,7 @@ int main()
          * this one-record index its size equals the initial file size. */
         const uint64_t payload = sizeof(thin_event) + sizeof(thin_density) + initial_io.file_bytes;
         check(captured_io.file_bytes == initial_io.file_bytes + (spill ? payload : 0));
-        check(captured_io.write_bytes == (spill ? 2 * initial_io.file_bytes + payload : 0));
+        check(captured_io.write_bytes == (spill ? zero_fill + initial_io.file_bytes + payload : 0));
         check(read_io.read_bytes == captured_io.read_bytes + (spill ? payload : 0));
         check(thin_sample.intervals.size() == 1);
         check(thin_sample.intervals[0].front == thin_density.front &&
@@ -410,6 +431,216 @@ int main()
                                events.data(), density.data());
         check(!invalid.finalize());
       }
+    }
+    {
+      /* Stage 1 spill safety: explicit directory, delete-on-close files, lossless
+       * compression round trip, first-error detail and budget numbers. */
+      namespace fs = std::filesystem;
+      const fs::path root = fs::temp_directory_path() / "cycles_deep_capture_test_spill";
+      fs::remove_all(root);
+      fs::create_directories(root);
+      const auto spill_files = [&] {
+        size_t n = 0;
+        for (const auto &entry : fs::directory_iterator(root))
+          n += entry.path().filename().string().rfind("cycles-deep-", 0) == 0;
+        return n;
+      };
+      {
+        Capture directed(3, 5, 2, 32 * 1024 * 1024, 2, true, false, false, false, 1, 0, 0, false,
+                         root.string());
+        check(directed.spill_directory() == root.string());
+        check(spill_files() == 2 * 5);  // One index and one stream file per one-row band.
+        /* Delete-on-close files are not visible to other openers. */
+        check(spill_files() > 0);
+      }
+      check(spill_files() == 0);
+      rejects([&] {
+        Capture missing(1, 1, 1, 4 * 1024 * 1024, 0, true, false, false, false, 1, 0, 0, false,
+                        (root / "does-not-exist").string());
+      });
+      /* Compressed and raw spill must reconstruct byte-identically, including
+       * pre-export random reads, re-bucketed rows and adaptive populations. */
+      for (const bool rebucket : {false, true}) {
+        if (!Capture::spill_compression_supported())
+          break;
+        /* 256 MiB enables compression by the budget rule; 48 MiB forces a
+         * re-bucket of the heavy first band (codec forced on for coverage). */
+        const size_t budget = rebucket ? size_t(48) * 1024 * 1024 : size_t(256) * 1024 * 1024;
+        const int width = rebucket ? 80 : 9;
+        Capture raw(width, 70, 8, budget, 200, true, true, true, true, 1, 0, 0, false,
+                    root.string());
+        Capture packed(width, 70, 8, budget, 200, true, true, true, true, 1, 0, 0, false,
+                       root.string());
+        CaptureTestAccess::raw_spill(raw);
+        check(rebucket ? CaptureTestAccess::compression(packed) == 0 :
+                         CaptureTestAccess::compression(packed) > 0);
+        CaptureTestAccess::compress_spill(packed, 1);
+        std::mt19937 random(rebucket ? 7 : 3);
+        std::vector<KernelDeepEvent> events(200);
+        std::vector<KernelDeepDensity> density(200);
+        for (int y = 0; y < 70; ++y)
+          for (int x = 0; x < width; ++x) {
+            const int population = y < 2 && rebucket ? 8 : 1 + (x + 3 * y) % 8;
+            for (int sample = 0; sample < population; ++sample) {
+              const int count = y < 2 ? (rebucket ? 150 + int(random() % 50) : int(random() % 200)) :
+                                        int(random() % 40);
+              float z = 1;
+              for (int i = 0; i < count; ++i) {
+                const float length = .01f + float(random() % 1000) / 4000;
+                if (i % 10 == 0) {
+                  events[i] = {deep_event_pack(DEEP_VOLUME_CUBIC, i % 5), z, z + length, 0, 0};
+                  density[i] = {{.01f * (i % 7), .02f, .003f * (i % 3), .01f}, double(z),
+                                double(z + length)};
+                }
+                else
+                  events[i] = {deep_event_pack(DEEP_VOLUME, i % 5), z, z + length, 0,
+                               .001f * float(random() % 100)};
+                z += length + .001f;
+              }
+              for (Capture *capture : {&raw, &packed})
+                capture->record_sample(x, y, sample, {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE},
+                                       events.data(), density.data());
+            }
+            for (Capture *capture : {&raw, &packed})
+              capture->set_population(x, y, population);
+          }
+        /* Pre-export random reads go through the compressed block cache. */
+        for (const int y : {69, 0, 35, 1})
+          for (const int x : {width - 1, 0, 4})
+            for (const int sample : {0, 2 + x % 3}) {
+              if (sample >= raw.population(x, y))
+                continue;
+              const auto a = CaptureTestAccess::events(raw, x, y, sample);
+              const auto b = CaptureTestAccess::events(packed, x, y, sample);
+              check(a.size() == b.size() &&
+                    std::equal(a.begin(), a.end(), b.begin(), [](const auto &l, const auto &r) {
+                      return std::memcmp(&l, &r, sizeof(l)) == 0;
+                    }));
+            }
+        check(raw.finalize() && packed.finalize());
+        for (int y = 69; y >= 0; --y) {
+          raw.begin_export_row(y);
+          packed.begin_export_row(y);
+          for (int x = 0; x < width; ++x) {
+            /* Every staged payload is byte-identical; a subset also reconstructs. */
+            for (int sample = 0; sample < raw.population(x, y); ++sample) {
+              const auto a = CaptureTestAccess::events(raw, x, y, sample);
+              const auto b = CaptureTestAccess::events(packed, x, y, sample);
+              check(a.size() == b.size() &&
+                    (a.empty() || std::memcmp(a.data(), b.data(), a.size() * sizeof(a[0])) == 0));
+            }
+            if (x % 7 || y % 3)
+              continue;
+            const auto a = raw.reconstruct_volume_pixel(x, y);
+            const auto b = packed.reconstruct_volume_pixel(x, y);
+            check(a.size() == b.size() &&
+                  (a.empty() || std::memcmp(a.data(), b.data(), a.size() * sizeof(a[0])) == 0));
+          }
+          raw.end_export_row(y);
+          packed.end_export_row(y);
+        }
+        const auto a = raw.spill_statistics(), b = packed.spill_statistics();
+        check(a.event_raw_bytes == b.event_raw_bytes && a.event_file_bytes == a.event_raw_bytes);
+        check(b.event_file_bytes < b.event_raw_bytes);
+        if (rebucket)  // Re-bucketing transfers more than the stored stream once.
+          check(b.read_bytes > b.event_file_bytes);
+        std::cout << "Spill compression " << (rebucket ? "(re-bucketed) " : "") << "raw "
+                  << b.event_raw_bytes << " stored " << b.event_file_bytes << " ratio "
+                  << double(b.event_raw_bytes) / double(b.event_file_bytes) << '\n';
+      }
+      check(spill_files() == 0);
+      {
+        /* First error wins and keeps its cause; the capture reports failure early. */
+        Capture duplicate(2, 1, 2, 4 * 1024 * 1024, 0, true, false, false, false, 1, 0, 0, false,
+                          root.string());
+        check(!duplicate.failed());
+        duplicate.record(1, 0, 1, 1);
+        duplicate.record(1, 0, 1, 1);
+        duplicate.record(5, 0, 0, 1);  // Later errors do not replace the first.
+        check(duplicate.failed());
+        const std::string message = duplicate.error_message();
+        check(message.find("camera sample recorded more than once") == 0 &&
+              message.find("pixel 1,0, sample 1") != std::string::npos);
+      }
+      {
+        /* Budget failures state the bytes and the minimum budget that fits. */
+        std::string message;
+        try {
+          Capture tight(512, 4, 64, size_t(16) * 1024 * 1024, 64, true, false, false, false, 1, 0, 0,
+                        false, root.string());
+        }
+        catch (const std::exception &error) {
+          message = error.what();
+        }
+        check(message.find("needs ") != std::string::npos &&
+              message.find("minimum deep_memory_mb ") != std::string::npos);
+        const int minimum = std::stoi(message.substr(message.rfind(' ') + 1));
+        Capture fits(512, 4, 64, size_t(minimum) * 1024 * 1024, 64, true, false, false, false, 1, 0,
+                     0, false, root.string());
+        rejects([&] {
+          Capture below(512, 4, 64, size_t(minimum - 1) * 1024 * 1024, 64, true, false, false, false,
+                        1, 0, 0, false, root.string());
+        });
+        std::cout << "Budget message: " << message << '\n';
+        /* A surface row needing more than the staging eighth fails at export with numbers. */
+        Capture row(64, 1, 128, 82 * 1024 * 1024, 64, true, false, false, false, 1, 0, 0, false,
+                    root.string());
+        std::vector<KernelDeepEvent> deep(64);
+        for (int i = 0; i < 64; ++i)
+          deep[i] = {DEEP_SURFACE, float(i + 1), float(i + 1), .5f, 0};
+        for (int x = 0; x < 64; ++x)
+          for (int sample = 0; sample < 128; ++sample)
+            row.record_events(x, 0, sample, deep.data(), 64);
+        check(row.finalize());
+        std::string export_message;
+        try {
+          row.begin_export_row(0);
+        }
+        catch (const std::exception &error) {
+          export_message = error.what();
+        }
+        std::cout << "Export message: " << export_message << '\n';
+        check(export_message.find("Deep export row exceeds --deep-memory-mb budget: largest row y=0") == 0 &&
+              export_message.find("staging limit 10747904 bytes") != std::string::npos);
+        const int row_minimum = std::stoi(export_message.substr(export_message.rfind(' ') + 1));
+        Capture larger(64, 1, 128, size_t(row_minimum) * 1024 * 1024, 64, true, false, false, false,
+                       1, 0, 0, false, root.string());
+        for (int x = 0; x < 64; ++x)
+          for (int sample = 0; sample < 128; ++sample)
+            larger.record_events(x, 0, sample, deep.data(), 64);
+        check(larger.finalize());
+        larger.begin_export_row(0);
+        larger.end_export_row(0);
+      }
+      {
+        /* A quota below the reserve fails between passes with both numbers. */
+#ifdef _WIN32
+        _putenv_s("CYCLES_DEEP_SPILL_MAX_MB", "200");
+#else
+        setenv("CYCLES_DEEP_SPILL_MAX_MB", "200", 1);
+#endif
+        Capture quota(4, 4, 4, 32 * 1024 * 1024, 0, true, false, false, false, 1, 0, 0, false,
+                      root.string());
+#ifdef _WIN32
+        _putenv_s("CYCLES_DEEP_SPILL_MAX_MB", "");
+#else
+        unsetenv("CYCLES_DEEP_SPILL_MAX_MB");
+#endif
+        quota.record(0, 0, 0, 1);
+        check(quota.check_spill_space().empty());
+        check(quota.failed());
+        const std::string message = quota.error_message();
+        std::cout << "Quota message: " << message << '\n';
+        check(message.find("deep spill disk space is insufficient") == 0 &&
+              message.find("quota 209715200 bytes") != std::string::npos);
+        /* A non-adaptive projection that cannot fit fails (sample counts as numbers). */
+        Capture fits(4, 4, 4, 32 * 1024 * 1024, 0, true, false, false, false, 1, 0, 0, false,
+                     root.string());
+        fits.record(0, 0, 0, 1);
+        check(fits.check_spill_space().empty() && !fits.failed());
+      }
+      check(spill_files() == 0);
+      fs::remove_all(root);
     }
     rejects([] { Capture c(-1, 2, 1, 1024); });
     rejects([] { Capture c(1, 2, 0, 1024); });

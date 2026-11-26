@@ -54,6 +54,22 @@ capacity and I/O failures preserve the previous EXR through atomic local publica
 network/power-loss/frame-transaction durability is not qualified. Scalar alpha
 does not encode arbitrary subpixel correlations or recover colour from beauty.
 
+Capture spill goes to delete-on-close files in the spill directory: Output > Deep >
+Spill Directory (Blender) or `--deep-spill-dir`, else `CYCLES_DEEP_SPILL_DIR`, else
+the system temp folder. The system removes them on close, crash or kill. The append
+stream is zstd-compressed in 64 KiB blocks; this is lossless and leaves deep EXR
+bytes unchanged (`CYCLES_DEEP_SPILL_COMPRESSION=0` stores raw records). Compression
+turns off when its roughly 430 KiB per band does not fit `deep_memory_mb/8`; the log
+then says `compression=off (budget)`. The identity index is a sparse file but still
+reaches width x height x samples x 24 B. Any capture error (I/O errors include errno,
+bytes and file) stops the render: CPU within the current pass, CUDA/OptiX at the
+next pass boundary; the previous EXR is kept. After each pass the renderer projects
+the spill size; a non-adaptive render that cannot fit fails, an adaptive render gets
+a warning (its sample count is only an upper bound). Any render stops when free
+space, or the optional `CYCLES_DEEP_SPILL_MAX_MB` quota, drops below 256 MiB. Budget
+failures print the bytes needed and the minimum `deep_memory_mb`; the export row
+check runs before the first row is written. Strict surfaces remain unbounded.
+
 CPU beauty remains exact. CUDA/OptiX beauty policy and its GPU-only change scope
 are in [VALIDATION.md](VALIDATION.md); source hashes and 75 kernel resource records
 provide the host-only proof.

@@ -82,8 +82,11 @@ keeps the same handedness for the whole shutter. Ribbon hair moves too
 (transforms, deforming particle and Curves hair); the Ribbon, Deep Volume off
 and depth tolerance 0 rules above still apply. Deep Volume layers support
 moving cameras and moving, scaled or sheared volumes (milestone M-c); deforming
-volume meshes and VDB velocity blur are rejected, and strict deep can exceed the
-volume reconstruction budget for fast-moving media (use a numeric error). Scaled
+volume meshes and VDB velocity blur are rejected. A pixel that needs more volume
+intervals than the reconstruction budget (fast-moving or thick media in strict
+deep) does not stop the render: as MoonRay does, neighbouring intervals with the
+most similar density are merged until it fits, and the log warns how many pixels
+were merged. Transmittance is kept at every remaining boundary. Scaled
 native VDB grids match beauty in both Volume Space modes. With strict deep, moving
 surfaces keep about one deep sample per camera sample, so files grow (161 MB at
 960x540 and 626 MB at 1920x1080, 64 samples, on the character test); see

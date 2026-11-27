@@ -202,5 +202,9 @@ Found during M-c (pre-existing, static):
   `tools/check_coplanar_volume_floor.py`.
 - Strict mode can overflow the volume reconstruction interval budget with
   fast-moving homogeneous boxes (explicit failure).
-- One unexplained OptiX "Illegal address (deep_surface)" while ~4 GPU jobs shared
-  the card; not reproduced alone.
+- OptiX "Illegal address (deep_surface)": the junkshop frame-1 crash (motion steps 1,
+  object "Weigth" blurred) was deterministic on the M-c build and no longer occurs on
+  HEAD (d60cc48f3; minimal BG case x3 clean, CUDA clean, full BG layer clean,
+  2026-11-27). The earlier ~4-jobs-per-card report is most likely GPU memory
+  pressure (each deep process peaks near 5.4 GB on a 10 GB card); run one GPU
+  deep render per card.

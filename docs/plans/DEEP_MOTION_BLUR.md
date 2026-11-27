@@ -192,8 +192,14 @@ Found during M-c (pre-existing, static):
   deep density (a 0.00375-scaled VDB gave τ 267× too low). Deep native and constant
   extinction now apply `object_volume_density`; checked by
   `tools/check_vdb_object_density.py`.
-- A ground plane coplanar with a mist slab's bottom face gives deep alpha above
-  beauty (mean +0.137).
+- Explained 2026-11-27: a ground plane coplanar with a mist slab's bottom face is a
+  native beauty limitation, not a deep bug. Beauty's closest-hit query ties the
+  slab's exit face with the plane at the same FLOAT t and the next segment starts
+  past t, so beauty loses the plane on some rays (CPU) or all rays (OptiX); stock
+  Cycles beauty is identical. Deep keeps tied crossings and sees the plane (alpha 1).
+  Offsets of +-1e-3 match beauty exactly. Deep-vs-beauty alpha checks must avoid
+  surfaces coplanar with volume boundaries. Checked by
+  `tools/check_coplanar_volume_floor.py`.
 - Strict mode can overflow the volume reconstruction interval budget with
   fast-moving homogeneous boxes (explicit failure).
 - One unexplained OptiX "Illegal address (deep_surface)" while ~4 GPU jobs shared

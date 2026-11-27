@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "session/deep.h"
+#include "deep/mesh_topology.h"
 #include "deep/volume.h"
 #include "scene/background.h"
 #include "scene/bake.h"
@@ -15,6 +16,7 @@
 #include "scene/shader_nodes.h"
 #include "scene/volume.h"
 #include "scene/image.h"
+#include "util/log.h"
 #include "util/progress.h"
 #include "session/session.h"
 #include "util/math.h"
@@ -731,6 +733,9 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
                                                     scene->default_background,
                   true);
   const auto camera_geometry = deep_camera_geometry(scene);
+  /* Open deep volume boundaries, with their boundary-edge counts. Warned per
+   * object below; they stay supported (an open interval ends at the clip end). */
+  std::map<const Geometry *, size_t> open_volume_meshes;
   for (Geometry *geometry : scene->geometry) {
     /* Camera-only deep traversal cannot record geometry outside this set. */
     if (!camera_geometry.count(geometry))
@@ -823,7 +828,31 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
           closed &= directed_edges.count({edge.first.second, edge.first.first}) == 1;
         require_deep(std::isfinite(signed_volume) && (!closed || signed_volume > 0),
                      "closed deep volume mesh must enclose positive volume");
+        if (!closed) {
+          /* Diagnostics only. Split vertices are welded by exact position so
+           * that only real holes are reported. */
+          const size_t boundary = deep::open_mesh_boundary_edges(
+              mesh->get_triangles().data(), mesh->num_triangles(), &vertices[0].x,
+              sizeof(vertices[0]) / sizeof(float));
+          if (boundary)
+            open_volume_meshes[geometry] = boundary;
+        }
       }
+    }
+  }
+  if (!open_volume_meshes.empty()) {
+    std::set<string> warned;
+    for (const Object *object : scene->objects) {
+      const auto open = open_volume_meshes.find(object->get_geometry());
+      if (open == open_volume_meshes.end() ||
+          !(object->get_visibility() & PATH_RAY_VISIBILITY_CAMERA))
+        continue;
+      const string name = object->name.empty() ? open->first->name.string() :
+                                                 object->name.string();
+      if (warned.insert(name).second)
+        LOG_WARNING << "Deep: volume mesh \"" << name << "\" is open (" << open->second
+                    << " boundary edges); rays that leave through the hole keep the volume to "
+                       "the camera clip end. Close the mesh or put an opaque surface behind it.";
     }
   }
   /* Reuse film padding: deep gets a scene bound without changing any beauty

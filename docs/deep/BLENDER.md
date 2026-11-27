@@ -25,8 +25,12 @@ Blender preferences.
 5. Procedural (non-VDB) smoke needs a positive **Volume Step**. Start at `0.05`.
    Each ray through smoke needs about 2 x (distance inside the volume / step)
    events, so a smaller step needs more events. On the layer that sees the smoke,
-   set **Max Events** to Custom and raise it (8192 is the maximum) if the render
-   stops on event capacity.
+   set **Max Events** to Custom and raise it (8192 is the maximum) if the log
+   warns that camera samples recorded more than the event limit. The render
+   does not stop: as MoonRay does, neighbouring volume events with the most
+   similar density are merged to fit, keeping transmittance at every kept
+   boundary. Merging is slow on GPU (about 3x per affected render), so raising
+   the limit or the step is faster. Shader and grid volumes use at least 4096.
 6. Run the read-only scanner first (see [Read-only scene scanner](#read-only-scene-scanner));
    it reports blockers before you spend render time.
 7. VDB volume layers (more than 8 samples) merge during render and need little
@@ -152,7 +156,8 @@ memory **8.7 GB**. Deep files: BG 207 MB, Girl 15 MB, Robots 30 MB.
 
 Scene settings: shader volume evaluation on, Volume Step `0.05`, deep memory
 8192 MB, deep error `0.001`, deep IDs on. A Volume Step of `0.01` or `0.02`
-overflowed 8192 events on the Robots smoke (see the folded-mesh limit below).
+overflowed 8192 events on the Robots smoke (see the folded-mesh limit below);
+that render now merges events with a warning instead of stopping.
 The smoke density is constant, so `0.05` loses no accuracy there.
 
 Checks against the flat beauty EXRs, over all 2 million pixels per layer:
@@ -380,7 +385,10 @@ The EXR identifies shader evaluation, starting/maximum step range and the adapti
 the requested error bounds representation/fitting/publication; half is the
 **stated, not proven** stepping allowance. Validate shader variation against a
 4x-finer-step reference. Non-grey/invalid extinction, unsupported shader features
-and bounded traversal/event overflow fail explicitly. The stepping contract is
+and boundary, media or native grid traversal limits fail explicitly. Event
+overflow merges similar neighbouring events, and rays past the 16384-step or
+65535-evaluation limit coarsen their steps (as Cycles does past Max Steps); both
+log a warning, and the stepping bound does not hold for coarsened samples. The stepping contract is
 recorded in the [validation policy](VALIDATION.md).
 
 ## Read-only scene scanner

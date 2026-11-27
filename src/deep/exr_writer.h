@@ -74,10 +74,6 @@ struct SurfaceImage {
   /* Opt-in compact output (surface merge as points, volume simplification,
    * HALF alpha). False keeps exact bytes. */
   bool compact = false;
-  /* Compact surface files write ZBack = Z on their point samples by default:
-   * Gaffer's DeepToFlat Range mode drops its flat ZBack output and Nuke's
-   * handling of a missing ZBack is unconfirmed. True omits the channel. */
-  bool compact_omit_zback = false;
   CompactStatistics *compact_statistics = nullptr;
   /* Increasing image y, then x, starting at data_window.min. No implicit flip.
    * Each pixel contains strictly depth-sorted reconstructed point samples. */

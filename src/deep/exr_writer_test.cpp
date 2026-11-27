@@ -214,20 +214,18 @@ void compact_output(const std::filesystem::path &directory)
         require(pixel.back == pixel.z, "Compact surface ZBack must equal Z");
     }
     const auto stats_kept = stats.samples_out.load();
-    image.compact_omit_zback = true;
-    require(!compact_plan(image, false).zback, "Opt-in ZBack omission plan");
     const auto path = directory / "compact" / "surface_ids.exr";
     write_deep_exr_rows(path, image, [&](int) { return row; });
     Imf::Header header;
     const auto pixels = read_compact(path, &header);
-    require(stats.samples_out.load() == 2 * stats_kept, "ZBack choice changed the samples");
+    require(stats.samples_out.load() == 2 * stats_kept, "Repeated compact write changed the samples");
     for (size_t p = 0; p < pixels.size(); ++p)
       require(pixels[p].z == read_compact(kept)[p].z && pixels[p].a == read_compact(kept)[p].a,
-              "ZBack omission changed Z or A");
-    require(!header.channels().findChannel("ZBack") &&
+              "Repeated compact write changed Z or A");
+    require(header.channels().findChannel("ZBack") &&
                 header.channels().findChannel("A")->type == Imf::HALF &&
                 header.channels().findChannel("Z")->type == Imf::FLOAT,
-            "Compact surface channels must be Z FLOAT, A HALF, no ZBack");
+            "Compact surface channels must be Z/ZBack FLOAT, A HALF");
     require(header.typedAttribute<Imf::StringAttribute>("cycles:deepSize").value() == "compact" &&
                 header.typedAttribute<Imf::DoubleAttribute>("cycles:deepCompactZTolerance").value() ==
                     double(1e-3f) &&
@@ -274,7 +272,6 @@ void compact_output(const std::filesystem::path &directory)
     image.error = 1e-4f;
     image.compact = true;
     const auto plan = compact_plan(image, false);
-    image.compact_omit_zback = true;
     require(plan.enabled && !plan.half, "1e-4 surfaces must keep FLOAT alpha");
     const auto path = directory / "compact" / "surface_float_alpha.exr";
     write_deep_exr_rows(path, image, [&](int) {
@@ -283,7 +280,7 @@ void compact_output(const std::filesystem::path &directory)
     Imf::Header header;
     const auto pixels = read_compact(path, &header);
     require(header.channels().findChannel("A")->type == Imf::FLOAT &&
-                !header.channels().findChannel("ZBack") && pixels[0].a[0] == .25f,
+                header.channels().findChannel("ZBack") && pixels[0].a[0] == .25f,
             "FLOAT-alpha compact file");
     image.error = 0;
     require(!compact_plan(image, false).half && !compact_plan(image, true).half &&

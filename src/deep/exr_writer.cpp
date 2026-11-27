@@ -1231,8 +1231,9 @@ CompactPlan compact_plan(const SurfaceImage &image, const bool volume)
     const double reserve = (plan.ledger - export_error) / 2;
     plan.half = reserve >= half_feedback_bound;
     plan.half_reserve = plan.half ? reserve : 0.0;
-    /* Every compact surface sample is a point (ZBack = Z). */
-    plan.zback = !image.compact_omit_zback;
+    /* Every compact surface sample is a point and keeps ZBack = Z: omitting it saves
+     * about 1% after compression and some readers mishandle a missing ZBack. */
+    plan.zback = true;
   }
   return plan;
 }

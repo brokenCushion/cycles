@@ -349,9 +349,6 @@ void BlenderOutputDriver::write_deep_render_tile(const DeepTile &tile)
   image.holdout_manifest = tile.holdout_manifest();
   image.ids = tile.ids();
   image.compact = tile.compact();
-  /* Validation only: omit ZBack on compact surface files (default keeps ZBack = Z). */
-  const char *omit_zback = std::getenv("CYCLES_DEEP_COMPACT_OMIT_ZBACK");
-  image.compact_omit_zback = omit_zback && omit_zback[0] == '1';
   deep::CompactStatistics compact_statistics;
   if (image.compact)
     image.compact_statistics = &compact_statistics;

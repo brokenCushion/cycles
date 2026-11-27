@@ -96,8 +96,9 @@ intervals keep their total optical depth so error does not build up along the ra
 Allowance 1e-4 at 1e-3, about 1e-5 at 1e-4, half that for shader-evaluated volumes,
 none in strict. (3) Alpha is HALF when the per-pixel budget allows (surfaces at error
 about 1e-3 or more, volumes with at least 2e-5 left), otherwise the file stays FLOAT.
-(4) Z and ZBack stay FLOAT; point samples carry ZBack = Z, because Gaffer's DeepToFlat
-Range mode drops a missing ZBack and Nuke's behaviour without one is unconfirmed. All
+(4) Z and ZBack stay FLOAT and ZBack is always written; point samples carry ZBack = Z
+(as MoonRay does). Omitting it saved about 1% after compression on junkshop and
+Gaffer's DeepToFlat Range mode drops a missing ZBack, so there is no option for it. All
 costs are measured exactly per pixel against the publication ledger; a pixel that cannot
 fit fails the export with its numbers. Junkshop frame 2 full size: 3.02 GB -> 0.82 GB.
 

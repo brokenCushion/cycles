@@ -188,9 +188,10 @@ from majorant/accumulation order and not from deep capture (see VALIDATION.md
 step 4).
 
 Found during M-c (pre-existing, static):
-- Scaled native VDBs with Volume Space = Object (Blender's default) get the wrong
-  deep density: Cycles multiplies by `object_volume_density`, the deep grid path
-  does not (a 0.00375-scaled VDB gave τ 267× too low). Workaround: Space = World.
+- Fixed 2026-11-27: scaled native VDBs with Volume Space = Object got the wrong
+  deep density (a 0.00375-scaled VDB gave τ 267× too low). Deep native and constant
+  extinction now apply `object_volume_density`; checked by
+  `tools/check_vdb_object_density.py`.
 - A ground plane coplanar with a mist slab's bottom face gives deep alpha above
   beauty (mean +0.137).
 - Strict mode can overflow the volume reconstruction interval budget with

@@ -84,8 +84,7 @@ and depth tolerance 0 rules above still apply. Deep Volume layers support
 moving cameras and moving, scaled or sheared volumes (milestone M-c); deforming
 volume meshes and VDB velocity blur are rejected, and strict deep can exceed the
 volume reconstruction budget for fast-moving media (use a numeric error). Scaled
-native VDB grids need Volume Space = World: deep does not yet apply Blender's
-Object-space density factor (known issue). With strict deep, moving
+native VDB grids match beauty in both Volume Space modes. With strict deep, moving
 surfaces keep about one deep sample per camera sample, so files grow (161 MB at
 960x540 and 626 MB at 1920x1080, 64 samples, on the character test); see
 [Shrinking motion-blurred deep EXRs](#shrinking-motion-blurred-deep-exrs). The

@@ -164,12 +164,16 @@ ccl_device KernelDeepResult deep_volume_interval(
   if (grid_scale == 0)
     return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
   shader_setup_from_volume(sd, &ray, object);
+  /* Native closures multiply density by the object-space volume scale (1 for
+   * meshes and world-space volumes). Shader-evaluated paths already include it
+   * through the same closures; per-shader host constants do not. */
+  const float object_density = object_volume_density(kg, object);
   if (grid_scale >= 0) {
     sd->shader = entry.shader;
     sd->shader_flag = kernel_data_fetch(shaders, entry.shader & SHADER_MASK).flags;
     sd->object_flag = kernel_data_fetch(object_flag, object);
     const KernelDeepResult captured = deep_volume_native(
-        kg, sd, &ray, start, end, grid_scale, events, density, stride, capacity, count, eps_ray, object_stream, write);
+        kg, sd, &ray, start, end, grid_scale * object_density, events, density, stride, capacity, count, eps_ray, object_stream, write);
     if (captured.status != DEEP_COMPLETE)
       return captured;
     count = int(captured.count);
@@ -177,7 +181,7 @@ ccl_device KernelDeepResult deep_volume_interval(
   else {
     const float constant_sigma =
         kernel_data_fetch(shaders, entry.shader & SHADER_MASK).deep_homogeneous_extinction;
-    float3 sigma = make_float3(constant_sigma);
+    float3 sigma = make_float3(constant_sigma * object_density);
     if (constant_sigma < 0) {
       sd->num_closure = 0;
       sd->num_closure_left = 0;

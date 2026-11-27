@@ -936,6 +936,12 @@ void PathTrace::write_deep_output()
                        << deep_capture_->reducer_summary();
   if (deep_capture_->collect_histogram)
     LOG_INFO_IMPORTANT << "Deep volume interval histogram: " << deep_capture_->volume_histogram();
+  if (const size_t merged = deep_capture_->budget_merged_pixels())
+    LOG_WARNING << "Deep: " << merged << " pixels needed more than "
+                << deep_capture_->reconstruction_limit()
+                << " volume samples"
+                << (deep_capture_->error() == 0 ? " in strict mode" : "")
+                << "; similar neighbouring volume samples were merged to fit (as MoonRay does).";
 }
 #endif
 

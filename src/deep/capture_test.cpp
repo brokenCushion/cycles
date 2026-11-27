@@ -263,6 +263,30 @@ int main()
       const auto curve = expanded.reconstruct_volume_pixel(0, 0);
       check(std::abs(interval_transmittance(curve, 8193) -
                      std::exp(-8192 * double(.0001f))) < 1e-12);
+      /* Two rays with offset boundaries and varying density need more than
+       * the 16384 budget: the pixel is merged to fit and counted, not failed. */
+      Capture over_budget(1, 1, 2, size_t(64) * 1024 * 1024, 8192, true, false, true, true);
+      std::vector<KernelDeepEvent> first(events.size()), offset(events.size());
+      double tau_first = 0, tau_offset = 0;
+      for (size_t i = 0; i < offset.size(); ++i) {
+        first[i] = {DEEP_VOLUME, float(i + 1), float(i + 2), 0, .0001f * float(1 + i % 7)};
+        offset[i] = {DEEP_VOLUME, float(i) + 1.5f, float(i) + 2.5f, 0,
+                     .0001f * float(1 + (i + 3) % 5)};
+        tau_first += double(first[i].optical_depth);
+        tau_offset += double(offset[i].optical_depth);
+      }
+      over_budget.record_events(0, 0, 0, first.data(), int(first.size()));
+      over_budget.record_events(0, 0, 1, offset.data(), int(offset.size()));
+      check(over_budget.finalize());
+      check(over_budget.budget_merged_pixels() == 0);
+      const auto fitted = over_budget.reconstruct_volume_pixel(0, 0);
+      check(fitted.size() <= over_budget.reconstruction_limit());
+      check(over_budget.budget_merged_pixels() == 1);
+      check(std::abs(interval_transmittance(fitted, 8194) -
+                     .5 * (std::exp(-tau_first) + std::exp(-tau_offset))) < 1e-7);
+      over_budget.reconstruct_volume_pixel(0, 0);
+      check(over_budget.budget_merged_pixels() == 1);
+      check(expanded.budget_merged_pixels() == 0);
       /* Streaming balanced averages fit dense accepted populations without
        * retaining every ray at once, even with a high adaptive maximum. */
       Capture sparse(2, 1, 1024, 64 * 1024 * 1024, 8192, true, true, true, true);

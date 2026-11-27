@@ -2500,10 +2500,25 @@ std::vector<IntervalSample> Capture::fit_volume(std::vector<VolumeCameraSample> 
                                                ExportStatistics *statistics) const
 {
   ExportTimer timer{statistics, ExportStatistics::MixtureFit};
-  if (!ids())
-    return reconstruct_volume(std::move(samples), tolerance, limit, reduction, bytes);
+  bool merged = false;
+  auto record_merge = [&] {
+    if (!merged)
+      return;
+    /* Rare; one pixel may be fitted several times (tree levels, reducer). */
+    std::lock_guard<std::mutex> lock(budget_merged_mutex_);
+    budget_merged_pixels_.insert(uint64_t(y) * uint64_t(width_) + uint64_t(x));
+  };
+  if (!ids()) {
+    auto curve = reconstruct_volume(std::move(samples), tolerance, limit, reduction, bytes,
+                                    &merged);
+    record_merge();
+    return curve;
+  }
   try {
-    return reconstruct_volume_ids(std::move(samples), tolerance + reduction, limit, bytes);
+    auto curve = reconstruct_volume_ids(std::move(samples), tolerance + reduction, limit, bytes,
+                                        &merged);
+    record_merge();
+    return curve;
   }
   catch (const std::runtime_error &error) {
     throw std::runtime_error(std::string(error.what()) + ", pixel=" +

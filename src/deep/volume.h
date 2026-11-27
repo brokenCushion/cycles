@@ -155,6 +155,11 @@ VolumeSimplification simplify_volume_curve(const std::vector<IntervalSample> &so
 /* Reference only: averages sample transmittance, then fits nonoverlapping
  * exponential intervals. Surface steps have front == back. Error is absolute
  * transmittance error at EVERY depth, bounded using log-mixture curvature.
+ * A pixel that needs more than max_intervals spans does not fail: as MoonRay
+ * does, adjacent volume intervals with the most similar extinction are merged
+ * (keeping transmittance at every kept boundary) until it fits, and
+ * *budget_merged is set. The error bound does not hold for such a pixel. Only
+ * an excess that no merge can remove (surface steps) still throws.
  * Optional streaming reduction adds at most reduction_tolerance absolute curve
  * error, preserves merged-segment endpoint transmittance and never merges
  * surface steps or gaps.
@@ -167,17 +172,21 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
                                               double tolerance = volume_reconstruction_error,
                                               size_t max_intervals = 65536,
                                               double reduction_tolerance = 0,
-                                              size_t max_working_bytes = std::numeric_limits<size_t>::max());
+                                              size_t max_working_bytes = std::numeric_limits<size_t>::max(),
+                                              bool *budget_merged = nullptr);
 
 /* Object-preserving convex camera average. The same-ID hazard is averaged
  * with transmission weights, not as independent per-object image averages.
  * Different IDs remain overlapping intervals; the sum of their hazards is the
  * ordinary mixture hazard. Fitting shares one absolute T allowance across tree
- * levels and objects. Capacity/memory exhaustion is an explicit failure. */
+ * levels and objects. Memory exhaustion is an explicit failure. Interval
+ * budget overflow merges similar neighbouring spans within each object (never
+ * across objects) and sets *budget_merged, as reconstruct_volume does. */
 std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSample> samples,
                                                   double tolerance,
                                                   size_t max_intervals,
-                                                  size_t max_working_bytes);
+                                                  size_t max_working_bytes,
+                                                  bool *budget_merged = nullptr);
 
 /* Exact maximum difference between two ordered, nonoverlapping exponential
  * curves, including surface discontinuities and interior stationary points. */

@@ -15,6 +15,7 @@
 #include <unordered_set>
 #include <map>
 #include <memory>
+#include <queue>
 
 namespace ccl::deep {
 std::vector<IntervalSample> merge_surface_depths(const std::vector<IntervalSample> &source,
@@ -255,6 +256,89 @@ namespace {
  * Subdivision remains subject to the existing per-pixel interval budget. */
 constexpr double max_interval_tau = 2;
 const double max_interval_alpha = -std::expm1(-max_interval_tau);
+
+/* Interval budget fallback, as MoonRay does for deep volume segments
+ * (VolumePixelBuffer::mergeSegments): repeatedly merge the adjacent pair of
+ * contiguous volume intervals whose extinction rates differ least until at
+ * most `limit` spans remain. A merge keeps the pair's total optical depth, so
+ * transmittance at every kept boundary is unchanged; only the shape inside a
+ * merged span becomes a single exponential. Surface steps (front == back) and
+ * gaps never merge, and neither does a pair whose alpha would exceed
+ * max_interval_alpha (FLOAT representability). With per_object, a span merges
+ * only with the next span of the same object (overlapping deep ID curves).
+ * The caller checks the resulting size: an unmergeable excess remains. */
+void merge_to_budget(std::vector<IntervalSample> &spans, const size_t limit, const bool per_object)
+{
+  const size_t n = spans.size();
+  if (n <= limit)
+    return;
+  constexpr size_t none = std::numeric_limits<size_t>::max();
+  std::vector<size_t> next(n, none), previous(n, none);
+  std::vector<double> tau(n);
+  std::vector<uint32_t> version(n, 0);
+  std::vector<char> alive(n, 1);
+  std::map<int, size_t> last;
+  for (size_t i = 0; i < n; ++i) {
+    tau[i] = spans[i].front < spans[i].back ? -std::log1p(-spans[i].alpha) : 0;
+    size_t p = i ? i - 1 : none;
+    if (per_object) {
+      const auto found = last.find(spans[i].object);
+      p = found == last.end() ? none : found->second;
+      last[spans[i].object] = i;
+    }
+    previous[i] = p;
+    if (p != none)
+      next[p] = i;
+  }
+  struct Candidate {
+    double cost;
+    size_t a, b;
+    uint32_t va, vb;
+  };
+  auto later = [](const Candidate &x, const Candidate &y) {
+    return x.cost != y.cost ? x.cost > y.cost : x.a > y.a;
+  };
+  std::priority_queue<Candidate, std::vector<Candidate>, decltype(later)> heap(later);
+  auto consider = [&](const size_t a) {
+    if (a == none || next[a] == none)
+      return;
+    const size_t b = next[a];
+    const auto &x = spans[a], &y = spans[b];
+    if (!(x.front < x.back && y.front < y.back && x.back == y.front) ||
+        -std::expm1(-(tau[a] + tau[b])) > max_interval_alpha)
+      return;
+    heap.push({std::abs(tau[a] / (x.back - x.front) - tau[b] / (y.back - y.front)), a, b,
+               version[a], version[b]});
+  };
+  for (size_t i = 0; i < n; ++i)
+    consider(i);
+  size_t count = n;
+  while (count > limit && !heap.empty()) {
+    const Candidate c = heap.top();
+    heap.pop();
+    if (!alive[c.a] || !alive[c.b] || version[c.a] != c.va || version[c.b] != c.vb ||
+        next[c.a] != c.b)
+      continue;
+    auto &x = spans[c.a];
+    const auto &y = spans[c.b];
+    tau[c.a] += tau[c.b];
+    const bool same = x.object == y.object && x.facing == y.facing;
+    x = {x.front, y.back, -std::expm1(-tau[c.a]), same ? x.object : -1, same ? x.facing : 0};
+    alive[c.b] = 0;
+    next[c.a] = next[c.b];
+    if (next[c.b] != none)
+      previous[next[c.b]] = c.a;
+    ++version[c.a];
+    --count;
+    consider(previous[c.a]);
+    consider(c.a);
+  }
+  size_t kept = 0;
+  for (size_t i = 0; i < n; ++i)
+    if (alive[i])
+      spans[kept++] = spans[i];
+  spans.resize(kept);
+}
 
 /* Exact extrema of the difference of two exponentials on one span. */
 double exponential_error(double ta, double ra, double tb, double rb, double width)
@@ -604,7 +688,8 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
                                               double tolerance,
                                               size_t max_intervals,
                                               double reduction_tolerance,
-                                              size_t max_working_bytes)
+                                              size_t max_working_bytes,
+                                              bool *budget_merged)
 {
   if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-2 || !max_intervals ||
       !std::isfinite(reduction_tolerance) || reduction_tolerance < 0 ||
@@ -657,7 +742,7 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
     std::vector<VolumeCameraSample>().swap(samples);
     if (working.size() <= 8)
       return reconstruct_volume(std::move(working), tolerance, max_intervals,
-                                reduction_tolerance, max_working_bytes);
+                                reduction_tolerance, max_working_bytes, budget_merged);
     size_t levels = 0;
     for (size_t n = working.size(); n > 1; n = (n + 1) / 2)
       ++levels;
@@ -687,7 +772,8 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
         pair.push_back(std::move(working[i + 1]));
         const size_t previous_bytes = (slots(pair[0]) + slots(pair[1])) * 96;
         auto curve = reconstruct_volume(pair, tolerance / levels, max_intervals,
-                                         reduction_tolerance / levels);
+                                         reduction_tolerance / levels,
+                                         std::numeric_limits<size_t>::max(), budget_merged);
         if (working.size() == 2)
           return curve;
         VolumeCameraSample merged{{pair[0].camera.id,
@@ -713,6 +799,31 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
   /* Source rates stay fixed while successive candidate merges are tested. */
   std::array<double, 64> merge_rates;
   size_t merge_count = 0;
+  /* Over budget, keep every span (compacting in bounded steps) and merge
+   * similar neighbours at the end instead of failing the render. Under budget
+   * this never triggers, so those pixels are unchanged. */
+  bool overflow = false;
+  const size_t overflow_slack = std::max<size_t>(max_intervals, 1024);
+  auto push_bounded = [&](const IntervalSample &span) {
+    if (result.size() >= max_intervals) {
+      overflow = true;
+      if (result.size() - max_intervals >= overflow_slack) {
+        merge_to_budget(result, max_intervals, false);
+        if (result.size() > max_intervals)
+          throw std::runtime_error("Volume reconstruction interval budget exceeded");
+      }
+    }
+    result.push_back(span);
+  };
+  auto finish_budget = [&] {
+    if (!overflow)
+      return;
+    merge_to_budget(result, max_intervals, false);
+    if (result.size() > max_intervals)
+      throw std::runtime_error("Volume reconstruction interval budget exceeded");
+    if (budget_merged)
+      *budget_merged = true;
+  };
   auto emit = [&](double front, double back, double a, double b, int object = -1, int facing = 0) {
     if (a <= b || a == 0)
       return;
@@ -768,9 +879,7 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
         }
       }
     }
-    if (result.size() == max_intervals)
-      throw std::runtime_error("Volume reconstruction interval budget exceeded");
-    result.push_back(next);
+    push_bounded(next);
     last_error = 0;
     last_prefix = a;
     merge_source[0] = next;
@@ -790,17 +899,27 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
     }
     if (ordered) {
       size_t count = 0;
+      bool fits = true;
       for (const auto &v : samples[0].intervals) {
         const double pieces = v.optical_depth > 0 ? std::max(1.0, std::ceil(v.optical_depth / max_interval_tau)) : 0;
-        if (pieces > double(max_intervals - count))
-          throw std::runtime_error("Volume reconstruction interval budget exceeded");
+        if (pieces > double(max_intervals - count)) {
+          fits = false;
+          break;
+        }
         count += size_t(pieces);
       }
-      result.reserve(count);
+      if (fits)
+        result.reserve(count);
+      /* Over budget: stop once transmittance is exactly zero (nothing behind
+       * is visible), then merge similar neighbours to fit. */
+      double transmittance = 1;
       for (const auto &v : samples[0].intervals) {
+        if (transmittance == 0)
+          break;
         const size_t pieces = v.optical_depth > 0 ?
-                                  size_t(std::max(1.0, std::ceil(v.optical_depth / max_interval_tau))) : 0;
-        for (size_t i = 0; i < pieces; ++i) {
+                                  size_t(std::min(double(size_t(1) << 52),
+                                                  std::max(1.0, std::ceil(v.optical_depth / max_interval_tau)))) : 0;
+        for (size_t i = 0; i < pieces && transmittance > 0; ++i) {
           const double front = i ? v.front + (v.back - v.front) * (double(i) / pieces) : v.front;
           const double back = i + 1 == pieces ? v.back :
                                 v.front + (v.back - v.front) * (double(i + 1) / pieces);
@@ -810,10 +929,17 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
           const double alpha = -std::expm1(-tau);
           if (alpha == 1)
             throw std::runtime_error("Volume interval opacity cannot be represented");
-          if (alpha > 0)
-            result.push_back({front, back, alpha});
+          if (alpha > 0) {
+            if (fits)
+              result.push_back({front, back, alpha});
+            else {
+              push_bounded({front, back, alpha});
+              transmittance *= 1 - alpha;
+            }
+          }
         }
       }
+      finish_budget();
       return result;
     }
   }
@@ -917,13 +1043,15 @@ std::vector<IntervalSample> reconstruct_volume(std::vector<VolumeCameraSample> s
     /* The next surface query is this same depth and before-event value. */
     before = tb;
   }
+  finish_budget();
   return result;
 }
 
 std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSample> samples,
                                                   const double tolerance,
                                                   const size_t max_intervals,
-                                                  const size_t max_working_bytes)
+                                                  const size_t max_working_bytes,
+                                                  bool *budget_merged)
 {
   if (!std::isfinite(tolerance) || tolerance <= 0 || tolerance > 1e-2 || !max_intervals)
     throw std::invalid_argument("Invalid deep ID reconstruction budget");
@@ -947,19 +1075,29 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
   }
   if (max_weight == 0)
     throw std::invalid_argument("Deep ID pixel requires positive camera weight");
-  auto check_size = [&](const std::vector<IntervalSample> &spans,
-                        const int object, const size_t added) {
-    if (added <= max_intervals - std::min(max_intervals, spans.size())) return;
+  auto budget_failure = [&](const std::vector<IntervalSample> &spans) {
     std::map<int, size_t> counts;
     for (const auto &span : spans) ++counts[span.object];
-    counts[object] += added;
     std::string message = "Deep ID reconstruction interval budget exceeded: intervals=" +
-                          std::to_string(spans.size() + added) + ", limit=" +
+                          std::to_string(spans.size()) + ", limit=" +
                           std::to_string(max_intervals) + ", per_object=";
     for (const auto &entry : counts)
       message += std::to_string(entry.first) + ":" + std::to_string(entry.second) + " ";
     throw std::runtime_error(message);
   };
+  /* Over budget, merge similar neighbouring volume spans within each object
+   * (never across objects) instead of failing, as reconstruct_volume does. */
+  bool overflow = false;
+  auto fit_budget = [&](std::vector<IntervalSample> &spans) {
+    if (spans.size() <= max_intervals) return;
+    overflow = true;
+    merge_to_budget(spans, max_intervals, true);
+    if (spans.size() > max_intervals) budget_failure(spans);
+  };
+  /* Working-size cap for one tree combine before its final merge. */
+  const size_t growth_cap = max_intervals > std::numeric_limits<size_t>::max() / 16 ?
+                                std::numeric_limits<size_t>::max() :
+                                max_intervals * 8 + 1024;
   for (auto &sample : samples) {
     if (sample.camera.weight == 0) continue;
     std::map<int, VolumeCameraSample> objects;
@@ -977,11 +1115,12 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
       entry.second.camera.weight = 1;
       entry.second.camera.complete = true;
       const auto spans = reconstruct_volume({std::move(entry.second)}, allowance / objects.size(),
-                                            max_intervals, 0);
-      check_size(curve.spans, entry.first, spans.size());
+                                            max_intervals, 0, std::numeric_limits<size_t>::max(),
+                                            &overflow);
       for (const auto &v : spans)
         curve.spans.push_back({v.front, v.back, v.alpha, entry.first, v.facing});
     }
+    fit_budget(curve.spans);
     working.push_back(std::move(curve));
   }
   std::vector<VolumeCameraSample>().swap(samples);
@@ -1059,7 +1198,7 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
         }
       }
       if (!merged) {
-        check_size(output.spans, object, 1);
+        if (output.spans.size() >= growth_cap) budget_failure(output.spans);
         last_spans[index] = output.spans.size();
         merge_errors[index] = 0;
         merge_prefixes[index] = object_transmission[index];
@@ -1156,6 +1295,7 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
       };
       fit(fit, z, end, 0);
     }
+    fit_budget(output.spans);
     return output;
   };
   while (working.size() > 1) {
@@ -1177,6 +1317,8 @@ std::vector<IntervalSample> reconstruct_volume_ids(std::vector<VolumeCameraSampl
     if (a.back != b.back) return a.back < b.back;
     return a.object < b.object;
   });
+  if (overflow && budget_merged)
+    *budget_merged = true;
   return result;
 }
 

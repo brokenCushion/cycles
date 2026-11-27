@@ -14,6 +14,7 @@
 #include <functional>
 #include <mutex>
 #include <memory>
+#include <unordered_set>
 #include <vector>
 #include <string>
 #include <utility>
@@ -234,6 +235,14 @@ class Capture {
    * when enabled (debug log level or CYCLES_DEEP_HISTOGRAM). Log only. */
   bool collect_histogram = false;
   std::string volume_histogram() const;
+  /* Distinct pixels whose volume curve needed more than reconstruction_limit()
+   * samples and had similar neighbouring samples merged to fit (as MoonRay
+   * does) instead of failing. Read after export for one warning per render. */
+  size_t budget_merged_pixels() const
+  {
+    std::lock_guard<std::mutex> lock(budget_merged_mutex_);
+    return budget_merged_pixels_.size();
+  }
   mutable ExportStatistics export_statistics;
   float volume_shader_error = 0; /* Total stated bound; error() is the proven half. */
   bool volume_shader_adaptive = false;
@@ -442,6 +451,8 @@ class Capture {
     REDUCTION
   };
   mutable std::mutex error_mutex_;
+  mutable std::mutex budget_merged_mutex_;
+  mutable std::unordered_set<uint64_t> budget_merged_pixels_;
   /* Written once, before error_ is published. */
   mutable std::string error_detail_;
   mutable std::string incomplete_detail_; /* error_message() text for incomplete reducers. */

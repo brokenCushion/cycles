@@ -236,6 +236,118 @@ int main(int argc, char **argv)
       std::cout << "PASS deep ID mixture oracle, selection and fail-closed budgets; max="
                 << std::setprecision(17) << maximum << '\n';
     }
+    {
+      /* Interval budget overflow merges similar neighbouring volume intervals
+       * (as MoonRay does) instead of failing; pixels that fit are unchanged. */
+      auto same = [](const std::vector<IntervalSample> &a, const std::vector<IntervalSample> &b) {
+        if (a.size() != b.size()) return false;
+        for (size_t i = 0; i < a.size(); ++i)
+          if (a[i].front != b[i].front || a[i].back != b[i].back || a[i].alpha != b[i].alpha ||
+              a[i].object != b[i].object || a[i].facing != b[i].facing)
+            return false;
+        return true;
+      };
+      /* Kept boundaries are boundaries of the full curve; transmittance
+       * there (before and after each step) and in total must not change. */
+      auto preserved = [](const std::vector<IntervalSample> &full,
+                          const std::vector<IntervalSample> &fitted, const char *what) {
+        size_t surfaces[2] = {0, 0};
+        for (const auto &v : full) surfaces[0] += v.front == v.back;
+        for (const auto &v : fitted) surfaces[1] += v.front == v.back;
+        check(surfaces[0] == surfaces[1], what);
+        double pf = 1, pm = 1;
+        for (const auto &v : full) pf *= 1 - v.alpha;
+        for (const auto &v : fitted) pm *= 1 - v.alpha;
+        check(pf > 0 && std::abs(pm - pf) <= 1e-12 * pf, what);
+        for (const auto &v : fitted)
+          for (const double z : {v.front, v.back})
+            for (const bool before : {true, false}) {
+              const double tf = interval_transmittance(full, z, before);
+              check(std::abs(interval_transmittance(fitted, z, before) - tf) <= 1e-12 * tf, what);
+            }
+      };
+      /* Single ordered medium (fast path). */
+      VolumeCameraSample ray{{0, 1, true, {}}, {}};
+      for (int i = 0; i < 5000; ++i)
+        ray.intervals.push_back({1.0 + i, 2.0 + i, .0002 * (1 + i % 7)});
+      bool merged = false;
+      const auto full = reconstruct_volume({ray}, 1e-7, 65536, 0, SIZE_MAX, &merged);
+      check(full.size() == 5000 && !merged, "Ordered medium reference");
+      const auto exact = reconstruct_volume({ray}, 1e-7, full.size(), 0, SIZE_MAX, &merged);
+      check(same(full, exact) && !merged, "Budget fallback changed an ordered pixel that fits");
+      const auto fitted = reconstruct_volume({ray}, 1e-7, 1000, 0, SIZE_MAX, &merged);
+      check(merged && fitted.size() <= 1000 && !fitted.empty(),
+            "Ordered medium over budget was not merged to fit");
+      preserved(full, fitted, "Ordered budget merge changed kept transmittance");
+      /* Mixture of two rays with offset boundaries and surface steps
+       * (general path), with and without streaming reduction. */
+      std::vector<VolumeCameraSample> rays(2);
+      for (int r = 0; r < 2; ++r) {
+        rays[r].camera = {uint64_t(r), 1, true, {}};
+        for (int i = 0; i < 1500; ++i)
+          rays[r].intervals.push_back(
+              {1.0 + i + .5 * r, 2.0 + i + .5 * r, .001 * (1 + (i + 3 * r) % 5)});
+      }
+      rays[0].camera.events.push_back({700.25, .3, 2, 1});
+      rays[1].camera.events.push_back({900.75, .2, 3, -1});
+      for (const double reduction : {0.0, 1e-6}) {
+        merged = false;
+        const auto mixture = reconstruct_volume(rays, 1e-6, 65536, reduction, SIZE_MAX, &merged);
+        check(mixture.size() > 2500 && !merged, "Mixture reference");
+        const auto mixture_exact = reconstruct_volume(rays, 1e-6, mixture.size(), reduction,
+                                                      SIZE_MAX, &merged);
+        check(same(mixture, mixture_exact) && !merged,
+              "Budget fallback changed a mixture pixel that fits");
+        /* Small enough to also compact while streaming. */
+        const auto mixture_fitted = reconstruct_volume(rays, 1e-6, 300, reduction, SIZE_MAX,
+                                                       &merged);
+        check(merged && mixture_fitted.size() <= 300, "Mixture over budget was not merged");
+        preserved(mixture, mixture_fitted, "Mixture budget merge changed kept transmittance");
+        for (const auto &v : mixture_fitted)
+          if (v.front == v.back)
+            check(v.object == (v.front < 800 ? 2 : 3), "Budget merge lost surface provenance");
+      }
+      /* Surface steps never merge: an excess of them is still a hard limit. */
+      VolumeCameraSample steps{{0, 1, true, {}}, {}};
+      for (int i = 0; i < 10; ++i) steps.camera.events.push_back({1.0 + i, .1});
+      rejects([&] { reconstruct_volume({steps}, 1e-7, 5); });
+      /* Deep IDs: merge within each object, never across objects. */
+      VolumeCameraSample objects{{0, 1, true, {}}, {}};
+      for (int i = 0; i < 3000; ++i)
+        for (int object = 0; object < 2; ++object)
+          objects.intervals.push_back(
+              {1.0 + i + .3 * object, 2.0 + i + .3 * object, .0005 * (1 + (i + object) % 4), object});
+      merged = false;
+      const auto ids = reconstruct_volume_ids({objects}, 1e-6, 65536, SIZE_MAX, &merged);
+      check(!merged && ids.size() == 6000, "Deep ID budget reference");
+      const auto ids_fitted = reconstruct_volume_ids({objects}, 1e-6, 500, SIZE_MAX, &merged);
+      check(merged && ids_fitted.size() <= 500, "Deep ID over budget was not merged");
+      for (int object = 0; object < 2; ++object) {
+        std::vector<IntervalSample> a, b;
+        for (const auto &v : ids) if (v.object == object) a.push_back(v);
+        for (const auto &v : ids_fitted) {
+          check(v.object == 0 || v.object == 1, "Deep ID budget merge crossed objects");
+          if (v.object == object) b.push_back(v);
+        }
+        preserved(a, b, "Deep ID budget merge changed kept object transmittance");
+      }
+      /* Camera tree with an over-budget combine. */
+      std::vector<VolumeCameraSample> id_rays;
+      for (int c = 0; c < 4; ++c) {
+        auto copy = objects;
+        copy.camera.id = uint64_t(c);
+        for (auto &v : copy.intervals) v.optical_depth *= 1 + .1 * c;
+        id_rays.push_back(std::move(copy));
+      }
+      merged = false;
+      const auto tree = reconstruct_volume_ids(id_rays, 1e-5, 500, SIZE_MAX, &merged);
+      check(merged && tree.size() <= 500, "Deep ID camera tree over budget was not merged");
+      const double expected = oracle(id_rays, 3005);
+      check(std::abs(interval_transmittance(tree, 3005) - expected) < 1e-4,
+            "Deep ID camera tree budget merge changed total transmittance");
+      std::cout << "PASS interval budget merge: " << full.size() << " -> " << fitted.size()
+                << " ordered, " << ids.size() << " -> " << ids_fitted.size() << " deep ID\n";
+    }
     for (float error : {1e-4f, 1e-3f, 1e-2f}) {
       const auto budget = error_budget(error);
       check(std::abs(budget.density + budget.reconstruction + budget.coalescing + 1e-6 - error) < 1e-15,
@@ -358,7 +470,12 @@ int main(int argc, char **argv)
     invalid = fixtures[0].samples;
     invalid[0].intervals[0].optical_depth = -1;
     rejects([&] { reconstruct_volume(invalid); });
-    rejects([&] { reconstruct_volume(fixtures[5].samples, 2e-7, 1); });
+    {
+      /* Over budget: merged to fit (as MoonRay does), not failed. */
+      bool merged = false;
+      const auto one = reconstruct_volume(fixtures[5].samples, 2e-7, 1, 0, SIZE_MAX, &merged);
+      check(merged && one.size() == 1, "Partial coverage over budget was not merged");
+    }
     rejects([&] { reconstruct_volume(fixtures[0].samples, 0); });
     rejects([&] { reconstruct_volume(fixtures[0].samples, 1e-7, 10, -1); });
     rejects([&] { interval_curve_error({{2, 8, 1}}, {}); });
@@ -408,7 +525,13 @@ int main(int argc, char **argv)
                                                 {{1, 0, true, {}}, {}}};
     for (int i = 0; i < 2000; ++i)
       uniform_rays[0].intervals.push_back({1 + i * .001, 1 + (i + 1) * .001, .0001});
-    rejects([&] { reconstruct_volume(uniform_rays, 2e-8, 10); });
+    {
+      bool merged = false;
+      const auto merged_rays = reconstruct_volume(uniform_rays, 2e-8, 10, 0, SIZE_MAX, &merged);
+      check(merged && merged_rays.size() <= 10 &&
+                std::abs(interval_transmittance(merged_rays, 3) - std::exp(-.2)) < 1e-12,
+            "Uniform rays over budget were not merged to fit");
+    }
     const auto uniform_reduced = reconstruct_volume(uniform_rays, 2e-8, 10, 2e-8);
     check(uniform_reduced.size() == 1, "Constant-density subdivision was not reduced");
     check(interval_curve_error(uniform_reduced, {{1, 3, -std::expm1(-.2)}}) < 1e-11,
@@ -434,7 +557,14 @@ int main(int argc, char **argv)
       check(std::abs(oracle(alternating_rate, z) - interval_transmittance(tightened, z)) <= 1e-4,
             "Rescued merge exceeded physical curve budget");
     }
-    rejects([&] { reconstruct_volume(alternating_rate, 1e-8, 1, 8e-5); });
+    {
+      /* The reduction allowance rejects this merge; the budget then forces it. */
+      bool merged = false;
+      const auto forced = reconstruct_volume(alternating_rate, 1e-8, 1, 8e-5, SIZE_MAX, &merged);
+      check(merged && forced.size() == 1 &&
+                std::abs(forced[0].alpha + std::expm1(-.3)) < 1e-15,
+            "Budget did not force the rejected reduction merge");
+    }
     for (const auto &ray : long_rays)
       for (const auto &v : ray.intervals)
         for (double z : {v.front, (v.front + v.back) / 2, v.back})

@@ -35,7 +35,7 @@ class CPUKernels {
   IntegratorShadeFunction integrator_intersect_closest;
   CPUKernelFunction<KernelDeepResult (*)(
       const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *, KernelDeepEvent *, int, bool,
-      KernelDeepDensity *, double, unsigned int *, const KernelDeepTrace *)>
+      KernelDeepDensity *, double, unsigned int *, unsigned int *, const KernelDeepTrace *)>
       deep_surface;
   CPUKernelFunction<bool (*)(const ThreadKernelGlobalsCPU *, const IntegratorStateCPU *,
       int, double, double, int, double *)> deep_volume_oracle;

@@ -747,9 +747,65 @@ int main()
       c.record_events(0, 0, 0, event, 1);
       check(!c.finalize());
     }
+    /* More events than the capacity merge instead of failing, as the kernel
+     * does: only surfaces, so the nearest-depth pair of one object merges at
+     * the nearer depth with alpha 1-(1-a)(1-b). */
     Capture overflow(1, 1, 1, single_record_bytes, 1);
     overflow.record_events(0, 0, 0, stack, 2);
-    check(!overflow.finalize());
+    check(overflow.finalize());
+    check(overflow.event_merged_samples == 1);
+    p = overflow.reconstruct_pixel(0, 0);
+    check(p.size() == 1 && p[0].depth == 2 && p[0].alpha == .625);
+    /* Invalid input is rejected before merging, never merged into validity. */
+    const KernelDeepEvent invalid_stack[] = {{DEEP_SURFACE, 2, 2, 1.1f, 0},
+                                             {DEEP_SURFACE, 8, 8, 2, 0}};
+    Capture invalid_overflow(1, 1, 1, single_record_bytes, 1);
+    invalid_overflow.record_events(0, 0, 0, invalid_stack, 2);
+    check(!invalid_overflow.finalize());
+    check(invalid_overflow.event_merged_samples == 0);
+    {
+      /* Volume events past the capacity: contiguous events of one object with
+       * the most similar extinction merge first, keeping their summed optical
+       * depth, so transmittance at every kept boundary is exact. Under the
+       * capacity the same events are stored unchanged. */
+      const KernelDeepEvent spans[] = {{deep_event_pack(DEEP_VOLUME, 3), 2, 3, 0, .1f},
+                                       {deep_event_pack(DEEP_VOLUME, 3), 3, 4, 0, .1f},
+                                       {deep_event_pack(DEEP_VOLUME, 3), 4, 5, 0, 2},
+                                       {deep_event_pack(DEEP_VOLUME, 3), 5, 6, 0, 2.1f}};
+      Capture fits(1, 1, 1, 8 * 1024 * 1024, 4, false, false, true);
+      fits.record_events(0, 0, 0, spans, 4);
+      check(fits.finalize() && fits.event_merged_samples == 0);
+      const auto kept = fits.volume_sample(0, 0, 0).intervals;
+      check(kept.size() == 4);
+      for (size_t i = 0; i < kept.size(); ++i)
+        check(kept[i].front == spans[i].front && kept[i].back == spans[i].back &&
+              kept[i].optical_depth == double(spans[i].optical_depth) && kept[i].object == 3);
+      Capture merged(1, 1, 1, 8 * 1024 * 1024, 2, false, false, true);
+      merged.record_events(0, 0, 0, spans, 4);
+      check(merged.finalize() && merged.event_merged_samples == 1);
+      const auto intervals = merged.volume_sample(0, 0, 0).intervals;
+      check(intervals.size() == 2);
+      check(intervals[0].front == 2 && intervals[0].back == 4 && intervals[0].object == 3);
+      check(intervals[1].front == 4 && intervals[1].back == 6 && intervals[1].object == 3);
+      check(std::abs(intervals[0].optical_depth - (double(.1f) + double(.1f))) < 1e-7);
+      check(std::abs(intervals[1].optical_depth - (2 + double(2.1f))) < 1e-6);
+      /* Different objects and gaps never merge; surfaces then merge instead. */
+      const KernelDeepEvent apart[] = {{deep_event_pack(DEEP_VOLUME, 1), 2, 3, 0, .1f},
+                                       {deep_event_pack(DEEP_VOLUME, 2), 3, 4, 0, .1f},
+                                       {deep_event_pack(DEEP_VOLUME, 2), 5, 6, 0, .1f},
+                                       {deep_event_pack(DEEP_SURFACE, 4), 7, 7, .5f, 1},
+                                       {deep_event_pack(DEEP_SURFACE, 4), 7.5f, 7.5f, .5f, -1}};
+      Capture surfaces(1, 1, 1, 8 * 1024 * 1024, 4, false, false, true);
+      surfaces.record_events(0, 0, 0, apart, 5);
+      check(surfaces.finalize() && surfaces.event_merged_samples == 1);
+      const auto sample = surfaces.volume_sample(0, 0, 0);
+      check(sample.intervals.size() == 3 && sample.camera.events.size() == 1);
+      check(sample.camera.events[0].depth == 7 && sample.camera.events[0].alpha == .75 &&
+            sample.camera.events[0].facing == 0);
+      Capture stuck(1, 1, 1, 8 * 1024 * 1024, 2, false, false, true);
+      stuck.record_events(0, 0, 0, apart, 3);
+      check(!stuck.finalize() && stuck.event_merged_samples == 0);
+    }
     for (const bool spill : {false, true}) {
       for (const KernelDeepResult invalid : {KernelDeepResult{DEEP_EMPTY, 0, DEEP_ERROR_NONE},
                                              KernelDeepResult{DEEP_ACTIVE, 0, DEEP_ERROR_NONE},

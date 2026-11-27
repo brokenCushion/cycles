@@ -1,5 +1,10 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "deep/capture.h"
+#ifndef CCL_NAMESPACE_BEGIN
+#  define CCL_NAMESPACE_BEGIN namespace ccl {
+#  define CCL_NAMESPACE_END }
+#endif
+#include "kernel/deep/merge.h"
 #include <map>
 #include <algorithm>
 #include <array>
@@ -1657,10 +1662,11 @@ void Capture::record_events(const int x,
 void Capture::record_sample(const int x,
                             const int y,
                             const uint32_t sample,
-                            const KernelDeepResult &result,
+                            const KernelDeepResult &input,
                             const KernelDeepEvent *events,
                             const KernelDeepDensity *density)
 {
+  KernelDeepResult result = input;
   if (diagnostics())
     diagnostic_hit(x, y, sample, {2, int(result.status), int(result.count), int(result.error),
                                   -1, 0, 0, 0, 0, 0, 0});
@@ -1676,7 +1682,7 @@ void Capture::record_sample(const int x,
     fail(result.error);
     return;
   }
-  if (result.count > capacity_ || (result.count && !events)) {
+  if (result.count && !events) {
     fail(DEEP_ERROR_CAPACITY);
     return;
   }
@@ -1684,40 +1690,68 @@ void Capture::record_sample(const int x,
     set_error(OUT_OF_RANGE);
     return;
   }
-  for (unsigned i = 0; i < result.count; ++i) {
-    const KernelDeepEvent &e = events[i];
-    const bool surface = deep_event_type(e) == DEEP_SURFACE;
-    const bool cubic = deep_event_type(e) == DEEP_VOLUME_CUBIC;
-    if (has_density(deep_event_type(e))) {
-      if (!volume_grid_ || !density || (cubic && e.optical_depth != 0)) {
-        set_error(INVALID_DEPTH);
-        return;
+  /* Kernels never exceed the capacity: they merge on overflow themselves
+   * (kernel/deep/merge.h). A direct caller's excess is validated first, then
+   * merged by the same rule, so invalid input is never merged into validity. */
+  auto valid = [&](const KernelDeepEvent *events, const KernelDeepDensity *density) {
+    for (unsigned i = 0; i < result.count; ++i) {
+      const KernelDeepEvent &e = events[i];
+      const bool surface = deep_event_type(e) == DEEP_SURFACE;
+      const bool cubic = deep_event_type(e) == DEEP_VOLUME_CUBIC;
+      if (has_density(deep_event_type(e))) {
+        if (!volume_grid_ || !density || (cubic && e.optical_depth != 0))
+          return false;
+        if (!std::isfinite(density[i].front) || !std::isfinite(density[i].back) ||
+            density[i].front <= 0 || density[i].back <= density[i].front ||
+            e.front != float(density[i].front) || e.back != float(density[i].back))
+          return false;
+        for (float coefficient : density[i].optical_depth)
+          if (!std::isfinite(coefficient) || coefficient < 0)
+            return false;
       }
-      if (!std::isfinite(density[i].front) || !std::isfinite(density[i].back) ||
-          density[i].front <= 0 || density[i].back <= density[i].front ||
-          e.front != float(density[i].front) || e.back != float(density[i].back)) {
-        set_error(INVALID_DEPTH);
-        return;
-      }
-      for (float coefficient : density[i].optical_depth)
-        if (!std::isfinite(coefficient) || coefficient < 0) {
-          set_error(INVALID_DEPTH);
-          return;
-        }
+      if (!std::isfinite(e.front) || e.front <= 0 || !std::isfinite(e.back) ||
+          !std::isfinite(e.surface_alpha) || !std::isfinite(e.optical_depth) ||
+          (surface ? (e.back != e.front || e.surface_alpha < 0 || e.surface_alpha > 1 ||
+                      (e.optical_depth != 0 && e.optical_depth != 1 && e.optical_depth != -1)) :
+                     ((!cubic && deep_event_type(e) != DEEP_VOLUME) || !volume_ ||
+                      (has_density(deep_event_type(e)) ? e.back < e.front : e.back <= e.front) ||
+                      e.optical_depth < 0 || e.surface_alpha != 0)) ||
+          (!volume_ && i && e.front < events[i - 1].front) ||
+          (!max_events_ && (!surface || e.surface_alpha != 1)))
+        return false;
     }
-    if (!std::isfinite(e.front) || e.front <= 0 || !std::isfinite(e.back) ||
-        !std::isfinite(e.surface_alpha) || !std::isfinite(e.optical_depth) ||
-        (surface ? (e.back != e.front || e.surface_alpha < 0 || e.surface_alpha > 1 ||
-                    (e.optical_depth != 0 && e.optical_depth != 1 && e.optical_depth != -1)) :
-                   ((!cubic && deep_event_type(e) != DEEP_VOLUME) || !volume_ ||
-                    (has_density(deep_event_type(e)) ? e.back < e.front : e.back <= e.front) ||
-                    e.optical_depth < 0 || e.surface_alpha != 0)) ||
-        (!volume_ && i && e.front < events[i - 1].front) ||
-        (!max_events_ && (!surface || e.surface_alpha != 1)))
-    {
+    return true;
+  };
+  if (!valid(events, density)) {
+    set_error(INVALID_DEPTH);
+    return;
+  }
+  std::vector<KernelDeepEvent> merged_events;
+  std::vector<KernelDeepDensity> merged_density;
+  if (result.count > capacity_) {
+    merged_events.assign(events, events + result.count);
+    if (density)
+      merged_density.assign(density, density + result.count);
+    int count = int(result.count);
+    while (count > int(capacity_)) {
+      int companions = 0;
+      const int freed = ccl::deep_merge_events(
+          merged_events.data(), density ? merged_density.data() : nullptr, 1, count, false,
+          has_density(DEEP_VOLUME), count - int(capacity_), &companions);
+      if (freed < 1) {
+        fail(DEEP_ERROR_CAPACITY);
+        return;
+      }
+      count -= freed;
+    }
+    result.count = unsigned(count);
+    events = merged_events.data();
+    density = density ? merged_density.data() : nullptr;
+    if (!valid(events, density)) {
       set_error(INVALID_DEPTH);
       return;
     }
+    record_fallbacks(DEEP_FALLBACK_MERGED);
   }
   if (reducer_) {
     const size_t pixel = size_t(y) * width_ + x;

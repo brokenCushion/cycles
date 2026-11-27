@@ -7,6 +7,7 @@
 #include "kernel/deep/grid.h"
 #include "kernel/deep/volume_boundary.h"
 #include "kernel/deep/mip.h"
+#include "kernel/deep/write.h"
 #include "deep/volume.h"
 
 #include <algorithm>
@@ -16,6 +17,7 @@
 #include <stdexcept>
 #include <vector>
 #include <limits>
+#include <cstring>
 
 namespace {
 void check(const bool condition, const char *message)
@@ -206,6 +208,268 @@ void grid_tests()
             deep_grid_next(&cursor, &segment) == DEEP_GRID_LIMIT,
         "Traversal exhaustion was not explicit");
 }
+/* Event capacity fallback (kernel/deep/merge.h, deep_event_reserve): the
+ * same kernel code CPU, CUDA and OptiX run, exercised on the CPU. */
+struct MergeLane {
+  int stride;
+  bool compact, companions;
+  std::vector<KernelDeepEvent> events;
+  std::vector<KernelDeepDensity> density;
+  KernelDeepWriteState write;
+  int count = 0;
+  MergeLane(const int capacity, const int stride, const bool compact, const bool companions)
+      : stride(stride), compact(compact), companions(companions),
+        events(size_t(capacity) * stride), density(size_t(capacity) * stride)
+  {
+    write.fallback = true;
+    write.compact_density = compact;
+    write.volume_companions = companions;
+  }
+  /* What deep_volume_constant stores, without its roundoff allowance check. */
+  KernelDeepError volume(const double front, const double back, const double tau,
+                         const int object, const int capacity)
+  {
+    const auto error = ccl::deep_event_reserve(events.data(), density.data(), stride, capacity,
+                                               &count, &write);
+    if (error != DEEP_ERROR_NONE)
+      return error;
+    float high = float(tau);
+    if (double(high) > tau)
+      high = std::nextafter(high, 0.0f);
+    const KernelDeepDensity companion{{high, float(tau - double(high)), 0, 0}, front, back};
+    ccl::deep_write_event(events.data(), density.data(), count * stride,
+        {deep_event_pack(DEEP_VOLUME, object), float(front), float(back), 0, float(tau)},
+        companions ? &companion : nullptr, &write);
+    ++count;
+    return DEEP_ERROR_NONE;
+  }
+  KernelDeepError surface(const float depth, const float alpha, const int object,
+                          const int capacity, const float facing = 1)
+  {
+    const auto error = ccl::deep_event_reserve(events.data(), density.data(), stride, capacity,
+                                               &count, &write);
+    if (error != DEEP_ERROR_NONE)
+      return error;
+    ccl::deep_write_event(events.data(), density.data(), count * stride,
+        {deep_event_pack(DEEP_SURFACE, object), depth, depth, alpha, facing}, nullptr, &write);
+    ++count;
+    return DEEP_ERROR_NONE;
+  }
+  /* Exact span and optical depth of event i, as the host decodes them. */
+  void span(const int i, double &front, double &back, double &tau) const
+  {
+    const KernelDeepEvent &e = events[size_t(i) * stride];
+    if (deep_event_type(e) == DEEP_SURFACE || !companions) {
+      front = e.front, back = e.back, tau = e.optical_depth;
+      return;
+    }
+    int ordinal = 0;
+    for (int j = 0; j < i; ++j)
+      ordinal += deep_event_type(events[size_t(j) * stride]) != DEEP_SURFACE;
+    const KernelDeepDensity &c = density[compact ? size_t(ordinal) : size_t(i) * stride];
+    check(e.front == float(c.front) && e.back == float(c.back), "Merged companion bounds differ");
+    check(c.optical_depth[0] >= 0 && c.optical_depth[1] >= 0, "Merged companion is negative");
+    front = c.front, back = c.back;
+    tau = double(c.optical_depth[0]) + double(c.optical_depth[1]);
+  }
+};
+
+/* A smoke-like ray: 2000 contiguous steps of two objects, with gaps and
+ * surfaces, written through the reserve into `capacity` slots. */
+void merge_smoke(MergeLane &lane, const int capacity, std::vector<double> &boundaries,
+                 std::vector<double> &cumulative, double &tau)
+{
+  std::mt19937 rng(7);
+  std::uniform_real_distribution<double> uniform(0, 1);
+  double depth = 1;
+  tau = 0;
+  for (int i = 0; i < 2000; ++i) {
+    if (i % 500 == 499) {
+      check(lane.surface(float(depth), .25f, 3, capacity) == DEEP_ERROR_NONE,
+            "Surface write failed");
+      depth += .5; /* gap */
+    }
+    const double length = .01 * (1 + uniform(rng));
+    const double sigma = 2 + std::sin(i * .01) + (i / 700) * 5;
+    check(lane.volume(depth, depth + length, sigma * length, i < 1200 ? 5 : 6, capacity) ==
+              DEEP_ERROR_NONE,
+          "Overflowing write did not merge");
+    /* Both ends: a gap leaves the back of the previous span unshared. */
+    boundaries.push_back(depth);
+    cumulative.push_back(tau);
+    depth += length;
+    tau += sigma * length;
+    boundaries.push_back(depth);
+    cumulative.push_back(tau);
+  }
+}
+
+void merge_tests()
+{
+  for (const int stride : {1, 3}) {
+    for (const bool compact : {false, true}) {
+      if (compact && stride != 1)
+        continue;
+      for (const bool companions : {true, false}) {
+        if (compact && !companions)
+          continue;
+        /* Under capacity nothing changes: bytes equal a lane without fallback. */
+        MergeLane fits(64, stride, compact, companions), plain(64, stride, compact, companions);
+        plain.write.fallback = false;
+        for (int i = 0; i < 64; ++i) {
+          check(fits.volume(1 + i, 2 + i, .01 * (i % 5), 7, 64) == DEEP_ERROR_NONE &&
+                    plain.volume(1 + i, 2 + i, .01 * (i % 5), 7, 64) == DEEP_ERROR_NONE,
+                "Under-capacity write failed");
+        }
+        check(!fits.write.fallbacks && fits.count == 64 &&
+                  std::memcmp(fits.events.data(), plain.events.data(),
+                              fits.events.size() * sizeof(KernelDeepEvent)) == 0 &&
+                  std::memcmp(fits.density.data(), plain.density.data(),
+                              fits.density.size() * sizeof(KernelDeepDensity)) == 0,
+              "Under-capacity lane changed");
+        /* Without fallback a full lane still fails explicitly, untouched. */
+        check(plain.volume(65, 66, .01, 7, 64) == DEEP_ERROR_EVENT_CAPACITY && plain.count == 64,
+              "Full lane without fallback did not fail");
+        for (const int capacity : {64, 256}) {
+          MergeLane lane(capacity, stride, compact, companions);
+          std::vector<double> boundaries, cumulative; /* exact prefix optical depth */
+          double tau = 0;
+          merge_smoke(lane, capacity, boundaries, cumulative, tau);
+          check(lane.count <= capacity && lane.count > capacity / 2 &&
+                    (lane.write.fallbacks & DEEP_FALLBACK_MERGED) && !lane.write.failed &&
+                    int(lane.write.events) == lane.count,
+                "Merged lane exceeds capacity or lost its flag");
+          int with_companion = 0, surfaces = 0;
+          double total = 0;
+          for (int i = 0; i < lane.count; ++i) {
+            double front, back, t;
+            lane.span(i, front, back, t);
+            const KernelDeepEvent &e = lane.events[size_t(i) * stride];
+            if (deep_event_type(e) == DEEP_SURFACE) {
+              ++surfaces;
+              check(e.surface_alpha == .25f && deep_event_object(e) == 3, "Surface was merged");
+              continue;
+            }
+            with_companion += companions;
+            check(deep_event_type(e) == DEEP_VOLUME, "Merged event kind");
+            /* Every kept boundary is an original one; its prefix optical
+             * depth (hence transmittance) equals the exact sum. */
+            auto find = [&](const double z) {
+              for (size_t k = 0; k < boundaries.size(); ++k)
+                if (companions ? boundaries[k] == z : float(boundaries[k]) == float(z))
+                  return int(k);
+              return -1;
+            };
+            const int first = find(front), last = find(back);
+            check(first >= 0 && last > first, "Merged span does not end on original boundaries");
+            const double expected = cumulative[last] - cumulative[first];
+            check(std::abs(t - expected) <= (companions ? 1e-12 : 1e-6) * (1 + expected),
+                  "Merged optical depth differs from the sum");
+            total += t;
+          }
+          check(surfaces == 4, "Surface count changed");
+          check(int(lane.write.companions) == with_companion, "Companion cursor drifted");
+          check(std::abs(total - tau) <= (companions ? 1e-11 : 1e-4) * tau,
+                "Total optical depth changed");
+          /* Deterministic: an identical second lane produces identical bytes. */
+          MergeLane again(capacity, stride, compact, companions);
+          std::vector<double> b2, c2;
+          double t2;
+          merge_smoke(again, capacity, b2, c2, t2);
+          check(again.count == lane.count &&
+                    std::memcmp(again.events.data(), lane.events.data(),
+                                lane.events.size() * sizeof(KernelDeepEvent)) == 0 &&
+                    std::memcmp(again.density.data(), lane.density.data(),
+                                lane.density.size() * sizeof(KernelDeepDensity)) == 0,
+                "Merge is not deterministic");
+        }
+        /* Count pass: no payload, one slot assumed freed, live counters. */
+        KernelDeepWriteState counted;
+        counted.count_only = true;
+        counted.fallback = true;
+        int count = 0;
+        for (int i = 0; i < 100; ++i) {
+          check(ccl::deep_event_reserve(nullptr, nullptr, 1, 8, &count, &counted) ==
+                    DEEP_ERROR_NONE,
+                "Count pass reserve failed");
+          ccl::deep_write_event(nullptr, nullptr, 0,
+              {deep_event_pack(DEEP_VOLUME, 1), 1, 2, 0, 1}, nullptr, &counted);
+          ++count;
+        }
+        check(count == 8 && counted.events == 8 && (counted.fallbacks & DEEP_FALLBACK_MERGED),
+              "Count pass prediction");
+      }
+    }
+  }
+  /* Most similar first: lower exponent bins merge before earlier pairs of a
+   * higher bin, regardless of buffer order; at most `target` merge. */
+  {
+    MergeLane lane(6, 1, false, true);
+    const double sigma[] = {9, 1, 4, 4, 1.5, 1.5};
+    for (int i = 0; i < 6; ++i)
+      check(lane.volume(1 + i, 2 + i, sigma[i], 2, 6) == DEEP_ERROR_NONE, "Write");
+    int companions = 0;
+    check(ccl::deep_merge_events(lane.events.data(), lane.density.data(), 1, 6, false, true, 2,
+                                 &companions) == 2 && companions == 2,
+          "Two most similar pairs");
+    lane.count = 4;
+    double front, back, tau;
+    const double expected[4][3] = {{1, 2, 9}, {2, 3, 1}, {3, 5, 8}, {5, 7, 3}};
+    for (int i = 0; i < 4; ++i) {
+      lane.span(i, front, back, tau);
+      check(front == expected[i][0] && back == expected[i][1] && tau == expected[i][2],
+            "Most similar pairs did not merge first");
+    }
+  }
+  /* Strict (no DEEP_VOLUME companions): cubic cells merge into a FLOAT span. */
+  {
+    std::vector<KernelDeepEvent> events(3);
+    std::vector<KernelDeepDensity> density(3);
+    for (int i = 0; i < 3; ++i) {
+      events[i] = {deep_event_pack(DEEP_VOLUME_CUBIC, 4), float(1 + i), float(2 + i), 0, 0};
+      density[i] = {{1, 2, 3, float(i)}, double(1 + i), double(2 + i)};
+    }
+    int companions = 0;
+    check(ccl::deep_merge_events(events.data(), density.data(), 1, 3, false, false, 1,
+                                 &companions) == 1 &&
+              companions == 2 && deep_event_type(events[0]) == DEEP_VOLUME &&
+              deep_event_object(events[0]) == 4 && events[0].front == 1 &&
+              events[0].back == 3 && events[0].optical_depth == 1.5f + 1.75f &&
+              deep_event_type(events[1]) == DEEP_VOLUME_CUBIC && density[1].optical_depth[3] == 2,
+          "Strict cubic merge");
+  }
+  /* Surfaces only: the nearest-depth pair of one object; planes shift density. */
+  {
+    MergeLane lane(3, 2, false, true);
+    check(lane.surface(1, .5f, 1, 3) == DEEP_ERROR_NONE &&
+              lane.surface(2, .5f, 2, 3) == DEEP_ERROR_NONE &&
+              lane.surface(2.1f, .5f, 2, 3, -1) == DEEP_ERROR_NONE &&
+              lane.volume(4, 5, .3, 2, 3) == DEEP_ERROR_NONE && lane.count == 3,
+          "Surface merge write");
+    const KernelDeepEvent &merged = lane.events[2];
+    check(merged.front == 2 && merged.back == 2 && merged.surface_alpha == .75f &&
+              merged.optical_depth == 0 && deep_event_object(merged) == 2 &&
+              lane.events[0].front == 1 && lane.events[4].front == 4 &&
+              lane.density[4].front == 4 && lane.density[4].back == 5,
+          "Nearest same-object surfaces did not merge");
+    /* Nothing mergeable (different objects): fails as before. */
+    MergeLane stuck(2, 1, false, true);
+    check(stuck.surface(1, .5f, 1, 2) == DEEP_ERROR_NONE &&
+              stuck.surface(2, .5f, 2, 2) == DEEP_ERROR_NONE &&
+              stuck.surface(3, .5f, 3, 2) == DEEP_ERROR_EVENT_CAPACITY,
+          "Unmergeable lane did not fail");
+    /* Invalid values never merge. */
+    std::vector<KernelDeepEvent> bad = {
+        {deep_event_pack(DEEP_VOLUME, 1), 1, 2, 0, std::numeric_limits<float>::quiet_NaN()},
+        {deep_event_pack(DEEP_VOLUME, 1), 2, 3, 0, 1},
+        {deep_event_pack(DEEP_SURFACE, 1), 4, 4, 1.5f, 0},
+        {deep_event_pack(DEEP_SURFACE, 1), 5, 5, .5f, 0}};
+    int companions = 0;
+    check(ccl::deep_merge_events(bad.data(), nullptr, 1, 4, false, false, 4, &companions) == 0,
+          "Invalid events merged");
+  }
+  std::cout << "PASS: event capacity merge (planes, compact, strict, surfaces, count pass)\n";
+}
 }  // namespace
 
 int main()
@@ -317,6 +581,7 @@ int main()
     using namespace ccl;
     mip_tests();
     grid_tests();
+    merge_tests();
     const double start[] = {0, 0, 0}, end[] = {1, 1, 1};
     const double feature[] = {0, 6, 0, 0, 0, 0, 0, 0};
     const auto hidden = deep_trilinear_density(feature, start, end);

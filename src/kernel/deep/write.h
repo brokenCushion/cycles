@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #pragma once
+#include "kernel/deep/merge.h"
 #include "kernel/deep/types.h"
 CCL_NAMESPACE_BEGIN
 /* Logical payload stores, including partial failed attempts. A count pass emits
@@ -30,5 +31,41 @@ ccl_device_inline void deep_write_event(
     write->companions += companion ? 1 : 0;
     write->written_bytes += sizeof(KernelDeepEvent) + (companion ? sizeof(KernelDeepDensity) : 0);
   }
+}
+/* Make room for one more event of this camera sample. Below capacity nothing
+ * changes. At capacity, capture entry points (write->fallback) merge similar
+ * neighbouring events (kernel/deep/merge.h) instead of failing, and flag the
+ * sample. A count pass has no payload to merge: it assumes one freed slot, and
+ * the host sizes a flagged lane's output range at the full capacity. The
+ * output pass frees at least one slot or fails exactly as without fallback. */
+ccl_device_inline KernelDeepError deep_event_reserve(
+    ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
+    const int stride, const int capacity, ccl_private int *count,
+    ccl_private KernelDeepWriteState *write)
+{
+  if (*count < capacity)
+    return DEEP_ERROR_NONE;
+  if (!write || !write->fallback || capacity < 1 || (!events && !write->count_only))
+    return DEEP_ERROR_EVENT_CAPACITY;
+  write->fallbacks |= DEEP_FALLBACK_MERGED;
+  if (!events) {
+    /* Keep the predicted counters live (at most capacity) like the output pass. */
+    --*count;
+    if (write->events)
+      --write->events;
+    if (write->companions)
+      --write->companions;
+    return DEEP_ERROR_NONE;
+  }
+  int companions = 0;
+  const int freed = deep_merge_events(events, density, stride, *count, write->compact_density,
+                                      write->volume_companions, capacity / 2, &companions);
+  if (freed < 1)
+    return DEEP_ERROR_EVENT_CAPACITY;
+  *count -= freed;
+  write->events -= unsigned(freed) < write->events ? unsigned(freed) : write->events;
+  write->companions -= unsigned(companions) < write->companions ? unsigned(companions) :
+                                                                    write->companions;
+  return DEEP_ERROR_NONE;
 }
 CCL_NAMESPACE_END

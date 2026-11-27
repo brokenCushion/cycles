@@ -140,17 +140,20 @@ KernelDeepResult KERNEL_FUNCTION_FULL_NAME(deep_surface)(const ThreadKernelGloba
                                             const bool volume,
                                             KernelDeepDensity *density,
                                             const double eps_ray, unsigned int *evaluations,
-                                            const KernelDeepTrace *trace)
+                                            unsigned int *fallbacks, const KernelDeepTrace *trace)
 {
 #  ifdef KERNEL_STUB
   STUB_ASSERT(KERNEL_ARCH, deep_surface);
   return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
 #  else
   *evaluations = 0;
+  *fallbacks = 0;
   if (volume) {
     KernelDeepWriteState write{};
+    write.fallback = true; /* merge/coarsen at capacity instead of failing */
     const auto result = deep_volume_cpu(kg, camera, events, max_events, density, eps_ray, &write);
     *evaluations = write.shader_evaluations;
+    *fallbacks = write.fallbacks;
     return result;
   }
   IntegratorStateCPU traversal = *camera;

@@ -29,7 +29,15 @@ CCL_NAMESPACE_BEGIN
  * doubling alone cannot detect within-interval depth-cut error for a line.
  * Emit the two positive half integrals, reusing them as child midpoints if
  * refinement is needed. Fixed-size DFS, 24 levels, 65535 evaluations and the
- * unchanged event capacity fail explicitly; no RNG, heap or silent cutoff. */
+ * event capacity bound the work; no RNG or heap. Without write->fallback they
+ * fail explicitly. Camera capture instead coarsens, as native Cycles does when
+ * a ray needs more than Max Steps: more than 16384 steps (or more than the
+ * remaining evaluations allow at the minimum cost per step) use fewer, longer
+ * steps; an interval whose refinement would leave too few evaluations for the
+ * rest of the ray, or that reaches level 24, is accepted unrefined. The stated
+ * stepping error does not hold for such a sample, which is flagged
+ * (DEEP_FALLBACK_COARSENED). Rays within the limits are unchanged: a ray that
+ * completes today always passes these reservations. */
 ccl_device_inline KernelDeepError deep_shader_sigma_checked(
     KernelGlobals kg, IntegratorState state, const Ray &ray, const VolumeStack &entry,
     const double t, ccl_private KernelDeepWriteState *write, float *value)
@@ -55,9 +63,21 @@ ccl_device KernelDeepResult deep_volume_shader(
 {
 #if defined(WITH_NANOVDB) && (!defined(__KERNEL_GPU__) || defined(__KERNEL_CUDA__))
   const double physical_length = double(len(ray.D));
-  const double dt = double(step) / physical_length;
-  const double required = ::ceil((end - start) / dt);
-  if (!(step > 0 && dt > 0 && required >= 1 && required <= 16384 && density && eps_ray > 0))
+  double dt = double(step) / physical_length;
+  double required = ::ceil((end - start) / dt);
+  const bool valid = step > 0 && dt > 0 && required >= 1 && density && eps_ray > 0;
+  /* Minimum evaluations per step: the midpoint, plus both halves when adaptive. */
+  const int per_step = kernel_data.pad3 == 1 ? 1 : 3;
+  if (valid && write && write->fallback) {
+    const double budget = ::floor(double(65535 - int(write->shader_evaluations)) / per_step);
+    const double limit = budget < 16384 ? budget : 16384;
+    if (required > limit && limit >= 1) {
+      required = limit;
+      dt = (end - start) / required;
+      write->fallbacks |= DEEP_FALLBACK_COARSENED;
+    }
+  }
+  if (!(valid && dt > 0 && required <= 16384))
     return {DEEP_FAILED, 0, DEEP_ERROR_GRID_STEPS};
   const float4 camera_z = deep_camera_depth_row(
       kernel_data.cam, kernel_data_array(camera_motion), ray.time);
@@ -113,8 +133,18 @@ ccl_device KernelDeepResult deep_volume_shader(
       const double difference = ::fabs(length*double(interval.sigma)-tau);
       const double prefix = ::fmin(1.0, ::exp(-stream->tau+stream->prefix_error));
       const int occupied = int(left > 0) + int(right > 0);
-      if (prefix*difference <= occupied*per_record_allowance &&
-          prefix*.25*length*::fabs(double(left)-double(right)) <= local_allowance) {
+      bool accept = prefix*difference <= occupied*per_record_allowance &&
+                    prefix*.25*length*::fabs(double(left)-double(right)) <= local_allowance;
+      /* Refining needs both children (2 evaluations each) plus every pending
+       * interval (2 each) and every later step (per_step each). */
+      if (!accept && write->fallback &&
+          (interval.level == 24 || size == 24 ||
+           double(write->shader_evaluations) + 4 + 2*size +
+               double(per_step)*(required - 1 - i) > 65535)) {
+        accept = true;
+        write->fallbacks |= DEEP_FALLBACK_COARSENED;
+      }
+      if (accept) {
         const float values[2] = {left, right};
         const double positions[3] = {interval.front, mid, interval.back};
         for (int half = 0; half < 2; ++half) {
@@ -201,8 +231,10 @@ ccl_device KernelDeepResult deep_volume_interval(
     if (!isfinite(sigma.x) || sigma.x < 0 || sigma.x != sigma.y || sigma.x != sigma.z)
       return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
     if (sigma.x > 0) {
-      if (count == capacity)
-        return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
+      const KernelDeepError reserved = deep_event_reserve(
+          events, density, stride, capacity, &count, write);
+      if (reserved != DEEP_ERROR_NONE)
+        return {DEEP_FAILED, 0, reserved};
       const float4 camera_z = deep_camera_depth_row(
           kernel_data.cam, kernel_data_array(camera_motion), ray.time);
       const double depth_origin = double(camera_z.x) * double(ray.P.x) +
@@ -472,6 +504,8 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
                                         const int media_limit = DEEP_MAX_MEDIA)
 {
 #ifdef __VOLUME__
+  if (write)
+    write->volume_companions = density && eps_ray > 0;
   const int medium_stride = media_stride ? media_stride : stride;
   Ray ray;
   integrator_state_read_ray(state, &ray);
@@ -636,8 +670,10 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
           if (!isfinite(t.x) || t.x < 0 || t.x > 1 || t.x != t.y || t.x != t.z)
             return {DEEP_FAILED, 0, DEEP_ERROR_EXTINCTION};
           if (t.x < 1) {
-            if (count == capacity)
-              return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
+            const KernelDeepError reserved = deep_event_reserve(
+                events, density, stride, capacity, &count, write);
+            if (reserved != DEEP_ERROR_NONE)
+              return {DEEP_FAILED, 0, reserved};
             const float z = deep_camera_depth(
                 kernel_data.cam, kernel_data_array(camera_motion), ray.time, ray.P + hit.t * ray.D);
             deep_write_event(events, density, count * stride,

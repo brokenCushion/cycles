@@ -269,6 +269,7 @@ set(SRC_KERNEL_DEEP_HEADERS
   deep/volume_boundary.h
   deep/density.h
   deep/grid.h
+  deep/merge.h
   deep/volume_grid.h
   deep/volume_native.h
   deep/surface_boundary.h

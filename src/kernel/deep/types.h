@@ -119,8 +119,18 @@ struct KernelDeepRecord {
    * high 16 bits. Strict uses zero evaluations and keeps its original bytes. */
   unsigned int x, y, sample, population;
   KernelDeepResult result;
-  unsigned int payload_counts; // low/high 16 bits: event/companion stores (predicted in count pass)
+  unsigned int payload_counts; // low/high 15 bits: event/companion stores (predicted in count pass)
 };
+/* Resource fallbacks one camera sample took instead of failing; the host counts
+ * samples and warns once per render. Records carry them in payload_counts bit
+ * 15 (merged) and bit 31 (coarsened); live counts stay below 1 << 15. */
+enum KernelDeepFallback : unsigned int {
+  DEEP_FALLBACK_MERGED = 1u,    /* events merged to fit the sample's event capacity */
+  DEEP_FALLBACK_COARSENED = 2u, /* volume shader steps coarsened to fit step/evaluation limits */
+};
+constexpr unsigned int DEEP_PAYLOAD_COUNT_MASK = 0x7fffu;
+constexpr unsigned int DEEP_PAYLOAD_MERGED = 1u << 15;
+constexpr unsigned int DEEP_PAYLOAD_COARSENED = 1u << 31;
 
 static_assert(sizeof(unsigned int) == 4 && sizeof(float) == 4, "Deep record scalar layout");
 static_assert(sizeof(KernelDeepEvent) == 20, "Deep event layout");
@@ -128,7 +138,7 @@ static_assert(sizeof(KernelDeepDensity) == 32, "Deep density layout");
 static_assert(sizeof(KernelDeepResult) == 12, "Deep result layout");
 static_assert(sizeof(KernelDeepRecord) == 32, "Deep metadata layout");
 static_assert(sizeof(KernelDeepMedium) == 8, "Deep medium layout");
-static_assert(DEEP_MAX_VOLUME_EVENTS < (1u << 16), "Deep write counters fit sixteen bits");
+static_assert(DEEP_MAX_VOLUME_EVENTS < (1u << 15), "Deep write counters fit fifteen bits");
 struct DeepVolumeCompression {
   double anchor, last, anchor_tau, tau, lower, upper, roundoff, cutoff;
   double prefix_error, anchor_error;
@@ -147,5 +157,9 @@ struct KernelDeepWriteState {
   unsigned int events = 0, companions = 0;
   unsigned int limit = ~0u;
   unsigned int density_limit = ~0u;
+  unsigned int fallbacks = 0; /* KernelDeepFallback bits */
   bool count_only = false, compact_density = false, failed = false;
+  /* Merge/coarsen instead of failing at capacity (camera capture entry points
+   * only); volume_companions: DEEP_VOLUME events carry a density companion. */
+  bool fallback = false, volume_companions = false;
 };

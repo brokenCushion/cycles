@@ -196,6 +196,8 @@ ccl_device void deep_surface_kernel(const int index,
   write.limit = ranges ? ranges[index].count : unsigned(max(1, max_events) * event_stride);
   write.compact_density = ranges != nullptr;
   write.density_limit = ranges ? ranges[index].density_count : ~0u;
+  /* Volume camera capture merges/coarsens at capacity instead of failing. */
+  write.fallback = media != nullptr;
   const unsigned event_offset = ranges ? ranges[index].offset : unsigned(index);
   ccl_global KernelDeepEvent *lane_events = events ? events + event_offset : nullptr;
   ccl_global KernelDeepDensity *lane_density = density ? density + (ranges ? ranges[index].density_offset : event_offset) : nullptr;
@@ -218,7 +220,10 @@ ccl_device void deep_surface_kernel(const int index,
     record->result = deep_surface_cuda(nullptr, state, lane_events, event_stride, max_events,
                                       hits ? hits + index : nullptr, &write);
   }
-  record->payload_counts = write.events | (write.companions << 16);
+  record->payload_counts = (write.events & DEEP_PAYLOAD_COUNT_MASK) |
+                           ((write.companions & DEEP_PAYLOAD_COUNT_MASK) << 16) |
+                           ((write.fallbacks & DEEP_FALLBACK_MERGED) ? DEEP_PAYLOAD_MERGED : 0u) |
+                           ((write.fallbacks & DEEP_FALLBACK_COARSENED) ? DEEP_PAYLOAD_COARSENED : 0u);
   record->population |= write.shader_evaluations << 16;
   if (write.failed)
     record->result = {DEEP_FAILED, record->result.count, DEEP_ERROR_EVENT_CAPACITY};

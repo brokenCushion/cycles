@@ -46,8 +46,9 @@ ccl_device KernelDeepError deep_volume_constant(
     const int stride, const int capacity, ccl_private int *count, const int object = -1,
     ccl_private KernelDeepWriteState *write = nullptr)
 {
-  if (*count == capacity)
-    return DEEP_ERROR_EVENT_CAPACITY;
+  const KernelDeepError reserved = deep_event_reserve(events, density, stride, capacity, count, write);
+  if (reserved != DEEP_ERROR_NONE)
+    return reserved;
   if (!(front > 0 && back > front && back <= 3.4028234663852886e38 &&
         tau >= 0 && tau <= 3.4028234663852886e38))
     return DEEP_ERROR_DEPTH;
@@ -76,8 +77,9 @@ ccl_device KernelDeepError deep_volume_exact(
     ccl_private int *count, const int object = -1,
     ccl_private KernelDeepWriteState *write = nullptr)
 {
-  if (*count == capacity)
-    return DEEP_ERROR_EVENT_CAPACITY;
+  const KernelDeepError reserved = deep_event_reserve(events, density, stride, capacity, count, write);
+  if (reserved != DEEP_ERROR_NONE)
+    return reserved;
   deep_write_event(events, density, *count * stride,
       {deep_event_pack(DEEP_VOLUME_CUBIC, object), float(cell.front), float(cell.back), 0, 0},
       &cell, write);
@@ -120,8 +122,10 @@ ccl_device KernelDeepError deep_volume_compression_cell(
         stream, rounding_allowance, events, density, stride, capacity, count, write);
     if (error != DEEP_ERROR_NONE)
       return error;
-    if (*count == capacity)
-      return DEEP_ERROR_EVENT_CAPACITY;
+    const KernelDeepError reserved = deep_event_reserve(
+        events, density, stride, capacity, count, write);
+    if (reserved != DEEP_ERROR_NONE)
+      return reserved;
     float z = float(cell.front);
     if (double(z) < cell.front)
       z = nextafterf(z, FLT_MAX);
@@ -329,8 +333,12 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
       occupied |= coefficients.optical_depth[i] > 0;
     if (!occupied)
       continue;
-    if (eps_ray == 0 && count == capacity)
-      return {DEEP_FAILED, 0, DEEP_ERROR_EVENT_CAPACITY};
+    if (eps_ray == 0) {
+      const KernelDeepError reserved = deep_event_reserve(
+          events, density, stride, capacity, &count, write);
+      if (reserved != DEEP_ERROR_NONE)
+        return {DEEP_FAILED, 0, reserved};
+    }
     const double a = depth_origin + segment.front * depth_per_t;
     const double b = depth_origin + segment.back * depth_per_t;
     if (!(a > 0 && b <= 3.4028234663852886e38 && b > a))

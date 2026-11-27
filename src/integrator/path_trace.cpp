@@ -942,6 +942,15 @@ void PathTrace::write_deep_output()
                 << " volume samples"
                 << (deep_capture_->error() == 0 ? " in strict mode" : "")
                 << "; similar neighbouring volume samples were merged to fit (as MoonRay does).";
+  if (const uint64_t merged = deep_capture_->event_merged_samples.load())
+    LOG_WARNING << "Deep: " << merged << " camera samples recorded more than "
+                << deep_capture_->max_events()
+                << " events; similar neighbouring volume events were merged to fit (as MoonRay does).";
+  if (const uint64_t coarsened = deep_capture_->step_coarsened_samples.load())
+    LOG_WARNING << "Deep: " << coarsened
+                << " camera samples needed more volume shader steps than the per-sample limit"
+                   " (16384 steps, 65535 evaluations); their steps were coarsened to fit"
+                   " (as Cycles does past Max Steps).";
 }
 #endif
 

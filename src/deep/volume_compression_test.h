@@ -197,6 +197,34 @@ ccl_device int check_volume_compression(ccl_global KernelDeepEvent *events,
         DEEP_ERROR_NONE || count != 1 || deep_event_type(events[0]) != DEEP_VOLUME || deep_event_object(events[0]) != 17)
       return 12;
   }
+  {
+    /* Capture fallback: separated cells (no compression) into two slots merge
+     * instead of failing; total optical depth is kept. Same code on CUDA. */
+    DeepVolumeCompression stream{};
+    stream.object = 17;
+    KernelDeepWriteState write;
+    write.fallback = true;
+    write.volume_companions = true;
+    int count = 0;
+    for (int i = 0; i < 9; ++i) {
+      const float value = .01f * float(1 + i % 3);
+      const KernelDeepDensity cell{{value, 2 * value, value, 2 * value}, double(i + 1), double(i + 2)};
+      if (deep_volume_compression_cell(&stream, cell, 1e-5, 1e-8, events, density, 1, 2, &count,
+                                       &write) != DEEP_ERROR_NONE ||
+          deep_volume_compression_flush(&stream, 1e-8, events, density, 1, 2, &count, &write) !=
+              DEEP_ERROR_NONE)
+        return 16;
+    }
+    double tau = 0;
+    for (int i = 0; i < count; ++i)
+      tau += deep_event_type(events[i]) == DEEP_VOLUME ?
+                 double(density[i].optical_depth[0]) + double(density[i].optical_depth[1]) :
+                 (double(density[i].optical_depth[0]) + double(density[i].optical_depth[1]) +
+                  double(density[i].optical_depth[2]) + double(density[i].optical_depth[3])) / 4;
+    if (count != 2 || !(write.fallbacks & DEEP_FALLBACK_MERGED) || density[0].front != 1 ||
+        density[count - 1].back != 10 || fabs(tau - .27) > 1e-7)
+      return 17;
+  }
   return 0;
 }
 CCL_NAMESPACE_END

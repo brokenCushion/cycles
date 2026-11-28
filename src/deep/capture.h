@@ -57,7 +57,8 @@ class Capture {
                      uint32_t sample,
                      const KernelDeepResult &result,
                      const KernelDeepEvent *events,
-                     const KernelDeepDensity *density = nullptr);
+                     const KernelDeepDensity *density = nullptr,
+                     bool merge_online = false);
   void record_events(int x, int y, uint32_t sample, const KernelDeepEvent *events, int count);
   std::vector<SurfaceEvent> events(int x, int y, int sample) const;
   /* Event kind selects local surface alpha or integrated volume optical depth. */

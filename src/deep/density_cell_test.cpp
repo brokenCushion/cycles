@@ -401,6 +401,32 @@ void merge_tests()
       }
     }
   }
+  /* Numeric GPU count/output passes may deliver the source events unmerged. */
+  {
+    MergeLane raw(16, 1, true, true);
+    raw.write.defer_merge = true;
+    raw.write.limit = 16;
+    for (int i = 0; i < 12; ++i)
+      check(raw.volume(1 + i, 2 + i, .25, 2, 8) == DEEP_ERROR_NONE, "Write deferred lane");
+    check(raw.count == 12 && raw.write.events == 12 && raw.write.companions == 12 &&
+              (raw.write.fallbacks & DEEP_FALLBACK_MERGED),
+          "Deferred lane did not retain the exact source records");
+    KernelDeepWriteState counted;
+    counted.count_only = counted.fallback = counted.defer_merge = true;
+    int count = 0;
+    for (unsigned i = 0; i < DEEP_FLAT_COUNT_LIMIT + 7; ++i) {
+      check(ccl::deep_event_reserve(nullptr, nullptr, 1, 8, &count, &counted) == DEEP_ERROR_NONE,
+            "Deferred count failed");
+      ccl::deep_write_event(nullptr, nullptr, 0, {}, nullptr, &counted);
+      ++count;
+    }
+    check(count == int(DEEP_FLAT_COUNT_LIMIT) && counted.events == DEEP_FLAT_COUNT_LIMIT,
+          "Deferred count did not saturate at the staging limit");
+  }
+  /* Match CUDA's flush-to-zero behavior without changing stored optical depth. */
+  check(ccl::deep_merge_rate(double(std::numeric_limits<float>::min()), 2) == 0 &&
+            ccl::deep_merge_bin(std::numeric_limits<float>::denorm_min()) == 0,
+        "Subnormal merge costs must use the zero bin");
   /* Most similar first: lower exponent bins merge before earlier pairs of a
    * higher bin, regardless of buffer order; at most `target` merge. */
   {
@@ -420,6 +446,38 @@ void merge_tests()
       check(front == expected[i][0] && back == expected[i][1] && tau == expected[i][2],
             "Most similar pairs did not merge first");
     }
+  }
+  /* A run can free several slots in one pass, keeping the optical depth at
+   * the remaining boundary. The original first rate anchors the comparisons. */
+  {
+    MergeLane lane(8, 1, true, true);
+    for (int i = 0; i < 8; ++i)
+      check(lane.volume(1 + i, 2 + i, .25, 2, 8) == DEEP_ERROR_NONE, "Write equal-rate run");
+    int companions = 0;
+    check(ccl::deep_merge_events(lane.events.data(), lane.density.data(), 1, 8, true, true, 4,
+                                 &companions) == 4 &&
+              companions == 4,
+          "Equal-rate run did not free its quota");
+    lane.count = 4;
+    double front, back, tau;
+    lane.span(0, front, back, tau);
+    check(front == 1 && back == 6 && tau == 1.25, "Merged run changed optical depth");
+    lane.span(1, front, back, tau);
+    check(front == 6 && back == 7 && tau == .25, "Compaction changed the next span");
+  }
+  /* Appending to a full lane can merge the same smooth tail repeatedly. */
+  {
+    MergeLane lane(8, 1, true, true);
+    for (int i = 0; i < 12; ++i)
+      check(lane.volume(1 + i, 2 + i, .25, 2, 8) == DEEP_ERROR_NONE, "Write streaming tail");
+    check(lane.count == 8 && lane.write.companions == 8 &&
+              (lane.write.fallbacks & DEEP_FALLBACK_MERGED),
+          "Streaming tail exceeded capacity or changed the companion count");
+    double front, back, tau;
+    lane.span(6, front, back, tau);
+    check(front == 7 && back == 12 && tau == 1.25, "Streaming tail changed optical depth");
+    lane.span(7, front, back, tau);
+    check(front == 12 && back == 13 && tau == .25, "Streaming tail changed the newest span");
   }
   /* Strict (no DEEP_VOLUME companions): cubic cells merge into a FLOAT span. */
   {

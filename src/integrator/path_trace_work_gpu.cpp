@@ -1043,7 +1043,7 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
   const int batch_size = int(min(size_t(32768), deep_grid_staging_bytes / (2 * lane_bytes)));
   /* Leave 64 KiB for pinned-page rounding of the eight host allocations. */
   const size_t event_slots = (deep_grid_staging_bytes - 64 * 1024 -
-      size_t(capacity) * sizeof(KernelDeepDensity) - size_t(batch_size) * lane_bytes) /
+      DEEP_FLAT_COUNT_LIMIT * sizeof(KernelDeepDensity) - size_t(batch_size) * lane_bytes) /
       (4 * (sizeof(KernelDeepEvent) + sizeof(KernelDeepDensity)));
   if (event_slots < size_t(capacity)) {
     capture->fail(DEEP_ERROR_CAPACITY);
@@ -1101,7 +1101,9 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
     capture->fail(error);
     device_->set_error(capture->error_message());
   };
-  vector<KernelDeepDensity> sample_density(capacity);
+  vector<KernelDeepDensity> sample_density;
+  sample_density.reserve(DEEP_FLAT_COUNT_LIMIT);
+  sample_density.resize(capacity);
   auto consume = [&](DeepBatch &buffer) {
     if (!buffer.pending)
       return true;
@@ -1131,13 +1133,16 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
       /* A merged lane's range was sized at the full capacity by the count pass;
        * the output pass may free more than one slot per merge. */
       const bool merged = (record.payload_counts & DEEP_PAYLOAD_MERGED) != 0;
+      const bool raw = range.count > unsigned(capacity);
       if (record.result.status != DEEP_COMPLETE || record.result.error != DEEP_ERROR_NONE ||
-          (merged ? record.result.count > range.count || companions > range.density_count :
+          (merged && !raw ? record.result.count > range.count || companions > range.density_count :
                     record.result.count != range.count || companions != range.density_count)) {
         fail(record.result.error == DEEP_ERROR_NONE ? DEEP_ERROR_EVENT_CAPACITY : record.result.error);
         return false;
       }
       const KernelDeepEvent *events = buffer.events.data() + range.offset;
+      if (record.result.count > sample_density.size())
+        sample_density.resize(record.result.count);
       unsigned companion = 0;
       for (unsigned event = 0; event < record.result.count; ++event) {
         if (deep_event_type(events[event]) != DEEP_SURFACE) {
@@ -1152,9 +1157,10 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
         fail(DEEP_ERROR_EVENT_CAPACITY);
         return false;
       }
-      capture->record_fallbacks(deep_record_fallbacks(record));
+      capture->record_fallbacks(deep_record_fallbacks(record) &
+                                (raw ? ~unsigned(DEEP_FALLBACK_MERGED) : ~0u));
       capture->record_sample(record.x, record.y, record.sample, record.result,
-                            events, sample_density.data());
+                            events, sample_density.data(), raw);
       ++deep_record_count_;
     }
     deep_spill_seconds_ += time_dt() - spill_start;
@@ -1214,13 +1220,20 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
       const double spill_start = time_dt();
       while (cursor < count && buffer.count < batch_size) {
         const auto &record = deep_records_[cursor];
-        if (record.result.count > unsigned(capacity) ||
+        const bool overflow = (record.payload_counts & DEEP_PAYLOAD_MERGED) != 0;
+        if (record.result.count > DEEP_FLAT_COUNT_LIMIT ||
+            (!overflow && record.result.count > unsigned(capacity)) ||
             (record.result.status != DEEP_COMPLETE && record.result.status != DEEP_SKIPPED) ||
             record.result.error != DEEP_ERROR_NONE) {
           fail(record.result.error == DEEP_ERROR_NONE ? DEEP_ERROR_EVENT_CAPACITY : record.result.error);
           return;
         }
-        if (record.result.count > event_slots - buffer.slots)
+        /* Saturated predictions or rays wider than the staging buffer still
+         * merge in the kernel at the requested event capacity. */
+        const unsigned lane_count = overflow && (record.result.count == DEEP_FLAT_COUNT_LIMIT ||
+                                                  record.result.count > event_slots) ?
+                                        unsigned(capacity) : record.result.count;
+        if (lane_count > event_slots - buffer.slots)
           break;
         capture->shader_evaluations.fetch_add(record.population >> 16, std::memory_order_relaxed);
         if (capture->adaptive())
@@ -1233,18 +1246,15 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
           ++deep_record_count_;
         }
         else {
-          /* A merged lane's output pass frees slots the count pass could
-           * not see: reserve companions for its whole range. */
-          const unsigned companions = (record.payload_counts & DEEP_PAYLOAD_MERGED) ?
-                                          record.result.count :
+          const unsigned companions = overflow && lane_count == unsigned(capacity) ? lane_count :
                                           (record.payload_counts >> 16) & DEEP_PAYLOAD_COUNT_MASK;
-          if (companions > record.result.count || companions > event_slots - buffer.density_slots) {
+          if (companions > lane_count || companions > event_slots - buffer.density_slots) {
             fail(DEEP_ERROR_EVENT_CAPACITY);
             return;
           }
-          buffer.ranges[buffer.count++] = {unsigned(buffer.slots), record.result.count,
+          buffer.ranges[buffer.count++] = {unsigned(buffer.slots), lane_count,
               unsigned(first + cursor), unsigned(buffer.density_slots), companions};
-          buffer.slots += record.result.count;
+          buffer.slots += lane_count;
           buffer.density_slots += companions;
         }
         ++cursor;

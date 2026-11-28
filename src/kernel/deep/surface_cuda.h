@@ -198,6 +198,8 @@ ccl_device void deep_surface_kernel(const int index,
   write.density_limit = ranges ? ranges[index].density_count : ~0u;
   /* Volume camera capture merges/coarsens at capacity instead of failing. */
   write.fallback = media != nullptr;
+  write.defer_merge = media && density && eps_ray > 0 &&
+                      (!events || (ranges && ranges[index].count > unsigned(max_events)));
   const unsigned event_offset = ranges ? ranges[index].offset : unsigned(index);
   ccl_global KernelDeepEvent *lane_events = events ? events + event_offset : nullptr;
   ccl_global KernelDeepDensity *lane_density = density ? density + (ranges ? ranges[index].density_offset : event_offset) : nullptr;

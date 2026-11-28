@@ -129,6 +129,9 @@ enum KernelDeepFallback : unsigned int {
   DEEP_FALLBACK_COARSENED = 2u, /* volume shader steps coarsened to fit step/evaluation limits */
 };
 constexpr unsigned int DEEP_PAYLOAD_COUNT_MASK = 0x7fffu;
+/* The maximum count is also the sentinel for a potentially longer ray.
+ * Longer rays keep the compact in-kernel fallback. */
+constexpr unsigned int DEEP_FLAT_COUNT_LIMIT = DEEP_PAYLOAD_COUNT_MASK;
 constexpr unsigned int DEEP_PAYLOAD_MERGED = 1u << 15;
 constexpr unsigned int DEEP_PAYLOAD_COARSENED = 1u << 31;
 
@@ -158,8 +161,10 @@ struct KernelDeepWriteState {
   unsigned int limit = ~0u;
   unsigned int density_limit = ~0u;
   unsigned int fallbacks = 0; /* KernelDeepFallback bits */
+  float tail_merge_rate = -1.0f; /* first extinction rate of an active tail run */
   bool count_only = false, compact_density = false, failed = false;
   /* Merge/coarsen instead of failing at capacity (camera capture entry points
    * only); volume_companions: DEEP_VOLUME events carry a density companion. */
   bool fallback = false, volume_companions = false;
+  bool defer_merge = false; /* exact flat GPU payload, merged during readback */
 };

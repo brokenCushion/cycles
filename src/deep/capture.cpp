@@ -4,7 +4,7 @@
 #  define CCL_NAMESPACE_BEGIN namespace ccl {
 #  define CCL_NAMESPACE_END }
 #endif
-#include "kernel/deep/merge.h"
+#include "kernel/deep/write.h"
 #include <map>
 #include <algorithm>
 #include <array>
@@ -1664,7 +1664,8 @@ void Capture::record_sample(const int x,
                             const uint32_t sample,
                             const KernelDeepResult &input,
                             const KernelDeepEvent *events,
-                            const KernelDeepDensity *density)
+                            const KernelDeepDensity *density,
+                            const bool merge_online)
 {
   KernelDeepResult result = input;
   if (diagnostics())
@@ -1729,20 +1730,44 @@ void Capture::record_sample(const int x,
   std::vector<KernelDeepEvent> merged_events;
   std::vector<KernelDeepDensity> merged_density;
   if (result.count > capacity_) {
-    merged_events.assign(events, events + result.count);
-    if (density)
-      merged_density.assign(density, density + result.count);
-    int count = int(result.count);
-    while (count > int(capacity_)) {
-      int companions = 0;
-      const int freed = ccl::deep_merge_events(
-          merged_events.data(), density ? merged_density.data() : nullptr, 1, count, false,
-          has_density(DEEP_VOLUME), count - int(capacity_), &companions);
-      if (freed < 1) {
-        fail(DEEP_ERROR_CAPACITY);
-        return;
+    int count = 0;
+    if (merge_online) {
+      /* Replay the online merge used by the kernels. The GPU may have written
+       * the exact input stream to a flat staging range all at once. */
+      merged_events.resize(capacity_);
+      if (density)
+        merged_density.resize(capacity_);
+      auto *output_density = density ? merged_density.data() : nullptr;
+      KernelDeepWriteState write;
+      write.fallback = true;
+      write.volume_companions = has_density(DEEP_VOLUME);
+      for (unsigned i = 0; i < result.count; ++i) {
+        const auto error = ccl::deep_event_reserve(
+            merged_events.data(), output_density, 1, int(capacity_), &count, &write);
+        if (error != DEEP_ERROR_NONE) {
+          fail(error);
+          return;
+        }
+        const auto *companion = has_density(deep_event_type(events[i])) ? &density[i] : nullptr;
+        ccl::deep_write_event(merged_events.data(), output_density, count++, events[i], companion, &write);
       }
-      count -= freed;
+    }
+    else {
+      merged_events.assign(events, events + result.count);
+      if (density)
+        merged_density.assign(density, density + result.count);
+      count = int(result.count);
+      while (count > int(capacity_)) {
+        int companions = 0;
+        const int freed = ccl::deep_merge_events(
+            merged_events.data(), density ? merged_density.data() : nullptr, 1, count, false,
+            has_density(DEEP_VOLUME), count - int(capacity_), &companions);
+        if (freed < 1) {
+          fail(DEEP_ERROR_CAPACITY);
+          return;
+        }
+        count -= freed;
+      }
     }
     result.count = unsigned(count);
     events = merged_events.data();

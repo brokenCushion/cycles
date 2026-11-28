@@ -4,6 +4,7 @@
 #include "kernel/deep/types.h"
 #ifndef __KERNEL_GPU__
 #  include <cmath>
+#  include <cstring>
 #endif
 
 CCL_NAMESPACE_BEGIN
@@ -23,12 +24,13 @@ CCL_NAMESPACE_BEGIN
  * GPU lane cannot afford for thousands of overflowing smoke steps (lanes of a
  * warp overflow at different times and serialize). Instead each call frees up
  * to `target` slots in two linear passes: histogram the extinction difference
- * of every mergeable adjacent pair by binary exponent, then merge disjoint
- * pairs: all below the exponent bin that reaches `target`, and pairs in that
+ * of every mergeable adjacent pair by binary exponent, then compact in
+ * runs: all below the exponent bin that reaches `target`, and pairs in that
  * bin, in buffer order, up to `target` in total. The most similar pairs therefore
- * merge first, within a factor of two, and each call frees at least one slot
- * when any pair is mergeable. Each event's extinction rate is computed once
- * per pass (double division is slow on consumer GPUs).
+ * merge first, within a factor of two in the unclamped bins. Like MoonRay,
+ * compare each new member against the first extinction rate in the run.
+ * Compute rates in FLOAT for selection only; depth and optical depth still
+ * use the original doubles.
  *
  * Events are rewritten in place: [0, count) at `stride`, companions either at
  * the event index (planes) or packed in companion order (`compact`). Inputs
@@ -37,7 +39,7 @@ struct DeepMergeSpan {
   KernelDeepEvent event;
   KernelDeepDensity companion;
   double front, back, tau;
-  double sigma; /* tau per unit depth, volumes only */
+  float sigma; /* tau per unit depth, for merge selection only */
   bool has_companion;
 };
 
@@ -47,6 +49,29 @@ ccl_device_inline bool deep_merge_has_companion(const KernelDeepEvent event,
 {
   const KernelDeepEventKind kind = deep_event_type(event);
   return density && (kind == DEEP_VOLUME_CUBIC || (kind == DEEP_VOLUME && volume_companions));
+}
+
+ccl_device_inline float deep_merge_rate(const double tau, const double width)
+{
+  const float a = float(tau);
+  const float b = float(width);
+  /* Avoid subnormal operands and a potential intermediate overflow. The
+   * rare extreme inputs use the wide calculation before converting to FLOAT. */
+  if (tau == 0)
+    return 0;
+  float rate;
+  if (!(a >= FLT_MIN && a <= FLT_MAX && b >= FLT_MIN && b <= FLT_MAX))
+    rate = float(tau / width);
+  else {
+#ifdef __KERNEL_GPU__
+    rate = __fdiv_rn(a, b);
+#else
+    rate = a / b;
+#endif
+  }
+  /* CUDA uses flush-to-zero. Apply the same rule to merge costs on CPU
+   * and OptiX; stored optical depths are independent of these rates. */
+  return rate >= FLT_MIN ? rate : 0.0f;
 }
 
 ccl_device_inline DeepMergeSpan deep_merge_load(const ccl_global KernelDeepEvent *events,
@@ -76,8 +101,8 @@ ccl_device_inline DeepMergeSpan deep_merge_load(const ccl_global KernelDeepEvent
     span.tau = double(span.event.optical_depth);
   }
   span.sigma = deep_event_type(span.event) != DEEP_SURFACE && span.back > span.front ?
-                   span.tau / (span.back - span.front) :
-                   0.0;
+                   deep_merge_rate(span.tau, span.back - span.front) :
+                   0.0f;
   return span;
 }
 
@@ -85,7 +110,7 @@ ccl_device_inline DeepMergeSpan deep_merge_load(const ccl_global KernelDeepEvent
 ccl_device_inline bool deep_merge_volume_pair(const DeepMergeSpan a,
                                               const DeepMergeSpan b,
                                               const bool volume_companions,
-                                              ccl_private double *cost)
+                                              ccl_private float *cost)
 {
   if (deep_event_type(a.event) == DEEP_SURFACE || deep_event_type(b.event) == DEEP_SURFACE ||
       deep_event_object(a.event) != deep_event_object(b.event) ||
@@ -98,8 +123,8 @@ ccl_device_inline bool deep_merge_volume_pair(const DeepMergeSpan a,
   /* A merged event without a companion keeps FLOAT bounds; they must stay ordered. */
   if (!(a.has_companion && volume_companions) && !(float(a.front) < float(b.back)))
     return false;
-  const double difference = a.sigma - b.sigma;
-  *cost = difference < 0 ? -difference : difference;
+  /* Compare saturated rates in the widest bin, without subtracting inf-inf. */
+  *cost = a.sigma <= FLT_MAX && b.sigma <= FLT_MAX ? fabsf(a.sigma - b.sigma) : FLT_MAX;
   return true;
 }
 
@@ -111,7 +136,7 @@ ccl_device_inline DeepMergeSpan deep_merge_volume(const DeepMergeSpan a,
   span.front = a.front;
   span.back = b.back;
   span.tau = a.tau + b.tau;
-  span.sigma = span.tau / (span.back - span.front);
+  span.sigma = a.sigma;
   span.has_companion = a.has_companion && volume_companions;
   span.event = {(a.event.kind & ~DEEP_EVENT_KIND_MASK) | unsigned(DEEP_VOLUME),
                 float(span.front), float(span.back), 0, float(span.tau)};
@@ -126,15 +151,19 @@ ccl_device_inline DeepMergeSpan deep_merge_volume(const DeepMergeSpan a,
   return span;
 }
 
-/* Exponent bins: 0 holds equal extinction, then one binary exponent each
+/* Exponent bins: 0 holds zero and subnormal costs, then one binary exponent each
  * (outer ones clamped). */
-ccl_device_inline int deep_merge_bin(const double cost)
+ccl_device_inline int deep_merge_bin(const float cost)
 {
-  if (!(cost > 0))
+#ifdef __KERNEL_GPU__
+  const unsigned int bits = __float_as_uint(cost);
+#else
+  unsigned int bits;
+  std::memcpy(&bits, &cost, sizeof(bits));
+#endif
+  if (bits < 0x00800000u)
     return 0;
-  int exponent = 0;
-  (void)frexp(cost, &exponent);
-  exponent += 32;
+  const int exponent = int(bits >> 23) - 94;
   return exponent < 1 ? 1 : (exponent > 63 ? 63 : exponent);
 }
 
@@ -149,6 +178,48 @@ ccl_device_inline void deep_merge_store(ccl_global KernelDeepEvent *events,
   events[index * stride] = span.event;
   if (span.has_companion)
     density[compact ? companion : index * stride] = span.companion;
+}
+
+/* When a full lane is still writing a smooth run, make room at its tail.
+ * MoonRay compares subsequent segments with the first rate in the run and
+ * accepts a difference of at most the largest rate divided by its compression
+ * resolution (default 10). Use the larger of the two local rates to avoid a
+ * distant dense interval setting the tolerance for this pair. */
+ccl_device_inline bool deep_merge_tail(ccl_global KernelDeepEvent *events,
+                                       ccl_global KernelDeepDensity *density,
+                                       const int stride,
+                                       const int count,
+                                       ccl_private KernelDeepWriteState *write,
+                                       ccl_private int *freed_companions)
+{
+  if (count < 2)
+    return false;
+  const int last = count - 1;
+  const bool has_a = deep_merge_has_companion(
+      events[(last - 1) * stride], density != nullptr, write->volume_companions);
+  const bool has_b = deep_merge_has_companion(
+      events[last * stride], density != nullptr, write->volume_companions);
+  const int companion = int(write->companions) - int(has_a) - int(has_b);
+  if (has_a != has_b || companion < 0)
+    return false;
+  DeepMergeSpan a = deep_merge_load(
+      events, density, stride, last - 1, write->compact_density, companion, write->volume_companions);
+  const DeepMergeSpan b = deep_merge_load(
+      events, density, stride, last, write->compact_density, companion + int(has_a),
+      write->volume_companions);
+  if (write->tail_merge_rate >= 0)
+    a.sigma = write->tail_merge_rate;
+  float cost;
+  if (!deep_merge_volume_pair(a, b, write->volume_companions, &cost))
+    return false;
+  const float scale = a.sigma > b.sigma ? a.sigma : b.sigma;
+  if (!(scale <= FLT_MAX && cost <= scale * 0.1f))
+    return false;
+  const DeepMergeSpan span = deep_merge_volume(a, b, write->volume_companions);
+  deep_merge_store(events, density, stride, last - 1, write->compact_density, companion, span);
+  *freed_companions = int(has_a) + int(has_b) - int(span.has_companion);
+  write->tail_merge_rate = a.sigma;
+  return true;
 }
 
 /* Histogram of mergeable adjacent pairs by exponent bin; returns their number. */
@@ -169,7 +240,7 @@ ccl_device int deep_merge_histogram(const ccl_global KernelDeepEvent *events,
     const DeepMergeSpan next = deep_merge_load(
         events, density, stride, i, compact, companion, volume_companions);
     companion += next.has_companion ? 1 : 0;
-    double cost;
+    float cost;
     if (deep_merge_volume_pair(previous, next, volume_companions, &cost)) {
       ++histogram[deep_merge_bin(cost)];
       ++pairs;
@@ -217,20 +288,20 @@ ccl_device_noinline int deep_merge_events(ccl_global KernelDeepEvent *events,
     const int wanted = target < 1 ? 1 : (target < pairs ? target : pairs);
     unsigned int before;
     const int threshold = deep_merge_threshold(histogram, unsigned(wanted), &before);
-    /* Every pair below the threshold bin merges; pairs in it fill the rest. */
+    /* Reserve room for more expensive pairs only after the cheaper bins.
+     * A run can free multiple slots without recalculating its extinction. */
     int quota = wanted - int(before);
     /* In-place compaction: outputs never pass the next unread input. The
      * first qualifying pair always merges (or follows an earlier merge). */
     int freed = 0, output = 0, output_companion = 0;
     DeepMergeSpan run = deep_merge_load(events, density, stride, 0, compact, 0, volume_companions);
     int companion = run.has_companion ? 1 : 0;
-    bool merged_run = false;
     for (int i = 1; i < count; ++i) {
       const DeepMergeSpan next = deep_merge_load(
           events, density, stride, i, compact, companion, volume_companions);
       companion += next.has_companion ? 1 : 0;
-      double cost;
-      if (!merged_run && deep_merge_volume_pair(run, next, volume_companions, &cost)) {
+      float cost;
+      if (freed < wanted && deep_merge_volume_pair(run, next, volume_companions, &cost)) {
         const int bin = deep_merge_bin(cost);
         if (bin < threshold || (bin == threshold && quota > 0)) {
           quota -= bin == threshold ? 1 : 0;
@@ -238,7 +309,6 @@ ccl_device_noinline int deep_merge_events(ccl_global KernelDeepEvent *events,
           run = deep_merge_volume(run, next, volume_companions);
           *freed_companions += companions - int(run.has_companion);
           ++freed;
-          merged_run = true; /* disjoint pairs: a merged span waits for the next call */
           continue;
         }
       }
@@ -246,7 +316,6 @@ ccl_device_noinline int deep_merge_events(ccl_global KernelDeepEvent *events,
       output_companion += run.has_companion ? 1 : 0;
       ++output;
       run = next;
-      merged_run = false;
     }
     deep_merge_store(events, density, stride, output, compact, output_companion, run);
     return freed;

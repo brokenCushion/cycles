@@ -789,6 +789,13 @@ int main()
       check(intervals[1].front == 4 && intervals[1].back == 6 && intervals[1].object == 3);
       check(std::abs(intervals[0].optical_depth - (double(.1f) + double(.1f))) < 1e-7);
       check(std::abs(intervals[1].optical_depth - (2 + double(2.1f))) < 1e-6);
+      Capture staged(1, 1, 1, 8 * 1024 * 1024, 2, false, false, true);
+      staged.record_sample(0, 0, 0, {DEEP_COMPLETE, 4, DEEP_ERROR_NONE}, spans, nullptr, true);
+      check(staged.finalize() && staged.event_merged_samples == 1);
+      const auto replayed = staged.volume_sample(0, 0, 0).intervals;
+      check(replayed.size() == 2 && replayed[0].front == 2 && replayed[0].back == 5 &&
+            replayed[1].front == 5 && replayed[1].back == 6);
+      check(std::abs(replayed[0].optical_depth - (2 + 2 * double(.1f))) < 1e-6);
       /* Different objects and gaps never merge; surfaces then merge instead. */
       const KernelDeepEvent apart[] = {{deep_event_pack(DEEP_VOLUME, 1), 2, 3, 0, .1f},
                                        {deep_event_pack(DEEP_VOLUME, 2), 3, 4, 0, .1f},

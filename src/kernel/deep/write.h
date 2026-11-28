@@ -36,8 +36,8 @@ ccl_device_inline void deep_write_event(
  * changes. At capacity, capture entry points (write->fallback) merge similar
  * neighbouring events (kernel/deep/merge.h) instead of failing, and flag the
  * sample. A count pass has no payload to merge: it assumes one freed slot, and
- * the host sizes a flagged lane's output range at the full capacity. The
- * output pass frees at least one slot or fails exactly as without fallback. */
+ * the host can allocate a flat range for the exact records when their count
+ * fits the staging limit. Otherwise the output pass merges in the kernel. */
 ccl_device_inline KernelDeepError deep_event_reserve(
     ccl_global KernelDeepEvent *events, ccl_global KernelDeepDensity *density,
     const int stride, const int capacity, ccl_private int *count,
@@ -48,6 +48,12 @@ ccl_device_inline KernelDeepError deep_event_reserve(
   if (!write || !write->fallback || capacity < 1 || (!events && !write->count_only))
     return DEEP_ERROR_EVENT_CAPACITY;
   write->fallbacks |= DEEP_FALLBACK_MERGED;
+  if (write->defer_merge) {
+    if (events)
+      return unsigned(*count) < write->limit ? DEEP_ERROR_NONE : DEEP_ERROR_EVENT_CAPACITY;
+    if (unsigned(*count) < DEEP_FLAT_COUNT_LIMIT)
+      return DEEP_ERROR_NONE;
+  }
   if (!events) {
     /* Keep the predicted counters live (at most capacity) like the output pass. */
     --*count;
@@ -58,8 +64,12 @@ ccl_device_inline KernelDeepError deep_event_reserve(
     return DEEP_ERROR_NONE;
   }
   int companions = 0;
-  const int freed = deep_merge_events(events, density, stride, *count, write->compact_density,
-                                      write->volume_companions, capacity / 2, &companions);
+  int freed = 1;
+  if (!deep_merge_tail(events, density, stride, *count, write, &companions)) {
+    write->tail_merge_rate = -1.0f;
+    freed = deep_merge_events(events, density, stride, *count, write->compact_density,
+                              write->volume_companions, capacity / 2, &companions);
+  }
   if (freed < 1)
     return DEEP_ERROR_EVENT_CAPACITY;
   *count -= freed;

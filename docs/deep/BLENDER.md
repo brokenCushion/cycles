@@ -370,9 +370,10 @@ See [support and native texture differences](SUPPORT.md).
 
 ## Shader-evaluated volume capture
 
-OSL deep volumes use the native extinction shader evaluator on CPU. Deep
-rejects OSL volumes on OptiX before the volume shader setup that can stall.
-For OptiX, use an SVM volume graph. SVM graphs use shader evaluation only with `--deep-volume-shader-eval` (`use_deep_volume_shader_eval`
+OSL deep volumes use the native extinction shader evaluator on CPU and OptiX.
+OptiX can take several minutes to compile OSL volume kernels on a cold cache.
+Deep preflight warns about the setup time. CPU or SVM shaders start faster.
+SVM graphs use shader evaluation only with `--deep-volume-shader-eval` (`use_deep_volume_shader_eval`
 in Blender); otherwise analytic capture is unchanged. Supply numeric deep error.
 `--deep-volume-step` (`deep_volume_step`) caps the world-space voxel step and is
 required for a volume without a grid. Zero selects the grid step automatically.

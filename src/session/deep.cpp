@@ -581,6 +581,9 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
     for (Node *node : geometry->get_used_shaders())
       params.deep.volume_shader_evaluation |= shader_evaluated_volume(
           scene, params.deep, static_cast<Shader *>(node));
+  require_deep(!(params.deep.volume_shader_evaluation && params.device.type == DEVICE_OPTIX &&
+                 scene->params.shadingsystem == SHADINGSYSTEM_OSL),
+               "OptiX OSL volume shader setup can stall; use CPU or an SVM volume shader for Deep Volume");
   params.deep.volume_grid |= params.deep.volume_shader_evaluation;
 #ifndef WITH_NANOVDB
   require_deep(!params.deep.volume_shader_evaluation, "shader-evaluated volumes require NanoVDB capture buffers");

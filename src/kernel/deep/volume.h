@@ -185,10 +185,17 @@ ccl_device KernelDeepResult deep_volume_interval(
 {
   const VolumeStack entry = {sd->object, sd->shader};
   const float grid_scale = kernel_data_fetch(shaders, sd->shader & SHADER_MASK).deep_density_scale;
-  if (grid_scale == -2)
+  if (grid_scale == -2) {
+#if defined(__KERNEL_OPTIX__) && defined(__OSL__)
+    /* OptiX OSL volume evaluation is rejected before device setup. Keep the
+     * adaptive stepping code out of the OSL surface module. */
+    return {DEEP_FAILED, 0, DEEP_ERROR_STATE};
+#else
     return deep_volume_shader(kg, state, ray, entry, start, end,
         -kernel_data_fetch(shaders, entry.shader & SHADER_MASK).deep_homogeneous_extinction,
         events, density, stride, capacity, count, eps_ray, object_stream, write);
+#endif
+  }
   /* A zero multiplier may eliminate the density attribute during native shader
    * compilation. It contributes no extinction and needs no voxel lookup. */
   if (grid_scale == 0)

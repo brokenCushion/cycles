@@ -1,0 +1,68 @@
+{
+  "source": "D:\\CyclesDeepArchive\\builds\\validation\\m8-production\\vdb-664\\scene.blend",
+  "source_sha256": "417722651fc0977002f7f93a689e1b85545b339f73e712983cd819ed63ed8231",
+  "cases": {
+    "surface_bevel": {
+      "scene": "D:/temp/cycles_deep_bounded/finish/surface-bevel-relinked.blend",
+      "resolution": [
+        32,
+        32
+      ],
+      "samples": 4,
+      "center": [
+        -8.0,
+        243.5,
+        -52.0
+      ],
+      "deep_max_events": 16,
+      "volume_names": [
+        "SuppliedVDB"
+      ],
+      "clip": [
+        808.7429809570312,
+        2088.98046875
+      ]
+    },
+    "surface_ao": {
+      "scene": "C:\\Users\\jun\\Documents\\ChatGPT\\cycles_deep\\builds\\validation\\landscape-cloud\\final-fixtures\\surface_ao\\scene.blend",
+      "resolution": [
+        32,
+        32
+      ],
+      "samples": 4,
+      "center": [
+        -8.0,
+        243.5,
+        -52.0
+      ],
+      "volume_names": [
+        "SuppliedVDB"
+      ],
+      "clip": [
+        808.7429809570312,
+        2088.98046875
+      ]
+    },
+    "reject_bevel_opacity": {
+      "scene": "D:\\CyclesDeepScratch\\optimization-phase8a\\clangcl-deep\\raytrace-fixed-fixtures\\reject_bevel_opacity\\scene.blend",
+      "resolution": [
+        32,
+        32
+      ],
+      "samples": 4,
+      "center": [
+        -8.0,
+        243.5,
+        -52.0
+      ],
+      "deep_max_events": 16,
+      "volume_names": [
+        "SuppliedVDB"
+      ],
+      "clip": [
+        808.7429809570312,
+        2088.98046875
+      ]
+    }
+  }
+}

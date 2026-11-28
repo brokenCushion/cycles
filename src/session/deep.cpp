@@ -736,6 +736,7 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
   /* Open deep volume boundaries, with their boundary-edge counts. Warned per
    * object below; they stay supported (an open interval ends at the clip end). */
   std::map<const Geometry *, size_t> open_volume_meshes;
+  std::set<const Geometry *> intersecting_volume_meshes;
   for (Geometry *geometry : scene->geometry) {
     /* Camera-only deep traversal cannot record geometry outside this set. */
     if (!camera_geometry.count(geometry))
@@ -828,6 +829,10 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
           closed &= directed_edges.count({edge.first.second, edge.first.first}) == 1;
         require_deep(std::isfinite(signed_volume) && (!closed || signed_volume > 0),
                      "closed deep volume mesh must enclose positive volume");
+        if (closed && deep::mesh_has_proper_self_intersection(
+                          mesh->get_triangles().data(), mesh->num_triangles(),
+                          &vertices[0].x, sizeof(vertices[0]) / sizeof(float)))
+          intersecting_volume_meshes.insert(geometry);
         if (!closed) {
           /* Diagnostics only. Split vertices are welded by exact position so
            * that only real holes are reported. */
@@ -839,6 +844,16 @@ void validate_deep_scene(Scene *scene, SessionParams &params)
         }
       }
     }
+  }
+  for (Object *object : scene->objects) {
+    const bool self_intersects = intersecting_volume_meshes.count(object->get_geometry()) != 0;
+    if (object->deep_volume_self_intersects != self_intersects) {
+      object->deep_volume_self_intersects = self_intersects;
+      object->tag_update(scene);
+    }
+    if (self_intersects && (object->get_visibility() & PATH_RAY_VISIBILITY_CAMERA))
+      LOG_WARNING << "Deep: volume mesh \"" << object->name
+                  << "\" self-intersects; capture uses the outermost volume crossings.";
   }
   if (!open_volume_meshes.empty()) {
     std::set<string> warned;

@@ -418,6 +418,14 @@ ccl_device KernelDeepResult deep_volume_object(
   int cursor_prim = -1;
   Intersection previous;
   bool previous_back = false, has_previous = false;
+  const bool folded = (kernel_data_fetch(object_flag, object) &
+                       SD_OBJECT_DEEP_VOLUME_SELF_INTERSECTS) != 0;
+  /* MoonRay starts outside at the far end of the ray. Sum oriented
+   * crossings past the near clip (including past the far clip), then replay
+   * from near to far. Only transitions into/out of positive winding count
+   * as boundaries of the union. Ordinary and open meshes keep their path. */
+  bool count_winding = folded;
+  int winding = 0;
   for (int step = 0; step < (density ? 16384 : 128); ++step) {
     double nearest = double(FLT_MAX), near_u = 0, near_v = 0;
     int near_prim = -1;
@@ -438,7 +446,16 @@ ccl_device KernelDeepResult deep_volume_object(
         deep_volume_candidate(kg, object, first + i, origin, direction, cursor, cursor_prim,
                               nearest, near_u, near_v, near_prim, back);
     }
-    if (near_prim < 0 || nearest >= clip_end) {
+    if (near_prim < 0 || (!count_winding && nearest >= clip_end)) {
+      if (count_winding) {
+        count_winding = false;
+        cursor = clip_start;
+        cursor_prim = -1;
+        has_previous = false;
+        start = winding > 0 ? clip_start : -1;
+        step = -1;
+        continue;
+      }
       if (start >= 0 && clip_end > start) {
         sd->shader = shader;
         const auto result = deep_volume_interval(kg, state, sd, ray, object, start, clip_end,
@@ -457,6 +474,16 @@ ccl_device KernelDeepResult deep_volume_object(
     if (has_previous && deep_same_surface_boundary(kg, previous, hit, previous_back, back))
       continue;
     previous = hit; previous_back = back; has_previous = true;
+    if (count_winding) {
+      winding += back ? 1 : -1;
+      continue;
+    }
+    if (folded) {
+      const bool was_inside = winding > 0;
+      winding += back ? -1 : 1;
+      if (was_inside == (winding > 0))
+        continue;
+    }
     if (!back) {
       /* Native stack entry ignores another front face of an active object. */
       if (start < 0)
@@ -559,7 +586,8 @@ ccl_device KernelDeepResult deep_volume(KernelGlobals kg,
     ShaderDataTinyStorage storage{};
     ShaderData &sd = *AS_SHADER_DATA(&storage);
     shader_setup_from_ray(kg, &sd, &initial_ray, &hit);
-    if (!(sd.runtime_flag & SR_BACKFACING))
+    if (!(sd.runtime_flag & SR_BACKFACING) &&
+        !(kernel_data_fetch(object_flag, hit.object) & SD_OBJECT_DEEP_VOLUME_SELF_INTERSECTS))
       continue;
     if (object_count == media_limit)
       return {DEEP_FAILED, 0, DEEP_ERROR_MEDIA_CAPACITY};

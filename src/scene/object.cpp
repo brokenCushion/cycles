@@ -739,6 +739,10 @@ void ObjectManager::device_update_object_transform(UpdateObjectTransformState *s
   if (ob->use_holdout) {
     flag |= SD_OBJECT_HOLDOUT_MASK;
   }
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  if (ob->deep_volume_self_intersects)
+    flag |= SD_OBJECT_DEEP_VOLUME_SELF_INTERSECTS;
+#endif
   state->object_flag[ob->index] = flag;
 
   /* Have curves. */

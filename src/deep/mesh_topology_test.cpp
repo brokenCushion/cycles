@@ -1,4 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
+#ifndef CCL_NAMESPACE_BEGIN
+#  define CCL_NAMESPACE_BEGIN namespace ccl {
+#  define CCL_NAMESPACE_END }
+#endif
 #include "deep/mesh_topology.h"
 
 #include <cstdio>
@@ -66,7 +70,11 @@ int main()
         shells[i][a] = cube_positions[i][a];
         shells[i + 8][a] = cube_positions[i][a] + (a == 0 ? 0.5f : 0.25f);
       }
-    check(count(tris, padded(shells, 16, 4), 4) == 0, "overlapping closed shells reported open");
+    const auto shell_positions = padded(shells, 16, 4);
+    check(count(tris, shell_positions, 4) == 0, "overlapping closed shells reported open");
+    check(ccl::deep::mesh_has_proper_self_intersection(
+              tris.data(), tris.size() / 3, shell_positions.data(), 4),
+          "Crossing closed shells were not detected");
   }
 
   /* Split vertices: every triangle owns its corners (no shared topology).

@@ -77,6 +77,9 @@ class Object : public Node {
 
   /* Set during device update. */
   bool intersects_volume;
+#ifdef WITH_CYCLES_DEEP_OPAQUE
+  bool deep_volume_self_intersects = false;
+#endif
 
   /* Specifies the position of the object in scene->objects and
    * in the device vectors. Gets set in device_update. */

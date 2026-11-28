@@ -1001,6 +1001,8 @@ enum ShaderDataObjectFlag : uint {
   SD_OBJECT_HAS_VOLUME_MOTION = (1u << 11),
   /* Geometry has per-corner normals instead of per-vertex. */
   SD_OBJECT_HAS_CORNER_NORMALS = (1u << 12),
+  /* Deep-only: closed mesh with intersecting boundary faces. */
+  SD_OBJECT_DEEP_VOLUME_SELF_INTERSECTS = (1u << 13),
 
   /* object is using caustics */
   SD_OBJECT_CAUSTICS = (SD_OBJECT_CAUSTICS_CASTER | SD_OBJECT_CAUSTICS_RECEIVER),

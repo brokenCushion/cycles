@@ -187,18 +187,13 @@ file is never visible under its final name.
 - **Volume merge cost.** Merging uses render-thread time (about +60% per pass on
   CPU). On CUDA/OptiX it currently runs on one host thread, so strict volume
   renders are slower on GPU (up to about 3.6x on the motion VDB test).
-- **Open or poked-through volume meshes.** Deep, like beauty, decides where a ray is
-  inside a volume from the mesh faces it crosses: in through a face pointing at the
-  ray, out through one pointing away. A mesh with a hole, or one where part of the
-  surface pokes out through another part (for example a strong Displace modifier on
-  a smoke puff), can leave a ray inside with no exit face. Deep then keeps the volume
-  to the camera clip end, which can give very long volume intervals or
-  event-capacity failures. Beauty instead drops the volume for that whole last
-  stretch of the ray, including real volume, so the two differ and neither is right.
-  Close the mesh, remove the poke-through, or put an opaque surface behind it.
-  Closed, overlapping and displaced meshes without poke-through match beauty.
-  Preflight logs a console warning naming each open deep volume mesh (`Deep: volume
-  mesh "..." is open (N boundary edges)`); it does not detect poke-through.
+- **Open or poked-through volume meshes.** A hole can leave rays inside the
+  volume to the camera clip end, which can produce long intervals. Preflight
+  warns about boundary edges. A bounded preflight check also warns when it finds
+  crossing faces in a closed mesh. Deep capture pairs the outermost entry and
+  exit on those rays, including rays that start inside the volume. Large or
+  coplanar intersections can go undetected. Fix holes and intersecting geometry
+  when you need deep and beauty to agree.
 - **DeepRecolor on volumes.** Recolouring divides the flat colour by the flat
   alpha. Where the beauty's volume alpha is noisy, the recoloured smoke speckles
   even though the deep alpha is clean. Render the smoke beauty with more samples or

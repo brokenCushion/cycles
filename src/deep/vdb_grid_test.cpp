@@ -15,6 +15,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <random>
 #include <stdexcept>
 #include <vector>
@@ -184,6 +185,7 @@ int main(int argc, char **argv)
       if (!ccl::deep_grid_begin(&cursor, origin, direction, 0.0, 1.0, 16384))
         throw std::runtime_error("Grid cursor initialization failed");
       double actual_tau = 0;
+      size_t visited_cells = 0;
       ccl::DeepGridSegment<double> segment{};
       ccl::DeepGridStep status;
       while ((status = ccl::deep_grid_next(&cursor, &segment)) == ccl::DEEP_GRID_SEGMENT) {
@@ -193,8 +195,9 @@ int main(int argc, char **argv)
           throw std::runtime_error("Native density lookup failed");
         for (float value : coefficients.optical_depth)
           actual_tau += double(value) / 4;
-        ++total_cells;
+        ++visited_cells;
       }
+      total_cells += visited_cells;
       if (status != ccl::DEEP_GRID_DONE)
         throw std::runtime_error("Native traversal did not complete");
       const auto captured = ccl::deep_volume_grid_capture(
@@ -224,8 +227,13 @@ int main(int argc, char **argv)
         for (float value : b)
           stored_tau += double(value) / 4;
       }
-      if (stored_tau != actual_tau)
-        throw std::runtime_error("Native capture changed optical depth");
+      /* These loops can sum the same non-negative coefficients in different
+       * orders. Budget double rounding for four additions per cell in each. */
+      const double roundoff = std::numeric_limits<double>::epsilon() *
+                              4.0 * (visited_cells + captured.count) *
+                              std::max(actual_tau, stored_tau);
+      if (!(std::abs(stored_tau - actual_tau) <= roundoff))
+        throw std::runtime_error("Native capture changed optical depth beyond summation roundoff");
       for (const double eps : {4.95e-5, 4.995e-4}) {
         std::vector<KernelDeepEvent> compressed(8192);
         std::vector<KernelDeepDensity> spans(8192);
@@ -293,7 +301,10 @@ int main(int argc, char **argv)
           expected_tau += .02 * length * half * density;
         }
       }
-      const double error = std::abs(std::exp(-expected_tau) - std::exp(-actual_tau));
+      const double expected_transmittance = std::exp(-expected_tau);
+      const double error = std::max(
+          std::abs(expected_transmittance - std::exp(-actual_tau)),
+          std::abs(expected_transmittance - std::exp(-stored_tau)));
       maximum_error = std::max(maximum_error, error);
       if (!(error <= 1e-7))
         throw std::runtime_error("Native grid transmittance differs from OpenVDB oracle");

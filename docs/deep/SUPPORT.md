@@ -46,7 +46,9 @@ method, world-unit step range, selection rule and both allowances. Shader
 variation can exceed the stepping allowance; each fixture needs a 4x-finer-step
 check. Grid voxel size selects the step; `--deep-volume-step` caps it and is
 required without a grid. Native analytic capture remains the default for SVM.
-Completed misses count in normalization; incomplete/overflowing work fails explicitly.
+Completed misses count in normalization. Native VDB traversal continues past
+16384 cell or empty-tile visits without discarding cells, up to 64 chunks per
+interval. Boundary and media overflow still fail explicitly.
 
 Device buffers are host-allocated and bounded. Spill and parallel host fitting
 are separate from beauty. No GPU allocation/files/STL/exceptions. Cancellation,

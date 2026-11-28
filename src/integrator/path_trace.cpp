@@ -951,6 +951,10 @@ void PathTrace::write_deep_output()
                 << " camera samples needed more volume shader steps than the per-sample limit"
                    " (16384 steps, 65535 evaluations); their steps were coarsened to fit"
                    " (as Cycles does past Max Steps).";
+  if (const uint64_t extended = deep_capture_->grid_extended_samples.load())
+    LOG_WARNING << "Deep: " << extended
+                << " camera samples exceeded 16384 native grid steps; "
+                   "exact cell traversal continued in bounded chunks.";
 }
 #endif
 

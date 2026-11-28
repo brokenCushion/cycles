@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -46,6 +47,33 @@ template<typename BuildT> static void test_empty_tiles(const int precision)
     if (std::abs(std::exp(-tau) - std::exp(-expected)) > 1e-7)
       throw std::runtime_error("Empty-tile skip lost interpolation halo or nonzero tile");
   }
+}
+
+static void test_long_ray()
+{
+  constexpr int cells = 16385;
+  auto source = openvdb::FloatGrid::create(0);
+  source->fill(openvdb::CoordBBox({0, 0, 0}, {cells, 1, 1}), .25f);
+  auto handle = ccl::openvdb_to_nanovdb(source, 32, 0.0f);
+  const auto *native = reinterpret_cast<const ccl::nanovdb::NanoGrid<float> *>(handle.data());
+  const ccl::nanovdb::CachedReadAccessor<float> accessor(native->tree().root());
+  const double origin[3] = {0, .25, .25}, direction[3] = {1, 0, 0};
+  std::vector<KernelDeepEvent> expected_events(cells), events(cells);
+  std::vector<KernelDeepDensity> expected_density(cells), density(cells);
+  const auto baseline = ccl::deep_volume_grid_capture(
+      accessor, origin, direction, 0.0, double(cells), .02, 1, 1, 1,
+      expected_events.data(), expected_density.data(), 1, cells, 0, cells);
+  KernelDeepWriteState write{};
+  write.fallback = true;
+  const auto continued = ccl::deep_volume_grid_capture(
+      accessor, origin, direction, 0.0, double(cells), .02, 1, 1, 1,
+      events.data(), density.data(), 1, cells, 0, 16384, 0, 1, nullptr, -1, &write);
+  if (baseline.status != DEEP_COMPLETE || baseline.count != cells ||
+      continued.status != DEEP_COMPLETE || continued.count != cells ||
+      write.fallbacks != DEEP_FALLBACK_GRID_EXTENDED ||
+      std::memcmp(expected_events.data(), events.data(), cells * sizeof(KernelDeepEvent)) ||
+      std::memcmp(expected_density.data(), density.data(), cells * sizeof(KernelDeepDensity)))
+    throw std::runtime_error("Grid continuation changed exact cell records");
 }
 
 static void test_half_precision()
@@ -110,6 +138,7 @@ int main(int argc, char **argv)
         std::cout << "PASS: compressed curves against independent exact cubic integration\n";
       }
       test_half_precision();
+      test_long_ray();
       test_empty_tiles<float>(32);
       test_empty_tiles<ccl::nanovdb::Fp16>(16);
     openvdb::io::File file(argv[1]);

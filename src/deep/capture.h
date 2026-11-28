@@ -250,15 +250,18 @@ class Capture {
   std::atomic<uint64_t> shader_evaluations{0};
   /* Camera samples that took a kernel resource fallback instead of failing
    * (KernelDeepFallback): more events than the event capacity, merged to fit
-   * as MoonRay does; or volume shader steps coarsened to fit the step and
-   * evaluation limits. Count each accepted sample once; one warning each. */
-  std::atomic<uint64_t> event_merged_samples{0}, step_coarsened_samples{0};
+   * as MoonRay does, volume shader steps coarsened to fit the step and
+   * evaluation limits, or native grid traversal continued in chunks.
+   * Count each accepted sample once and log one warning per kind. */
+  std::atomic<uint64_t> event_merged_samples{0}, step_coarsened_samples{0}, grid_extended_samples{0};
   void record_fallbacks(const unsigned int fallbacks)
   {
     if (fallbacks & DEEP_FALLBACK_MERGED)
       event_merged_samples.fetch_add(1, std::memory_order_relaxed);
     if (fallbacks & DEEP_FALLBACK_COARSENED)
       step_coarsened_samples.fetch_add(1, std::memory_order_relaxed);
+    if (fallbacks & DEEP_FALLBACK_GRID_EXTENDED)
+      grid_extended_samples.fetch_add(1, std::memory_order_relaxed);
   }
   float volume_step_min = 0, volume_step_max = 0;
   /* Sequential Y-down export: prepare on the caller thread before parallel

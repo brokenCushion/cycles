@@ -381,7 +381,9 @@ The EXR identifies shader evaluation, starting/maximum step range and the adapti
 the requested error bounds representation/fitting/publication; half is the
 **stated, not proven** stepping allowance. Validate shader variation against a
 4x-finer-step reference. Non-grey/invalid extinction, unsupported shader features
-and boundary, media or native grid traversal limits fail explicitly. Event
+and the boundary and media limits fail explicitly. Native VDB traversal
+continues in exact 16384-visit chunks, up to 64 chunks per interval, with a
+warning when a ray needs another chunk. Event
 overflow merges similar neighbouring events, and rays past the 16384-step or
 65535-evaluation limit coarsen their steps (as Cycles does past Max Steps); both
 log a warning, and the stepping bound does not hold for coarsened samples. The stepping contract is

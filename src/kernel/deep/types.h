@@ -115,8 +115,8 @@ struct KernelDeepResult {
   KernelDeepError error;
 };
 struct KernelDeepRecord {
-  /* Population in low 16 bits (host cap 4096); shader point evaluations in
-   * high 16 bits. Strict uses zero evaluations and keeps its original bytes. */
+  /* Population in low 15 bits (host cap 4096), extended grid flag in bit 15,
+   * shader point evaluations in the high 16 bits. */
   unsigned int x, y, sample, population;
   KernelDeepResult result;
   unsigned int payload_counts; // low/high 15 bits: event/companion stores (predicted in count pass)
@@ -127,7 +127,10 @@ struct KernelDeepRecord {
 enum KernelDeepFallback : unsigned int {
   DEEP_FALLBACK_MERGED = 1u,    /* events merged to fit the sample's event capacity */
   DEEP_FALLBACK_COARSENED = 2u, /* volume shader steps coarsened to fit step/evaluation limits */
+  DEEP_FALLBACK_GRID_EXTENDED = 4u, /* continued exact native-grid traversal in chunks */
 };
+constexpr unsigned int DEEP_POPULATION_MASK = 0x7fffu;
+constexpr unsigned int DEEP_POPULATION_GRID_EXTENDED = 1u << 15;
 constexpr unsigned int DEEP_PAYLOAD_COUNT_MASK = 0x7fffu;
 /* The maximum count is also the sentinel for a potentially longer ray.
  * Longer rays keep the compact in-kernel fallback. */

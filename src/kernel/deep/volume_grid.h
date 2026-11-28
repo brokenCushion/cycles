@@ -238,6 +238,19 @@ ccl_device KernelDeepError deep_volume_grid_cell(
   return DEEP_ERROR_NONE;
 }
 
+/* Use a fresh work budget without changing the exact traversal. Empty tiles
+ * consume one visit just like cells. Keep a hard upper bound on runtime work. */
+ccl_device_inline int deep_volume_grid_remaining(
+    const int remaining, const int chunk_size, ccl_private int *chunks_left,
+    ccl_private KernelDeepWriteState *write)
+{
+  if (remaining || !write || !write->fallback || !*chunks_left)
+    return remaining;
+  --*chunks_left;
+  write->fallbacks |= DEEP_FALLBACK_GRID_EXTENDED;
+  return chunk_size;
+}
+
 /* Append cell records to host-allocated lane buffers. The grid-space ray keeps
  * the world ray parameter; depth_origin + t * depth_per_t converts it to axial
  * camera depth. Physical extinction uses world length, never grid length.
@@ -283,7 +296,11 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
   const double eps_record = .25 * eps_ray / capacity;
   DeepGridSegment<double> segment{};
   DeepGridStep step;
+  int chunks_left = 63;
   while (true) {
+    if (cursor.current < cursor.end)
+      cursor.remaining = deep_volume_grid_remaining(
+          cursor.remaining, traversal_limit, &chunks_left, write);
     if (cursor.current < cursor.end && cursor.remaining > 0) {
       int dimension;
       const int3 cell = make_int3(cursor.cell[0], cursor.cell[1], cursor.cell[2]);
@@ -311,7 +328,8 @@ ccl_device KernelDeepResult deep_volume_grid_capture(
             }
             return {DEEP_COMPLETE, unsigned(count), DEEP_ERROR_NONE};
           }
-          const int remaining = cursor.remaining - 1;
+          const int remaining = deep_volume_grid_remaining(
+              cursor.remaining - 1, traversal_limit, &chunks_left, write);
           if (!remaining)
             return {DEEP_FAILED, 0, DEEP_ERROR_GRID_STEPS};
           if (!deep_grid_begin(&cursor, origin, direction, exit, end, remaining))

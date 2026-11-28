@@ -1018,11 +1018,12 @@ void PathTraceWorkGPU::DeepBatch::unpin()
     queue->unpin_host_memory(*host_buffers[--pinned]);
 }
 
-/* KernelDeepFallback bits a record's payload_counts carries. */
+/* Unpack the flags without changing the record layout. */
 static unsigned deep_record_fallbacks(const KernelDeepRecord &record)
 {
   return ((record.payload_counts & DEEP_PAYLOAD_MERGED) ? DEEP_FALLBACK_MERGED : 0u) |
-         ((record.payload_counts & DEEP_PAYLOAD_COARSENED) ? DEEP_FALLBACK_COARSENED : 0u);
+         ((record.payload_counts & DEEP_PAYLOAD_COARSENED) ? DEEP_FALLBACK_COARSENED : 0u) |
+         ((record.population & DEEP_POPULATION_GRID_EXTENDED) ? DEEP_FALLBACK_GRID_EXTENDED : 0u);
 }
 
 void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
@@ -1237,11 +1238,12 @@ void PathTraceWorkGPU::capture_deep_flat(const int num_tiles)
           break;
         capture->shader_evaluations.fetch_add(record.population >> 16, std::memory_order_relaxed);
         if (capture->adaptive())
-          capture->set_population(record.x, record.y, record.population & 0xffffu);
+          capture->set_population(record.x, record.y, record.population & DEEP_POPULATION_MASK);
         if (record.result.status == DEEP_SKIPPED) {
           ++deep_skipped_count_;
         }
         else if (!record.result.count) {
+          capture->record_fallbacks(deep_record_fallbacks(record));
           capture->record_sample(record.x, record.y, record.sample, record.result, nullptr, nullptr);
           ++deep_record_count_;
         }
@@ -1512,7 +1514,7 @@ void PathTraceWorkGPU::capture_deep_tiles(const int num_tiles)
                   (record.payload_counts & DEEP_PAYLOAD_MERGED))))
               continue;
             if (capture->adaptive()) {
-              capture->set_population(record.x, record.y, record.population & 0xffffu);
+              capture->set_population(record.x, record.y, record.population & DEEP_POPULATION_MASK);
             }
             if (record.result.status == DEEP_SKIPPED && record.result.count == 0 &&
                 record.result.error == DEEP_ERROR_NONE)

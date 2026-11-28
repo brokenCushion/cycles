@@ -227,6 +227,8 @@ ccl_device void deep_surface_kernel(const int index,
                            ((write.fallbacks & DEEP_FALLBACK_MERGED) ? DEEP_PAYLOAD_MERGED : 0u) |
                            ((write.fallbacks & DEEP_FALLBACK_COARSENED) ? DEEP_PAYLOAD_COARSENED : 0u);
   record->population |= write.shader_evaluations << 16;
+  if (write.fallbacks & DEEP_FALLBACK_GRID_EXTENDED)
+    record->population |= DEEP_POPULATION_GRID_EXTENDED;
   if (write.failed)
     record->result = {DEEP_FAILED, record->result.count, DEEP_ERROR_EVENT_CAPACITY};
   /* Restore every field modified by visibility traversal, including failure.
